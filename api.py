@@ -97,6 +97,8 @@ class CatalogView(APIView):
         profile = forge.get_or_create_equipment_profile(request.user)
         owned = set(profile.equipment.values_list("key", flat=True)) | {"bodyweight"}
         blocked = forge.blocked_exercise_ids(request.user)
+        # Best "fires" (peer flames) the user has ever earned per exercise.
+        best_fires = forge.best_flames_by_exercise(request.user)
 
         # Stable group order: bodyweight first, then the rest by display name.
         equipment = list(Equipment.objects.all())
@@ -130,6 +132,7 @@ class CatalogView(APIView):
                 substitute = (
                     {"uuid": str(sub.uuid), "name": sub.name} if sub else None
                 )
+            fires = best_fires.get(ex.name)
             group["exercises"].append(
                 {
                     "uuid": str(ex.uuid),
@@ -142,6 +145,12 @@ class CatalogView(APIView):
                     "eligible": (set(req_keys) or {"bodyweight"}) <= owned,
                     "is_blocked": is_blocked,
                     "substitute": substitute,
+                    # Highest peer "fires" (1-10) ever earned on this move, with
+                    # the AMRAP value behind it. Null when never scored.
+                    # ``best_fires_estimated`` flags a placeholder benchmark.
+                    "best_fires": fires["flames"] if fires else None,
+                    "best_fires_value": fires["value"] if fires else None,
+                    "best_fires_estimated": fires["estimated"] if fires else False,
                 }
             )
 

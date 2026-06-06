@@ -240,6 +240,21 @@
 .forge-cat-name { font-family: "Inter", sans-serif; color: var(--cauldron-cream); font-weight: 600; }
 .forge-cat-row.is-blocked .forge-cat-name { text-decoration: line-through; color: var(--cauldron-cream-dim); }
 .forge-cat-pattern { color: var(--cauldron-cream-muted); font-size: .8rem; }
+.forge-cat-fires {
+  display: inline-flex; align-items: baseline; gap: .12rem;
+  margin-left: .55rem; font-size: .82rem; font-weight: 700;
+  color: var(--cauldron-paprika-light);
+  filter: drop-shadow(0 0 4px var(--cauldron-paprika-glow));
+}
+.forge-cat-fires strong { font-size: .95rem; }
+.forge-cat-fires-max { color: var(--cauldron-cream-muted); font-weight: 400; font-size: .72rem; }
+.forge-cat-fires.is-estimated { filter: none; opacity: .85; }
+.forge-cat-fires-est {
+  margin-left: .25rem; font-weight: 400; font-size: .62rem;
+  text-transform: uppercase; letter-spacing: .04em;
+  color: var(--cauldron-cream-muted); font-style: italic;
+}
+.forge-cat-row.is-blocked .forge-cat-fires { opacity: .5; filter: none; }
 .forge-cat-sub { color: var(--cauldron-paprika-light); font-size: .82rem; }
 .forge-cat-sub--none { color: var(--cauldron-cream-muted); }
 .forge-cat-btn { padding: .4rem .9rem; font-size: .82rem; white-space: nowrap; }

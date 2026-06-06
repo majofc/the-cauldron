@@ -4,19 +4,46 @@ This module is PURE (no Django/ORM): it takes plain values and returns plain
 results, so it is unit-testable in isolation.
 
 HONESTY POLICY — the peer score must be fair, so every number here is sourced and
-its confidence is labelled. We never invent deciles:
+its confidence is labelled. We never silently invent deciles; estimates are
+flagged so they can be swapped for real data later (see the_cauldron/README.md).
 
-- ``pushup``  GOOD   — real age×sex percentiles, CSEP-PATH (Payne et al., 2000).
-                       NB: female norms use the MODIFIED (knee) push-up position.
-- ``plank``   THIN   — one peer-reviewed study, collegiate athletes 18-25 only
-                       (Chase/Brigham, IJES). Only applied for ages ≤ 29.
-- ``pullup``  THIN   — single 18-35 bracket, category bands only; men only
-                       (women's data is a floor effect → excluded).
+Each norm carries a ``confidence``:
 
-Movements with NO published norms (vertical push, hinge/unilateral) are simply
-absent here; the scorer returns ``has_data=False`` for them rather than guessing.
-Category-band sources are mapped to deciles by midpoint and clearly flagged
-``approximate``. See the research report in the PR description for full sourcing.
+- ``good``       real age×sex percentiles from a published reference.
+- ``thin``       real but narrow (one study, few brackets, or one sex).
+- ``estimated``  PLACEHOLDER — no published age×sex percentile table was found
+                 for this movement, so the table is a physiologically-plausible
+                 estimate. Flagged ``estimated`` end-to-end (score → API → UI)
+                 and listed in the README for replacement with real data.
+
+Per movement:
+
+- ``pushup``         GOOD      — CSEP-PATH (Payne et al., 2000). Female norms use
+                                 the MODIFIED (knee) push-up position.
+- ``plank``          THIN/EST  — ages ≤29 real (Chase/Brigham, IJES, collegiate
+                                 18-25); ages 30+ ESTIMATED (~12%/decade decay,
+                                 consistent with reported ~10-15%/decade), flagged
+                                 via ``estimated_brackets``.
+- ``pullup``         THIN      — single 18-35 bracket, category bands, men only
+                                 (women's data is a floor effect → excluded).
+- ``australian_row`` THIN/EST  — Strength Level community standards (inverted row,
+                                 101k sets); 20-39 as published, 40+ estimated.
+- ``pike_pushup``    THIN/EST  — Strength Level community standards (79k sets);
+                                 20-39 as published, 40+ estimated.
+- ``glute_bridge``   THIN/EST  — Strength Level community standards (163k sets);
+                                 20-39 as published, 40+ estimated.
+- ``split_squat``    EST       — DERIVED from Strength Level bodyweight-squat
+                                 standards at ~0.5× per leg; whole table estimated.
+
+Strength Level publishes population rep standards with documented level cutoffs
+(Beginner/Novice/Intermediate/Advanced/Elite = P5/P20/P50/P80/P95). The logging
+population skews trained and young-adult, hence confidence "thin" and the 40+
+estimated extensions.
+
+Peer scoring is per the CALIBRATED TEST movement of each pattern (the Trial
+anchor). Other rungs on a ladder (e.g. Wall Push-up vs Push-up) are intentionally
+NOT scored: a rep count is only comparable to a norm at the difficulty the norm
+was measured at. Such movements return ``has_data=False``.
 """
 
 from dataclasses import dataclass
@@ -26,9 +53,13 @@ from typing import Optional
 # movements that genuinely match a normed test are scored; everything else
 # returns "no peer data".
 EXERCISE_NORMS = {
-    "Push-up": "pushup",
-    "Plank": "plank",
-    "Pull-up": "pullup",
+    "Push-up": "pushup",          # horizontal push  (real)
+    "Plank": "plank",             # core             (real ≤29, estimated 30+)
+    "Pull-up": "pullup",          # vertical pull    (real, men only)
+    "Australian Row": "australian_row",  # vertical pull anchor (estimated)
+    "Pike Push-up": "pike_pushup",       # vertical push        (estimated)
+    "Split Squat": "split_squat",        # lower unilateral     (estimated)
+    "Glute Bridge": "glute_bridge",      # hinge                (estimated)
 }
 
 AGE_BRACKETS = [(20, 29), (30, 39), (40, 49), (50, 59), (60, 69)]
@@ -68,13 +99,28 @@ NORMS = {
         "metric": "seconds",
         "confidence": "thin",
         "source": "Fitness norms for the plank (Chase/Brigham et al., IJES) — "
-                  "collegiate athletes 18-25; quartiles only.",
+                  "collegiate athletes 18-25; quartiles only. Brackets 30+ are "
+                  "ESTIMATED (≈12%/decade decay, consistent with the reported "
+                  "~10-15%/decade decline after 35), not directly measured.",
         "url": "https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/",
         "type": "percentiles",
-        "max_age": 29,  # study population is young; do not extrapolate older
+        # Ages 30+ are estimated extensions of the 18-29 study data, not measured.
+        "estimated_brackets": {(30, 39), (40, 49), (50, 59), (60, 69)},
         "tables": {
-            "male": {(18, 29): {25: 84, 50: 110, 75: 135}},
-            "female": {(18, 29): {25: 73, 50: 95, 75: 122}},
+            "male": {
+                (18, 29): {25: 84, 50: 110, 75: 135},   # real
+                (30, 39): {25: 74, 50: 97, 75: 119},    # estimated
+                (40, 49): {25: 65, 50: 85, 75: 105},    # estimated
+                (50, 59): {25: 57, 50: 75, 75: 92},     # estimated
+                (60, 69): {25: 50, 50: 66, 75: 81},     # estimated
+            },
+            "female": {
+                (18, 29): {25: 73, 50: 95, 75: 122},    # real
+                (30, 39): {25: 64, 50: 84, 75: 107},    # estimated
+                (40, 49): {25: 56, 50: 74, 75: 94},     # estimated
+                (50, 59): {25: 49, 50: 65, 75: 83},     # estimated
+                (60, 69): {25: 43, 50: 57, 75: 73},     # estimated
+            },
         },
     },
     "pullup": {
@@ -93,6 +139,129 @@ NORMS = {
             # meaningful as deciles, so it is intentionally omitted.
         },
     },
+    # ── Crowd-sourced norms (Strength Level) ─────────────────────────────────
+    # No peer-reviewed age×sex AMRAP percentile study was found for these moves,
+    # but Strength Level publishes population rep standards from hundreds of
+    # thousands of logged sets, with documented level→percentile cutoffs:
+    #   Beginner=P5, Novice=P20, Intermediate=P50, Advanced=P80, Elite=P95.
+    # That population skews trained and young-adult, so we treat the published
+    # figures as the 20-39 brackets (confidence "thin") and model ages 40+ as an
+    # estimated decline (~15%/decade; flagged via estimated_brackets). "<1" rep
+    # at P5 is recorded as 1. See the_cauldron/README.md for replacement notes.
+    "australian_row": {
+        "label": "Australian row",
+        "metric": "reps",
+        "confidence": "thin",
+        "source": "Strength Level community rep standards for the inverted row "
+                  "(101,242 logged sets; level→percentile B/N/I/A/E = 5/20/50/"
+                  "80/95). Trained-skewed; ages 40+ are an estimated decline.",
+        "url": "https://strengthlevel.com/strength-standards/inverted-row",
+        "type": "percentiles",
+        "estimated_brackets": {(40, 49), (50, 59), (60, 69)},
+        "tables": {
+            "male": {
+                (20, 29): {5: 1, 20: 6, 50: 19, 80: 35, 95: 54},   # Strength Level
+                (30, 39): {5: 1, 20: 6, 50: 19, 80: 35, 95: 54},   # Strength Level
+                (40, 49): {5: 1, 20: 5, 50: 16, 80: 30, 95: 46},   # estimated
+                (50, 59): {5: 1, 20: 4, 50: 13, 80: 25, 95: 38},   # estimated
+                (60, 69): {5: 1, 20: 3, 50: 11, 80: 20, 95: 31},   # estimated
+            },
+            "female": {
+                (20, 29): {5: 1, 20: 2, 50: 13, 80: 27, 95: 43},   # Strength Level
+                (30, 39): {5: 1, 20: 2, 50: 13, 80: 27, 95: 43},   # Strength Level
+                (40, 49): {5: 1, 20: 2, 50: 11, 80: 23, 95: 37},   # estimated
+                (50, 59): {5: 1, 20: 1, 50: 9, 80: 19, 95: 30},    # estimated
+                (60, 69): {5: 1, 20: 1, 50: 8, 80: 16, 95: 25},    # estimated
+            },
+        },
+    },
+    "pike_pushup": {
+        "label": "Pike push-up",
+        "metric": "reps",
+        "confidence": "thin",
+        "source": "Strength Level community rep standards for the pike push-up "
+                  "(79,652 logged sets; level→percentile B/N/I/A/E = 5/20/50/80/"
+                  "95). Trained-skewed; ages 40+ are an estimated decline.",
+        "url": "https://strengthlevel.com/strength-standards/pike-push-up",
+        "type": "percentiles",
+        "estimated_brackets": {(40, 49), (50, 59), (60, 69)},
+        "tables": {
+            "male": {
+                (20, 29): {5: 1, 20: 6, 50: 19, 80: 36, 95: 54},   # Strength Level
+                (30, 39): {5: 1, 20: 6, 50: 19, 80: 36, 95: 54},   # Strength Level
+                (40, 49): {5: 1, 20: 5, 50: 16, 80: 31, 95: 46},   # estimated
+                (50, 59): {5: 1, 20: 4, 50: 13, 80: 25, 95: 38},   # estimated
+                (60, 69): {5: 1, 20: 3, 50: 11, 80: 21, 95: 31},   # estimated
+            },
+            "female": {
+                (20, 29): {5: 1, 20: 2, 50: 13, 80: 28, 95: 44},   # Strength Level
+                (30, 39): {5: 1, 20: 2, 50: 13, 80: 28, 95: 44},   # Strength Level
+                (40, 49): {5: 1, 20: 2, 50: 11, 80: 24, 95: 37},   # estimated
+                (50, 59): {5: 1, 20: 1, 50: 9, 80: 20, 95: 31},    # estimated
+                (60, 69): {5: 1, 20: 1, 50: 8, 80: 16, 95: 26},    # estimated
+            },
+        },
+    },
+    "glute_bridge": {
+        "label": "Glute bridge",
+        "metric": "reps",
+        "confidence": "thin",
+        "source": "Strength Level community rep standards for the bodyweight "
+                  "glute bridge (163,095 logged sets; level→percentile B/N/I/A/E "
+                  "= 5/20/50/80/95). Trained-skewed; ages 40+ are an estimated "
+                  "decline.",
+        "url": "https://strengthlevel.com/strength-standards/glute-bridge",
+        "type": "percentiles",
+        "estimated_brackets": {(40, 49), (50, 59), (60, 69)},
+        "tables": {
+            "male": {
+                (20, 29): {5: 1, 20: 7, 50: 37, 80: 78, 95: 125},  # Strength Level
+                (30, 39): {5: 1, 20: 7, 50: 37, 80: 78, 95: 125},  # Strength Level
+                (40, 49): {5: 1, 20: 6, 50: 31, 80: 66, 95: 106},  # estimated
+                (50, 59): {5: 1, 20: 5, 50: 26, 80: 55, 95: 88},   # estimated
+                (60, 69): {5: 1, 20: 4, 50: 21, 80: 45, 95: 73},   # estimated
+            },
+            "female": {
+                (20, 29): {5: 1, 20: 8, 50: 31, 80: 62, 95: 97},   # Strength Level
+                (30, 39): {5: 1, 20: 8, 50: 31, 80: 62, 95: 97},   # Strength Level
+                (40, 49): {5: 1, 20: 7, 50: 26, 80: 53, 95: 82},   # estimated
+                (50, 59): {5: 1, 20: 6, 50: 22, 80: 43, 95: 68},   # estimated
+                (60, 69): {5: 1, 20: 5, 50: 18, 80: 36, 95: 56},   # estimated
+            },
+        },
+    },
+    # ── Derived (estimated) norm ─────────────────────────────────────────────
+    # No per-leg split-squat rep norm exists. We derive it from Strength Level's
+    # bodyweight (bilateral) squat standards (546,341 logged sets) at ~0.5× —
+    # the rough per-leg-to-bilateral rep ratio. The 0.5 ratio is our assumption,
+    # so the WHOLE table is flagged ``estimated`` (not just ages 40+).
+    "split_squat": {
+        "label": "Split squat (per leg)",
+        "metric": "reps",
+        "confidence": "estimated",
+        "estimated": True,
+        "source": "DERIVED — Strength Level bodyweight-squat rep standards "
+                  "(546,341 sets) scaled ~0.5× for per-leg work. Ratio is an "
+                  "assumption; replace with a real per-leg split-squat norm.",
+        "url": "https://strengthlevel.com/strength-standards/bodyweight-squat",
+        "type": "percentiles",
+        "tables": {
+            "male": {
+                (20, 29): {5: 1, 20: 8, 50: 29, 80: 57, 95: 89},
+                (30, 39): {5: 1, 20: 8, 50: 29, 80: 57, 95: 89},
+                (40, 49): {5: 1, 20: 7, 50: 25, 80: 48, 95: 76},
+                (50, 59): {5: 1, 20: 6, 50: 20, 80: 40, 95: 62},
+                (60, 69): {5: 1, 20: 5, 50: 17, 80: 33, 95: 52},
+            },
+            "female": {
+                (20, 29): {5: 1, 20: 4, 50: 20, 80: 41, 95: 66},
+                (30, 39): {5: 1, 20: 4, 50: 20, 80: 41, 95: 66},
+                (40, 49): {5: 1, 20: 3, 50: 17, 80: 35, 95: 56},
+                (50, 59): {5: 1, 20: 3, 50: 14, 80: 29, 95: 46},
+                (60, 69): {5: 1, 20: 2, 50: 12, 80: 24, 95: 38},
+            },
+        },
+    },
 }
 
 
@@ -103,8 +272,9 @@ class PeerScore:
     decile: Optional[int] = None       # 1-10
     percentile: Optional[float] = None  # 0-100
     label: str = ""
-    confidence: str = ""               # good | thin | none
+    confidence: str = ""               # good | thin | estimated | none
     approximate: bool = False
+    estimated: bool = False            # table is a placeholder, not published data
     source: str = ""
     url: str = ""
     note: str = ""
@@ -201,8 +371,16 @@ def score(exercise_name: str, value, sex: str, age: Optional[int]) -> PeerScore:
         pct = _pct_from_bands(anchors, float(value))
         approximate = True
 
+    # Whole-table placeholder, or a per-bracket estimated extension of real data.
+    estimated = norm.get("estimated", False) or (
+        bracket in norm.get("estimated_brackets", set())
+    )
+
     decile, flames = _flames_from_percentile(pct)
     note = norm.get("female_note", "") if sex == "female" else ""
+    if estimated:
+        est_note = "Estimated benchmark — not yet from published data."
+        note = f"{note} {est_note}".strip() if note else est_note
     return PeerScore(
         has_data=True,
         flames=flames,
@@ -211,6 +389,7 @@ def score(exercise_name: str, value, sex: str, age: Optional[int]) -> PeerScore:
         label=norm["label"],
         confidence=norm["confidence"],
         approximate=approximate,
+        estimated=estimated,
         source=norm["source"],
         url=norm["url"],
         note=note,

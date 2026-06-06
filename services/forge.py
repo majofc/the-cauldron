@@ -9,6 +9,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from the_cauldron.models import (
+    AssessmentResult,
     AssessmentSession,
     BlockedExercise,
     Exercise,
@@ -55,6 +56,7 @@ def _peer_score_dict(score) -> dict:
         "label": score.label,
         "confidence": score.confidence,
         "approximate": score.approximate,
+        "estimated": score.estimated,
         "source": score.source,
         "url": score.url,
         "note": score.note,
@@ -67,6 +69,48 @@ def peer_score(user, exercise_name, value) -> dict:
     profile = get_or_create_equipment_profile(user)
     age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
     return _peer_score_dict(norms.score(exercise_name, value, profile.sex, age))
+
+
+def best_flames_by_exercise(user) -> dict:
+    """Highest "fires" (peer flames, 1-10) the user has ever earned on each
+    exercise, keyed by exercise name.
+
+    Flames rise monotonically with the AMRAP value, so the best value the user
+    has ever logged for a movement yields the best flames. Sources are every
+    AMRAP working set and every Trial result. Only movements with a published
+    peer norm and at least one recorded result that scores appear in the result.
+    """
+    profile = get_or_create_equipment_profile(user)
+    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
+
+    best_value = {}  # exercise name -> best AMRAP reps/seconds ever
+
+    def consider(name, value):
+        if value is None or name not in norms.EXERCISE_NORMS:
+            return
+        if value > best_value.get(name, -1):
+            best_value[name] = value
+
+    for sl in SetLog.objects.filter(
+        session__user=user, is_amrap=True, actual_reps__isnull=False
+    ).select_related("exercise"):
+        consider(sl.exercise.name, sl.actual_reps)
+
+    for r in AssessmentResult.objects.filter(session__user=user).select_related(
+        "tested_exercise"
+    ):
+        consider(r.tested_exercise.name, r.reps_or_seconds)
+
+    result = {}
+    for name, value in best_value.items():
+        sc = norms.score(name, value, profile.sex, age)
+        if sc.has_data:
+            result[name] = {
+                "flames": sc.flames,
+                "value": value,
+                "estimated": sc.estimated,
+            }
+    return result
 
 
 def peer_decile_cutoffs(user, exercise_name) -> dict:
