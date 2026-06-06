@@ -36,6 +36,16 @@
 <li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">The Cauldron</a></li>
 {% endblock %}
 
+{% block nav_cta %}
+<div class="nav-cta">
+  {% if user.is_authenticated %}
+    <a href="{% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter the Forge →</a>
+  {% else %}
+    <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter →</a>
+  {% endif %}
+</div>
+{% endblock %}
+
 {% block content %}
 
   <!-- ═══════════════════════════════════════
@@ -106,7 +116,7 @@
     </p>
 
     <div class="cauldron-hero-cta">
-      <a href="#" class="btn-cauldron btn-cauldron--primary">Begin Your Practice</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Begin Your Practice</a>
       <a href="#pillars" class="btn-cauldron btn-cauldron--ghost">Explore the Arts</a>
     </div>
   </section>
@@ -251,7 +261,7 @@
       The cauldron is ready. The flame is lit. What will you preserve?
     </p>
     <div class="cauldron-hero-cta">
-      <a href="#" class="btn-cauldron btn-cauldron--primary">Enter the Cauldron</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Cauldron</a>
     </div>
   </section>
 

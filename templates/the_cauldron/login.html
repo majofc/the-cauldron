@@ -10,6 +10,18 @@
 <link rel="stylesheet" href="{% static 'the_cauldron/css/forge.css' %}">
 {% endblock %}
 
+{% block nav_links %}
+<li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
+<li><a href="{% url 'scholomancy-landing' %}" class="nav-link">Scholomancy</a></li>
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">The Cauldron</a></li>
+{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  <a href="{% url 'the_cauldron:landing' %}" class="btn-primary btn-sm">← Cauldron</a>
+</div>
+{% endblock %}
+
 {% block content %}
 <section class="forge-auth">
   <div class="cauldron-card forge-auth-card">

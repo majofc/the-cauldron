@@ -179,7 +179,9 @@
         `<span class="forge-score-ex">${item.exercise}</span>` +
         `<span class="forge-score-note">${sc.reason || "No peer data yet."}</span></div>`;
     }
-    const approx = sc.approximate
+    const approx = sc.estimated
+      ? `<span class="forge-score-approx" title="Estimated benchmark — not yet from published data">≈ est.</span>`
+      : sc.approximate
       ? `<span class="forge-score-approx" title="Interpolated from published percentiles">≈ approx</span>`
       : "";
     const note = sc.note ? `<div class="forge-score-subnote">${sc.note}</div>` : "";
@@ -711,10 +713,18 @@
             : "";
         const btnLabel = ex.is_blocked ? "Unblock" : "Block";
         const btnAct = ex.is_blocked ? "unblock" : "block";
+        const fires =
+          ex.best_fires != null
+            ? `<span class="forge-cat-fires${ex.best_fires_estimated ? " is-estimated" : ""}" ` +
+              `title="Your best peer score on ${ex.name}: ${ex.best_fires}/10 fires (${ex.best_fires_value} reps)` +
+              `${ex.best_fires_estimated ? " — estimated benchmark, not yet from published data" : ""}">` +
+              `🔥 <strong>${ex.best_fires}</strong><span class="forge-cat-fires-max">/10</span>` +
+              `${ex.best_fires_estimated ? `<span class="forge-cat-fires-est">est.</span>` : ""}</span>`
+            : "";
         rows +=
           `<div class="forge-cat-row${blockedCls}">` +
           `<div class="forge-cat-meta">` +
-          `<span class="forge-cat-name">${ex.name}</span>` +
+          `<span class="forge-cat-name">${ex.name}${fires}</span>` +
           `<span class="forge-cat-pattern">${PATTERN_LABELS[ex.pattern_key] || ex.pattern_name}` +
           (eligible ? "" : ` · <span class="forge-cat-tag">needs gear</span>`) + `</span>` +
           sub +

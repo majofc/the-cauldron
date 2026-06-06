@@ -7,7 +7,9 @@ from the_cauldron.services import norms
 
 
 def test_unnormed_movement_has_no_data():
-    s = norms.score("Pike Push-up", 10, "male", 25)
+    # A non-anchor ladder rung is intentionally not scored (rep counts aren't
+    # comparable to a norm measured at a different difficulty).
+    s = norms.score("Wall Push-up", 10, "male", 25)
     assert s.has_data is False
     assert s.confidence == "none"
 
@@ -20,10 +22,14 @@ def test_missing_age_blocks_scoring():
     assert norms.score("Push-up", 25, "male", None).has_data is False
 
 
-def test_plank_rejects_out_of_range_age():
-    # Plank norms only cover young athletes (≤29).
-    assert norms.score("Plank", 100, "male", 45).has_data is False
-    assert norms.score("Plank", 100, "male", 24).has_data is True
+def test_plank_young_bracket_is_real_older_is_estimated():
+    young = norms.score("Plank", 100, "male", 24)
+    assert young.has_data is True
+    assert young.estimated is False  # 18-29 bracket is published data
+    older = norms.score("Plank", 100, "male", 45)
+    assert older.has_data is True  # now covered via estimated extension
+    assert older.estimated is True
+    assert "estimated" in older.note.lower()
 
 
 def test_female_pullup_excluded_floor_effect():
@@ -63,6 +69,53 @@ def test_female_pushup_carries_modified_position_note():
     s = norms.score("Push-up", 18, "female", 25)
     assert s.has_data
     assert "modified" in s.note.lower()
+
+
+# ── Estimated norms: every Trial anchor is scoreable, flagged estimated ───────
+
+
+def test_all_trial_anchors_are_scoreable():
+    anchors = ["Push-up", "Australian Row", "Pike Push-up", "Split Squat",
+               "Plank", "Glute Bridge"]
+    for name in anchors:
+        for sex in ("male", "female"):
+            s = norms.score(name, 12, sex, 35)
+            assert s.has_data is True, f"{name}/{sex} should score"
+            assert 1 <= s.flames <= 10
+
+
+def test_crowdsourced_norms_real_in_prime_estimated_when_old():
+    # Pike/row/glute use Strength Level data for 20-39 (real, "thin"), and a
+    # flagged estimated decline for 40+.
+    for name in ["Australian Row", "Pike Push-up", "Glute Bridge"]:
+        prime = norms.score(name, 12, "male", 35)
+        assert prime.has_data and prime.confidence == "thin"
+        assert prime.estimated is False, f"{name} should be real in prime age"
+        old = norms.score(name, 12, "male", 55)
+        assert old.estimated is True, f"{name} 40+ should be estimated"
+        assert "estimated" in old.note.lower()
+
+
+def test_split_squat_is_fully_estimated():
+    # Derived from bodyweight-squat data; the whole table is flagged.
+    for age in (25, 55):
+        s = norms.score("Split Squat", 12, "male", age)
+        assert s.estimated is True
+        assert s.confidence == "estimated"
+        assert "estimated" in s.note.lower()
+
+
+def test_real_pushup_not_flagged_estimated():
+    s = norms.score("Push-up", 25, "male", 25)
+    assert s.estimated is False
+
+
+def test_estimated_norm_monotonic():
+    prev = 0
+    for reps in range(0, 70, 5):
+        d = norms.score("Glute Bridge", reps, "female", 35).decile
+        assert d >= prev
+        prev = d
 
 
 # ── Decile cutoffs for charting ──────────────────────────────────────────────

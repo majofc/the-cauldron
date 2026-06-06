@@ -226,6 +226,44 @@ def test_assessment_returns_peer_flames_for_normed_move(seeded, client):
     assert 1 <= score["flames"] <= 10
 
 
+def test_catalog_reports_best_fires_ever(seeded, client):
+    """The Exercises catalog annotates each move with the user's best peer
+    "fires" ever earned; un-normed/never-scored moves report null."""
+    _set_demographics(client, birth_year=1995, sex="male")
+    pushup = Exercise.objects.get(name="Push-up")
+    payload = {
+        "split": "full_body_3x",
+        "results": [
+            {"pattern_key": pushup.pattern.key, "tested_exercise": str(pushup.uuid), "reps_or_seconds": 25}
+        ],
+    }
+    assert client.post("/cauldron/api/assessment/", payload, format="json").status_code == 201
+
+    catalog = client.get("/cauldron/api/catalog/").json()
+    by_name = {e["name"]: e for g in catalog["groups"] for e in g["exercises"]}
+    assert 1 <= by_name["Push-up"]["best_fires"] <= 10
+    assert by_name["Push-up"]["best_fires_value"] == 25
+    # A move without a published norm never has fires.
+    assert by_name["Nordic Curl"]["best_fires"] is None
+
+
+def test_catalog_best_fires_null_without_demographics(seeded, client):
+    """Without age+sex there is no fair peer basis, so fires stay null even
+    after a normed result is recorded."""
+    _set_equipment(client, ["bodyweight"])
+    pushup = Exercise.objects.get(name="Push-up")
+    payload = {
+        "split": "full_body_3x",
+        "results": [
+            {"pattern_key": pushup.pattern.key, "tested_exercise": str(pushup.uuid), "reps_or_seconds": 25}
+        ],
+    }
+    client.post("/cauldron/api/assessment/", payload, format="json")
+    catalog = client.get("/cauldron/api/catalog/").json()
+    by_name = {e["name"]: e for g in catalog["groups"] for e in g["exercises"]}
+    assert by_name["Push-up"]["best_fires"] is None
+
+
 def test_peer_score_absent_without_demographics(seeded, client):
     pushup = Exercise.objects.get(name="Push-up")
     payload = {
