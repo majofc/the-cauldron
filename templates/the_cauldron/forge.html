@@ -1,0 +1,314 @@
+{% extends 'arcano/base.html' %}
+{% load static %}
+
+{% block title %}The Forge — Adaptive Calisthenics{% endblock %}
+{% block meta_description %}Take the Trial and forge a calisthenics program that adapts to you and your equipment.{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/forge.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="The Cauldron home">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:logout' %}" class="nav-link">Sign out</a></li>
+{% endblock %}
+
+{% block content %}
+<main class="forge" id="forge-app">
+
+  <header class="forge-header">
+    <h1 class="forge-title">The Forge</h1>
+    <p class="forge-subtitle">A calisthenics program that adapts to you — and to what you own.</p>
+    <nav class="forge-tabs" aria-label="Forge sections">
+      <button class="forge-tab is-active" data-tab="equipment">Equipment</button>
+      <button class="forge-tab" data-tab="trial">The Trial</button>
+      <button class="forge-tab" data-tab="today">Today</button>
+      <button class="forge-tab" data-tab="exercises">Exercises</button>
+      <button class="forge-tab" data-tab="progress">Progress</button>
+      <button class="forge-tab" data-tab="about">About</button>
+    </nav>
+  </header>
+
+  <!-- Loader -->
+  <div class="forge-loader" id="forge-loader" hidden>
+    <div class="forge-loader-ring"></div>
+    <p class="forge-loader-caption">Stirring the pot…</p>
+  </div>
+
+  <!-- Toast for progression deltas -->
+  <div class="forge-toast" id="forge-toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- ── Equipment ─────────────────────────────────────────── -->
+  <section class="forge-panel is-active" data-panel="equipment">
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">What do you have?</h2>
+      <p class="forge-help">Bodyweight is always assumed. Pick what else you own — the Trial and your
+        program adapt to it. Loadable gear lets the engine add weight instead of only changing difficulty.</p>
+      <div class="forge-equip-cards" id="forge-equipment-grid"></div>
+
+      <div class="forge-loadable" id="forge-loadable">
+        <label class="forge-field" data-for="dumbbells" hidden>
+          <span>Dumbbell weights you have (kg, comma-separated)</span>
+          <input type="text" id="forge-dumbbells" placeholder="5, 10, 15, 20">
+        </label>
+        <label class="forge-field" data-for="bands" hidden>
+          <span>Band levels, easiest first (comma-separated)</span>
+          <input type="text" id="forge-bands" placeholder="light, medium, heavy">
+        </label>
+        <label class="forge-field" data-for="barbell" hidden>
+          <span>Barbell smallest increment (kg)</span>
+          <input type="number" id="forge-barbell-inc" step="0.5" placeholder="2.5">
+        </label>
+      </div>
+
+      <div class="forge-demographics">
+        <h3 class="forge-about-h3">Your stats <span class="forge-demo-opt">— optional, for the peer score</span></h3>
+        <p class="forge-help">We compare your results against published norms for your age &amp; sex to award
+          your <span class="forge-flame-inline">🔥</span> rating. Leave blank to skip — everything else still works.</p>
+        <div class="forge-demo-row">
+          <label class="forge-field">
+            <span>Birth year</span>
+            <input type="number" id="forge-birth-year" min="1920" max="2020" placeholder="1995">
+          </label>
+          <label class="forge-field">
+            <span>Sex (for norms)</span>
+            <select id="forge-sex">
+              <option value="undisclosed">Prefer not to say</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn-cauldron btn-cauldron--primary" id="forge-save-equipment">Save equipment</button>
+    </div>
+  </section>
+
+  <!-- ── The Trial ─────────────────────────────────────────── -->
+  <section class="forge-panel" data-panel="trial">
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">The Trial</h2>
+      <p class="forge-help">For each pattern, do <strong>one set to honest technical failure</strong> on the
+        suggested move and record the reps (or seconds for holds). We place you objectively — no guessing your level.</p>
+      <div id="forge-trial-list" class="forge-trial-list"></div>
+      <div class="forge-trial-actions">
+        <button class="btn-cauldron btn-cauldron--primary" id="forge-submit-trial">Forge my program</button>
+        <button class="btn-cauldron btn-cauldron--ghost" id="forge-retake" hidden>Retake the Trial</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Today ─────────────────────────────────────────────── -->
+  <section class="forge-panel" data-panel="today">
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="forge-today-head">
+        <h2 class="forge-h2">Today's session</h2>
+        <div class="forge-today-controls">
+          <label class="forge-day-pick">Day
+            <select id="forge-day-select"></select>
+          </label>
+          <label class="forge-day-pick">Rest ping
+            <select id="forge-chime-select">
+              <option value="cauldron">Cauldron Chime</option>
+              <option value="ember">Ember Bell</option>
+              <option value="gong">Deep Gong</option>
+              <option value="triad">Arcane Triad</option>
+            </select>
+          </label>
+          <button type="button" class="forge-chime-preview" title="Preview sound" aria-label="Preview rest ping">🔊</button>
+        </div>
+      </div>
+      <div id="forge-today-list" class="forge-today-list"></div>
+      <button class="btn-cauldron btn-cauldron--primary" id="forge-log-session" hidden>Save session</button>
+    </div>
+  </section>
+
+  <!-- ── Exercises (catalog + blocking) ────────────────────── -->
+  <section class="forge-panel" data-panel="exercises">
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">Exercises</h2>
+      <p class="forge-help">Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong>
+        anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from
+        the Trial and your program, and we swap in the closest equal-or-easier alternative for the same
+        pattern. Unblock any time. Groups for gear you don't own are dimmed.</p>
+      <label class="forge-catalog-filter">
+        <input type="checkbox" id="forge-catalog-mine"> Only show what I can do
+      </label>
+      <div id="forge-catalog" class="forge-catalog"></div>
+    </div>
+  </section>
+
+  <!-- ── Progress ──────────────────────────────────────────── -->
+  <section class="forge-panel" data-panel="progress">
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">Progression</h2>
+      <div class="forge-chart-head">
+        <label class="forge-chart-metric">Exercise
+          <select id="forge-chart-exercise">
+            <option value="">All (total)</option>
+          </select>
+        </label>
+        <label class="forge-chart-metric">Metric
+          <select id="forge-chart-metric">
+            <option value="total_volume">Total volume</option>
+            <option value="total_reps">Total reps</option>
+            <option value="best_amrap">Best AMRAP set</option>
+          </select>
+        </label>
+        <div class="forge-period-toggle" role="group" aria-label="Group by">
+          <button class="forge-period is-active" data-period="day">Day</button>
+          <button class="forge-period" data-period="week">Week</button>
+          <button class="forge-period" data-period="month">Month</button>
+        </div>
+      </div>
+      <div id="forge-chart" class="forge-chart"></div>
+      <p class="forge-chart-legend" id="forge-chart-legend" hidden></p>
+    </div>
+
+    <div class="cauldron-card forge-card" id="forge-asym-card" hidden>
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">Left / right balance</h2>
+      <p class="forge-help">Per-leg results from your Trials. Big gaps mean train the weaker side first.</p>
+      <div id="forge-asym" class="forge-asym"></div>
+    </div>
+
+    <div class="cauldron-card forge-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">Saved sessions</h2>
+      <p class="forge-help">Planned vs. real for every set you've logged.</p>
+      <div id="forge-history" class="forge-history"></div>
+    </div>
+  </section>
+
+  <!-- ── Results reveal / unlock overlay ───────────────────── -->
+  <div class="forge-overlay" id="forge-reveal" hidden>
+    <div class="cauldron-card forge-reveal-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <!-- The forge: anvil + hammer + sparks animation while results compute -->
+      <div class="forge-anvil" id="forge-anvil" aria-hidden="true">
+        <div class="forge-sparks">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <svg class="forge-hammer" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+             stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="30" y="6" width="22" height="14" rx="2" transform="rotate(35 41 13)"/>
+          <line x1="33" y1="20" x2="14" y2="48"/>
+        </svg>
+        <svg class="forge-anvil-base" viewBox="0 0 64 40" fill="currentColor" aria-hidden="true">
+          <path d="M6 6h34c-2 6-8 8-12 8h22v6H4l8-6H6z"/>
+          <rect x="20" y="22" width="10" height="8"/>
+          <path d="M10 32h30c0 4-4 6-8 6H18c-4 0-8-2-8-6z"/>
+        </svg>
+      </div>
+      <div class="forge-reveal-body" id="forge-reveal-body"></div>
+      <div class="forge-reveal-actions" id="forge-reveal-actions" hidden></div>
+    </div>
+  </div>
+
+  <!-- ── About (how & why the Forge works) ─────────────────── -->
+  <section class="forge-panel" data-panel="about">
+    <div class="cauldron-card forge-card forge-about">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <h2 class="forge-h2">How the Forge works — and why</h2>
+      <p class="forge-help">The Forge isn't a fixed routine. It measures where you are, prescribes the next
+        honest step, and adjusts after every session. Each design choice below is anchored to the strength-science
+        evidence — the citations are real and linked.</p>
+
+      <h3 class="forge-about-h3">1 · We test, we don't guess</h3>
+      <p class="forge-about-p">Most apps ask how hard a set felt — your "reps in reserve" (RIR). The problem:
+        novices are unreliable at judging how close to failure they are, and tend to stop well short while
+        believing they were near the limit. Accuracy improves with training experience, but for a beginner it's
+        a shaky foundation.<sup><a href="#ref-1">1</a></sup> Trained lifters estimate effort far more accurately
+        than novices.<sup><a href="#ref-2">2</a></sup> So the Forge places you with an <strong>objective AMRAP</strong>
+        (as-many-reps-as-possible) test set per movement pattern, not a feeling — the number puts you on the right
+        rung automatically.</p>
+
+      <h3 class="forge-about-h3">2 · Autoregulated double progression</h3>
+      <p class="forge-about-p">Your last working set each session is an AMRAP "test set." Beat the top of the
+        rep range and you move up; fall short and you back off — the program <em>autoregulates</em> to your daily
+        readiness instead of forcing a fixed weekly jump. Autoregulated progressive resistance exercise (APRE)
+        out-performed traditional linear periodization for strength gains in a controlled trial.<sup><a href="#ref-3">3</a></sup></p>
+
+      <h3 class="forge-about-h3">3 · Two ways to get stronger</h3>
+      <p class="forge-about-p">When you only have bodyweight, the Forge progresses by <strong>difficulty</strong>
+        — climbing a ladder of harder variations (wall push-up → push-up → archer push-up). When you own loadable
+        gear, it progresses by <strong>load</strong>, adding the smallest available increment. Load mode also fixes
+        a well-known problem: it's hard to keep overloading the lower body with bodyweight alone.</p>
+
+      <h3 class="forge-about-h3">4 · Rest like you mean it</h3>
+      <p class="forge-about-p">Each exercise carries an evidence-based rest target — roughly 2–3 minutes for heavy
+        compounds, less for accessory and isometric work. Longer inter-set rest produced greater gains in both
+        strength and muscle size than short rest in resistance-trained men.<sup><a href="#ref-4">4</a></sup></p>
+
+      <h3 class="forge-about-h3">5 · Train each pattern often</h3>
+      <p class="forge-about-p">The default Full-Body ×3 split hits every movement pattern multiple times a week.
+        When volume is equated, higher weekly frequency tends to favour hypertrophy — and frequent practice also
+        accelerates skill on the calisthenics movements themselves.<sup><a href="#ref-5">5</a></sup></p>
+
+      <h3 class="forge-about-h3">References</h3>
+      <ol class="forge-refs">
+        <li id="ref-1">Steele J, et al. <em>Ability to predict repetitions to momentary failure is not perfectly
+          accurate, though improves with resistance training experience.</em> PLoS ONE, 2017.
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5712461/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+        <li id="ref-2">Zourdos MC, et al. <em>Novel Resistance Training–Specific Rating of Perceived Exertion Scale
+          Measuring Repetitions in Reserve.</em> J Strength Cond Res, 2016.
+          <a href="https://pubmed.ncbi.nlm.nih.gov/26049792/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+        <li id="ref-3">Mann JB, et al. <em>The effect of autoregulatory progressive resistance exercise vs. linear
+          periodization on strength improvement in college athletes.</em> J Strength Cond Res, 2010.
+          <a href="https://pubmed.ncbi.nlm.nih.gov/20543732/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+        <li id="ref-4">Schoenfeld BJ, et al. <em>Longer Interset Rest Periods Enhance Muscle Strength and Hypertrophy
+          in Resistance-Trained Men.</em> J Strength Cond Res, 2016.
+          <a href="https://pubmed.ncbi.nlm.nih.gov/26605807/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+        <li id="ref-5">Schoenfeld BJ, Ogborn D, Krieger JW. <em>Effects of Resistance Training Frequency on Measures
+          of Muscle Hypertrophy: A Systematic Review and Meta-Analysis.</em> Sports Med, 2016.
+          <a href="https://link.springer.com/article/10.1007/s40279-016-0543-8" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+      </ol>
+    </div>
+  </section>
+
+</main>
+
+<script>window.FORGE_API = "{% url 'the_cauldron:forge' %}".replace(/forge\/$/, "api/");</script>
+{% endblock %}
+
+{% block app_scripts %}
+<!-- Cauldron loader first so forge.js can use it; it also takes over page transitions. -->
+<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+<script src="{% static 'the_cauldron/js/forge.js' %}"></script>
+{% endblock %}
+
+{# Replace Arcano's page-transition loader: the Cauldron loader (loaded above)
+   installs its own nav handlers, so this block is intentionally empty. #}
+{% block nav_auto_loader %}{% endblock %}

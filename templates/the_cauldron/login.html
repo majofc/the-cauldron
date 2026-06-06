@@ -1,0 +1,43 @@
+{% extends 'arcano/base.html' %}
+{% load static %}
+
+{% block title %}Enter The Cauldron{% endblock %}
+{% block meta_description %}Sign in to The Cauldron.{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/forge.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="forge-auth">
+  <div class="cauldron-card forge-auth-card">
+    <div class="corner-tl" aria-hidden="true"></div>
+    <div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div>
+    <div class="corner-br" aria-hidden="true"></div>
+
+    <h1 class="forge-title">Enter The Cauldron</h1>
+    <p class="forge-subtitle">Sign in to tend your forge.</p>
+
+    {% if form.errors %}
+    <p class="forge-error" role="alert">Those credentials didn't catch. Try again.</p>
+    {% endif %}
+
+    <form method="post" class="forge-form">
+      {% csrf_token %}
+      <label class="forge-field">
+        <span>Username</span>
+        <input type="text" name="username" autocomplete="username" required autofocus>
+      </label>
+      <label class="forge-field">
+        <span>Password</span>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn-cauldron btn-cauldron--primary">Light the fire</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

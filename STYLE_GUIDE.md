@@ -152,6 +152,89 @@ All keyframes are in `landing.css`. Captions to use: `"Tending the flame…"`, `
 
 ---
 
+## Equipment cards (`.forge-equip-card`)
+
+Equipment is chosen via **magical icon cards**, not checkboxes. Each card: an
+inline line-SVG icon (`.forge-equip-icon`), a name, a hidden checkbox, a radial
+`.forge-equip-glow`, and a `✦` `.forge-equip-check`. Selected (`.is-on`) lights
+the icon (paprika + drop-shadow), shows the glow, pops the check, and adds
+`--cauldron-shadow-glow`. Icons live in `EQUIP_ICON` in `forge.js`.
+
+The Equipment tab also holds the optional **demographics** (`.forge-demographics`:
+birth year + sex) used only for the peer score — never required.
+
+## Peer "flames" score + results reveal (`.forge-overlay`, `.forge-flames`)
+
+After the Trial and after each session, results are revealed in a full-screen
+`.forge-overlay` whose `.forge-anvil` plays a **hammer-and-sparks forging
+animation** (`.forging`) for ~1.3 s before the verdict. The peer score is shown
+as `.forge-flames` — ten 🔥 glyphs, `lit` ones igniting in a staggered `ablaze`
+flicker. Honesty rules carry into the UI: show the decile/percentile, link the
+source norm, tag interpolated values `≈ approx`, surface the female modified-
+push-up note, and show the "no peer data yet" reason rather than a fake score.
+All animations respect `prefers-reduced-motion`.
+
+### Unlock celebration (gated progression)
+
+An earned difficulty advance is **not** automatic — it appears in the overlay as
+a `.forge-unlock-burst` (🔨✨🔥) celebration with **Claim it / Not yet**. Accept
+climbs the ladder; deny holds and resets the counter. Backed by
+`POST /progression/<uuid>/<accept|deny>/`.
+
+## Progress: decile lines + balance (`.forge-chart-decile`, `.forge-asym-row`)
+
+When the Progress chart is filtered to one normed exercise on the AMRAP metric,
+overlay dashed `.forge-chart-decile` peer-decile lines — only the cutoff just
+below the lowest value, the one just above the highest, and those in between.
+`.forge-asym-row` shows per-leg Trial results with L/R bars; `.is-warn` flags a
+≥20% imbalance.
+
+## Arcane numeral input (`.forge-trial-input`)
+
+Result fields (the Trial and Today logging) are **not boxed**. They render as a
+glowing rune-line: transparent background, no border except a paprika
+`border-bottom`, large **Cormorant Garamond** numerals in `--cauldron-paprika-light`,
+centred, native spinners removed. Focus brightens the underline, adds an ember
+`text-shadow`, and shifts the text to cream. Never give these a filled box or
+rounded border — that's the boring look this replaced.
+
+### Unilateral (per-leg) testing (`.forge-trial-legs`, `.forge-leg`, `.forge-trial-asym`)
+
+Single-limb movements (pattern `lower_unilateral`, exposed as
+`ExerciseSerializer.is_unilateral`) are tested **per side**: two `.forge-leg`
+fields labelled Left/Right. Placement uses the **weaker** leg (the min), and
+`.forge-trial-asym` shows an italic Cormorant note when the sides differ ≥20%.
+Each Trial move also shows its recommended rest (`.forge-trial-rest`) — "between
+sides" for unilateral, "before testing" otherwise.
+
+## Exercise catalog & blocking (`.forge-cat-*`)
+
+The **Exercises** tab lists the full catalog grouped by equipment, each move
+block/unblockable. Components (all in `forge.css`, all using cauldron tokens):
+
+| Class | Role |
+|---|---|
+| `.forge-cat-group` | One equipment group; add `.is-unowned` to dim gear the user doesn't own |
+| `.forge-cat-head` | Group heading (Playfair) + optional `.forge-cat-tag` pill |
+| `.forge-cat-row` | One exercise row; add `.is-blocked` (paprika border + strike-through name) |
+| `.forge-cat-sub` | Substitute line (`→ using X`); `.forge-cat-sub--none` when no stand-in exists |
+| `.forge-cat-btn` | Block/Unblock action — reuses `.btn-cauldron.btn-cauldron--ghost` |
+| `.forge-cat-tag` | Small uppercase pill ("not owned", "needs gear") |
+
+Blocked rows always show their substitute (or an explicit "no substitute
+available"). Blocking is the **deliberate server-rendered/API exception** to the
+otherwise card-driven UI — it round-trips through `/cauldron/api/exercises/{uuid}/block|unblock/`.
+
+## About / methodology (`.forge-about-*`, `.forge-refs`)
+
+The **About** tab explains how and why the Forge works, with numbered, linked
+citations. `.forge-about-h3` section headers, `.forge-about-p` body copy,
+superscript `<sup><a>` reference markers, and an ordered `.forge-refs` list with
+paprika external links. Every scientific claim must carry a real, linked
+citation — no uncited assertions.
+
+---
+
 ## Non-negotiables (these extend global rules)
 
 | Rule | Detail |
