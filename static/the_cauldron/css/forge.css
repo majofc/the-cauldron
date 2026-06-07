@@ -259,6 +259,79 @@
 .forge-cat-sub--none { color: var(--cauldron-cream-muted); }
 .forge-cat-btn { padding: .4rem .9rem; font-size: .82rem; white-space: nowrap; }
 
+/* ── Today actions row ────────────────────────────────────────────────── */
+.forge-today-actions {
+  display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.4rem; align-items: center;
+}
+
+/* ── Earphones mode (voice-guided session) overlay ────────────────────── */
+.forge-voice-card {
+  position: relative; width: 100%; max-width: 480px; text-align: center;
+  padding: 2.4rem 1.6rem 1.6rem;
+  animation: forgeRise .35s cubic-bezier(.2,1,.3,1) both;
+}
+.forge-voice-exit {
+  position: absolute; top: .7rem; right: .9rem;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: transparent; border: 1px solid var(--cauldron-paprika-border);
+  color: var(--cauldron-cream-dim); font-size: 1rem; cursor: pointer;
+  transition: color .2s ease, border-color .2s ease;
+}
+.forge-voice-exit:hover { color: var(--cauldron-cream); border-color: var(--cauldron-paprika); }
+.forge-voice-eyebrow {
+  font-family: "Inter", sans-serif; font-size: .72rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--cauldron-paprika-light); margin: 0 0 .8rem;
+}
+.forge-voice-exercise {
+  font-family: "Playfair Display", serif; font-size: 2rem; line-height: 1.1;
+  color: var(--cauldron-cream); margin: 0 0 .4rem;
+}
+.forge-voice-target {
+  font-family: "Cormorant Garamond", serif; font-style: italic; font-size: 1.15rem;
+  color: var(--cauldron-paprika-light); margin: 0 0 1rem; min-height: 1.2em;
+}
+.forge-voice-timer {
+  font-family: "Inter", sans-serif; font-variant-numeric: tabular-nums;
+  font-size: 3.4rem; font-weight: 700; color: var(--cauldron-cream);
+  letter-spacing: .03em; margin: .4rem 0 .8rem;
+  text-shadow: 0 0 18px var(--cauldron-paprika-glow);
+}
+.forge-voice-timer[hidden] { display: none; }
+.forge-voice-instruction {
+  font-family: "Inter", sans-serif; font-size: 1rem; color: var(--cauldron-cream-dim);
+  margin: 0 0 1rem; min-height: 1.3em; line-height: 1.45;
+}
+.forge-voice-mic {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-family: "Inter", sans-serif; font-size: .82rem; color: var(--cauldron-cream-muted);
+  margin-bottom: .5rem;
+}
+.forge-voice-mic[hidden] { display: none; }
+.forge-voice-mic-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--cauldron-paprika); box-shadow: 0 0 0 0 var(--cauldron-paprika-glow);
+  animation: forgeMicPulse 1.4s ease-out infinite;
+}
+@keyframes forgeMicPulse {
+  0%   { box-shadow: 0 0 0 0 var(--cauldron-paprika-glow); opacity: 1; }
+  70%  { box-shadow: 0 0 0 12px transparent; opacity: .6; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+.forge-voice-heard {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  font-size: .95rem; color: var(--cauldron-cream-muted); min-height: 1.3em; margin: 0 0 1rem;
+}
+.forge-voice-controls {
+  display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; align-items: center;
+}
+.forge-voice-controls:empty { display: none; }
+.forge-voice-reps { display: flex; gap: .5rem; align-items: center; }
+.forge-voice-reps .forge-trial-input { width: 96px; font-size: 1.4rem; text-align: center; }
+.forge-voice-help {
+  font-family: "Inter", sans-serif; font-size: .72rem; color: var(--cauldron-cream-muted);
+  margin: 1.4rem 0 0; line-height: 1.5; opacity: .8;
+}
+
 /* ── Results reveal / unlock overlay ──────────────────────────────────── */
 body.forge-overlay-open { overflow: hidden; }
 .forge-overlay {
