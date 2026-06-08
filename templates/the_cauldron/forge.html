@@ -29,6 +29,12 @@
 <li><a href="{% url 'the_cauldron:logout' %}" class="nav-link">Sign out</a></li>
 {% endblock %}
 
+{% block nav_cta %}
+<div class="nav-cta">
+  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">Sign out</a>
+</div>
+{% endblock %}
+
 {% block content %}
 <main class="forge" id="forge-app">
 
@@ -142,7 +148,13 @@
         </div>
       </div>
       <div id="forge-today-list" class="forge-today-list"></div>
-      <button class="btn-cauldron btn-cauldron--primary" id="forge-log-session" hidden>Save session</button>
+      <div class="forge-today-actions">
+        <button class="btn-cauldron btn-cauldron--ghost" id="forge-earphones" hidden
+                title="Hands-free guided workout — listen on your earphones and speak your reps">
+          🎧 Earphones mode
+        </button>
+        <button class="btn-cauldron btn-cauldron--primary" id="forge-log-session" hidden>Save session</button>
+      </div>
     </div>
   </section>
 
@@ -233,6 +245,38 @@
       </div>
       <div class="forge-reveal-body" id="forge-reveal-body"></div>
       <div class="forge-reveal-actions" id="forge-reveal-actions" hidden></div>
+    </div>
+  </div>
+
+  <!-- ── Earphones mode (hands-free voice-guided session) ──── -->
+  <div class="forge-overlay forge-voice" id="forge-voice" hidden role="dialog"
+       aria-modal="true" aria-label="Earphones mode">
+    <div class="cauldron-card forge-voice-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+
+      <button type="button" class="forge-voice-exit" id="forge-voice-exit"
+              aria-label="Exit earphones mode">✕</button>
+
+      <p class="forge-voice-eyebrow" id="forge-voice-progress">🎧 Earphones mode</p>
+      <h2 class="forge-voice-exercise" id="forge-voice-exercise">Getting ready…</h2>
+      <p class="forge-voice-target" id="forge-voice-target"></p>
+
+      <div class="forge-voice-timer" id="forge-voice-timer" hidden aria-live="off">0:00</div>
+
+      <p class="forge-voice-instruction" id="forge-voice-instruction" aria-live="polite"></p>
+
+      <div class="forge-voice-mic" id="forge-voice-mic" hidden>
+        <span class="forge-voice-mic-dot" aria-hidden="true"></span>
+        <span>Listening…</span>
+      </div>
+      <p class="forge-voice-heard" id="forge-voice-heard" aria-live="polite"></p>
+
+      <div class="forge-voice-controls" id="forge-voice-controls"></div>
+
+      <p class="forge-voice-help">
+        Say a number for reps · “start” / “stop” for holds · “repeat” · “skip rest” · “exit”
+      </p>
     </div>
   </div>
 
