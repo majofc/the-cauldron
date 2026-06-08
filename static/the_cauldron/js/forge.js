@@ -564,6 +564,7 @@
       if (!program) {
         $("#forge-today-list").innerHTML = `<p class="forge-help">No program yet — take the Trial.</p>`;
         $("#forge-log-session").hidden = true;
+        $("#forge-earphones").hidden = true;
         return;
       }
       select.innerHTML = program.days
@@ -584,6 +585,7 @@
       currentSession = await api(`today/?day=${dayIndex}`);
       renderToday(currentSession);
       $("#forge-log-session").hidden = false;
+      $("#forge-earphones").hidden = !voiceSupported();
     } catch (e) {
       notify("Couldn't open that day.");
     } finally {
@@ -988,6 +990,437 @@
   if (chimeSel) {
     chimeSel.value = getChime();
     chimeSel.addEventListener("change", () => { setChime(chimeSel.value); playChime(chimeSel.value); });
+  }
+
+  // ── Earphones mode — hands-free, voice-guided Today session ─────────────────
+  // Speaks each set (exercise, target, rest) via the Web Speech API and listens
+  // for the user's reps / "start"-"stop" / "skip" / "exit". Pure client layer
+  // over the existing Today data + the existing sessions/<uuid>/log/ endpoint.
+  // Recognition is Chromium-only; everything degrades to on-screen buttons.
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function voiceSupported() {
+    return !!(window.speechSynthesis && SR);
+  }
+
+  const voice = {
+    active: false,
+    steps: [],       // flattened, ordered set descriptors for the session
+    idx: 0,
+    collected: {},   // set uuid -> { actual_reps, actual_load }
+    state: "idle",   // ready_timed | timing | awaiting_reps | resting | done
+    recog: null,
+    wantListen: false,
+    swId: null,      // count-up stopwatch (timed holds)
+    restId: null,    // rest countdown
+    elapsed: 0,
+    lastAnnounce: "",
+    ttsVoice: null,
+  };
+
+  const NUM_WORDS = {
+    zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+    eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+    fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18,
+    nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+    seventy: 70, eighty: 80, ninety: 90,
+  };
+  function wordsToNumber(text) {
+    const tokens = String(text).toLowerCase().replace(/[-,]/g, " ").split(/\s+/);
+    let total = null;
+    for (const tok of tokens) {
+      if (Object.prototype.hasOwnProperty.call(NUM_WORDS, tok)) {
+        total = (total || 0) + NUM_WORDS[tok];
+      }
+    }
+    return total;
+  }
+  function parseReps(alts) {
+    for (const a of alts) {
+      const m = String(a).match(/\d+/);
+      if (m) { const n = parseInt(m[0], 10); if (n >= 0 && n <= 999) return n; }
+      const w = wordsToNumber(a);
+      if (w != null) return w;
+    }
+    return null;
+  }
+
+  // ── DOM helpers ──
+  const vEl = (name) => $("#forge-voice-" + name);
+  const setProgress = (t) => { vEl("progress").textContent = t; };
+  const setExercise = (t) => { vEl("exercise").textContent = t; };
+  const setTarget = (t) => { vEl("target").textContent = t || ""; };
+  const setInstruction = (t) => { vEl("instruction").textContent = t || ""; };
+  const showMic = (on) => { vEl("mic").hidden = !on; };
+  function showTimer(on) { vEl("timer").hidden = !on; }
+  function updateTimer(sec) {
+    const m = Math.floor(sec / 60), s = sec % 60;
+    vEl("timer").textContent = `${m}:${String(s).padStart(2, "0")}`;
+  }
+  function setControls(buttons) {
+    vEl("controls").innerHTML = buttons
+      .map((b) =>
+        `<button type="button" class="btn-cauldron ` +
+        `${b.act === "exit" || b.act === "skipset" || b.act === "skiprest" ? "btn-cauldron--ghost" : "btn-cauldron--primary"} ` +
+        `forge-voice-cmd" data-act="${b.act}">${b.label}</button>`)
+      .join("");
+  }
+  function setRepsControls() {
+    vEl("controls").innerHTML =
+      `<div class="forge-voice-reps">` +
+      `<input type="number" min="0" id="forge-voice-reps-input" class="forge-trial-input" placeholder="reps" inputmode="numeric">` +
+      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-voice-cmd" data-act="logreps">Log</button>` +
+      `</div>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="skipset">Skip</button>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="exit">Exit</button>`;
+  }
+
+  // ── Speech (TTS) ──
+  function pickVoice() {
+    if (!window.speechSynthesis) return;
+    const choose = () => {
+      const vs = window.speechSynthesis.getVoices();
+      voice.ttsVoice =
+        vs.find((v) => /en[-_]US/i.test(v.lang)) ||
+        vs.find((v) => /^en/i.test(v.lang)) || null;
+    };
+    choose();
+    if (!voice.ttsVoice) window.speechSynthesis.onvoiceschanged = choose;
+  }
+  function speak(text) {
+    return new Promise((resolve) => {
+      if (!window.speechSynthesis) return resolve();
+      stopListening(); // don't let the mic hear our own voice
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "en-US";
+        u.rate = 1.0;
+        if (voice.ttsVoice) u.voice = voice.ttsVoice;
+        u.onend = resolve;
+        u.onerror = resolve;
+        window.speechSynthesis.speak(u);
+      } catch (e) { resolve(); }
+    });
+  }
+
+  // ── Speech recognition (STT) ──
+  function startListening() {
+    if (!SR || !voice.active) return;
+    voice.wantListen = true;
+    if (voice.recog) return;
+    const r = new SR();
+    r.lang = "en-US";
+    r.continuous = true;
+    r.interimResults = false;
+    r.maxAlternatives = 4;
+    r.onresult = (ev) => {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        const res = ev.results[i];
+        if (res.isFinal) handleHeard(Array.from(res).map((a) => a.transcript));
+      }
+    };
+    r.onerror = (ev) => {
+      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+        voice.wantListen = false;
+        micDenied();
+      }
+    };
+    r.onend = () => {
+      voice.recog = null;
+      if (voice.active && voice.wantListen) setTimeout(startListening, 250);
+    };
+    try { r.start(); voice.recog = r; showMic(true); }
+    catch (e) { /* start() throws if already running — ignore */ }
+  }
+  function stopListening() {
+    voice.wantListen = false;
+    showMic(false);
+    if (voice.recog) {
+      try { voice.recog.onend = null; voice.recog.stop(); } catch (e) { /* noop */ }
+      voice.recog = null;
+    }
+  }
+  function micDenied() {
+    showMic(false);
+    setInstruction("Microphone blocked — use the on-screen buttons (allow the mic and reopen for voice).");
+    notify("Mic permission denied — voice off. Use the buttons.");
+  }
+
+  // ── Command routing ──
+  function handleHeard(alts) {
+    const primary = (alts[0] || "").trim();
+    vEl("heard").textContent = primary ? "“" + primary + "”" : "";
+    const t = alts.join(" • ").toLowerCase();
+
+    if (/\b(exit|quit|cancel|close|abort)\b/.test(t)) return command("exit");
+    if (/\b(repeat|again|pardon)\b/.test(t)) return command("repeat");
+
+    switch (voice.state) {
+      case "ready_timed":
+        if (/\b(start|begin|go|ready|now)\b/.test(t)) return command("start");
+        break;
+      case "timing":
+        if (/\b(stop|done|finished|finish|end)\b/.test(t)) return command("stop");
+        break;
+      case "awaiting_reps": {
+        const n = parseReps(alts);
+        if (n != null) return command("reps", n);
+        if (/\b(none|nothing|skip)\b/.test(t)) return command("skipset");
+        break;
+      }
+      case "resting":
+        if (/\b(skip|next|ready|continue|go|done)\b/.test(t)) return command("skiprest");
+        break;
+    }
+  }
+  function command(act, arg) {
+    switch (act) {
+      case "exit": return exitVoice();
+      case "repeat": return reAnnounce();
+      case "start": if (voice.state === "ready_timed") beginHold(); return;
+      case "stop": if (voice.state === "timing") endHold(); return;
+      case "reps": if (voice.state === "awaiting_reps") recordReps(arg); return;
+      case "logreps": {
+        const el = $("#forge-voice-reps-input");
+        const v = el ? parseInt(el.value, 10) : NaN;
+        if (!isNaN(v) && voice.state === "awaiting_reps") recordReps(v);
+        return;
+      }
+      case "skipset":
+        if (voice.state === "awaiting_reps" || voice.state === "ready_timed") afterSet();
+        return;
+      case "skiprest": if (voice.state === "resting") skipRest(); return;
+    }
+  }
+
+  // ── Flow ──
+  function buildSteps(session) {
+    const logs = session.set_logs || [];
+    const totals = {};
+    logs.forEach((s) => { totals[s.exercise_name] = (totals[s.exercise_name] || 0) + 1; });
+    const seen = {};
+    return logs.map((s) => {
+      seen[s.exercise_name] = (seen[s.exercise_name] || 0) + 1;
+      return {
+        uuid: s.uuid,
+        exerciseName: s.exercise_name,
+        isTimed: !!s.is_timed,
+        isAmrap: !!s.is_amrap,
+        targetReps: s.expected_reps,
+        expectedLoad: s.expected_load,
+        restSeconds: s.rest_seconds || 0,
+        cues: s.cues || "",
+        setNumber: seen[s.exercise_name],
+        totalSets: totals[s.exercise_name],
+      };
+    });
+  }
+
+  async function announceStep(i) {
+    if (!voice.active) return; // a late .then() after exit must not revive the UI
+    voice.idx = i;
+    if (i >= voice.steps.length) return finishVoice();
+    const s = voice.steps[i];
+    voice.state = s.isTimed ? "ready_timed" : "awaiting_reps";
+    setProgress(`Set ${s.setNumber} of ${s.totalSets}${s.isAmrap && !s.isTimed ? " · AMRAP" : ""}`);
+    setExercise(s.exerciseName);
+    const unit = s.isTimed ? "seconds" : "reps";
+    const loadStr = s.expectedLoad != null ? ` at ${s.expectedLoad}` : "";
+    setTarget(
+      s.isTimed
+        ? (s.isAmrap ? "Hold as long as you can" : `Target hold ${s.targetReps} seconds`)
+        : s.isAmrap
+        ? `As many reps as possible (target ${s.targetReps}+)`
+        : `Target ${s.targetReps}${loadStr} ${unit}`
+    );
+
+    let say = `${s.exerciseName}. Set ${s.setNumber} of ${s.totalSets}. `;
+    if (s.isTimed) {
+      say += s.isAmrap
+        ? "Hold as long as you can. Say start when you're ready."
+        : `Target hold, ${s.targetReps} seconds. Say start when you're ready.`;
+    } else if (s.isAmrap) {
+      say += "As many reps as you can. Say your reps when you're done.";
+    } else {
+      say += `Target ${s.targetReps} reps${loadStr}. Say your reps when you're done.`;
+    }
+    if (s.setNumber === 1 && s.cues) say += ` ${s.cues}`;
+    voice.lastAnnounce = say;
+
+    if (s.isTimed) {
+      setInstruction("Say “start” to begin the hold.");
+      setControls([
+        { label: "▶ Start", act: "start" },
+        { label: "Skip", act: "skipset" },
+        { label: "Exit", act: "exit" },
+      ]);
+    } else {
+      setInstruction("Do your set, then say your reps (a number).");
+      setRepsControls();
+    }
+    await speak(say);
+    startListening();
+  }
+
+  function reAnnounce() {
+    const txt =
+      voice.state === "resting" ? "Still resting. Say skip to go now."
+      : voice.state === "timing" ? `Holding. ${voice.elapsed} seconds so far. Say stop when done.`
+      : voice.lastAnnounce;
+    if (txt) speak(txt).then(startListening);
+  }
+
+  function beginHold() {
+    voice.state = "timing";
+    voice.elapsed = 0;
+    showTimer(true); updateTimer(0);
+    setInstruction("Holding… say “stop” when you're done.");
+    setControls([{ label: "■ Stop", act: "stop" }, { label: "Exit", act: "exit" }]);
+    voice.swId = setInterval(() => { voice.elapsed++; updateTimer(voice.elapsed); }, 1000);
+    speak("Go.").then(startListening);
+  }
+  function endHold() {
+    if (voice.state !== "timing") return; // ignore a duplicate "stop"
+    voice.state = "busy";                 // block re-entry during the spoken ack
+    if (voice.swId) { clearInterval(voice.swId); voice.swId = null; }
+    showTimer(false);
+    const secs = voice.elapsed;
+    recordValue(secs);
+    speak(`Recorded ${secs} seconds.`).then(afterSet);
+  }
+
+  function recordReps(n) {
+    if (voice.state !== "awaiting_reps") return; // ignore a duplicate number
+    voice.state = "busy";                        // block re-entry during the ack
+    recordValue(n);
+    speak(`Logged ${n} ${n === 1 ? "rep" : "reps"}.`).then(afterSet);
+  }
+  function recordValue(v) {
+    const step = voice.steps[voice.idx];
+    voice.collected[step.uuid] = { actual_reps: v, actual_load: step.expectedLoad };
+    // Mirror into the Today input so a manual Save still works if they exit.
+    const inp = $(`.forge-actual[data-uuid="${step.uuid}"]`);
+    if (inp) inp.value = v;
+  }
+
+  function afterSet() {
+    if (!voice.active) return;
+    const nextI = voice.idx + 1;
+    if (nextI >= voice.steps.length) return finishVoice();
+    const rest = voice.steps[voice.idx].restSeconds || 0;
+    if (rest > 0) beginRest(rest, nextI);
+    else announceStep(nextI);
+  }
+  function beginRest(total, nextI) {
+    voice.state = "resting";
+    let remaining = total;
+    setProgress("Recover");
+    setExercise("Rest");
+    setTarget("");
+    showTimer(true); updateTimer(remaining);
+    setInstruction(`Rest ${fmtRest(total)} — say “skip” to go now.`);
+    setControls([{ label: "⏭ Skip rest", act: "skiprest" }, { label: "Exit", act: "exit" }]);
+    voice.restId = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(voice.restId); voice.restId = null;
+        showTimer(false);
+        playChime(getChime());
+        speak("Rest over.").then(() => announceStep(nextI));
+        return;
+      }
+      updateTimer(remaining);
+    }, 1000);
+    speak(`Rest for ${total} seconds.`).then(startListening);
+  }
+  function skipRest() {
+    if (voice.restId) { clearInterval(voice.restId); voice.restId = null; }
+    showTimer(false);
+    announceStep(voice.idx + 1);
+  }
+
+  async function finishVoice() {
+    if (voice.state === "done") return; // guard against a double-advance double-POST
+    voice.state = "done";
+    stopListening();
+    showTimer(false);
+    setProgress("Done");
+    setExercise("Workout complete");
+    setTarget("");
+    setControls([]);
+    vEl("heard").textContent = "";
+    const sets = voice.collected;
+    if (!Object.keys(sets).length) {
+      setInstruction("No sets logged.");
+      await speak("No sets were logged. Exiting earphones mode.");
+      return closeVoice();
+    }
+    setInstruction("Saving your session…");
+    await speak("Workout complete. Saving your session.");
+    try {
+      const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
+      closeVoice();
+      $("#forge-log-session").hidden = true;
+      $("#forge-earphones").hidden = true;
+      const unlocks = (res.progression || []).filter((d) => d.unlock).map((d) => d.unlock);
+      await showResults({ peer: res.peer || [], unlocks, title: "Session forged" });
+    } catch (e) {
+      notify("Couldn't save the session.");
+      setInstruction("Couldn't save — your reps are still on the Today screen.");
+      closeVoice();
+    }
+  }
+
+  function exitVoice() {
+    if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+    speak("Exiting earphones mode.");
+    closeVoice();
+    notify("Earphones mode closed. Your logged reps are on the Today screen — tap Save session to keep them.");
+  }
+  function closeVoice() {
+    voice.active = false;
+    stopListening();
+    if (voice.swId) { clearInterval(voice.swId); voice.swId = null; }
+    if (voice.restId) { clearInterval(voice.restId); voice.restId = null; }
+    if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+    $("#forge-voice").hidden = true;
+    document.body.classList.remove("forge-overlay-open");
+  }
+
+  async function startVoice() {
+    if (!voiceSupported()) { notify("Earphones mode needs Chrome or Edge."); return; }
+    if (!currentSession) { notify("Open a day first."); return; }
+    const steps = buildSteps(currentSession);
+    if (!steps.length) { notify("Nothing scheduled today."); return; }
+    voice.steps = steps; voice.idx = 0; voice.collected = {}; voice.active = true;
+    pickVoice();
+    try { audioCtx().resume(); } catch (e) { /* gesture unlock */ }
+    setProgress("🎧 Earphones mode");
+    setExercise("Getting ready…");
+    setTarget(""); setInstruction(""); setControls([]);
+    vEl("heard").textContent = "";
+    $("#forge-voice").hidden = false;
+    document.body.classList.add("forge-overlay-open");
+    await speak("Earphones mode on. Let's forge.");
+    announceStep(0);
+  }
+
+  const earBtn = $("#forge-earphones");
+  if (earBtn) earBtn.addEventListener("click", startVoice);
+  const exitBtn = $("#forge-voice-exit");
+  if (exitBtn) exitBtn.addEventListener("click", () => command("exit"));
+  const voiceControls = $("#forge-voice-controls");
+  if (voiceControls) {
+    voiceControls.addEventListener("click", (e) => {
+      const b = e.target.closest(".forge-voice-cmd");
+      if (b) command(b.dataset.act);
+    });
+    // Enter in the reps fallback input logs the value.
+    voiceControls.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.id === "forge-voice-reps-input") {
+        e.preventDefault(); command("logreps");
+      }
+    });
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────--
