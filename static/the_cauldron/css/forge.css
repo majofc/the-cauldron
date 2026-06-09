@@ -301,6 +301,30 @@
   font-family: "Inter", sans-serif; font-size: 1rem; color: var(--cauldron-cream-dim);
   margin: 0 0 1rem; min-height: 1.3em; line-height: 1.45;
 }
+/* Voice-input mic toggle — discreet corner button (mirrors the exit button).
+   Muted (default): dim, slashed mic, no beep. Active: paprika mic, ember glow. */
+.forge-voice-mictoggle {
+  position: absolute; top: .7rem; left: .9rem;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid var(--cauldron-paprika-border);
+  color: var(--cauldron-cream-muted); cursor: pointer;
+  transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.forge-voice-mictoggle svg { width: 17px; height: 17px; }
+.forge-voice-mictoggle:hover { color: var(--cauldron-cream); border-color: var(--cauldron-paprika); }
+.forge-voice-mictoggle:focus-visible { outline: 2px solid var(--cauldron-paprika); outline-offset: 2px; }
+/* Slash is visible only when muted. */
+.forge-voice-mictoggle .forge-mic-slash { opacity: 1; transition: opacity .2s ease; }
+.forge-voice-mictoggle:not(.is-muted) .forge-mic-slash { opacity: 0; }
+/* Active (listening enabled) state. */
+.forge-voice-mictoggle:not(.is-muted) {
+  color: var(--cauldron-paprika-light);
+  border-color: var(--cauldron-paprika);
+  background: var(--cauldron-paprika-glow);
+  box-shadow: var(--cauldron-shadow-ember);
+}
+
 .forge-voice-mic {
   display: inline-flex; align-items: center; gap: .5rem;
   font-family: "Inter", sans-serif; font-size: .82rem; color: var(--cauldron-cream-muted);

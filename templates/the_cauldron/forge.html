@@ -255,6 +255,19 @@
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
 
+      <button type="button" class="forge-voice-mictoggle is-muted" id="forge-voice-mictoggle"
+              aria-pressed="false"
+              title="Voice input off — tap to enable hands-free commands (your browser beeps while listening)"
+              aria-label="Voice input off — tap to enable hands-free voice commands">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="2.5" width="6" height="11" rx="3"/>
+          <path d="M5 11a7 7 0 0 0 14 0"/>
+          <line x1="12" y1="18" x2="12" y2="21.5"/>
+          <line class="forge-mic-slash" x1="4" y1="3.5" x2="20" y2="20.5"/>
+        </svg>
+      </button>
+
       <button type="button" class="forge-voice-exit" id="forge-voice-exit"
               aria-label="Exit earphones mode">✕</button>
 
@@ -275,7 +288,8 @@
       <div class="forge-voice-controls" id="forge-voice-controls"></div>
 
       <p class="forge-voice-help">
-        Say a number for reps · “start” / “stop” for holds · “repeat” · “skip rest” · “exit”
+        Guidance is spoken through your earphones — tap the buttons to log each set.
+        Tap the mic (top-left) for hands-free voice commands; your browser beeps while listening.
       </p>
     </div>
   </div>
