@@ -1002,6 +1002,15 @@
     return !!(window.speechSynthesis && SR);
   }
 
+  // Voice INPUT (microphone) is opt-in and OFF by default: the browser's speech
+  // recognition plays a "ding" earcon every time it starts listening, and it
+  // restarts on each silence timeout (rest, between reps) — a constant beep on
+  // earphones. Off → spoken guidance still plays, the user taps to log.
+  function voiceInputEnabled() { return localStorage.getItem("forge-voice-input") === "on"; }
+  function setVoiceInputEnabled(on) { localStorage.setItem("forge-voice-input", on ? "on" : "off"); }
+  // Phrase prompts for the active mode: spoken commands vs. on-screen buttons.
+  function micCue(sayPhrase, tapPhrase) { return voiceInputEnabled() ? sayPhrase : tapPhrase; }
+
   const voice = {
     active: false,
     steps: [],       // flattened, ordered set descriptors for the session
@@ -1106,6 +1115,8 @@
   // ── Speech recognition (STT) ──
   function startListening() {
     if (!SR || !voice.active) return;
+    // Mic off → never arm recognition, so the browser never beeps.
+    if (!voiceInputEnabled()) { voice.wantListen = false; showMic(false); return; }
     voice.wantListen = true;
     if (voice.recog) return;
     const r = new SR();
@@ -1234,28 +1245,30 @@
         : `Target ${s.targetReps}${loadStr} ${unit}`
     );
 
+    const startHint = micCue("Say start when you're ready.", "Tap start when you're ready.");
+    const repsHint = micCue("Say your reps when you're done.", "Tap your reps when you're done.");
     let say = `${s.exerciseName}. Set ${s.setNumber} of ${s.totalSets}. `;
     if (s.isTimed) {
       say += s.isAmrap
-        ? "Hold as long as you can. Say start when you're ready."
-        : `Target hold, ${s.targetReps} seconds. Say start when you're ready.`;
+        ? `Hold as long as you can. ${startHint}`
+        : `Target hold, ${s.targetReps} seconds. ${startHint}`;
     } else if (s.isAmrap) {
-      say += "As many reps as you can. Say your reps when you're done.";
+      say += `As many reps as you can. ${repsHint}`;
     } else {
-      say += `Target ${s.targetReps} reps${loadStr}. Say your reps when you're done.`;
+      say += `Target ${s.targetReps} reps${loadStr}. ${repsHint}`;
     }
     if (s.setNumber === 1 && s.cues) say += ` ${s.cues}`;
     voice.lastAnnounce = say;
 
     if (s.isTimed) {
-      setInstruction("Say “start” to begin the hold.");
+      setInstruction(micCue("Say “start” to begin the hold.", "Tap Start to begin the hold."));
       setControls([
         { label: "▶ Start", act: "start" },
         { label: "Skip", act: "skipset" },
         { label: "Exit", act: "exit" },
       ]);
     } else {
-      setInstruction("Do your set, then say your reps (a number).");
+      setInstruction(micCue("Do your set, then say your reps (a number).", "Do your set, then tap your reps below."));
       setRepsControls();
     }
     await speak(say);
@@ -1270,11 +1283,22 @@
     if (txt) speak(txt).then(startListening);
   }
 
+  // Re-label the current step's on-screen instruction for the active input mode
+  // (used when the user flips the Voice input toggle mid-session).
+  function refreshVoiceInstruction() {
+    switch (voice.state) {
+      case "ready_timed":   setInstruction(micCue("Say “start” to begin the hold.", "Tap Start to begin the hold.")); break;
+      case "timing":        setInstruction(micCue("Holding… say “stop” when you're done.", "Holding… tap Stop when you're done.")); break;
+      case "awaiting_reps": setInstruction(micCue("Do your set, then say your reps (a number).", "Do your set, then tap your reps below.")); break;
+      case "resting":       setInstruction(micCue("Resting — say “skip” to go now.", "Resting — tap Skip to go now.")); break;
+    }
+  }
+
   function beginHold() {
     voice.state = "timing";
     voice.elapsed = 0;
     showTimer(true); updateTimer(0);
-    setInstruction("Holding… say “stop” when you're done.");
+    setInstruction(micCue("Holding… say “stop” when you're done.", "Holding… tap Stop when you're done."));
     setControls([{ label: "■ Stop", act: "stop" }, { label: "Exit", act: "exit" }]);
     voice.swId = setInterval(() => { voice.elapsed++; updateTimer(voice.elapsed); }, 1000);
     speak("Go.").then(startListening);
@@ -1318,7 +1342,7 @@
     setExercise("Rest");
     setTarget("");
     showTimer(true); updateTimer(remaining);
-    setInstruction(`Rest ${fmtRest(total)} — say “skip” to go now.`);
+    setInstruction(micCue(`Rest ${fmtRest(total)} — say “skip” to go now.`, `Rest ${fmtRest(total)} — tap Skip to go now.`));
     setControls([{ label: "⏭ Skip rest", act: "skiprest" }, { label: "Exit", act: "exit" }]);
     voice.restId = setInterval(() => {
       remaining--;
@@ -1407,6 +1431,35 @@
 
   const earBtn = $("#forge-earphones");
   if (earBtn) earBtn.addEventListener("click", startVoice);
+  // Discreet corner mic button: reflects + flips the voice-input preference.
+  const micToggle = $("#forge-voice-mictoggle");
+  function syncMicToggle() {
+    if (!micToggle) return;
+    const on = voiceInputEnabled();
+    micToggle.classList.toggle("is-muted", !on);
+    micToggle.setAttribute("aria-pressed", on ? "true" : "false");
+    const msg = on
+      ? "Voice input on — tap to mute (stops the listening beep)"
+      : "Voice input off — tap to enable hands-free commands (your browser beeps while listening)";
+    micToggle.title = msg;
+    micToggle.setAttribute("aria-label", msg);
+  }
+  if (micToggle) {
+    syncMicToggle();
+    micToggle.addEventListener("click", () => {
+      const on = !voiceInputEnabled();
+      setVoiceInputEnabled(on);
+      syncMicToggle();
+      if (!voice.active) return;
+      // Apply immediately to the in-progress session.
+      if (on) {
+        if (["ready_timed", "timing", "awaiting_reps", "resting"].indexOf(voice.state) !== -1) startListening();
+      } else {
+        stopListening();
+      }
+      refreshVoiceInstruction();
+    });
+  }
   const exitBtn = $("#forge-voice-exit");
   if (exitBtn) exitBtn.addEventListener("click", () => command("exit"));
   const voiceControls = $("#forge-voice-controls");
