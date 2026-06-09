@@ -12,6 +12,7 @@
 {% block app_styles %}
 <link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/forge-showcase.css' %}">
 {% endblock %}
 
 {% block nav_brand %}
@@ -223,6 +224,303 @@
   </section>
 
   <!-- ═══════════════════════════════════════
+       THE FORGE — adaptive calisthenics showcase
+  ═══════════════════════════════════════ -->
+  <hr class="fshow-seam" aria-hidden="true">
+
+  <section class="fshow" id="forge" aria-label="The Forge">
+
+    <div class="fshow-head">
+      <span class="fshow-eyebrow">The Practice · The Forge</span>
+      <h2 class="fshow-title">Temper the body like the blade</h2>
+      <p class="fshow-lead">
+        The cauldron tempers the recipe; <strong>the Forge tempers you</strong>.
+        It is an adaptive calisthenics trainer that learns your true strength,
+        then reshapes a program around it — bodyweight first, equipment when you
+        have it. No guesswork, no fixed plan that ignores how you actually moved
+        today. You train, the Forge listens, the difficulty answers.
+      </p>
+    </div>
+
+    <!-- How it works: Trial → Ladder → Adapt -->
+    <div class="fshow-flow">
+      <div class="fshow-flow-step">
+        <span class="fshow-flow-num">I</span>
+        <div class="fshow-flow-title">The Trial</div>
+        <p class="fshow-flow-text">
+          One honest all-out set per movement. We measure what you can do —
+          objectively — not what you guess you have left.
+        </p>
+      </div>
+      <span class="fshow-flow-arrow" aria-hidden="true">→</span>
+      <div class="fshow-flow-step">
+        <span class="fshow-flow-num">II</span>
+        <div class="fshow-flow-title">Your Rung</div>
+        <p class="fshow-flow-text">
+          Your score places you on the right rung of each movement ladder —
+          and builds a program from where you truly stand.
+        </p>
+      </div>
+      <span class="fshow-flow-arrow" aria-hidden="true">→</span>
+      <div class="fshow-flow-step">
+        <span class="fshow-flow-num">III</span>
+        <div class="fshow-flow-title">It Adapts</div>
+        <p class="fshow-flow-text">
+          Every session ends in a test set. Beat it and you climb; fall short
+          and it eases off. The plan rewrites itself around you.
+        </p>
+      </div>
+    </div>
+
+    <!-- Animated demos -->
+    <p class="fshow-subhead">Live from the Forge</p>
+    <div class="fshow-demos">
+
+      <article class="fshow-demo">
+        <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+        <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+        <div class="fshow-demo-stage">
+          <div class="fshow-amrap" aria-hidden="true">
+            <span class="fshow-amrap-label">AMRAP · Push-up</span>
+            <span class="fshow-amrap-num"></span>
+            <span class="fshow-amrap-unit">reps to failure</span>
+          </div>
+        </div>
+        <h3 class="fshow-demo-title">An objective Trial</h3>
+        <p class="fshow-demo-text">
+          One max-effort set counts your real reps — novices misjudge “reps in
+          reserve” by 4–5, so the Forge measures instead of asking.
+        </p>
+      </article>
+
+      <article class="fshow-demo">
+        <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+        <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+        <div class="fshow-demo-stage">
+          <div class="fshow-ladder" aria-hidden="true">
+            <div class="fshow-rung fshow-rung--1">Knee Push-up</div>
+            <div class="fshow-rung fshow-rung--2">Push-up</div>
+            <div class="fshow-rung fshow-rung--3">Diamond Push-up</div>
+            <span class="fshow-burst">🔨✨🔥</span>
+          </div>
+        </div>
+        <h3 class="fshow-demo-title">Earn the climb</h3>
+        <p class="fshow-demo-text">
+          Hold the top of your rep range and the next, harder rung unlocks —
+          a celebration you choose to claim, never an automatic jump.
+        </p>
+      </article>
+
+      <article class="fshow-demo">
+        <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+        <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+        <div class="fshow-demo-stage">
+          <div class="fshow-fires" aria-hidden="true">
+            <span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span>
+            <span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span>
+            <span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span><span class="fshow-fire">🔥</span>
+            <span class="fshow-fire">🔥</span>
+          </div>
+        </div>
+        <h3 class="fshow-demo-title">See where you stand</h3>
+        <p class="fshow-demo-text">
+          Your Trial score lights up to ten “fires” against published age- and
+          sex-matched norms — and we tell you when a number is only an estimate.
+        </p>
+      </article>
+    </div>
+
+    <!-- Skill tree -->
+    <p class="fshow-subhead">The skill tree</p>
+    <p class="fshow-tree-intro">
+      Six fundamental movement patterns, each a ladder of exercises that
+      <em>evolve</em> from your first rep to feats of mastery. You start where
+      the Trial places you and climb one rung at a time — branching onto the
+      loaded path whenever you bring equipment. Hover a node for its cue, or tap
+      <span aria-hidden="true">▶</span> to watch a pattern evolve.
+    </p>
+
+    <div class="fshow-tree-legend" aria-hidden="true">
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--bw"></span> Bodyweight rung</span>
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--gear"></span> Needs equipment</span>
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--master"></span> Mastery</span>
+    </div>
+
+    <div class="fshow-tree" id="fshow-tree">
+      <noscript>
+        <p class="fshow-tree-intro">
+          The interactive skill tree needs JavaScript. The six ladders are:
+          Horizontal Push (Wall Push-up → Archer Push-up), Vertical Pull
+          (Australian Row → Archer Pull-up), Vertical Push (Incline Pike Push-up
+          → Handstand Push-up), Lower Unilateral (Assisted Split Squat → Pistol
+          Squat), Core Anti-Extension (Knee Plank → Hollow Body Hold), and Hinge
+          (Glute Bridge → Nordic Curl) — each with loaded variants for owned
+          equipment.
+        </p>
+      </noscript>
+    </div>
+
+    <div class="cauldron-hero-cta" style="justify-content:center; margin-top:2rem;">
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Forge →</a>
+    </div>
+  </section>
+
+  <!-- How difficulty increases -->
+  <div class="fshow-how">
+    <div class="fshow-how-inner">
+      <div class="fshow-head" style="margin-bottom:0;">
+        <span class="fshow-eyebrow">The Method</span>
+        <h2 class="fshow-title">How the difficulty rises</h2>
+        <p class="fshow-lead">
+          The Forge runs an <strong>autoregulated double-progression</strong>
+          engine (APRE-style): the last working set of every exercise is an
+          all-out test, and its result decides your next session. Two levers
+          turn — climb the ladder, or add load — and the engine picks the right
+          one for the movement and the gear you own.
+        </p>
+      </div>
+
+      <div class="fshow-how-grid">
+        <article class="fshow-how-card">
+          <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+          <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+          <p class="fshow-how-kicker">Lever 1 — Difficulty</p>
+          <h3 class="fshow-how-title">Climb the movement ladder</h3>
+          <p class="fshow-how-text">
+            For pure bodyweight work, harder <em>is</em> the progression. Hit the
+            top of your rep range for <strong>two sessions running</strong> and
+            the next rung is earned.
+          </p>
+          <p class="fshow-how-text">
+            But it never jumps for you: the unlock is <strong>parked as a
+            celebration</strong> you Claim or hold. Fall below the range and the
+            Forge regresses you a rung to rebuild — no grinding reps you can't
+            do with form.
+          </p>
+        </article>
+
+        <article class="fshow-how-card">
+          <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+          <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+          <p class="fshow-how-kicker">Lever 2 — Load</p>
+          <h3 class="fshow-how-title">Add the smallest real increment</h3>
+          <p class="fshow-how-text">
+            When you own loadable gear — dumbbells, a barbell, bands — the Forge
+            switches to <strong>load progression</strong>: beat the top of the
+            range and it adds the smallest weight you actually have, then resets
+            your reps.
+          </p>
+          <p class="fshow-how-text">
+            This solves the hardest problem in bodyweight training — overloading
+            the legs and hips — and de-loads automatically when a set comes up
+            short.
+          </p>
+        </article>
+
+        <article class="fshow-how-card">
+          <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+          <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+          <p class="fshow-how-kicker">Measured, not guessed</p>
+          <h3 class="fshow-how-title">Objective from the first rep</h3>
+          <p class="fshow-how-text">
+            Both levers are driven by a real AMRAP count, not a subjective
+            “how hard was that?” Beginners misjudge proximity to failure by
+            <strong>4–5 reps</strong>, so the Forge measures the number and
+            adapts from fact.
+          </p>
+          <p class="fshow-how-text">
+            Blocked a move for injury or preference? It's swapped for the closest
+            equal-or-easier substitute in the same pattern — the ladder bends
+            around you.
+          </p>
+        </article>
+
+        <article class="fshow-how-card">
+          <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+          <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+          <p class="fshow-how-kicker">Recovery, dialled in</p>
+          <h3 class="fshow-how-title">Rest matched to the work</h3>
+          <p class="fshow-how-text">
+            Rest isn't an afterthought. Heavy, low-rep and loaded compounds get
+            <strong>~2½ minutes</strong>; hypertrophy ranges ~2; endurance sets
+            ~75 seconds; isometric holds ~60 — each grounded in the training
+            literature.
+          </p>
+          <p class="fshow-how-text">
+            The result: progress you can sustain, on a schedule your body can
+            actually recover from.
+          </p>
+        </article>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sources -->
+  <section class="fshow-sources" aria-label="Sources">
+    <p class="fshow-subhead">The evidence</p>
+    <p class="fshow-sources-note">
+      The Forge's peer scoring and methods are sourced — and honest about
+      confidence. Where no published age×sex benchmark exists, the figure is
+      flagged <em>estimated</em> in the app and here, never passed off as
+      measured data.
+    </p>
+    <ol class="fshow-refs">
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">1</span>
+        <span>Push-up percentiles — CSEP-PATH, Payne et al. (2000). Real age×sex
+          norms (female norms use the modified knee push-up).
+          <a href="https://fitnessnorms.com/strength/push-ups/" target="_blank" rel="noopener">fitnessnorms.com</a>
+        </span>
+      </li>
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">2</span>
+        <span>Plank-hold norms — Chase/Brigham et al., <em>IJES</em> (collegiate
+          18–25); brackets 30+ extrapolated.<span class="fshow-ref-est">est. 30+</span>
+          <a href="https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/" target="_blank" rel="noopener">digitalcommons.wku.edu</a>
+        </span>
+      </li>
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">3</span>
+        <span>Pull-up categories — Topend Sports adult standards (18–35, men).
+          <a href="https://www.topendsports.com/testing/tests/pullup.htm" target="_blank" rel="noopener">topendsports.com</a>
+        </span>
+      </li>
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">4</span>
+        <span>Inverted-row, pike-push-up, glute-bridge &amp; bodyweight-squat rep
+          standards — Strength Level community data (hundreds of thousands of
+          logged sets; ages 40+ modelled).<span class="fshow-ref-est">est. 40+</span>
+          <a href="https://strengthlevel.com/strength-standards" target="_blank" rel="noopener">strengthlevel.com</a>
+        </span>
+      </li>
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">5</span>
+        <span>Rest-interval prescription — Schoenfeld et al. (2016) &amp; Grgic
+          et al. (2017) review on inter-set rest for strength &amp; hypertrophy.
+          <a href="https://pubmed.ncbi.nlm.nih.gov/27038416/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>
+        </span>
+      </li>
+      <li class="fshow-ref">
+        <span class="fshow-ref-num">6</span>
+        <span>Progression model — Autoregulated Progressive Resistance Exercise
+          (APRE): the test-set result sets the next prescription.
+          <a href="https://pubmed.ncbi.nlm.nih.gov/21993042/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>
+        </span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- Forge closing CTA -->
+  <section class="fshow-cta" aria-label="Enter the Forge">
+    <h2 class="fshow-cta-title">The anvil is hot</h2>
+    <p class="fshow-cta-sub">Take the Trial. Find your rung. Start climbing.</p>
+    <div class="cauldron-hero-cta" style="justify-content:center;">
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Forge →</a>
+      <a href="#forge" class="btn-cauldron btn-cauldron--ghost">See the skill tree</a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════
        PHILOSOPHY
   ═══════════════════════════════════════ -->
   <section class="cauldron-philosophy" aria-label="Philosophy">
@@ -294,6 +592,10 @@
 <li><a href="{% url 'welcome' %}">Arcano</a></li>
 <li><a href="{% url 'scholomancy-landing' %}">Scholomancy</a></li>
 <li><a href="{% url 'the_cauldron:landing' %}">The Cauldron</a></li>
+{% endblock %}
+
+{% block app_scripts %}
+<script src="{% static 'the_cauldron/js/forge-skilltree.js' %}" defer></script>
 {% endblock %}
 
 {% block nav_auto_loader %}
