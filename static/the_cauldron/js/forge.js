@@ -156,6 +156,8 @@
     if (rb) { e.preventDefault(); toggleRest(rb); return; }
     const pv = e.target.closest(".forge-chime-preview");
     if (pv) { e.preventDefault(); playChime(getChime()); return; }
+    const sk = e.target.closest(".forge-skip-ex-btn");
+    if (sk) { e.preventDefault(); sk.closest(".forge-ex-block")?.remove(); return; }
   });
 
   // ── Results reveal + unlock celebration ────────────────────────────────────
@@ -613,7 +615,7 @@
       block.innerHTML =
         `<div class="forge-ex-head">` +
         `<span class="forge-ex-name">${name}</span>${video}` +
-        (rest ? `<span class="forge-ex-rest" title="Recommended rest between sets">⏱ Rest ${rest}</span>` : "") +
+        `<button type="button" class="forge-skip-ex-btn" title="Remove this exercise from the session">✕ Skip exercise</button>` +
         `</div>`;
       sets.forEach((s) => {
         const row = document.createElement("div");
@@ -1414,9 +1416,21 @@
   async function startVoice() {
     if (!voiceSupported()) { notify("Earphones mode needs Chrome or Edge."); return; }
     if (!currentSession) { notify("Open a day first."); return; }
-    const steps = buildSteps(currentSession);
-    if (!steps.length) { notify("Nothing scheduled today."); return; }
-    voice.steps = steps; voice.idx = 0; voice.collected = {}; voice.active = true;
+    const allSteps = buildSteps(currentSession);
+    if (!allSteps.length) { notify("Nothing scheduled today."); return; }
+    // Pre-collect already-filled inputs and skip those steps.
+    const preCollected = {};
+    const steps = allSteps.filter((s) => {
+      const inp = $(`.forge-actual[data-uuid="${s.uuid}"]`);
+      const val = inp ? parseInt(inp.value, 10) : NaN;
+      if (!isNaN(val)) {
+        preCollected[s.uuid] = { actual_reps: val, actual_load: s.expectedLoad };
+        return false;
+      }
+      return true;
+    });
+    if (!steps.length) { notify("All sets are already filled — nothing left for earphones mode."); return; }
+    voice.steps = steps; voice.idx = 0; voice.collected = preCollected; voice.active = true;
     pickVoice();
     try { audioCtx().resume(); } catch (e) { /* gesture unlock */ }
     setProgress("🎧 Earphones mode");

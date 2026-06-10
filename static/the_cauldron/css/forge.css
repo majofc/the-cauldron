@@ -524,12 +524,13 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-video-link:hover { text-decoration: underline; }
 .forge-ex-head { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: .6rem; }
 .forge-ex-head .forge-ex-name { margin-bottom: 0; }
-.forge-ex-rest {
-  margin-left: auto; font-family: "Inter", sans-serif; font-size: .8rem;
-  color: var(--cauldron-cream-dim);
-  border: 1px solid var(--cauldron-paprika-border); border-radius: 999px;
-  padding: .15rem .6rem;
+.forge-skip-ex-btn {
+  margin-left: auto; font-family: "Inter", sans-serif; font-size: .75rem;
+  background: none; border: 1px solid var(--cauldron-paprika-border); border-radius: 999px;
+  color: var(--cauldron-cream-dim); padding: .15rem .6rem; cursor: pointer;
+  transition: color .15s, border-color .15s;
 }
+.forge-skip-ex-btn:hover { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika-light); }
 
 /* Timers (stopwatch + rest) and sound picker */
 .forge-timed-cell { display: flex; gap: .4rem; align-items: center; }
