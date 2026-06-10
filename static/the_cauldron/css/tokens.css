@@ -29,6 +29,10 @@
   --cauldron-shadow-glow:  0 0 48px rgba(178, 58, 31, 0.28);
   --cauldron-shadow-ember: 0 0 8px var(--cauldron-paprika), 0 0 20px rgba(178, 58, 31, 0.5);
 
+  /* ── Forge animation (spark / ember accent) ── */
+  --cauldron-ember:       #F2A33C;
+  --cauldron-ember-white: #FFE6B8;
+
   /* ── Corner ornament color ── */
   --cauldron-corner-color: var(--cauldron-paprika-border);
 }

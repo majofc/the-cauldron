@@ -782,3 +782,221 @@
   .fshow-fire:nth-child(-n+7) { filter: none; opacity: 1; }
   .fshow-node.is-lit .fshow-orb { transition: none; }
 }
+
+/* ─────────────────────────────────────────────────
+   SKILL TREE — videogame-style exercise ladder
+   Mounted by forge-skilltree.js on #fshow-tree
+───────────────────────────────────────────────── */
+
+.tree-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+@media (min-width: 900px) {
+  .tree-layout { grid-template-columns: 1fr 280px; align-items: start; }
+}
+
+.tree { display: flex; flex-direction: column; gap: 1.8rem; }
+
+/* Each movement pattern = one ladder */
+.ladder {
+  background: var(--cauldron-bg-card);
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.ladder-head {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .7rem 1rem;
+  background: var(--cauldron-paprika-dim);
+  border-bottom: 1px solid var(--cauldron-paprika-border);
+}
+.ladder-head-icon {
+  width: 1.8rem; height: 1.8rem; flex-shrink: 0;
+  color: var(--cauldron-paprika-light);
+}
+.ladder-head-icon .forge-glyph { width: 100%; height: 100%; }
+.ladder-head-name {
+  flex: 1;
+  font-family: "Playfair Display", serif;
+  font-size: 1rem; color: var(--cauldron-cream);
+}
+.ladder-evolve-btn {
+  font-size: .75rem; padding: .2rem .7rem;
+  background: transparent; border: 1px solid var(--cauldron-paprika);
+  border-radius: 20px; color: var(--cauldron-paprika-light); cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.ladder-evolve-btn:hover { background: var(--cauldron-paprika-dim); color: var(--cauldron-cream); }
+
+.ladder-rail {
+  display: flex; flex-wrap: nowrap; gap: 0;
+  overflow-x: auto; padding: .8rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cauldron-paprika-border) transparent;
+}
+
+/* Main column and branch column */
+.tcol { display: flex; flex-direction: column; gap: .5rem; align-items: center; }
+.tbranch {
+  display: flex; flex-direction: column; gap: .5rem;
+  border-left: 2px dashed var(--cauldron-paprika-border);
+  padding-left: .6rem; margin-left: .2rem;
+}
+.tbranch-link {
+  font-size: .65rem; color: var(--cauldron-cream-muted); text-align: center;
+  padding: .15rem .4rem;
+}
+
+/* Connector line between nodes */
+.tlink {
+  width: 2px; height: .8rem; flex-shrink: 0;
+  background: var(--cauldron-paprika-border);
+  margin: 0 auto;
+}
+.tlink.is-done { background: var(--cauldron-paprika); }
+
+/* Node tile */
+.tnode {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: .3rem; padding: .4rem;
+  background: transparent; border: none; cursor: pointer;
+  border-radius: 10px;
+  transition: background .2s;
+  min-width: 72px;
+}
+.tnode:hover, .tnode:focus-visible { background: var(--cauldron-paprika-glow); outline: none; }
+.tnode-tile {
+  width: 56px; height: 56px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--cauldron-bg-surface);
+  border: 2px solid var(--cauldron-paprika-border);
+  color: var(--cauldron-cream-muted);
+  transition: border-color .2s, color .2s;
+}
+.tnode-tile .forge-glyph { width: 2.2rem; height: 2.2rem; }
+.tnode-tile .forge-glyph .ref { opacity: 0.34; }
+.tnode-tile .forge-glyph .mo { stroke: var(--cauldron-ember); }
+
+/* Node states */
+.tnode[data-state="done"] .tnode-tile {
+  border-color: var(--cauldron-paprika);
+  background: var(--cauldron-paprika-subtle);
+  color: var(--cauldron-cream);
+}
+.tnode[data-state="current"] .tnode-tile {
+  border-color: var(--cauldron-paprika-light);
+  box-shadow: 0 0 0 2px var(--cauldron-paprika-glow);
+  color: var(--cauldron-cream);
+  animation: tnode-breathe 2.4s ease-in-out infinite;
+}
+.tnode[data-state="next"] .tnode-tile {
+  border-color: rgba(178,58,31,.45);
+  color: var(--cauldron-cream-dim);
+}
+.tnode[data-state="locked"] .tnode-tile {
+  border-color: rgba(178,58,31,.18);
+  color: var(--cauldron-cream-muted);
+  opacity: .5;
+}
+
+@keyframes tnode-breathe {
+  0%, 100% { box-shadow: 0 0 0 2px var(--cauldron-paprika-glow); }
+  50%       { box-shadow: 0 0 0 5px rgba(178,58,31,.22); }
+}
+
+/* Current indicator dot */
+.tnode[data-state="current"]::after {
+  content: "";
+  position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--cauldron-paprika-light);
+}
+
+/* Badge (level number) */
+.tnode-badge {
+  position: absolute; top: 2px; right: 2px;
+  font-size: .6rem; line-height: 1;
+  background: var(--cauldron-paprika); color: var(--cauldron-cream);
+  border-radius: 4px; padding: 1px 4px; opacity: 0;
+  transition: opacity .2s;
+}
+.tnode[data-state="done"] .tnode-badge,
+.tnode[data-state="current"] .tnode-badge { opacity: 1; }
+
+/* Master ring */
+.tnode-master-ring {
+  position: absolute; inset: 4px; border-radius: 12px;
+  border: 2px solid var(--cauldron-ember); opacity: 0;
+  pointer-events: none;
+}
+.tnode.is-master .tnode-master-ring { opacity: .7; }
+
+/* Tooltip label */
+.tnode-tip {
+  font-size: .68rem; color: var(--cauldron-cream-dim); text-align: center;
+  max-width: 70px; line-height: 1.25;
+  white-space: normal; word-break: break-word;
+}
+
+/* Evolve sweep animation */
+.tnode.is-evolving .tnode-tile {
+  animation: tnode-evolve .5s ease forwards;
+}
+@keyframes tnode-evolve {
+  0%   { transform: scale(1); filter: brightness(1); }
+  40%  { transform: scale(1.15); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+/* ── Detail panel ─────────────────────────────────────────────────────────── */
+.tdetail {
+  position: sticky; top: 1.5rem;
+  background: var(--cauldron-bg-card);
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 12px; padding: 1.2rem;
+  color: var(--cauldron-cream); font-size: .9rem;
+}
+.tdetail-icon {
+  width: 3rem; height: 3rem; margin: 0 auto .7rem;
+  color: var(--cauldron-cream-dim);
+}
+.tdetail-icon .forge-glyph { width: 100%; height: 100%; }
+.tdetail h4 {
+  font-family: "Playfair Display", serif; font-size: 1.1rem;
+  margin: 0 0 .4rem; color: var(--cauldron-cream);
+}
+.tdetail p { margin: 0 0 .6rem; color: var(--cauldron-cream-dim); line-height: 1.5; }
+.tdetail-state {
+  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--cauldron-paprika-light);
+}
+
+/* ── Forge glyph global rules ─────────────────────────────────────────────── */
+.forge-glyph .ref { opacity: 0.34; }
+.forge-glyph .mo  { stroke: var(--cauldron-ember); }
+.forge-glyph .slash { stroke: var(--cauldron-paprika-light); }
+
+/* ── Tree legend ──────────────────────────────────────────────────────────── */
+.tree-legend {
+  display: flex; flex-wrap: wrap; gap: .8rem 1.4rem;
+  margin-top: 1.5rem; font-size: .78rem; color: var(--cauldron-cream-dim);
+}
+.tree-legend-item { display: flex; align-items: center; gap: .4rem; }
+.tree-legend-dot {
+  width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0;
+}
+.tree-legend-dot.is-done    { background: var(--cauldron-paprika); }
+.tree-legend-dot.is-current { background: var(--cauldron-paprika-light); border: 1px solid var(--cauldron-paprika); }
+.tree-legend-dot.is-next    { background: transparent; border: 1px solid rgba(178,58,31,.45); }
+.tree-legend-dot.is-locked  { background: transparent; border: 1px dashed rgba(178,58,31,.25); opacity: .5; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tnode[data-state="current"] .tnode-tile { animation: none; }
+  .tnode.is-evolving .tnode-tile { animation: none; }
+}
