@@ -1418,17 +1418,17 @@
     if (!currentSession) { notify("Open a day first."); return; }
     const allSteps = buildSteps(currentSession);
     if (!allSteps.length) { notify("Nothing scheduled today."); return; }
-    // Pre-collect already-filled inputs and skip those steps.
+    // Build a map of already-filled set UUIDs directly from DOM inputs.
     const preCollected = {};
-    const steps = allSteps.filter((s) => {
-      const inp = $(`.forge-actual[data-uuid="${s.uuid}"]`);
-      const val = inp ? parseInt(inp.value, 10) : NaN;
-      if (!isNaN(val)) {
-        preCollected[s.uuid] = { actual_reps: val, actual_load: s.expectedLoad };
-        return false;
-      }
-      return true;
+    $$(".forge-actual").forEach((inp) => {
+      const v = inp.value.trim();
+      if (v === "") return;
+      const n = parseFloat(v);
+      if (isNaN(n)) return;
+      const load = inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
+      preCollected[inp.dataset.uuid] = { actual_reps: n, actual_load: load };
     });
+    const steps = allSteps.filter((s) => !(s.uuid in preCollected));
     if (!steps.length) { notify("All sets are already filled — nothing left for earphones mode."); return; }
     voice.steps = steps; voice.idx = 0; voice.collected = preCollected; voice.active = true;
     pickVoice();
