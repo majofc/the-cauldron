@@ -218,6 +218,7 @@
   display: inline-flex; align-items: center; gap: .5rem; cursor: pointer;
   color: var(--cauldron-cream-dim); font-size: .88rem; margin-bottom: 1.2rem;
 }
+.forge-catalog-filter[hidden] { display: none; }
 .forge-catalog { display: flex; flex-direction: column; gap: 1.6rem; }
 .forge-cat-group.is-unowned { opacity: .55; }
 .forge-cat-head {
@@ -786,6 +787,256 @@ body.forge-overlay-open { overflow: hidden; }
   border-radius: 8px; padding: .45rem .6rem; cursor: pointer; font-size: 1rem;
 }
 .forge-chime-preview:hover { border-color: var(--cauldron-paprika); box-shadow: var(--cauldron-shadow-ember); }
+
+/* ── Exercises view toggle ───────────────────────────────── */
+.forge-ex-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: .2rem;
+}
+.forge-ex-header .forge-h2 { margin: 0; }
+.forge-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.forge-view-btn {
+  font-family: "Inter", sans-serif; font-size: .82rem;
+  color: var(--cauldron-cream-dim);
+  background: transparent; border: none;
+  padding: .4rem 1rem; cursor: pointer;
+  transition: var(--arcano-transition, all .15s ease);
+}
+.forge-view-btn:hover { color: var(--cauldron-cream); }
+.forge-view-btn.is-active,
+.forge-view-btn[aria-pressed="true"] {
+  background: var(--cauldron-paprika-dim);
+  color: var(--cauldron-cream);
+}
+
+/* ── Skill tree ──────────────────────────────────────────── */
+.forge-tree { display: flex; flex-direction: column; gap: 2rem; }
+
+.ftree-track {
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 14px;
+  background: var(--cauldron-bg-card);
+  padding: 1.2rem 1.2rem 1rem;
+}
+
+.ftree-track-head {
+  display: flex; align-items: center; gap: .8rem; margin-bottom: .5rem;
+}
+.ftree-pattern-icon {
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--cauldron-paprika-light);
+}
+.ftree-pattern-name {
+  font-family: "Playfair Display", serif; font-weight: 700;
+  color: var(--cauldron-cream); font-size: 1.1rem;
+}
+.ftree-pattern-muscles {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted); font-size: .85rem;
+  margin-bottom: 1rem;
+}
+
+.ftree-section-label {
+  font-family: "Inter", sans-serif; font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--cauldron-cream-muted);
+  margin: .8rem 0 .4rem;
+}
+.ftree-section-label:first-of-type { margin-top: 0; }
+
+/* Ladder: vertical stack of nodes connected by a rail */
+.ftree-ladder {
+  display: flex; flex-direction: column; gap: 0;
+  position: relative;
+}
+.ftree-ladder::before {
+  content: "";
+  position: absolute; left: 15px; top: 18px; bottom: 18px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--cauldron-paprika-border), var(--cauldron-paprika-border));
+  z-index: 0;
+}
+
+/* Individual exercise node */
+.ftree-node {
+  display: flex; align-items: center; gap: .75rem;
+  padding: .6rem .75rem .6rem 0;
+  cursor: pointer;
+  position: relative; z-index: 1;
+  transition: transform .15s ease;
+  outline: none;
+}
+.ftree-node:hover { transform: translateX(4px); }
+.ftree-node:focus-visible .ftree-node-tile {
+  outline: 2px solid var(--cauldron-paprika);
+  outline-offset: 2px;
+}
+
+/* Orb (state indicator circle) */
+.ftree-node-orb {
+  width: 30px; height: 30px; flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--cauldron-paprika-border);
+  background: var(--cauldron-bg-deep);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; color: var(--cauldron-cream-muted);
+  transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+  position: relative; z-index: 1;
+}
+
+/* State: done (surpassed) */
+.ftree-node[data-state="done"] { opacity: .45; }
+.ftree-node[data-state="done"] .ftree-node-orb {
+  background: var(--cauldron-paprika-dim);
+  border-color: var(--cauldron-paprika);
+  color: var(--cauldron-cream);
+  font-size: .8rem;
+}
+
+/* State: current (actively prescribed) */
+.ftree-node[data-state="current"] .ftree-node-orb {
+  background: var(--cauldron-paprika);
+  border-color: var(--cauldron-paprika-light);
+  box-shadow: 0 0 0 4px var(--cauldron-paprika-glow), 0 0 16px var(--cauldron-paprika);
+  animation: ftreeOrbPulse 2.4s ease-in-out infinite;
+  color: var(--cauldron-cream);
+  font-size: .8rem;
+}
+.ftree-node[data-state="current"] .ftree-node-tile {
+  border-color: var(--cauldron-paprika);
+  background: var(--cauldron-paprika-subtle);
+  box-shadow: var(--cauldron-shadow-ember);
+  animation: ftreeTileBreathe 2.4s ease-in-out infinite;
+}
+@keyframes ftreeOrbPulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--cauldron-paprika-glow), 0 0 10px var(--cauldron-paprika); }
+  50%       { box-shadow: 0 0 0 7px var(--cauldron-paprika-glow), 0 0 22px var(--cauldron-paprika-light); }
+}
+@keyframes ftreeTileBreathe {
+  0%, 100% { box-shadow: 0 0 8px -2px var(--cauldron-paprika-glow); }
+  50%       { box-shadow: 0 0 18px 2px var(--cauldron-paprika-glow); }
+}
+
+/* State: locked (needs gear the user doesn't own) */
+.ftree-node[data-state="locked"] { opacity: .35; }
+
+/* State: blocked (user-blocked) */
+.ftree-node[data-state="blocked"] { opacity: .5; }
+.ftree-node[data-state="blocked"] .ftree-node-orb {
+  background: var(--cauldron-paprika-subtle);
+  border-color: var(--cauldron-paprika);
+  color: var(--cauldron-paprika-light);
+}
+.ftree-node[data-state="blocked"] .ftree-node-name {
+  text-decoration: line-through;
+  color: var(--cauldron-cream-dim);
+}
+
+/* Tile (the clickable row body) */
+.ftree-node-tile {
+  flex: 1; display: flex; justify-content: space-between; align-items: center;
+  gap: .6rem;
+  padding: .55rem .8rem;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 10px;
+  background: var(--cauldron-bg-card);
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+  min-width: 0;
+}
+.ftree-node:hover .ftree-node-tile {
+  border-color: var(--cauldron-paprika);
+  box-shadow: 0 2px 12px -4px var(--cauldron-paprika-glow);
+}
+
+.ftree-node-info { flex: 1; min-width: 0; }
+.ftree-node-name {
+  font-family: "Inter", sans-serif; font-weight: 600;
+  color: var(--cauldron-cream); font-size: .93rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ftree-node-reps {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted); font-size: .8rem; margin-top: .05rem;
+}
+.ftree-node-badge {
+  font-family: "Inter", sans-serif; font-size: .65rem;
+  text-transform: uppercase; letter-spacing: .07em;
+  border-radius: 999px; padding: .15rem .5rem; flex-shrink: 0;
+  border: 1px solid;
+}
+.ftree-node-badge--done    { color: var(--cauldron-cream-muted); border-color: var(--cauldron-paprika-border); }
+.ftree-node-badge--current { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika); }
+.ftree-node-badge--next    { color: var(--cauldron-cream-dim); border-color: var(--cauldron-paprika-border); }
+.ftree-node-badge--locked  { color: var(--cauldron-cream-muted); border-color: var(--cauldron-paprika-border); }
+.ftree-node-badge--blocked { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika); }
+.ftree-node-fires {
+  font-size: .8rem; color: var(--cauldron-paprika-light); flex-shrink: 0;
+  filter: drop-shadow(0 0 4px var(--cauldron-paprika-glow));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ftree-node[data-state="current"] .ftree-node-orb,
+  .ftree-node[data-state="current"] .ftree-node-tile { animation: none; }
+}
+
+/* ── Exercise detail modal ───────────────────────────────── */
+.forge-ex-modal-card {
+  position: relative;
+  width: 100%; max-width: 520px;
+  padding: 2.4rem 1.8rem 1.6rem;
+  text-align: left;
+  animation: forgeRise .3s cubic-bezier(.2,1,.3,1) both;
+}
+.forge-ex-modal-name {
+  font-family: "Playfair Display", serif; font-weight: 700;
+  color: var(--cauldron-cream); font-size: 1.5rem; margin: 0 0 .3rem;
+}
+.forge-ex-modal-pattern {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted); font-size: .9rem; margin-bottom: 1rem;
+}
+.forge-ex-modal-state {
+  display: inline-flex; align-items: center; gap: .4rem; margin-bottom: 1.2rem;
+  font-family: "Inter", sans-serif; font-size: .78rem; text-transform: uppercase;
+  letter-spacing: .07em; border-radius: 999px; padding: .2rem .8rem;
+  border: 1px solid;
+}
+.forge-ex-modal-state--done    { color: var(--cauldron-cream-muted); border-color: var(--cauldron-paprika-border); background: transparent; }
+.forge-ex-modal-state--current { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-subtle); }
+.forge-ex-modal-state--next    { color: var(--cauldron-cream-dim); border-color: var(--cauldron-paprika-border); background: transparent; }
+.forge-ex-modal-state--locked  { color: var(--cauldron-cream-muted); border-color: var(--cauldron-paprika-border); background: transparent; }
+.forge-ex-modal-state--blocked { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-subtle); }
+.forge-ex-modal-section {
+  margin-bottom: 1rem;
+  border-top: 1px solid var(--cauldron-paprika-border);
+  padding-top: .9rem;
+}
+.forge-ex-modal-label {
+  font-family: "Inter", sans-serif; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--cauldron-cream-muted); margin-bottom: .3rem;
+}
+.forge-ex-modal-value {
+  font-family: "Cormorant Garamond", serif; font-size: 1.05rem;
+  color: var(--cauldron-cream); line-height: 1.5;
+}
+.forge-ex-modal-cues {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-dim); font-size: .95rem; line-height: 1.55;
+}
+.forge-ex-modal-equip {
+  display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .3rem;
+}
+.forge-ex-modal-equip-tag {
+  font-family: "Inter", sans-serif; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--cauldron-cream-muted);
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 999px; padding: .1rem .5rem;
+}
 
 /* Progression chart */
 .forge-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
