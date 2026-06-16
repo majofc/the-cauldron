@@ -9,6 +9,13 @@
 
   const LOADABLE = ["dumbbells", "bands", "barbell"];
 
+  // ── XSS guard ─────────────────────────────────────────────────────────────
+  function esc(str) {
+    const d = document.createElement("div");
+    d.textContent = str == null ? "" : String(str);
+    return d.innerHTML;
+  }
+
   // ── CSRF (Django) ──────────────────────────────────────────────────────────
   function getCookie(name) {
     const m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
@@ -38,11 +45,18 @@
   const toast = $("#forge-toast");
   let toastTimer = null;
 
+  const forgeApp = $("#forge-app");
+
   function showLoader(on) {
     loader.hidden = !on;
     loader.innerHTML = "";
-    if (on && window.CauldronLoader) {
-      loader.appendChild(window.CauldronLoader.build(window.CauldronLoader.randomCaption(), 120));
+    if (on) {
+      if (window.CauldronLoader) {
+        loader.appendChild(window.CauldronLoader.build(window.CauldronLoader.randomCaption(), 120));
+      }
+      forgeApp.setAttribute("inert", "");
+    } else {
+      forgeApp.removeAttribute("inert");
     }
   }
   function notify(msg) {
@@ -57,7 +71,10 @@
     $$(".forge-panel").forEach((p) => p.classList.toggle("is-active", p.dataset.panel === name));
     if (name === "trial") loadTrial();
     if (name === "today") loadToday();
-    if (name === "exercises") loadCatalog();
+    if (name === "exercises") {
+      if (catalogView === "tree") loadCatalogTree();
+      else loadCatalog();
+    }
     if (name === "progress") { loadProgress(); loadHistory(); }
   }
 
@@ -156,6 +173,8 @@
     if (rb) { e.preventDefault(); toggleRest(rb); return; }
     const pv = e.target.closest(".forge-chime-preview");
     if (pv) { e.preventDefault(); playChime(getChime()); return; }
+    const sk = e.target.closest(".forge-skip-ex-btn");
+    if (sk) { e.preventDefault(); sk.closest(".forge-ex-block")?.remove(); return; }
   });
 
   // ── Results reveal + unlock celebration ────────────────────────────────────
@@ -272,6 +291,129 @@
     closeOverlay();
   }
 
+  // Game-like session report using ForgeAnvil overlay.
+  async function showSessionReport(res) {
+    const unlocks = (res.progression || []).filter((d) => d.unlock).map((d) => d.unlock);
+    const peer = res.peer || [];
+
+    // Build custom content node for the anvil card.
+    const content = document.createElement("div");
+    content.className = "forge-session-report";
+
+    // Unlocked exercises section.
+    if (unlocks.length) {
+      const unlocksEl = document.createElement("div");
+      unlocksEl.className = "forge-report-unlocks";
+      const sectionTitle = document.createElement("h4");
+      sectionTitle.className = "forge-report-section-title";
+      sectionTitle.textContent = "New paths unlocked";
+      unlocksEl.appendChild(sectionTitle);
+      unlocks.forEach((u) => {
+        const iconKey = exIconKey(u.to_name);
+        const item = document.createElement("div");
+        item.className = "forge-report-unlock-item";
+        if (iconKey && window.ForgeIcons) {
+          const iconSpan = document.createElement("span");
+          iconSpan.className = "forge-report-unlock-icon";
+          iconSpan.setAttribute("aria-hidden", "true");
+          iconSpan.innerHTML = window.ForgeIcons.html(iconKey, "2");
+          item.appendChild(iconSpan);
+        }
+        const textSpan = document.createElement("span");
+        textSpan.className = "forge-report-unlock-text";
+        const strong = document.createElement("strong");
+        strong.textContent = u.to_name;
+        textSpan.appendChild(strong);
+        textSpan.appendChild(document.createTextNode(" unlocked from " + u.from_name));
+        item.appendChild(textSpan);
+        unlocksEl.appendChild(item);
+      });
+      content.appendChild(unlocksEl);
+    }
+
+    // Flames peer scores section.
+    const scored = peer.filter((p) => p.score && p.score.has_data)
+      .sort((a, b) => b.score.flames - a.score.flames);
+    if (scored.length) {
+      const scoresEl = document.createElement("div");
+      scoresEl.className = "forge-report-scores";
+      const sectionTitle = document.createElement("h4");
+      sectionTitle.className = "forge-report-section-title";
+      sectionTitle.textContent = "Your flames";
+      scoresEl.appendChild(sectionTitle);
+      scored.forEach((p) => {
+        const flames = Math.min(parseInt(p.score.flames, 10) || 0, 5);
+        const flameStr = "🔥".repeat(flames);
+        const iconKey = exIconKey(p.exercise_name || "");
+        const item = document.createElement("div");
+        item.className = "forge-report-score-item";
+        if (iconKey && window.ForgeIcons) {
+          const iconSpan = document.createElement("span");
+          iconSpan.className = "forge-report-score-icon";
+          iconSpan.setAttribute("aria-hidden", "true");
+          iconSpan.innerHTML = window.ForgeIcons.html(iconKey, "2");
+          item.appendChild(iconSpan);
+        }
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "forge-report-score-name";
+        nameSpan.textContent = p.exercise_name || "";
+        const flamesSpan = document.createElement("span");
+        flamesSpan.className = "forge-report-score-flames";
+        flamesSpan.title = flames + " flames";
+        flamesSpan.textContent = flameStr || "–";
+        item.appendChild(nameSpan);
+        item.appendChild(flamesSpan);
+        scoresEl.appendChild(item);
+      });
+      content.appendChild(scoresEl);
+    } else {
+      const reason = (peer.find((p) => p.score && p.score.reason) || {}).score?.reason ||
+        "Add birth year & sex in Equipment to unlock your peer flames.";
+      const note = document.createElement("p");
+      note.className = "forge-score-note forge-score-note--center";
+      note.textContent = reason;
+      content.appendChild(note);
+    }
+
+    // Use ForgeAnvil if available; otherwise fall back to old showResults.
+    if (!window.ForgeAnvil) {
+      await showResults({ peer, unlocks, title: "Session forged" });
+      return;
+    }
+
+    const { done } = window.ForgeAnvil.celebrate({
+      eyebrow: "Day complete",
+      title: "Forged.",
+      sub: "Every rep on today's list is struck and tempered. Rest — the anvil keeps its heat.",
+      cta: "Bank the day",
+      content,
+      strikes: 3,
+    });
+
+    // After closing, process unlock accept/deny via existing overlay flow if unlocks exist.
+    await new Promise((resolve) => { done.addEventListener("click", resolve, { once: true }); });
+
+    if (unlocks.length) {
+      openOverlay();
+      for (const u of unlocks) {
+        const body =
+          `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
+          `<h3 class="forge-reveal-title forge-unlock-title">New power unlocked!</h3>` +
+          `<p class="forge-unlock-text">You've mastered <strong>${u.from_name}</strong>. ` +
+          `The path to <strong>${u.to_name}</strong> is open — take it?</p>`;
+        const act = await step(body, [
+          { act: "accept", cls: "btn-cauldron--primary", label: "Claim it 🔥" },
+          { act: "deny", cls: "btn-cauldron--ghost", label: "Not yet" },
+        ]);
+        try {
+          await api(`progression/${u.prescription}/${act}/`, { method: "POST" });
+          notify(act === "accept" ? `Advanced to ${u.to_name}!` : "Holding at your current level.");
+        } catch (e) { notify("Couldn't update progression."); }
+      }
+      closeOverlay();
+    }
+  }
+
   // ── Equipment ────────────────────────────────────────────────────────────--
   let allEquipment = [];
 
@@ -285,7 +427,7 @@
       $("#forge-bands").value = (profile.band_levels || []).join(", ");
       $("#forge-barbell-inc").value = profile.barbell_min_increment || "";
       $("#forge-birth-year").value = profile.birth_year || "";
-      $("#forge-sex").value = profile.sex || "undisclosed";
+      setSexValue(profile.sex || "undisclosed");
     } catch (e) {
       notify("Couldn't load equipment.");
     } finally {
@@ -304,6 +446,61 @@
     kettlebell: '<path d="M9 6a3 3 0 0 1 6 0"/><path d="M7 9c-1 4-2 5-2 8h14c0-3-1-4-2-8a5 5 0 0 0-10 0Z"/>',
     rings: '<path d="M7 3v5M17 3v5"/><circle cx="7" cy="13" r="4"/><circle cx="17" cy="13" r="4"/>',
   };
+
+  // Maps exercise display names (lowercase) to forge-icons.js glyph keys.
+  const EXERCISE_ICON_MAP = {
+    "wall push-up": "wallpush", "wall push": "wallpush",
+    "incline push-up": "inclinepush", "incline push": "inclinepush",
+    "knee push-up": "kneepush", "knee push": "kneepush",
+    "push-up": "pushup", "push up": "pushup",
+    "diamond push-up": "diamondpush", "diamond push": "diamondpush",
+    "archer push-up": "archerpush", "archer push": "archerpush",
+    "row": "row", "inverted row": "row",
+    "negative pull-up": "negpull", "negative pull": "negpull",
+    "pull-up": "pullup", "pull up": "pullup",
+    "archer pull-up": "archerpull", "archer pull": "archerpull",
+    "pike push-up": "pikepush", "pike push": "pikepush",
+    "deep pike push-up": "deeppike", "deep pike": "deeppike",
+    "wall handstand push-up": "wallhspu", "wall hspu": "wallhspu",
+    "handstand push-up": "hspu", "hspu": "hspu",
+    "assisted split squat": "assistsplit",
+    "split squat": "splitsquat",
+    "bulgarian split squat": "bulgarian", "bulgarian": "bulgarian",
+    "pistol squat": "pistol", "pistol": "pistol",
+    "knee plank": "kneeplank",
+    "plank": "plank",
+    "rkc plank": "rkcplank",
+    "hollow body": "hollow", "hollow hold": "hollow",
+    "glute bridge": "glutebridge",
+    "single-leg bridge": "slbridge", "single leg bridge": "slbridge",
+    "hip thrust": "hipthrust",
+    "nordic curl": "nordic", "nordic": "nordic",
+  };
+
+  function exIconKey(name) {
+    return EXERCISE_ICON_MAP[name.toLowerCase()] || null;
+  }
+
+  // Sex button group helpers.
+  function sexValue() {
+    const on = $(".forge-sex-btn.is-on", $("#forge-sex"));
+    return on ? on.dataset.sex : "undisclosed";
+  }
+
+  function setSexValue(val) {
+    $$(".forge-sex-btn", $("#forge-sex")).forEach((btn) => {
+      const active = btn.dataset.sex === val;
+      btn.classList.toggle("is-on", active);
+      btn.setAttribute("aria-pressed", String(active));
+    });
+  }
+
+  // Wire sex button group clicks (runs once).
+  (function wireSexBtns() {
+    $$(".forge-sex-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setSexValue(btn.dataset.sex));
+    });
+  }());
 
   function fetchEquipmentList() {
     return [
@@ -382,7 +579,7 @@
           band_levels: parseList($("#forge-bands").value),
           barbell_min_increment: parseFloat($("#forge-barbell-inc").value) || 2.5,
           birth_year: isNaN(birthYear) ? null : birthYear,
-          sex: $("#forge-sex").value,
+          sex: sexValue(),
         },
       });
       notify("Equipment saved. Now take the Trial.");
@@ -610,10 +807,15 @@
         ? `<a class="forge-video-link" href="${meta.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
         : "";
       const unit = meta.is_timed ? "s" : "reps";
+      const iconKey = exIconKey(name);
+      const iconHTML = (iconKey && window.ForgeIcons)
+        ? `<span class="forge-ex-icon" aria-hidden="true">${window.ForgeIcons.html(iconKey)}</span>`
+        : "";
       block.innerHTML =
         `<div class="forge-ex-head">` +
+        iconHTML +
         `<span class="forge-ex-name">${name}</span>${video}` +
-        (rest ? `<span class="forge-ex-rest" title="Recommended rest between sets">⏱ Rest ${rest}</span>` : "") +
+        `<button type="button" class="forge-skip-ex-btn" title="Remove this exercise from the session">✕ Skip exercise</button>` +
         `</div>`;
       sets.forEach((s) => {
         const row = document.createElement("div");
@@ -661,8 +863,7 @@
       const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
       $("#forge-log-session").hidden = true;
       showLoader(false);
-      const unlocks = (res.progression || []).filter((d) => d.unlock).map((d) => d.unlock);
-      await showResults({ peer: res.peer || [], unlocks, title: "Session forged" });
+      await showSessionReport(res);
     } catch (e) {
       notify("Couldn't save the session.");
     } finally {
@@ -771,6 +972,366 @@
       renderCatalog();
     });
   }
+
+  // ── Skill tree ────────────────────────────────────────────────────────────
+  let catalogView = "tree"; // "tree" | "cards"
+
+  const PATTERN_ORDER = [
+    "horizontal_push", "vertical_pull", "vertical_push",
+    "lower_unilateral", "core_anti_extension", "hinge",
+  ];
+
+  const PATTERN_MUSCLES = {
+    horizontal_push: "Chest · Front Delts · Triceps",
+    vertical_pull: "Lats · Biceps · Mid-back",
+    vertical_push: "Shoulders · Triceps",
+    lower_unilateral: "Quads · Glutes",
+    core_anti_extension: "Abs · Deep Core",
+    hinge: "Hamstrings · Glutes · Low Back",
+  };
+
+  const PATTERN_ICON_PATHS = {
+    horizontal_push: '<path d="M4 16h13"/><path d="M17 16l-5-5"/><path d="M17 16l-5 5"/><rect x="22" y="8" width="6" height="16" rx="1"/>',
+    vertical_pull:   '<path d="M6 6h20"/><path d="M16 6v15"/><path d="M16 21l-5-5"/><path d="M16 21l5-5"/>',
+    vertical_push:   '<path d="M16 26V11"/><path d="M16 11l-5 5"/><path d="M16 11l5 5"/><path d="M8 6h16"/>',
+    lower_unilateral:'<path d="M12 5v9l-4 13"/><path d="M12 14l5 4-2 9"/><circle cx="12" cy="5" r="2"/>',
+    core_anti_extension:'<path d="M4 20h24"/><path d="M7 20c4-9 14-9 18 0"/><circle cx="16" cy="9" r="2"/>',
+    hinge:           '<path d="M5 11v6"/><path d="M27 11v6"/><path d="M5 14h22"/><path d="M9 14V9"/><path d="M23 14V9"/>',
+  };
+
+  const TREE_STATE_LABELS = {
+    done: "Cleared", current: "Active", next: "Next up",
+    locked: "Needs gear", blocked: "Blocked", noprogram: "",
+  };
+
+  // Structural equipment: non-loadable, fixed fixtures.
+  // Exercises that only require these (plus bodyweight) are part of the
+  // bodyweight spine. Exercises that also require loadable gear (dumbbells,
+  // barbell, bands, kettlebell) or machines (rowing_machine) go in the gear branch.
+  const STRUCTURAL_EQUIP = new Set(["bodyweight", "pullup_bar", "bench", "rings"]);
+
+  function isSpineExercise(ex) {
+    return !ex.required_equipment.length ||
+      ex.required_equipment.every((k) => STRUCTURAL_EQUIP.has(k));
+  }
+
+  function computeExerciseStates(exercises, catalogMap, currentByPattern) {
+    const byPattern = {};
+    exercises.forEach((ex) => {
+      (byPattern[ex.pattern_key] = byPattern[ex.pattern_key] || []).push(ex);
+    });
+    const stateMap = {};
+    Object.entries(byPattern).forEach(([patternKey, exList]) => {
+      const currentNames = currentByPattern[patternKey] || new Set();
+      let maxCurrentRank = -1;
+      exList.forEach((ex) => {
+        if (currentNames.has(ex.name)) maxCurrentRank = Math.max(maxCurrentRank, ex.difficulty_rank);
+      });
+      exList.forEach((ex) => {
+        const cat = catalogMap[ex.uuid] || {};
+        const isBlocked = cat.is_blocked || false;
+        if (currentNames.has(ex.name)) {
+          stateMap[ex.uuid] = isBlocked ? "blocked" : "current";
+        } else if (maxCurrentRank > -1 && ex.difficulty_rank < maxCurrentRank) {
+          stateMap[ex.uuid] = "done";
+        } else {
+          const eligible = cat.eligible !== undefined ? cat.eligible : false;
+          if (isBlocked) stateMap[ex.uuid] = "blocked";
+          else if (eligible) stateMap[ex.uuid] = maxCurrentRank === -1 ? "noprogram" : "next";
+          else stateMap[ex.uuid] = "locked";
+        }
+      });
+    });
+    return stateMap;
+  }
+
+  async function loadCatalogTree() {
+    showLoader(true);
+    try {
+      const [exercises, catalog, program] = await Promise.all([
+        api("exercises/"),
+        api("catalog/"),
+        api("program/").catch(() => null),
+      ]);
+      const catalogMap = {};
+      (catalog.groups || []).forEach((g) => {
+        g.exercises.forEach((ex) => { catalogMap[ex.uuid] = ex; });
+      });
+      const currentByPattern = {};
+      if (program) {
+        program.days.forEach((d) => {
+          d.prescriptions.forEach((p) => {
+            if (!currentByPattern[p.pattern_key]) currentByPattern[p.pattern_key] = new Set();
+            currentByPattern[p.pattern_key].add(p.exercise_name);
+          });
+        });
+      }
+      const stateMap = computeExerciseStates(exercises, catalogMap, currentByPattern);
+      renderSkillTree(exercises, catalogMap, stateMap);
+    } catch (e) {
+      notify("Couldn't load the skill tree.");
+    } finally {
+      showLoader(false);
+    }
+  }
+
+  function fmtRepsRange(ex) {
+    if (ex.rep_range_min == null) return "";
+    const range = ex.rep_range_min === ex.rep_range_max
+      ? `${ex.rep_range_min}` : `${ex.rep_range_min}–${ex.rep_range_max}`;
+    return ex.is_timed ? `${range}s hold` : `${range} reps`;
+  }
+
+  function renderSkillTree(exercises, catalogMap, stateMap) {
+    const host = $("#forge-tree");
+    host.innerHTML = "";
+    const byPattern = {};
+    exercises.forEach((ex) => {
+      (byPattern[ex.pattern_key] = byPattern[ex.pattern_key] || []).push(ex);
+    });
+    Object.values(byPattern).forEach((arr) =>
+      arr.sort((a, b) => a.difficulty_rank - b.difficulty_rank)
+    );
+    const frag = document.createDocumentFragment();
+
+    PATTERN_ORDER.forEach((patKey) => {
+      const exList = byPattern[patKey];
+      if (!exList || !exList.length) return;
+
+      const track = document.createElement("div");
+      track.className = "ftree-track";
+
+      const head = document.createElement("div");
+      head.className = "ftree-track-head";
+      head.innerHTML =
+        `<svg class="ftree-pattern-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" ` +
+        `stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
+        (PATTERN_ICON_PATHS[patKey] || "") + `</svg>`;
+      const nameEl = document.createElement("div");
+      nameEl.className = "ftree-pattern-name";
+      nameEl.textContent = PATTERN_LABELS[patKey] || patKey;
+      head.appendChild(nameEl);
+      track.appendChild(head);
+
+      const musclesEl = document.createElement("div");
+      musclesEl.className = "ftree-pattern-muscles";
+      musclesEl.textContent = PATTERN_MUSCLES[patKey] || "";
+      track.appendChild(musclesEl);
+
+      const spine = exList.filter(isSpineExercise);
+      const gear  = exList.filter((ex) => !isSpineExercise(ex));
+
+      const orbIcons = {
+        done: "✦", current: "●", next: "○", noprogram: "○", locked: "⊘", blocked: "✕",
+      };
+
+      function buildLadder(list) {
+        const ladder = document.createElement("div");
+        ladder.className = "ftree-ladder";
+        list.forEach((ex) => {
+          const state = stateMap[ex.uuid] || "locked";
+          const cat   = catalogMap[ex.uuid] || {};
+
+          const node = document.createElement("div");
+          node.className = "ftree-node";
+          node.setAttribute("data-state", state);
+          node.setAttribute("data-uuid", ex.uuid);
+          node.setAttribute("tabindex", "0");
+          node.setAttribute("role", "button");
+          node.setAttribute("aria-label", `${ex.name} — ${TREE_STATE_LABELS[state] || state}`);
+
+          const orb = document.createElement("div");
+          orb.className = "ftree-node-orb";
+          orb.textContent = orbIcons[state] || "○";
+          orb.setAttribute("aria-hidden", "true");
+
+          const tile = document.createElement("div");
+          tile.className = "ftree-node-tile";
+
+          const info = document.createElement("div");
+          info.className = "ftree-node-info";
+          const nameDiv = document.createElement("div");
+          nameDiv.className = "ftree-node-name";
+          nameDiv.textContent = ex.name;
+          info.appendChild(nameDiv);
+          const reps = fmtRepsRange(ex);
+          if (reps) {
+            const repsDiv = document.createElement("div");
+            repsDiv.className = "ftree-node-reps";
+            repsDiv.textContent = reps;
+            info.appendChild(repsDiv);
+          }
+          tile.appendChild(info);
+
+          const label = TREE_STATE_LABELS[state];
+          if (label) {
+            const badge = document.createElement("span");
+            badge.className = `ftree-node-badge ftree-node-badge--${state}`;
+            badge.textContent = label;
+            tile.appendChild(badge);
+          }
+
+          if (cat.best_fires != null) {
+            const fires = document.createElement("span");
+            fires.className = "ftree-node-fires";
+            fires.title = `Best peer score: ${cat.best_fires}/10 flames`;
+            fires.textContent = `🔥${cat.best_fires}`;
+            tile.appendChild(fires);
+          }
+
+          node.appendChild(orb);
+          node.appendChild(tile);
+
+          const openModal = () => openExerciseModal(ex, state, cat);
+          node.addEventListener("click", openModal);
+          node.addEventListener("keydown", (ev) => {
+            if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openModal(); }
+          });
+
+          ladder.appendChild(node);
+        });
+        return ladder;
+      }
+
+      if (spine.length) {
+        const lbl = document.createElement("div");
+        lbl.className = "ftree-section-label";
+        lbl.textContent = "Bodyweight";
+        track.appendChild(lbl);
+        track.appendChild(buildLadder(spine));
+      }
+      if (gear.length) {
+        const lbl = document.createElement("div");
+        lbl.className = "ftree-section-label";
+        lbl.textContent = "With equipment";
+        track.appendChild(lbl);
+        track.appendChild(buildLadder(gear));
+      }
+
+      frag.appendChild(track);
+    });
+    host.appendChild(frag);
+  }
+
+  // ── Exercise detail modal ─────────────────────────────────────────────────
+  const exModal = $("#forge-ex-modal");
+  const exModalBody = $("#forge-ex-modal-body");
+  const exModalActions = $("#forge-ex-modal-actions");
+
+  function openExerciseModal(ex, state, cat) {
+    exModalBody.innerHTML = "";
+    exModalActions.innerHTML = "";
+
+    exModalBody.innerHTML =
+      `<p class="forge-ex-modal-name">${esc(ex.name)}</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(PATTERN_LABELS[ex.pattern_key] || ex.pattern_key)}</p>`;
+
+    if (TREE_STATE_LABELS[state]) {
+      const s = document.createElement("div");
+      s.className = `forge-ex-modal-state forge-ex-modal-state--${state}`;
+      s.textContent = TREE_STATE_LABELS[state];
+      exModalBody.appendChild(s);
+    }
+
+    function addSection(label, html) {
+      const sec = document.createElement("div");
+      sec.className = "forge-ex-modal-section";
+      sec.innerHTML = `<div class="forge-ex-modal-label">${label}</div>${html}`;
+      exModalBody.appendChild(sec);
+    }
+
+    const reps = fmtRepsRange(ex);
+    if (reps) addSection("Target", `<div class="forge-ex-modal-value">${reps}</div>`);
+    if (ex.cues) addSection("Cues", `<div class="forge-ex-modal-cues">"${esc(ex.cues)}"</div>`);
+    if (ex.video_url && /^https:\/\//i.test(ex.video_url)) {
+      addSection("Video", `<a class="forge-video-link" href="${esc(ex.video_url)}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`);
+    }
+
+    const req = ex.required_equipment.filter((k) => k !== "bodyweight");
+    if (req.length) {
+      const tags = req.map((k) => `<span class="forge-ex-modal-equip-tag">${esc(k.replace(/_/g, " "))}</span>`).join("");
+      addSection("Equipment", `<div class="forge-ex-modal-equip">${tags}</div>`);
+    }
+
+    if (cat.best_fires != null) {
+      addSection(
+        "Peer score",
+        flamesMarkup(cat.best_fires) +
+        `<div class="forge-score-note">${cat.best_fires}/10 🔥 vs peers your age &amp; sex</div>`
+      );
+      igniteFlames(exModalBody);
+    }
+
+    if (state === "blocked" && cat.substitute) {
+      addSection("Substitute", `<div class="forge-ex-modal-value">→ ${esc(cat.substitute.name)}</div>`);
+    }
+
+    const isBlocked = state === "blocked";
+    const actionBtn = document.createElement("button");
+    actionBtn.className = `btn-cauldron ${isBlocked ? "btn-cauldron--primary" : "btn-cauldron--ghost"}`;
+    actionBtn.textContent = isBlocked ? "Unblock" : "Block this exercise";
+    actionBtn.addEventListener("click", async () => {
+      actionBtn.disabled = true;
+      const act = isBlocked ? "unblock" : "block";
+      try {
+        const res = await api(`exercises/${ex.uuid}/${act}/`, { method: "POST" });
+        if (act === "block") {
+          const sub = res.substitute ? ` Substitute: ${res.substitute.name}.` : " No substitute available.";
+          notify(`Blocked.${sub}`);
+        } else {
+          notify("Unblocked.");
+        }
+        closeExerciseModal();
+        loadCatalogTree();
+      } catch (err) {
+        notify("Couldn't update that exercise.");
+        actionBtn.disabled = false;
+      }
+    });
+    exModalActions.appendChild(actionBtn);
+
+    exModal.hidden = false;
+    document.body.classList.add("forge-overlay-open");
+  }
+
+  function closeExerciseModal() {
+    exModal.hidden = true;
+    document.body.classList.remove("forge-overlay-open");
+  }
+
+  const exModalCloseBtn = $("#forge-ex-modal-close");
+  if (exModalCloseBtn) exModalCloseBtn.addEventListener("click", closeExerciseModal);
+  if (exModal) {
+    exModal.addEventListener("click", (e) => { if (e.target === exModal) closeExerciseModal(); });
+  }
+
+  // ── View toggle ───────────────────────────────────────────────────────────
+  const treeContainer = $("#forge-tree");
+  const catalogContainer = $("#forge-catalog");
+  const catalogFilterLabel = $("#forge-catalog-filter-label");
+
+  $$(".forge-view-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view;
+      if (view === catalogView) return;
+      catalogView = view;
+      $$(".forge-view-btn").forEach((b) => {
+        b.classList.toggle("is-active", b.dataset.view === view);
+        b.setAttribute("aria-pressed", b.dataset.view === view ? "true" : "false");
+      });
+      if (view === "tree") {
+        catalogContainer.hidden = true;
+        if (catalogFilterLabel) catalogFilterLabel.hidden = true;
+        treeContainer.hidden = false;
+        loadCatalogTree();
+      } else {
+        treeContainer.hidden = true;
+        if (catalogFilterLabel) catalogFilterLabel.hidden = false;
+        catalogContainer.hidden = false;
+        loadCatalog();
+      }
+    });
+  });
 
   // ── History ──────────────────────────────────────────────────────────────--
   async function loadHistory() {
@@ -1386,8 +1947,7 @@
       closeVoice();
       $("#forge-log-session").hidden = true;
       $("#forge-earphones").hidden = true;
-      const unlocks = (res.progression || []).filter((d) => d.unlock).map((d) => d.unlock);
-      await showResults({ peer: res.peer || [], unlocks, title: "Session forged" });
+      await showSessionReport(res);
     } catch (e) {
       notify("Couldn't save the session.");
       setInstruction("Couldn't save — your reps are still on the Today screen.");
@@ -1414,9 +1974,21 @@
   async function startVoice() {
     if (!voiceSupported()) { notify("Earphones mode needs Chrome or Edge."); return; }
     if (!currentSession) { notify("Open a day first."); return; }
-    const steps = buildSteps(currentSession);
-    if (!steps.length) { notify("Nothing scheduled today."); return; }
-    voice.steps = steps; voice.idx = 0; voice.collected = {}; voice.active = true;
+    const allSteps = buildSteps(currentSession);
+    if (!allSteps.length) { notify("Nothing scheduled today."); return; }
+    // Build a map of already-filled set UUIDs directly from DOM inputs.
+    const preCollected = {};
+    $$(".forge-actual").forEach((inp) => {
+      const v = inp.value.trim();
+      if (v === "") return;
+      const n = parseFloat(v);
+      if (isNaN(n)) return;
+      const load = inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
+      preCollected[inp.dataset.uuid] = { actual_reps: n, actual_load: load };
+    });
+    const steps = allSteps.filter((s) => !(s.uuid in preCollected));
+    if (!steps.length) { notify("All sets are already filled — nothing left for earphones mode."); return; }
+    voice.steps = steps; voice.idx = 0; voice.collected = preCollected; voice.active = true;
     pickVoice();
     try { audioCtx().resume(); } catch (e) { /* gesture unlock */ }
     setProgress("🎧 Earphones mode");

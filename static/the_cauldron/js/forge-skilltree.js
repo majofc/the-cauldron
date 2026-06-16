@@ -1,260 +1,320 @@
 /* ═══════════════════════════════════════════════
-   The Forge — landing skill tree
-   Renders the six movement-pattern ladders as an
-   interactive, videogame-style skill tree.
+   Arcano Design System — The Cauldron · The Forge
+   Skill tree — six movement-pattern ladders rendered
+   as an interactive videogame progression map.
+   Depends on ForgeIcons (forge-icons.js).
 
-   This is PUBLIC marketing content on an unauthenticated
-   landing page, so the catalog is embedded here as a static
-   mirror of the seeded data (the_cauldron/management/commands/
-   seed_forge.py). It is intentionally NOT fetched from the
-   login-gated /cauldron/api/catalog/ endpoint. Keep this list
-   in sync with seed_forge.py LADDERS when the catalog changes.
+   Public landing page — the catalog is a static mirror
+   of seed_forge.py LADDERS. Keep in sync when catalog
+   changes. NOT fetched from the login-gated API.
    ═══════════════════════════════════════════════ */
 (function () {
   'use strict';
 
-  // Small line-SVG marks per pattern (viewBox 0 0 32 32, currentColor stroke).
-  var ICONS = {
-    horizontal_push: '<path d="M4 16h13"/><path d="M17 16l-5-5"/><path d="M17 16l-5 5"/><rect x="22" y="8" width="6" height="16" rx="1"/>',
-    vertical_pull:   '<path d="M6 6h20"/><path d="M16 6v15"/><path d="M16 21l-5-5"/><path d="M16 21l5-5"/>',
-    vertical_push:   '<path d="M16 26V11"/><path d="M16 11l-5 5"/><path d="M16 11l5 5"/><path d="M8 6h16"/>',
-    lower_unilateral:'<path d="M12 5v9l-4 13"/><path d="M12 14l5 4-2 9"/><circle cx="12" cy="5" r="2"/>',
-    core_anti_extension:'<path d="M4 20h24"/><path d="M7 20c4-9 14-9 18 0"/><circle cx="16" cy="9" r="2"/>',
-    hinge:           '<path d="M5 11v6"/><path d="M27 11v6"/><path d="M5 14h22"/><path d="M9 14V9"/><path d="M23 14V9"/>'
-  };
-
-  // Each pattern: bodyweight "spine" (climb-the-ladder) + "gear" branch
-  // (needs equipment / load progression). reps shown as the seeded rep range.
   var PATTERNS = [
     {
-      key: 'horizontal_push', name: 'Horizontal Push', muscles: 'Chest · Front Delts · Triceps',
-      spine: [
-        { name: 'Wall Push-up',     reps: '8–15 reps', cue: 'Body in a line; full lockout.' },
-        { name: 'Incline Push-up',  reps: '8–15 reps', cue: 'Hands elevated; brace core.' },
-        { name: 'Knee Push-up',     reps: '6–12 reps', cue: 'Hips down; chest to floor.' },
-        { name: 'Push-up',          reps: '5–12 reps', cue: 'Elbows ~45°; full range.' },
-        { name: 'Diamond Push-up',  reps: '5–10 reps', cue: 'Hands together; tuck elbows.' },
-        { name: 'Archer Push-up',   reps: '4–8 reps',  cue: 'Shift to one arm; control.' }
-      ],
-      gear: [
-        { name: 'Dumbbell Bench Press', reps: '6–12 reps', gear: 'Dumbbells', cue: 'Drive through chest; full range.' },
-        { name: 'Barbell Bench Press',  reps: '5–10 reps', gear: 'Barbell',   cue: 'Bar to chest; tight back.' }
+      id: 'hpush', name: 'Horizontal Push', icon: 'pushup',
+      rungs: [
+        { icon: 'wallpush',    name: 'Wall Push-up',    state: 'done',
+          cue: 'Stand an arm’s length from a wall, body in one line. Bend the elbows to bring your chest near, then press away.' },
+        { icon: 'inclinepush', name: 'Incline Push-up', state: 'done',
+          cue: 'Hands on a raised edge — the higher the surface, the lighter the load. Lower the surface as you get stronger.' },
+        { icon: 'kneepush',    name: 'Knee Push-up',    state: 'current',
+          cue: 'From the knees, keep a straight line hip-to-head. A clean half-step before the full push-up.',
+          loaded: { icon: 'band', name: 'Banded Knee Push-up', equip: 'Resistance band',
+            cue: 'Loop a band across the upper back for accommodating resistance — hardest at lockout.' } },
+        { icon: 'pushup',      name: 'Full Push-up',    state: 'next',
+          cue: 'Plank-tight, elbows tracking ~45°, chest to the floor and back. The benchmark of horizontal pressing.',
+          loaded: { icon: 'plate', name: 'Weighted Push-up', equip: 'Plate / pack',
+            cue: 'Rest a plate or loaded pack on the upper back once bodyweight reps feel easy.' } },
+        { icon: 'diamondpush', name: 'Diamond Push-up', state: 'locked',
+          cue: 'Hands together under the chest forming a diamond. Shifts the load onto the triceps and inner chest.' },
+        { icon: 'archerpush',  name: 'Archer Push-up',  state: 'locked', master: true,
+          cue: 'Shift your weight over one arm while the other stays straight. The doorway to the one-arm push-up.' }
       ]
     },
     {
-      key: 'vertical_pull', name: 'Vertical Pull', muscles: 'Lats · Biceps · Mid-back',
-      spine: [
-        { name: 'Australian Row',  reps: '8–15 reps', cue: 'Body straight; pull chest to bar.' },
-        { name: 'Negative Pull-up',reps: '3–6 reps',  cue: '5s lower; control the descent.' },
-        { name: 'Pull-up',         reps: '4–10 reps', cue: 'Dead hang; chin over bar.' },
-        { name: 'Archer Pull-up',  reps: '3–6 reps',  cue: 'Pull to one side; other arm straight.' }
-      ],
-      gear: [
-        { name: 'Band-Assisted Row',     reps: '8–15 reps', gear: 'Bands', cue: 'Squeeze shoulder blades.' },
-        { name: 'Rowing Machine',        reps: '10–20 reps', gear: 'Rower', cue: 'Legs–hips–arms sequence.' },
-        { name: 'Dumbbell Row',          reps: '6–12 reps', gear: 'Dumbbells', cue: 'Flat back; row to hip.' },
-        { name: 'Band-Assisted Pull-up', reps: '5–10 reps', gear: 'Bar + Bands', cue: 'Full hang to chin over bar.' }
+      id: 'vpull', name: 'Vertical Pull', icon: 'pullup',
+      rungs: [
+        { icon: 'row',        name: 'Australian Row',  state: 'done',
+          cue: 'Hang under a waist-high bar, body straight, and row your chest to it. Walk the feet forward to ease it.' },
+        { icon: 'negpull',    name: 'Negative Pull-up', state: 'current',
+          cue: 'Jump or step to the top, then lower yourself as slowly as you can. Builds the strength to pull up.',
+          loaded: { icon: 'band', name: 'Banded Pull-up', equip: 'Resistance band',
+            cue: 'Stand in a band looped over the bar — it gives the most help at the bottom where you’re weakest.' } },
+        { icon: 'pullup',     name: 'Pull-up',          state: 'next',
+          cue: 'Dead hang to chin-over-bar, no kip. The gold standard of vertical pulling strength.',
+          loaded: { icon: 'plate', name: 'Weighted Pull-up', equip: 'Belt / pack',
+            cue: 'Add load on a dip belt once you clear clean reps. The fastest route to raw pulling power.' } },
+        { icon: 'archerpull', name: 'Archer Pull-up',   state: 'locked', master: true,
+          cue: 'Pull to one hand while the other arm stays straight along the bar. The bridge to a one-arm pull-up.' }
       ]
     },
     {
-      key: 'vertical_push', name: 'Vertical Push', muscles: 'Shoulders · Triceps',
-      spine: [
-        { name: 'Incline Pike Push-up',      reps: '6–12 reps', cue: 'Hips high; head between hands.' },
-        { name: 'Pike Push-up',              reps: '5–12 reps', cue: 'Pike position; crown to floor.' },
-        { name: 'Wall Handstand Hold',       reps: '15–45s hold', cue: 'Hollow body; push tall.' },
-        { name: 'Assisted Handstand Push-up',reps: '3–8 reps',  cue: 'Partial range; control.' }
-      ],
-      gear: [
-        { name: 'Dumbbell Shoulder Press', reps: '6–12 reps', gear: 'Dumbbells', cue: 'Press overhead; ribs down.' },
-        { name: 'Barbell Overhead Press',  reps: '5–10 reps', gear: 'Barbell',   cue: 'Bar to overhead; glutes tight.' }
+      id: 'vpush', name: 'Vertical Push', icon: 'pikepush',
+      rungs: [
+        { icon: 'pikepush', name: 'Incline Pike Push-up',    state: 'done',
+          cue: 'Feet raised, hips high in a pike. Press the crown of your head toward the floor and back up.' },
+        { icon: 'deeppike', name: 'Pike Push-up',             state: 'current',
+          cue: 'Floor pike, hips stacked over the shoulders. Deepen the range until the head taps the ground.' },
+        { icon: 'wallhspu', name: 'Wall Handstand Push-up',   state: 'next',
+          cue: 'Kick to the wall and press. Chest-to-wall is the honest version; lower under control.' },
+        { icon: 'hspu',     name: 'Handstand Push-up',        state: 'locked', master: true,
+          cue: 'Free-balanced, full range. Overhead pressing strength meets total-body control.' }
       ]
     },
     {
-      key: 'lower_unilateral', name: 'Lower Body · Unilateral', muscles: 'Quads · Glutes',
-      spine: [
-        { name: 'Assisted Split Squat',  reps: '8–15 reps', cue: 'Hold support; knee tracks toe.' },
-        { name: 'Split Squat',           reps: '8–15 reps', cue: 'Tall torso; back knee down.' },
-        { name: 'Bulgarian Split Squat', reps: '6–12 reps', cue: 'Rear foot elevated; sink straight.' },
-        { name: 'Assisted Pistol Squat', reps: '4–8 reps',  cue: 'Hold support; full depth.' },
-        { name: 'Pistol Squat',          reps: '3–8 reps',  cue: 'One leg; controlled descent.' }
-      ],
-      gear: [
-        { name: 'Goblet Squat',                  reps: '6–12 reps', gear: 'Dumbbell / KB', cue: 'Weight at chest; sit between hips.' },
-        { name: 'Dumbbell Bulgarian Split Squat',reps: '6–12 reps', gear: 'Dumbbells',     cue: 'Loaded; rear foot elevated.' },
-        { name: 'Barbell Back Squat',            reps: '5–10 reps', gear: 'Barbell',        cue: 'Bar on traps; hit depth.' }
+      id: 'lower', name: 'Lower Unilateral', icon: 'pistol',
+      rungs: [
+        { icon: 'assistsplit', name: 'Assisted Split Squat',  state: 'done',
+          cue: 'Split stance, one hand on a rail for balance. Drop the back knee toward the floor and drive up.' },
+        { icon: 'splitsquat',  name: 'Split Squat',           state: 'current',
+          cue: 'Unsupported split stance. Vertical torso, front heel planted, full depth each rep.',
+          loaded: { icon: 'dumbbell', name: 'Goblet Split Squat', equip: 'Dumbbell / KB',
+            cue: 'Hold a weight at the chest. The cleanest way to overload the legs without a barbell.' } },
+        { icon: 'bulgarian',   name: 'Bulgarian Split Squat', state: 'next',
+          cue: 'Rear foot on a bench. Brutal single-leg range and balance — the legs’ true test.',
+          loaded: { icon: 'dumbbell', name: 'Loaded Bulgarian', equip: 'Dumbbells',
+            cue: 'A dumbbell in each hand. Among the highest-yield lower-body movements there is.' } },
+        { icon: 'pistol',      name: 'Pistol Squat',          state: 'locked', master: true,
+          cue: 'Full one-leg squat, other leg extended. Strength, mobility and control in a single feat.' }
       ]
     },
     {
-      key: 'core_anti_extension', name: 'Core · Anti-Extension', muscles: 'Abs · Deep Core',
-      spine: [
-        { name: 'Knee Plank',       reps: '15–45s hold', cue: 'Straight line knees to head.' },
-        { name: 'Plank',            reps: '20–60s hold', cue: 'Glutes + abs tight; no sag.' },
-        { name: 'Extended Plank',   reps: '15–45s hold', cue: 'Hands forward of shoulders.' },
-        { name: 'RKC Plank',        reps: '10–30s hold', cue: 'Max tension; posterior tilt.' },
-        { name: 'Hollow Body Hold', reps: '15–45s hold', cue: 'Low back pressed to floor.' }
-      ],
-      gear: [
-        { name: 'Ab Wheel / Band Rollout', reps: '6–12 reps', gear: 'Wheel / Bands', cue: "Brace hard; don't arch." }
+      id: 'core', name: 'Core · Anti-Extension', icon: 'plank',
+      rungs: [
+        { icon: 'kneeplank', name: 'Knee Plank',       state: 'done',
+          cue: 'Forearms down, knees on the floor, hips tucked. Brace as if bracing for a punch.' },
+        { icon: 'plank',     name: 'Forearm Plank',    state: 'current',
+          cue: 'Full plank, straight line heel-to-head. Squeeze glutes and ribs-down — no sagging hips.' },
+        { icon: 'rkcplank',  name: 'RKC Plank',        state: 'next',
+          cue: 'A plank turned to maximum tension — everything clenched. Ten brutal seconds beats a lazy minute.' },
+        { icon: 'hollow',    name: 'Hollow Body Hold', state: 'locked', master: true,
+          cue: 'On your back, lower back pressed flat, arms and legs lifted. The gymnastic core foundation.' }
       ]
     },
     {
-      key: 'hinge', name: 'Hinge · Posterior Chain', muscles: 'Hamstrings · Glutes · Low Back',
-      spine: [
-        { name: 'Glute Bridge',           reps: '12–20 reps', cue: 'Drive hips; squeeze glutes.' },
-        { name: 'Single-Leg Glute Bridge',reps: '8–15 reps',  cue: 'One leg; level hips.' },
-        { name: 'Assisted Nordic Curl',   reps: '5–10 reps',  cue: 'Control the lower; use hands.' },
-        { name: 'Nordic Curl',            reps: '3–8 reps',   cue: 'Hamstrings lower the body slowly.' }
-      ],
-      gear: [
-        { name: 'Dumbbell Romanian Deadlift', reps: '8–12 reps', gear: 'Dumbbells', cue: 'Soft knees; hinge from hips.' },
-        { name: 'Barbell Romanian Deadlift',  reps: '6–10 reps', gear: 'Barbell',   cue: 'Bar close; flat back.' },
-        { name: 'Kettlebell Swing',           reps: '12–20 reps', gear: 'Kettlebell', cue: 'Hip snap; not a squat.' }
+      id: 'hinge', name: 'Hinge', icon: 'glutebridge',
+      rungs: [
+        { icon: 'glutebridge', name: 'Glute Bridge',            state: 'done',
+          cue: 'On your back, knees bent, drive the hips up and squeeze. Learn to fire the glutes, not the back.' },
+        { icon: 'slbridge',    name: 'Single-leg Glute Bridge',  state: 'current',
+          cue: 'One leg extended, bridge with the other. Exposes and fixes side-to-side imbalances.' },
+        { icon: 'hipthrust',   name: 'Hip Thrust',              state: 'next',
+          cue: 'Shoulders on a bench for a deeper range. The most direct glute builder you can do.',
+          loaded: { icon: 'barbell', name: 'Barbell Hip Thrust', equip: 'Barbell',
+            cue: 'Load the lap across the hips. Scales near-endlessly — the answer to overloading the hips.' } },
+        { icon: 'nordic',      name: 'Nordic Curl',             state: 'locked', master: true,
+          cue: 'Ankles anchored, lower your straight body under control. The ultimate hamstring strength feat.' }
       ]
     }
   ];
 
-  var SVG_NS = 'http://www.w3.org/2000/svg';
-  var prefersReduced = window.matchMedia &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var I = window.ForgeIcons;
 
-  function el(tag, cls, html) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (html != null) e.innerHTML = html;
-    return e;
-  }
+  function buildNode(rung, pi, ri, isBranch) {
+    var node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'tnode' +
+      ' is-' + (isBranch ? 'gear' : rung.state) +
+      (rung.master ? ' is-master' : '') +
+      (isBranch ? ' is-branch' : '');
+    node.setAttribute('data-p', pi);
+    node.setAttribute('data-r', ri);
+    if (isBranch) node.setAttribute('data-branch', '1');
 
-  function makeIcon(key) {
-    var svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('class', 'fshow-track-icon');
-    svg.setAttribute('viewBox', '0 0 32 32');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.innerHTML = ICONS[key] || '';
-    return svg;
-  }
+    var tile = document.createElement('span');
+    tile.className = 'tnode-tile';
+    if (I) tile.appendChild(I.el(rung.icon));
+    node.appendChild(tile);
 
-  function makeNode(item, opts) {
-    opts = opts || {};
-    var node = el('div', 'fshow-node' + (opts.master ? ' fshow-node--master' : '') + (opts.gear ? ' fshow-node--gear' : ''));
-    node.setAttribute('tabindex', '0');
-    node.setAttribute('role', 'button');
-    node.setAttribute('aria-label', item.name + ' — ' + item.reps + (item.gear ? ' (' + item.gear + ')' : ''));
+    var badge = document.createElement('span');
+    badge.className = 'tnode-badge';
+    if (isBranch) badge.textContent = '';
+    else if (rung.state === 'done') badge.innerHTML = '❆';
+    else if (rung.state === 'locked') badge.innerHTML = lockSVG();
+    else if (rung.master) badge.innerHTML = '★';
+    node.appendChild(badge);
 
-    var orb = el('div', 'fshow-orb');
-    orb.setAttribute('aria-hidden', 'true');
-
-    var body = el('div', 'fshow-node-body');
-    var name = el('div', 'fshow-node-name');
-    name.appendChild(document.createTextNode(item.name));
-    if (item.gear) {
-      var tag = el('span', 'fshow-node-gear-tag');
-      tag.appendChild(document.createTextNode(item.gear));
-      name.appendChild(tag);
+    if (rung.master && !isBranch) {
+      var crown = document.createElement('span');
+      crown.className = 'tnode-master-ring';
+      node.appendChild(crown);
     }
-    var meta = el('div', 'fshow-node-meta');
-    meta.appendChild(document.createTextNode(item.reps + (opts.master ? ' · mastery' : '')));
-    var cue = el('div', 'fshow-cue');
-    cue.appendChild(document.createTextNode('“' + item.cue + '”'));
 
-    body.appendChild(name);
-    body.appendChild(meta);
-    body.appendChild(cue);
-    node.appendChild(orb);
-    node.appendChild(body);
+    var tip = document.createElement('span');
+    tip.className = 'tnode-tip';
+    tip.textContent = rung.name;
+    node.appendChild(tip);
 
-    // Touch / keyboard: toggle the cue open.
-    node.addEventListener('click', function () { node.classList.toggle('is-active'); });
-    node.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); node.classList.toggle('is-active'); }
-    });
     return node;
   }
 
-  function lightSequence(nodes) {
-    // Animate the "evolution": light spine nodes one by one, easy → hard.
-    if (prefersReduced) {
-      nodes.forEach(function (n) { n.classList.add('is-lit'); });
-      return;
-    }
-    nodes.forEach(function (n) { n.classList.remove('is-lit'); });
-    var i = 0;
-    (function step() {
-      if (i >= nodes.length) {
-        setTimeout(function () { nodes.forEach(function (n) { n.classList.remove('is-lit'); }); }, 700);
-        return;
+  function lockSVG() {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
+      'stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1.6"/>' +
+      '<path d="M8 11 V8 a4 4 0 0 1 8 0 v3"/></svg>';
+  }
+
+  function buildLadder(p, pi) {
+    var ladder = document.createElement('div');
+    ladder.className = 'ladder';
+
+    var head = document.createElement('div');
+    head.className = 'ladder-head';
+    var hi = document.createElement('span');
+    hi.className = 'ladder-head-icon';
+    if (I) hi.appendChild(I.el(p.icon));
+    head.appendChild(hi);
+    var hn = document.createElement('span');
+    hn.className = 'ladder-head-name';
+    hn.textContent = p.name;
+    head.appendChild(hn);
+    var play = document.createElement('button');
+    play.type = 'button';
+    play.className = 'ladder-play';
+    play.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Evolve</span>';
+    play.setAttribute('aria-label', 'Watch ' + p.name + ' evolve');
+    head.appendChild(play);
+    ladder.appendChild(head);
+
+    var rail = document.createElement('div');
+    rail.className = 'ladder-rail';
+
+    p.rungs.forEach(function (rung, ri) {
+      if (ri > 0) {
+        var link = document.createElement('span');
+        link.className = 'tlink' + (rung.state === 'locked' ? ' is-locked' : '');
+        rail.appendChild(link);
       }
-      nodes[i].classList.add('is-lit');
-      i++;
-      setTimeout(step, 420);
-    })();
+      var col = document.createElement('span');
+      col.className = 'tcol';
+
+      if (rung.loaded) {
+        var bwrap = document.createElement('span');
+        bwrap.className = 'tbranch';
+        var blink = document.createElement('span');
+        blink.className = 'tbranch-link';
+        var bnode = buildNode(rung.loaded, pi, ri, true);
+        bwrap.appendChild(bnode);
+        bwrap.appendChild(blink);
+        col.appendChild(bwrap);
+      }
+
+      col.appendChild(buildNode(rung, pi, ri, false));
+      rail.appendChild(col);
+    });
+
+    ladder.appendChild(rail);
+    play.addEventListener('click', function () { evolve(rail); });
+    return ladder;
   }
 
-  function buildTrack(p) {
-    var track = el('div', 'fshow-track');
-    ['tl', 'tr', 'bl', 'br'].forEach(function (c) {
-      var d = el('div', 'corner-' + c); d.setAttribute('aria-hidden', 'true'); track.appendChild(d);
-    });
+  function showDetail(panel, p, rung, isBranch) {
+    var statusText, statusCls;
+    if (isBranch) { statusText = 'Loaded variant'; statusCls = 'gear'; }
+    else if (rung.state === 'done') { statusText = 'Cleared'; statusCls = 'done'; }
+    else if (rung.state === 'current') { statusText = 'Your rung'; statusCls = 'current'; }
+    else if (rung.state === 'next') { statusText = 'Unlocked — ready'; statusCls = 'next'; }
+    else { statusText = 'Locked'; statusCls = 'locked'; }
 
-    var head = el('div', 'fshow-track-head');
-    head.appendChild(makeIcon(p.key));
-    var nm = el('div', 'fshow-track-name');
-    nm.appendChild(document.createTextNode(p.name));
-    head.appendChild(nm);
-    track.appendChild(head);
+    panel.querySelector('.tdetail-glyph').innerHTML = '';
+    if (I) panel.querySelector('.tdetail-glyph').appendChild(I.el(rung.icon, { sw: '2.2' }));
+    panel.querySelector('.tdetail-pattern').textContent = p.name;
+    panel.querySelector('.tdetail-name').textContent = rung.name;
+    var pill = panel.querySelector('.tdetail-status');
+    pill.textContent = statusText;
+    pill.className = 'tdetail-status is-' + statusCls;
+    panel.querySelector('.tdetail-cue').textContent = rung.cue;
 
-    var muscles = el('div', 'fshow-track-muscles');
-    muscles.appendChild(document.createTextNode(p.muscles));
-    track.appendChild(muscles);
-
-    // Play-evolution button.
-    var play = el('button', 'fshow-play');
-    play.setAttribute('type', 'button');
-    play.setAttribute('aria-label', 'Play the ' + p.name + ' progression');
-    play.setAttribute('title', 'Watch it evolve');
-    play.appendChild(document.createTextNode('▶'));
-    track.appendChild(play);
-
-    // Bodyweight spine.
-    var chain = el('div', 'fshow-chain');
-    var spineNodes = [];
-    p.spine.forEach(function (item, idx) {
-      var master = idx === p.spine.length - 1;
-      var node = makeNode(item, { master: master });
-      spineNodes.push(node);
-      chain.appendChild(node);
-    });
-    track.appendChild(chain);
-
-    play.addEventListener('click', function () { lightSequence(spineNodes); });
-
-    // Gear branch (equipment / load progression).
-    if (p.gear && p.gear.length) {
-      var label = el('div', 'fshow-branch-label');
-      label.appendChild(document.createTextNode('With equipment'));
-      track.appendChild(label);
-      var gearChain = el('div', 'fshow-chain');
-      p.gear.forEach(function (item) { gearChain.appendChild(makeNode(item, { gear: true })); });
-      track.appendChild(gearChain);
+    var equip = panel.querySelector('.tdetail-equip');
+    if (isBranch && rung.equip) {
+      equip.style.display = '';
+      equip.querySelector('.tdetail-equip-val').textContent = rung.equip;
+    } else {
+      equip.style.display = 'none';
     }
-    return track;
+    panel.classList.add('is-active');
   }
 
-  function render() {
-    var mount = document.getElementById('fshow-tree');
-    if (!mount) return;
-    var frag = document.createDocumentFragment();
-    PATTERNS.forEach(function (p) { frag.appendChild(buildTrack(p)); });
-    mount.appendChild(frag);
+  function evolve(rail) {
+    var nodes = rail.querySelectorAll('.tcol > .tnode');
+    nodes.forEach(function (n, i) {
+      setTimeout(function () {
+        n.classList.add('is-evolving');
+        setTimeout(function () { n.classList.remove('is-evolving'); }, 620);
+      }, i * 240);
+    });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', render);
-  } else {
-    render();
+  function mount(root) {
+    var layout = document.createElement('div');
+    layout.className = 'tree-layout';
+
+    var tree = document.createElement('div');
+    tree.className = 'tree';
+    PATTERNS.forEach(function (p, pi) { tree.appendChild(buildLadder(p, pi)); });
+
+    var panel = document.createElement('aside');
+    panel.className = 'tdetail';
+    panel.innerHTML =
+      '<div class="corner-tl"></div><div class="corner-tr"></div>' +
+      '<div class="corner-bl"></div><div class="corner-br"></div>' +
+      '<div class="tdetail-glyph"></div>' +
+      '<p class="tdetail-pattern"></p>' +
+      '<h4 class="tdetail-name"></h4>' +
+      '<span class="tdetail-status"></span>' +
+      '<p class="tdetail-cue"></p>' +
+      '<p class="tdetail-equip"><span class="tdetail-equip-k">Requires</span> ' +
+      '<span class="tdetail-equip-val"></span></p>' +
+      '<p class="tdetail-hint">Hover or tap any node to read its cue.</p>';
+
+    layout.appendChild(tree);
+    layout.appendChild(panel);
+    root.innerHTML = '';
+    root.appendChild(layout);
+
+    function resolve(node) {
+      var pi = +node.getAttribute('data-p');
+      var ri = +node.getAttribute('data-r');
+      var isBranch = node.hasAttribute('data-branch');
+      var p = PATTERNS[pi];
+      var rung = isBranch ? p.rungs[ri].loaded : p.rungs[ri];
+      return { p: p, rung: rung, isBranch: isBranch };
+    }
+
+    tree.addEventListener('mouseover', function (e) {
+      var node = e.target.closest('.tnode');
+      if (!node || !tree.contains(node)) return;
+      var r = resolve(node);
+      showDetail(panel, r.p, r.rung, r.isBranch);
+    });
+    tree.addEventListener('click', function (e) {
+      var node = e.target.closest('.tnode');
+      if (!node) return;
+      tree.querySelectorAll('.tnode.is-selected').forEach(function (n) { n.classList.remove('is-selected'); });
+      node.classList.add('is-selected');
+      var r = resolve(node);
+      showDetail(panel, r.p, r.rung, r.isBranch);
+    });
+    tree.addEventListener('focusin', function (e) {
+      var node = e.target.closest('.tnode');
+      if (!node) return;
+      var r = resolve(node);
+      showDetail(panel, r.p, r.rung, r.isBranch);
+    });
+
+    for (var pi = 0; pi < PATTERNS.length; pi++) {
+      var cur = PATTERNS[pi].rungs.filter(function (x) { return x.state === 'current'; })[0];
+      if (cur) { showDetail(panel, PATTERNS[pi], cur, false); break; }
+    }
   }
+
+  window.ForgeSkillTree = { mount: mount, patterns: PATTERNS };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    /* Support both IDs: fshow-tree (landing) and forge-skilltree (other) */
+    var root = document.getElementById('fshow-tree') || document.getElementById('forge-skilltree');
+    if (root) mount(root);
+  });
 }());

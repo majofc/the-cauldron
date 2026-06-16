@@ -36,6 +36,9 @@
 {% endblock %}
 
 {% block content %}
+<!-- Blocking loader — sits outside #forge-app so inert on the app doesn't swallow it -->
+<div class="forge-loader" id="forge-loader" hidden aria-live="polite" aria-label="Loading…"></div>
+
 <main class="forge" id="forge-app">
 
   <header class="forge-header">
@@ -50,12 +53,6 @@
       <button class="forge-tab" data-tab="about">About</button>
     </nav>
   </header>
-
-  <!-- Loader -->
-  <div class="forge-loader" id="forge-loader" hidden>
-    <div class="forge-loader-ring"></div>
-    <p class="forge-loader-caption">Stirring the pot…</p>
-  </div>
 
   <!-- Toast for progression deltas -->
   <div class="forge-toast" id="forge-toast" role="status" aria-live="polite" hidden></div>
@@ -94,14 +91,26 @@
             <span>Birth year</span>
             <input type="number" id="forge-birth-year" min="1920" max="2020" placeholder="1995">
           </label>
-          <label class="forge-field">
+          <div class="forge-field">
             <span>Sex (for norms)</span>
-            <select id="forge-sex">
-              <option value="undisclosed">Prefer not to say</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </label>
+            <div class="forge-sex-btns" id="forge-sex">
+              <button type="button" class="forge-sex-btn" data-sex="female" aria-pressed="false">
+                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="32" cy="24" r="12"/><line x1="32" y1="36" x2="32" y2="54"/><line x1="24" y1="46" x2="40" y2="46"/>
+                </svg>
+                Female
+              </button>
+              <button type="button" class="forge-sex-btn" data-sex="male" aria-pressed="false">
+                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="26" cy="38" r="12"/><line x1="35" y1="29" x2="50" y2="14"/><path d="M41 14 L50 14 L50 23"/>
+                </svg>
+                Male
+              </button>
+              <button type="button" class="forge-sex-btn is-on" data-sex="undisclosed" aria-pressed="true">
+                Prefer not to say
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -163,17 +172,35 @@
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">Exercises</h2>
+      <div class="forge-ex-header">
+        <h2 class="forge-h2">Exercises</h2>
+        <div class="forge-view-toggle" role="group" aria-label="Exercise display">
+          <button class="forge-view-btn is-active" data-view="tree" aria-pressed="true">Tree</button>
+          <button class="forge-view-btn" data-view="cards" aria-pressed="false">Cards</button>
+        </div>
+      </div>
       <p class="forge-help">Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong>
         anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from
         the Trial and your program, and we swap in the closest equal-or-easier alternative for the same
         pattern. Unblock any time. Groups for gear you don't own are dimmed.</p>
-      <label class="forge-catalog-filter">
+      <label class="forge-catalog-filter" id="forge-catalog-filter-label" hidden>
         <input type="checkbox" id="forge-catalog-mine"> Only show what I can do
       </label>
-      <div id="forge-catalog" class="forge-catalog"></div>
+      <div id="forge-tree" class="forge-tree"></div>
+      <div id="forge-catalog" class="forge-catalog" hidden></div>
     </div>
   </section>
+
+  <!-- ── Exercise detail modal ─────────────────────────────── -->
+  <div class="forge-overlay" id="forge-ex-modal" hidden role="dialog" aria-modal="true" aria-label="Exercise details">
+    <div class="cauldron-card forge-ex-modal-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <button type="button" class="forge-voice-exit" id="forge-ex-modal-close" aria-label="Close">✕</button>
+      <div id="forge-ex-modal-body"></div>
+      <div id="forge-ex-modal-actions" class="forge-reveal-actions"></div>
+    </div>
+  </div>
 
   <!-- ── Progress ──────────────────────────────────────────── -->
   <section class="forge-panel" data-panel="progress">
@@ -362,6 +389,9 @@
 {% endblock %}
 
 {% block app_scripts %}
+<!-- Icon library and anvil animation — must load before forge.js -->
+<script src="{% static 'the_cauldron/js/forge-icons.js' %}"></script>
+<script src="{% static 'the_cauldron/js/forge-anvil.js' %}"></script>
 <!-- Cauldron loader first so forge.js can use it; it also takes over page transitions. -->
 <script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
 <script src="{% static 'the_cauldron/js/forge.js' %}"></script>
