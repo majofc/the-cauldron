@@ -9,7 +9,7 @@ movement loaded with equipment and progress by load rather than by climbing.
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from the_cauldron.models import Equipment, Exercise, MovementPattern
+from the_cauldron.models import Equipment, Exercise, MovementPattern, Muscle
 
 PATTERNS = [
     ("horizontal_push", "Horizontal Push", "Chest, front delts, triceps", False),
@@ -93,6 +93,81 @@ LADDERS = {
     ],
 }
 
+
+# Muscle catalog: (key, display name, body-diagram region).
+MUSCLES = [
+    ("chest", "Chest", "front"),
+    ("front_delts", "Front Deltoids", "front"),
+    ("side_delts", "Side Deltoids", "front"),
+    ("rear_delts", "Rear Deltoids", "back"),
+    ("biceps", "Biceps", "front"),
+    ("triceps", "Triceps", "back"),
+    ("forearms", "Forearms", "front"),
+    ("abs", "Abs", "front"),
+    ("obliques", "Obliques", "front"),
+    ("quads", "Quads", "front"),
+    ("lats", "Lats", "back"),
+    ("traps", "Trapezius", "back"),
+    ("mid_back", "Mid-Back", "back"),
+    ("lower_back", "Lower Back", "back"),
+    ("glutes", "Glutes", "back"),
+    ("hamstrings", "Hamstrings", "back"),
+    ("calves", "Calves", "back"),
+]
+
+# Muscles trained by each exercise (by name). Primary movers first; the diagram
+# treats all listed muscles equally. Keys must exist in MUSCLES above.
+EXERCISE_MUSCLES = {
+    # ── Horizontal Push ──
+    "Wall Push-up": ["chest", "front_delts", "triceps"],
+    "Incline Push-up": ["chest", "front_delts", "triceps"],
+    "Knee Push-up": ["chest", "front_delts", "triceps"],
+    "Push-up": ["chest", "front_delts", "triceps", "abs"],
+    "Diamond Push-up": ["triceps", "chest", "front_delts"],
+    "Archer Push-up": ["chest", "front_delts", "triceps", "abs"],
+    "Dumbbell Bench Press": ["chest", "front_delts", "triceps"],
+    "Barbell Bench Press": ["chest", "front_delts", "triceps"],
+    # ── Vertical Pull ──
+    "Band-Assisted Row": ["lats", "mid_back", "biceps", "rear_delts"],
+    "Australian Row": ["lats", "mid_back", "biceps", "rear_delts"],
+    "Rowing Machine": ["lats", "mid_back", "biceps", "quads", "hamstrings"],
+    "Negative Pull-up": ["lats", "biceps", "mid_back", "forearms"],
+    "Band-Assisted Pull-up": ["lats", "biceps", "mid_back"],
+    "Pull-up": ["lats", "biceps", "mid_back", "forearms"],
+    "Archer Pull-up": ["lats", "biceps", "mid_back", "forearms"],
+    "Dumbbell Row": ["lats", "mid_back", "biceps", "rear_delts"],
+    # ── Vertical Push ──
+    "Incline Pike Push-up": ["front_delts", "side_delts", "triceps"],
+    "Pike Push-up": ["front_delts", "side_delts", "triceps"],
+    "Wall Handstand Hold": ["front_delts", "side_delts", "triceps", "traps"],
+    "Assisted Handstand Push-up": ["front_delts", "side_delts", "triceps", "traps"],
+    "Dumbbell Shoulder Press": ["front_delts", "side_delts", "triceps"],
+    "Barbell Overhead Press": ["front_delts", "side_delts", "triceps", "traps"],
+    # ── Lower (Unilateral) ──
+    "Assisted Split Squat": ["quads", "glutes"],
+    "Split Squat": ["quads", "glutes"],
+    "Bulgarian Split Squat": ["quads", "glutes", "hamstrings"],
+    "Assisted Pistol Squat": ["quads", "glutes"],
+    "Pistol Squat": ["quads", "glutes", "hamstrings"],
+    "Goblet Squat": ["quads", "glutes"],
+    "Dumbbell Bulgarian Split Squat": ["quads", "glutes", "hamstrings"],
+    "Barbell Back Squat": ["quads", "glutes", "hamstrings", "lower_back"],
+    # ── Core (Anti-Extension) ──
+    "Knee Plank": ["abs", "obliques"],
+    "Plank": ["abs", "obliques"],
+    "Extended Plank": ["abs", "obliques"],
+    "RKC Plank": ["abs", "obliques"],
+    "Hollow Body Hold": ["abs", "obliques", "quads"],
+    "Ab Wheel / Band Rollout": ["abs", "obliques", "lats"],
+    # ── Hinge / Posterior Chain ──
+    "Glute Bridge": ["glutes", "hamstrings"],
+    "Single-Leg Glute Bridge": ["glutes", "hamstrings"],
+    "Assisted Nordic Curl": ["hamstrings", "glutes"],
+    "Nordic Curl": ["hamstrings", "glutes", "calves"],
+    "Dumbbell Romanian Deadlift": ["hamstrings", "glutes", "lower_back"],
+    "Barbell Romanian Deadlift": ["hamstrings", "glutes", "lower_back"],
+    "Kettlebell Swing": ["glutes", "hamstrings", "lower_back", "front_delts"],
+}
 
 # Curated YouTube tutorial per exercise (real, search-sourced watch URLs).
 VIDEOS = {
@@ -186,6 +261,13 @@ class Command(BaseCommand):
             )
             equipment[key] = obj
 
+        muscles = {}
+        for key, name, region in MUSCLES:
+            obj, _ = Muscle.objects.update_or_create(
+                key=key, defaults={"name": name, "region": region}
+            )
+            muscles[key] = obj
+
         n_ex = 0
         for pkey, rungs in LADDERS.items():
             pattern = patterns[pkey]
@@ -209,6 +291,9 @@ class Command(BaseCommand):
                     },
                 )
                 ex.required_equipment.set([equipment[e] for e in equips])
+                ex.muscles.set(
+                    [muscles[m] for m in EXERCISE_MUSCLES.get(name, [])]
+                )
                 created.append((mode, ex))
                 n_ex += 1
 
@@ -224,6 +309,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Seeded {len(patterns)} patterns, {len(equipment)} equipment, {n_ex} exercises."
+                f"Seeded {len(patterns)} patterns, {len(equipment)} equipment, "
+                f"{len(muscles)} muscles, {n_ex} exercises."
             )
         )

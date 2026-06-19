@@ -7,6 +7,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     MovementPattern,
+    Muscle,
     PrescribedExercise,
     Program,
     ProgramDay,
@@ -26,11 +27,19 @@ class EquipmentAdmin(admin.ModelAdmin):
     list_display = ("name", "key", "is_loadable", "load_unit")
 
 
+@admin.register(Muscle)
+class MuscleAdmin(admin.ModelAdmin):
+    list_display = ("name", "key", "region")
+    list_filter = ("region",)
+    search_fields = ("name", "key")
+
+
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
     list_display = ("name", "pattern", "difficulty_rank", "progression_mode", "placement_threshold")
     list_filter = ("pattern", "progression_mode", "is_timed")
     search_fields = ("name",)
+    filter_horizontal = ("muscles",)
 
 
 @admin.register(Program)

@@ -90,6 +90,31 @@ class Equipment(ForgeBaseModel):
         return self.name
 
 
+class Muscle(ForgeBaseModel):
+    """A muscle (or muscle group) an exercise trains.
+
+    Seeded catalog, shared across users. ``region`` flags which side of the body
+    diagram the muscle lives on so the front/back silhouettes can be highlighted
+    independently. An exercise links to several muscles (see ``Exercise.muscles``).
+    """
+
+    class Region(models.TextChoices):
+        FRONT = "front", "Front"
+        BACK = "back", "Back"
+
+    key = models.SlugField(max_length=40, unique=True)
+    name = models.CharField(max_length=60)
+    region = models.CharField(
+        max_length=8, choices=Region.choices, default=Region.FRONT
+    )
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Exercise(ForgeBaseModel):
     """A single rung on a progression ladder for a pattern.
 
@@ -122,6 +147,13 @@ class Exercise(ForgeBaseModel):
     )
     required_equipment = models.ManyToManyField(
         Equipment, related_name="exercises", blank=True
+    )
+    muscles = models.ManyToManyField(
+        Muscle,
+        related_name="exercises",
+        blank=True,
+        help_text="Muscles this movement trains; drives the exercise detail "
+        "list and the daily worked-muscle diagram.",
     )
     video_url = models.URLField(blank=True, default="")
     cues = models.TextField(blank=True, default="")

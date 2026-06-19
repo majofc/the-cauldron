@@ -125,6 +125,9 @@
       clearInterval(swTimers.get(input));
       swTimers.delete(input);
       btn.textContent = "▶ Start"; btn.classList.remove("is-running");
+      // Hold finished — notify listeners (e.g. the worked-muscle map) now that
+      // the value is final, rather than on every tick while still timing.
+      input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     if (!input.value || isNaN(+input.value)) input.value = 0;
@@ -174,7 +177,7 @@
     const pv = e.target.closest(".forge-chime-preview");
     if (pv) { e.preventDefault(); playChime(getChime()); return; }
     const sk = e.target.closest(".forge-skip-ex-btn");
-    if (sk) { e.preventDefault(); sk.closest(".forge-ex-block")?.remove(); return; }
+    if (sk) { e.preventDefault(); sk.closest(".forge-ex-block")?.remove(); updateTodayMuscleMap(); return; }
   });
 
   // ── Results reveal + unlock celebration ────────────────────────────────────
@@ -790,9 +793,17 @@
     }
   }
 
+  // Map each set-log uuid → the muscles its exercise trains, for the daily
+  // worked-muscle diagram (revealed once every set is logged).
+  let muscleBySetUuid = {};
+
   function renderToday(session) {
     const list = $("#forge-today-list");
     list.innerHTML = "";
+    muscleBySetUuid = {};
+    (session.set_logs || []).forEach((s) => {
+      muscleBySetUuid[s.uuid] = s.muscles || [];
+    });
     // Group set logs by exercise.
     const groups = {};
     session.set_logs.forEach((s) => {
@@ -844,6 +855,74 @@
       }
       list.appendChild(block);
     });
+    updateTodayMuscleMap();
+  }
+
+  // Reveal the front/back muscle map once every set on the day is logged,
+  // highlighting the union of muscles trained by the completed exercises.
+  function collapseTodayMuscleMap() {
+    const panel = $("#forge-today-muscles-panel");
+    const toggle = $("#forge-today-muscles-toggle");
+    if (panel) panel.hidden = true;
+    if (toggle) toggle.setAttribute("aria-expanded", "false");
+  }
+
+  function updateTodayMuscleMap() {
+    const box = $("#forge-today-muscles");
+    const body = $("#forge-today-muscles-body");
+    if (!box || !body) return;
+    const inputs = $$(".forge-actual");
+    const complete =
+      inputs.length > 0 &&
+      inputs.every((i) => i.value.trim() !== "" && !isNaN(parseFloat(i.value)));
+    if (!complete) {
+      box.hidden = true;
+      body.innerHTML = "";
+      collapseTodayMuscleMap(); // reset to collapsed for next time
+      return;
+    }
+    const worked = new Map(); // key → display name
+    inputs.forEach((i) => {
+      (muscleBySetUuid[i.dataset.uuid] || []).forEach((m) =>
+        worked.set(m.key, m.name)
+      );
+    });
+    let html = window.ForgeAnatomy
+      ? window.ForgeAnatomy.svg(Array.from(worked.keys()))
+      : "";
+    if (worked.size) {
+      html +=
+        `<ul class="forge-muscle-legend">` +
+        Array.from(worked.values())
+          .sort()
+          .map((n) => `<li class="forge-muscle-chip">${esc(n)}</li>`)
+          .join("") +
+        `</ul>`;
+    }
+    body.innerHTML = html;
+    box.hidden = false;
+  }
+
+  // Live-update the map as reps are entered (manual typing or earphones mode).
+  const todayListEl = $("#forge-today-list");
+  if (todayListEl) {
+    todayListEl.addEventListener("input", (e) => {
+      if (e.target.classList && e.target.classList.contains("forge-actual")) {
+        updateTodayMuscleMap();
+      }
+    });
+  }
+
+  // The muscle map stays collapsed by default; this toggle expands/hides it.
+  const muscleMapToggle = $("#forge-today-muscles-toggle");
+  if (muscleMapToggle) {
+    muscleMapToggle.addEventListener("click", () => {
+      const panel = $("#forge-today-muscles-panel");
+      if (!panel) return;
+      const willShow = panel.hidden;
+      panel.hidden = !willShow;
+      muscleMapToggle.setAttribute("aria-expanded", String(willShow));
+    });
   }
 
   $("#forge-log-session").addEventListener("click", async () => {
@@ -874,12 +953,58 @@
   // ── Exercises (catalog + blocking) ─────────────────────────────────────────
   let catalogGroups = [];
   let catalogMineOnly = false;
+  // Shared name + muscle filters, applied across both the tree and cards views.
+  let exNameFilter = "";
+  let exMuscleFilter = "";
+  let exMuscleFilterReady = false;
+
+  function exMuscleKeys(ex) {
+    return (ex.muscles || []).map((m) => m.key);
+  }
+
+  function passesExFilter(ex) {
+    const nm = exNameFilter.trim().toLowerCase();
+    if (nm && !ex.name.toLowerCase().includes(nm)) return false;
+    if (exMuscleFilter && !exMuscleKeys(ex).includes(exMuscleFilter)) return false;
+    return true;
+  }
+
+  // Populate the muscle dropdown once, from the union of muscles in the data.
+  function populateExMuscleFilter(exercises) {
+    if (exMuscleFilterReady) return;
+    const sel = $("#forge-ex-muscle");
+    if (!sel) return;
+    const seen = new Map();
+    exercises.forEach((ex) =>
+      (ex.muscles || []).forEach((m) => seen.set(m.key, m.name))
+    );
+    if (!seen.size) return; // wait for data that actually carries muscles
+    Array.from(seen.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .forEach(([key, name]) => {
+        const o = document.createElement("option");
+        o.value = key;
+        o.textContent = name;
+        sel.appendChild(o);
+      });
+    exMuscleFilterReady = true;
+  }
+
+  // Re-render whichever exercise view is active, applying the current filters.
+  function renderExercisesView() {
+    if (catalogView === "tree") {
+      if (treeData) renderSkillTree(treeData.exercises, treeData.catalogMap, treeData.stateMap);
+    } else {
+      renderCatalog();
+    }
+  }
 
   async function loadCatalog() {
     showLoader(true);
     try {
       const data = await api("catalog/");
       catalogGroups = data.groups || [];
+      populateExMuscleFilter(catalogGroups.flatMap((g) => g.exercises || []));
       renderCatalog();
     } catch (e) {
       notify("Couldn't load exercises.");
@@ -898,14 +1023,18 @@
       host.innerHTML = `<p class="forge-help">No exercises to show.</p>`;
       return;
     }
+    let shown = 0;
     groups.forEach((g) => {
+      const exList = g.exercises.filter(passesExFilter);
+      if (!exList.length) return; // no matches in this equipment group
+      shown += exList.length;
       const section = document.createElement("div");
       section.className = "forge-cat-group" + (g.owned ? "" : " is-unowned");
       const owned = g.owned
         ? ""
         : `<span class="forge-cat-tag" title="You haven't marked this equipment as owned">not owned</span>`;
       let rows = "";
-      g.exercises.forEach((ex) => {
+      exList.forEach((ex) => {
         const eligible = ex.eligible;
         const blockedCls = ex.is_blocked ? " is-blocked" : "";
         const sub =
@@ -941,6 +1070,9 @@
         `<div class="forge-cat-rows">${rows}</div>`;
       host.appendChild(section);
     });
+    if (!shown) {
+      host.innerHTML = `<p class="forge-help">No exercises match your filters.</p>`;
+    }
   }
 
   // Event delegation for block/unblock buttons.
@@ -973,14 +1105,34 @@
     });
   }
 
+  // Name + muscle filters re-render whichever exercise view is active.
+  const exSearchEl = $("#forge-ex-search");
+  if (exSearchEl) {
+    exSearchEl.addEventListener("input", () => {
+      exNameFilter = exSearchEl.value;
+      renderExercisesView();
+    });
+  }
+  const exMuscleSel = $("#forge-ex-muscle");
+  if (exMuscleSel) {
+    exMuscleSel.addEventListener("change", () => {
+      exMuscleFilter = exMuscleSel.value;
+      renderExercisesView();
+    });
+  }
+
   // ── Skill tree ────────────────────────────────────────────────────────────
   let catalogView = "tree"; // "tree" | "cards"
+  let treeData = null; // last-loaded {exercises, catalogMap, stateMap} for re-filtering
 
   const PATTERN_ORDER = [
     "horizontal_push", "vertical_pull", "vertical_push",
     "lower_unilateral", "core_anti_extension", "hinge",
   ];
 
+  // Coarse per-pattern label shown on each skill-tree track header. The
+  // structured per-exercise Muscle M2M (exercise.muscles) is the source of truth
+  // for the muscle chips and the front/back diagram; this map is display-only.
   const PATTERN_MUSCLES = {
     horizontal_push: "Chest · Front Delts · Triceps",
     vertical_pull: "Lats · Biceps · Mid-back",
@@ -1067,6 +1219,8 @@
         });
       }
       const stateMap = computeExerciseStates(exercises, catalogMap, currentByPattern);
+      treeData = { exercises, catalogMap, stateMap };
+      populateExMuscleFilter(exercises);
       renderSkillTree(exercises, catalogMap, stateMap);
     } catch (e) {
       notify("Couldn't load the skill tree.");
@@ -1085,8 +1239,13 @@
   function renderSkillTree(exercises, catalogMap, stateMap) {
     const host = $("#forge-tree");
     host.innerHTML = "";
+    const visible = exercises.filter(passesExFilter);
+    if (!visible.length) {
+      host.innerHTML = `<p class="forge-help">No exercises match your filters.</p>`;
+      return;
+    }
     const byPattern = {};
-    exercises.forEach((ex) => {
+    visible.forEach((ex) => {
       (byPattern[ex.pattern_key] = byPattern[ex.pattern_key] || []).push(ex);
     });
     Object.values(byPattern).forEach((arr) =>
@@ -1242,6 +1401,16 @@
 
     const reps = fmtRepsRange(ex);
     if (reps) addSection("Target", `<div class="forge-ex-modal-value">${reps}</div>`);
+    if (ex.muscles && ex.muscles.length) {
+      const chips = ex.muscles
+        .map((m) => `<span class="forge-muscle-chip">${esc(m.name)}</span>`)
+        .join("");
+      addSection(
+        "Muscles worked",
+        `<div class="forge-muscle-chips">${chips}</div>` +
+          (window.ForgeAnatomy ? window.ForgeAnatomy.svg(ex.muscles.map((m) => m.key)) : "")
+      );
+    }
     if (ex.cues) addSection("Cues", `<div class="forge-ex-modal-cues">"${esc(ex.cues)}"</div>`);
     if (ex.video_url && /^https:\/\//i.test(ex.video_url)) {
       addSection("Video", `<a class="forge-video-link" href="${esc(ex.video_url)}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`);
@@ -1371,15 +1540,21 @@
   let chartPeriod = "day";
   let chartMetric = "total_volume";
   let chartExercise = "";
+  let chartMuscle = "";
   let decileCutoffs = null; // {10: v, ...} for the selected exercise, or null
   let exerciseFilterReady = false;
+  let chartMuscleFilterReady = false;
 
   async function loadProgress() {
     try {
-      const qs = chartExercise ? `?exercise=${encodeURIComponent(chartExercise)}` : "";
+      const params = [];
+      if (chartExercise) params.push(`exercise=${encodeURIComponent(chartExercise)}`);
+      if (chartMuscle) params.push(`muscle=${encodeURIComponent(chartMuscle)}`);
+      const qs = params.length ? `?${params.join("&")}` : "";
       const data = await api("progress/" + qs);
       progressPoints = data.points || [];
       populateExerciseFilter(data.exercises || []);
+      populateChartMuscleFilter(data.muscles || []);
       renderAsymmetry(data.asymmetry || []);
     } catch (e) {
       progressPoints = [];
@@ -1409,6 +1584,22 @@
       loadProgress();
     });
     exerciseFilterReady = true;
+  }
+
+  function populateChartMuscleFilter(muscles) {
+    if (chartMuscleFilterReady) return; // populate once; preserve selection
+    const sel = $("#forge-chart-muscle");
+    if (!sel || !muscles.length) return;
+    muscles.forEach((m) => {
+      const o = document.createElement("option");
+      o.value = m.key; o.textContent = m.name;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", () => {
+      chartMuscle = sel.value;
+      loadProgress();
+    });
+    chartMuscleFilterReady = true;
   }
 
   function renderAsymmetry(rows) {
@@ -1885,7 +2076,11 @@
     voice.collected[step.uuid] = { actual_reps: v, actual_load: step.expectedLoad };
     // Mirror into the Today input so a manual Save still works if they exit.
     const inp = $(`.forge-actual[data-uuid="${step.uuid}"]`);
-    if (inp) inp.value = v;
+    if (inp) {
+      inp.value = v;
+      // Keep the worked-muscle map in sync when reps arrive via earphones mode.
+      inp.dispatchEvent(new Event("input", { bubbles: true }));
+    }
   }
 
   function afterSet() {
