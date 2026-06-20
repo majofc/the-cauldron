@@ -6,6 +6,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     MovementPattern,
+    Muscle,
     PrescribedExercise,
     Program,
     ProgramDay,
@@ -13,6 +14,12 @@ from the_cauldron.models import (
     UserEquipmentProfile,
     WorkoutSession,
 )
+
+
+class MuscleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Muscle
+        fields = ["key", "name", "region"]
 
 
 class MovementPatternSerializer(serializers.ModelSerializer):
@@ -32,6 +39,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
     required_equipment = serializers.SlugRelatedField(
         slug_field="key", many=True, read_only=True
     )
+    muscles = MuscleSerializer(many=True, read_only=True)
     is_unilateral = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,7 +47,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
         fields = [
             "uuid", "pattern_key", "name", "difficulty_rank", "progression_mode",
             "rep_range_min", "rep_range_max", "is_timed", "placement_threshold",
-            "required_equipment", "video_url", "cues", "rest_seconds",
+            "required_equipment", "muscles", "video_url", "cues", "rest_seconds",
             "is_assessment_anchor", "is_unilateral",
         ]
 
@@ -128,12 +136,14 @@ class SetLogSerializer(serializers.ModelSerializer):
     video_url = serializers.CharField(source="exercise.video_url", read_only=True)
     is_timed = serializers.BooleanField(source="exercise.is_timed", read_only=True)
     cues = serializers.CharField(source="exercise.cues", read_only=True)
+    muscles = MuscleSerializer(source="exercise.muscles", many=True, read_only=True)
     rest_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = SetLog
         fields = [
-            "uuid", "exercise_name", "video_url", "is_timed", "cues", "rest_seconds",
+            "uuid", "exercise_name", "video_url", "is_timed", "cues", "muscles",
+            "rest_seconds",
             "set_index", "expected_reps", "expected_load",
             "actual_reps", "actual_load", "is_amrap", "rir",
         ]

@@ -1058,3 +1058,92 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-chart-line { fill: none; stroke: var(--cauldron-paprika-light); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .forge-chart-area { fill: var(--cauldron-paprika-glow); stroke: none; }
 .forge-chart-dot { fill: var(--cauldron-paprika); stroke: var(--cauldron-bg-card); stroke-width: 1.5; }
+
+/* ── Exercise filters (name + muscle) ───────────────────────────────────── */
+.forge-ex-filters {
+  display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end;
+  margin: .75rem 0;
+}
+.forge-ex-search {
+  flex: 1 1 12rem; min-width: 8rem;
+  font-family: "Inter", sans-serif; font-size: .9rem;
+  color: var(--cauldron-cream); background: var(--cauldron-bg-surface);
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 8px; padding: .5rem .7rem;
+}
+.forge-ex-search:focus {
+  outline: none; border-color: var(--cauldron-paprika-light);
+}
+.forge-ex-search::placeholder { color: var(--cauldron-cream-muted); }
+
+/* ── Muscles: chips, daily map, anatomy figures ─────────────────────────── */
+.forge-muscle-chips,
+.forge-muscle-legend {
+  display: flex; flex-wrap: wrap; gap: .4rem;
+  list-style: none; margin: .25rem 0 0; padding: 0;
+}
+.forge-muscle-chip {
+  font-family: "Inter", sans-serif; font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--cauldron-ember); background: var(--cauldron-paprika-subtle);
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 999px; padding: .22rem .6rem;
+}
+
+.forge-muscle-map {
+  position: relative;
+  margin-top: 1.5rem; padding: 1.25rem;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 14px; background: var(--cauldron-paprika-glow);
+  text-align: center;
+}
+.forge-muscle-map-toggle {
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  width: 100%; background: none; border: none; cursor: pointer; padding: .25rem;
+}
+.forge-muscle-map-title {
+  font-family: "Playfair Display", serif; font-weight: 700;
+  color: var(--cauldron-cream); font-size: 1.15rem; margin: 0;
+}
+.forge-muscle-map-caret {
+  color: var(--cauldron-ember); font-size: .85rem;
+  transition: transform .2s ease;
+}
+.forge-muscle-map-toggle[aria-expanded="true"] .forge-muscle-map-caret {
+  transform: rotate(180deg);
+}
+.forge-muscle-map-panel { margin-top: .5rem; }
+.forge-muscle-map-hint {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted); font-size: .9rem; margin: .25rem 0 1rem;
+}
+.forge-muscle-map .forge-muscle-legend { justify-content: center; margin-top: 1rem; }
+
+/* Front/back silhouettes */
+.fanat-body {
+  display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap;
+}
+.fanat-figure { margin: 0; width: 130px; max-width: 42vw; }
+.fanat-svg { width: 100%; height: auto; display: block; }
+.fanat-caption {
+  font-family: "Inter", sans-serif; font-size: .7rem;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--cauldron-cream-muted); margin-top: .35rem;
+}
+/* Neutral silhouette */
+.fanat-base {
+  fill: var(--cauldron-paprika-subtle);
+  stroke: var(--cauldron-paprika-border); stroke-width: 1;
+}
+/* Resting muscle groups */
+.fanat-muscle {
+  fill: rgba(240, 232, 220, 0.10);
+  stroke: var(--cauldron-paprika-border); stroke-width: 1;
+  transition: fill .25s ease, filter .25s ease;
+}
+/* Worked muscle groups light up like embers */
+.fanat-muscle.is-worked {
+  fill: var(--cauldron-ember);
+  stroke: var(--cauldron-ember-white); stroke-width: 1.2;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--cauldron-ember) 70%, transparent));
+}
