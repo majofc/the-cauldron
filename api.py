@@ -14,6 +14,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     MovementPattern,
+    Muscle,
     PrescribedExercise,
     Program,
     ProgramDay,
@@ -46,7 +47,9 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "uuid"
 
     def get_queryset(self):
-        qs = Exercise.objects.select_related("pattern").prefetch_related("required_equipment")
+        qs = Exercise.objects.select_related("pattern").prefetch_related(
+            "required_equipment", "muscles"
+        )
         if self.request.query_params.get("equipment") == "mine":
             profile = forge.get_or_create_equipment_profile(self.request.user)
             owned = set(profile.equipment.values_list("key", flat=True)) | {"bodyweight"}
@@ -115,7 +118,7 @@ class CatalogView(APIView):
 
         exercises = (
             Exercise.objects.select_related("pattern")
-            .prefetch_related("required_equipment")
+            .prefetch_related("required_equipment", "muscles")
             .order_by("pattern__name", "difficulty_rank")
         )
         # Cache substitutes only for blocked exercises (small set).
@@ -142,6 +145,9 @@ class CatalogView(APIView):
                     "difficulty_rank": ex.difficulty_rank,
                     "required_equipment": req_keys,
                     "is_timed": ex.is_timed,
+                    "muscles": [
+                        {"key": m.key, "name": m.name} for m in ex.muscles.all()
+                    ],
                     "eligible": (set(req_keys) or {"bodyweight"}) <= owned,
                     "is_blocked": is_blocked,
                     "substitute": substitute,
@@ -335,11 +341,13 @@ class ProgressView(APIView):
 
     def get(self, request):
         # Optional ?exercise=<name> narrows every point to that one movement;
+        # optional ?muscle=<key> narrows to sets that train that muscle;
         # omitted = totals across all exercises (the default view).
         only = request.query_params.get("exercise") or None
+        muscle = request.query_params.get("muscle") or None
         sessions = (
             WorkoutSession.objects.filter(user=request.user, status="completed")
-            .prefetch_related("set_logs__exercise")
+            .prefetch_related("set_logs__exercise__muscles")
             .order_by("performed_at", "created_at")
         )
         points = []
@@ -353,6 +361,8 @@ class ProgressView(APIView):
                 exercises.add(sl.exercise.name)
                 if only and sl.exercise.name != only:
                     continue
+                if muscle and not any(m.key == muscle for m in sl.exercise.muscles.all()):
+                    continue
                 if sl.actual_reps is None:
                     continue
                 counted = True
@@ -360,8 +370,8 @@ class ProgressView(APIView):
                 total_volume += sl.actual_reps * (sl.actual_load or 1)
                 if sl.is_amrap:
                     top_set = max(top_set, sl.actual_reps)
-            if only and not counted:
-                continue  # this exercise wasn't trained that session
+            if (only or muscle) and not counted:
+                continue  # nothing matching the filter was trained that session
             when = s.performed_at or s.created_at
             points.append(
                 {
@@ -391,10 +401,15 @@ class ProgressView(APIView):
             }
             for r in asym
         ]
+        muscles = [
+            {"key": m.key, "name": m.name}
+            for m in Muscle.objects.all().order_by("name")
+        ]
         return Response(
             {
                 "points": points,
                 "exercises": sorted(exercises),
+                "muscles": muscles,
                 "asymmetry": asymmetry,
             }
         )
@@ -409,7 +424,7 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return WorkoutSession.objects.filter(user=self.request.user).prefetch_related(
-            "set_logs"
+            "set_logs__exercise__muscles"
         )
 
     @action(detail=True, methods=["post"])

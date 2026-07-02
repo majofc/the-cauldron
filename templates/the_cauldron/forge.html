@@ -157,6 +157,17 @@
         </div>
       </div>
       <div id="forge-today-list" class="forge-today-list"></div>
+      <div id="forge-today-muscles" class="forge-muscle-map" hidden>
+        <button type="button" id="forge-today-muscles-toggle" class="forge-muscle-map-toggle"
+                aria-expanded="false" aria-controls="forge-today-muscles-panel">
+          <span class="forge-muscle-map-title">Muscles forged today</span>
+          <span class="forge-muscle-map-caret" aria-hidden="true">▾</span>
+        </button>
+        <div id="forge-today-muscles-panel" class="forge-muscle-map-panel" hidden>
+          <p class="forge-muscle-map-hint">Every set logged — here's the map of what you trained.</p>
+          <div id="forge-today-muscles-body"></div>
+        </div>
+      </div>
       <div class="forge-today-actions">
         <button class="btn-cauldron btn-cauldron--ghost" id="forge-earphones" hidden
                 title="Hands-free guided workout — listen on your earphones and speak your reps">
@@ -183,6 +194,15 @@
         anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from
         the Trial and your program, and we swap in the closest equal-or-easier alternative for the same
         pattern. Unblock any time. Groups for gear you don't own are dimmed.</p>
+      <div class="forge-ex-filters">
+        <input type="search" id="forge-ex-search" class="forge-ex-search"
+               placeholder="Search exercises…" aria-label="Search exercises by name">
+        <label class="forge-day-pick">Muscle
+          <select id="forge-ex-muscle">
+            <option value="">All muscles</option>
+          </select>
+        </label>
+      </div>
       <label class="forge-catalog-filter" id="forge-catalog-filter-label" hidden>
         <input type="checkbox" id="forge-catalog-mine"> Only show what I can do
       </label>
@@ -212,6 +232,11 @@
         <label class="forge-chart-metric">Exercise
           <select id="forge-chart-exercise">
             <option value="">All (total)</option>
+          </select>
+        </label>
+        <label class="forge-chart-metric">Muscle
+          <select id="forge-chart-muscle">
+            <option value="">All muscles</option>
           </select>
         </label>
         <label class="forge-chart-metric">Metric
@@ -391,6 +416,7 @@
 {% block app_scripts %}
 <!-- Icon library and anvil animation — must load before forge.js -->
 <script src="{% static 'the_cauldron/js/forge-icons.js' %}"></script>
+<script src="{% static 'the_cauldron/js/forge-anatomy.js' %}"></script>
 <script src="{% static 'the_cauldron/js/forge-anvil.js' %}"></script>
 <!-- Cauldron loader first so forge.js can use it; it also takes over page transitions. -->
 <script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
