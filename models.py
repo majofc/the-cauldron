@@ -417,6 +417,11 @@ class SetLog(ForgeBaseModel):
     expected_load = models.FloatField(null=True, blank=True)
     actual_reps = models.PositiveIntegerField(null=True, blank=True)
     actual_load = models.FloatField(null=True, blank=True)
+    # For unilateral (single-leg) moves the AMRAP set is logged per side; both
+    # are stored and ``actual_reps`` holds the weaker side (the min), mirroring
+    # AssessmentResult. Null for bilateral sets.
+    left_reps = models.PositiveIntegerField(null=True, blank=True)
+    right_reps = models.PositiveIntegerField(null=True, blank=True)
     is_amrap = models.BooleanField(default=False)
     rir = models.IntegerField(null=True, blank=True)
 

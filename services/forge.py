@@ -281,19 +281,41 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     """Record actual reps/load and advance prescriptions via the engine.
 
     ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"}.
+    Unilateral AMRAP sets may instead send {"left_reps", "right_reps", ...}; both
+    sides are stored and ``actual_reps`` is set to the weaker side so progression
+    and peer scoring never over-credit the strong leg (mirrors the assessment).
     Returns a list of human-readable progression deltas.
     """
     profile = get_or_create_equipment_profile(session.user)
+
+    def _int_or_none(v):
+        if v in (None, ""):
+            return None
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return None
 
     # Save actuals.
     for set_log in session.set_logs.all():
         res = set_results.get(str(set_log.uuid))
         if not res:
             continue
-        set_log.actual_reps = res.get("actual_reps")
+        left = _int_or_none(res.get("left_reps"))
+        right = _int_or_none(res.get("right_reps"))
+        sides = [v for v in (left, right) if v is not None]
+        if sides:
+            # Per-leg log: persist both sides; the weaker side drives everything.
+            set_log.left_reps = left
+            set_log.right_reps = right
+            set_log.actual_reps = min(sides)
+        else:
+            set_log.actual_reps = _int_or_none(res.get("actual_reps"))
         set_log.actual_load = res.get("actual_load")
         set_log.rir = res.get("rir")
-        set_log.save(update_fields=["actual_reps", "actual_load", "rir"])
+        set_log.save(update_fields=[
+            "actual_reps", "actual_load", "rir", "left_reps", "right_reps",
+        ])
 
     session.status = WorkoutSession.Status.COMPLETED
     session.performed_at = timezone.now()

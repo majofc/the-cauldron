@@ -424,7 +424,7 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return WorkoutSession.objects.filter(user=self.request.user).prefetch_related(
-            "set_logs__exercise__muscles"
+            "set_logs__exercise__pattern", "set_logs__exercise__muscles"
         )
 
     @action(detail=True, methods=["post"])
