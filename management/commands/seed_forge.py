@@ -227,17 +227,22 @@ def rest_for(mode, rmin, rmax, timed):
     """Evidence-based rest after a working set, in seconds.
 
     Longer rest (~2-3 min) favours strength and heavy compounds (Schoenfeld
-    2016; Grgic 2017 review): hard/low-rep and loaded lifts get 150s. Accessory/
-    hypertrophy ranges get ~120s, endurance (>12 reps) ~75s, isometric holds
-    ~60s (a hold isn't a high-fatigue compound set).
+    2016; Grgic 2017 review): hard/low-rep and loaded lifts get the most rest,
+    accessory/hypertrophy ranges less, endurance (>12 reps) less still, and
+    isometric holds the least (a hold isn't a high-fatigue compound set).
+
+    Baselines are cut ~30% from the original prescriptions (150/120/75/60s) to
+    keep sessions denser, rounded to the nearest 5s for clean timer values:
+    heavy 150→105, hypertrophy 120→85, endurance 75→55, holds 60→40. Existing
+    catalog and prescription rows are migrated to match in 0004.
     """
     if timed:
-        return 60
+        return 40
     if rmax <= 8 or (mode == "load" and rmax <= 10):
-        return 150
+        return 105
     if rmax <= 12:
-        return 120
-    return 75
+        return 85
+    return 55
 
 
 class Command(BaseCommand):
