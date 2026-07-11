@@ -138,14 +138,16 @@ class SetLogSerializer(serializers.ModelSerializer):
     cues = serializers.CharField(source="exercise.cues", read_only=True)
     muscles = MuscleSerializer(source="exercise.muscles", many=True, read_only=True)
     rest_seconds = serializers.SerializerMethodField()
+    is_unilateral = serializers.SerializerMethodField()
 
     class Meta:
         model = SetLog
         fields = [
             "uuid", "exercise_name", "video_url", "is_timed", "cues", "muscles",
-            "rest_seconds",
+            "rest_seconds", "is_unilateral",
             "set_index", "expected_reps", "expected_load",
-            "actual_reps", "actual_load", "is_amrap", "rir",
+            "actual_reps", "actual_load", "left_reps", "right_reps",
+            "is_amrap", "rir",
         ]
         read_only_fields = ["uuid", "exercise_name", "set_index", "expected_reps",
                             "expected_load", "is_amrap"]
@@ -154,6 +156,11 @@ class SetLogSerializer(serializers.ModelSerializer):
         if obj.prescribed_exercise_id:
             return obj.prescribed_exercise.target_rest_seconds
         return obj.exercise.rest_seconds
+
+    def get_is_unilateral(self, obj):
+        # Single-limb moves are logged per side; derived from the pattern to
+        # match ExerciseSerializer.is_unilateral.
+        return obj.exercise.pattern.key == "lower_unilateral"
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

@@ -328,6 +328,56 @@ def test_progress_filter_and_asymmetry(seeded, client, user):
     assert any(a["left"] == 12 and a["right"] == 7 for a in body["asymmetry"])
 
 
+def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user):
+    """The final (AMRAP) set of a single-leg move is logged per side: both legs
+    persist and actual_reps holds the weaker side. The serializer flags the set
+    as unilateral so the UI can render the split."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    from the_cauldron.models import PrescribedExercise, SetLog
+
+    # Find a day that prescribes a unilateral (lower_unilateral) exercise.
+    presc = PrescribedExercise.objects.filter(
+        day__program__user=user,
+        day__program__is_active=True,
+        pattern__key="lower_unilateral",
+    ).select_related("day").first()
+    assert presc is not None, "seed should place a lower_unilateral exercise"
+
+    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
+    assert today.status_code == 201
+    session = today.json()
+
+    # The unilateral exercise's AMRAP set must be flagged for the per-leg UI.
+    uni_amrap = next(
+        s for s in session["set_logs"]
+        if s["is_unilateral"] and s["is_amrap"]
+    )
+    # Non-AMRAP sets of the same move stay single-input.
+    assert any(
+        s["is_unilateral"] and not s["is_amrap"] for s in session["set_logs"]
+    )
+
+    set_results = {}
+    for s in session["set_logs"]:
+        if s["uuid"] == uni_amrap["uuid"]:
+            set_results[s["uuid"]] = {"left_reps": 12, "right_reps": 7,
+                                      "actual_load": s["expected_load"]}
+        else:
+            set_results[s["uuid"]] = {"actual_reps": s["expected_reps"],
+                                      "actual_load": s["expected_load"]}
+
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/", {"sets": set_results}, format="json"
+    )
+    assert resp.status_code == 200
+
+    sl = SetLog.objects.get(uuid=uni_amrap["uuid"])
+    assert sl.left_reps == 12 and sl.right_reps == 7
+    assert sl.actual_reps == 7  # weaker side drives progression/peer scoring
+
+
 def test_accept_and_deny_progression(seeded, client, user):
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")

@@ -93,7 +93,8 @@ Unique: `(program, day_index)`.
 Fields: `user`, `program_day`, `scheduled_for`, `performed_at`, `status` (planned/completed/skipped).
 
 **SetLog** — one actual set
-Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `is_amrap`, `rir`.
+Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `left_reps`, `right_reps`, `is_amrap`, `rir`.
+For unilateral moves the AMRAP set is logged per side: `left_reps`/`right_reps` are stored and `actual_reps` holds the weaker side (the min), mirroring `AssessmentResult`. `SetLogSerializer.is_unilateral` (computed from the pattern) tells the client to render the per-leg split.
 
 **BlockedExercise** — user-forbidden movements
 Fields: `user`, `exercise`, `reason`. Unique `(user, exercise)`.
