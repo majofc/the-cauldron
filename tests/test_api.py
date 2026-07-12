@@ -5,7 +5,18 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
-from the_cauldron.models import Equipment, Exercise, MovementPattern, Program, WorkoutSession
+from datetime import timedelta
+
+from django.utils import timezone
+
+from the_cauldron.models import (
+    Equipment,
+    Exercise,
+    MovementPattern,
+    Program,
+    SetLog,
+    WorkoutSession,
+)
 from the_cauldron.services import forge
 
 User = get_user_model()
@@ -337,10 +348,13 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
 
     from the_cauldron.models import PrescribedExercise, SetLog
 
-    # Find a day that prescribes a unilateral (lower_unilateral) exercise.
+    # Find a day that prescribes a unilateral (lower_unilateral) exercise. Use a
+    # non-"Full Body A" day (day_index != 0): Full Body A trains only the
+    # least-trained subset of patterns, so its unilateral move may be dropped.
     presc = PrescribedExercise.objects.filter(
         day__program__user=user,
         day__program__is_active=True,
+        day__day_index=1,
         pattern__key="lower_unilateral",
     ).select_related("day").first()
     assert presc is not None, "seed should place a lower_unilateral exercise"
@@ -429,3 +443,112 @@ def test_blocked_excluded_from_generated_program(seeded, client, user):
         ).values_list("exercise__name", flat=True)
     )
     assert "Push-up" not in used
+
+
+# ── Full Body A least-trained selection ──────────────────────────────────────
+
+
+def _log_amrap(user, day, exercise, reps, when):
+    """Record a completed session with a single AMRAP set for ``exercise``.
+
+    ``performed_at`` is what the 30-day window filters on, so pass ``when`` to
+    place the set inside or outside the window."""
+    session = WorkoutSession.objects.create(
+        user=user,
+        program_day=day,
+        performed_at=when,
+        status=WorkoutSession.Status.COMPLETED,
+    )
+    SetLog.objects.create(
+        session=session,
+        exercise=exercise,
+        set_index=0,
+        actual_reps=reps,
+        is_amrap=True,
+    )
+    return session
+
+
+def _active_program(user):
+    program = Program.objects.get(user=user, is_active=True)
+    return program
+
+
+def test_full_body_a_keeps_least_trained_and_drops_most_trained(seeded, client, user):
+    """Full Body A trains the 5 patterns with the lowest recent max AMRAP reps.
+    A never-trained pattern is kept; the single highest-rep pattern is dropped."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    prescs = list(day0.prescriptions.select_related("exercise", "pattern"))
+    assert len(prescs) == 6  # full body trains all six patterns
+
+    # Give five patterns increasing recent AMRAP reps; leave the sixth untouched.
+    trained, never_trained = prescs[:5], prescs[5]
+    for reps, presc in zip((10, 20, 30, 40, 50), trained):
+        _log_amrap(user, day0, presc.exercise, reps, timezone.now())
+
+    selected = forge.select_day_prescriptions(user, day0)
+    keys = {p.pattern.key for p in selected}
+
+    assert len(selected) == forge.FULL_BODY_A_PATTERN_COUNT == 5
+    # The most-trained pattern (50 reps) is dropped …
+    assert trained[-1].pattern.key not in keys
+    # … while the never-trained pattern survives (ranks as least-trained).
+    assert never_trained.pattern.key in keys
+    # Selection preserves the day's display order (it filters, it doesn't reorder).
+    assert [p.order for p in selected] == sorted(p.order for p in selected)
+
+
+def test_full_body_a_filters_the_opened_session(seeded, client, user):
+    """Opening Today for day 0 snapshots only the least-trained subset."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    hot = day0.prescriptions.select_related("exercise", "pattern").first()
+    _log_amrap(user, day0, hot.exercise, 60, timezone.now())
+
+    resp = client.get("/cauldron/api/today/?day=0")
+    assert resp.status_code == 201
+    session = resp.json()
+    # One exercise per pattern on a day, so distinct exercises == distinct
+    # patterns trained.
+    exercises = {sl["exercise_name"] for sl in session["set_logs"]}
+    assert len(exercises) == 5
+    assert hot.exercise.name not in exercises
+
+
+def test_other_days_train_every_pattern(seeded, client, user):
+    """Days other than Full Body A are unaffected — all patterns are trained
+    even when history would rank some as most-trained."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day1 = _active_program(user).days.get(day_index=1)
+    any_presc = day1.prescriptions.first()
+    _log_amrap(user, day1, any_presc.exercise, 99, timezone.now())
+
+    selected = forge.select_day_prescriptions(user, day1)
+    assert len(selected) == day1.prescriptions.count() == 6
+
+
+def test_recent_max_reps_ignores_sets_older_than_window(seeded, client, user):
+    """AMRAP sets outside the 30-day window don't count toward 'most trained'."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    presc = day0.prescriptions.select_related("exercise").first()
+
+    stale = timezone.now() - timedelta(days=forge.LEAST_TRAINED_WINDOW_DAYS + 5)
+    _log_amrap(user, day0, presc.exercise, 50, stale)
+
+    recent = forge.recent_max_reps_by_pattern(user)
+    assert presc.pattern_id not in recent  # too old to count
+
+    fresh = timezone.now() - timedelta(days=1)
+    _log_amrap(user, day0, presc.exercise, 33, fresh)
+    recent = forge.recent_max_reps_by_pattern(user)
+    assert recent[presc.pattern_id] == 33
