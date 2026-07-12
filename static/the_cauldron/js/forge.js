@@ -681,24 +681,52 @@
     wireAsymmetryHints();
   }
 
-  // Show an imbalance hint when both legs are entered and differ ≥20%.
-  function wireAsymmetryHints() {
-    $$(".forge-trial-row[data-unilateral='1']").forEach((row) => {
+  // Show an imbalance hint when both legs are entered and differ ≥20%. Shared by
+  // the Trial (place from the weaker side) and the Today per-leg AMRAP set (count
+  // the weaker side); parameterised by row selector + verb so the ≥20% rule and
+  // weaker-side math live in one place.
+  function wireAsymmetryHints(
+    rowSelector = ".forge-trial-row[data-unilateral='1']",
+    verb = "place you from the weaker side"
+  ) {
+    $$(rowSelector).forEach((row) => {
       const legs = $$(".forge-leg-input", row);
       const note = $(".forge-trial-asym", row);
+      if (!note) return;
       const check = () => {
         const vals = legs.map((i) => parseInt(i.value, 10)).filter((n) => !isNaN(n));
         if (vals.length < 2) { note.hidden = true; return; }
         const [lo, hi] = [Math.min(...vals), Math.max(...vals)];
         if (hi > 0 && (hi - lo) / hi >= 0.2) {
           note.hidden = false;
-          note.textContent = `Imbalance noted — we'll place you from the weaker side (${lo}).`;
+          note.textContent = `Imbalance noted — we'll ${verb} (${lo}).`;
         } else {
           note.hidden = true;
         }
       };
       legs.forEach((i) => i.addEventListener("input", check));
     });
+  }
+
+  // Merge a list of `.forge-actual` inputs into a {setUuid: {...}} results map.
+  // A unilateral AMRAP set has two per-leg inputs sharing one uuid; they merge
+  // into {left_reps, right_reps, actual_load}. Every other set is a single input
+  // → {actual_reps, actual_load}. Used by both manual Save and earphones mode so
+  // the per-leg split is preserved on either path.
+  function collectActualInputs(inputs) {
+    const sets = {};
+    inputs.forEach((inp) => {
+      const reps = parseInt(inp.value, 10);
+      if (isNaN(reps)) return;
+      const load = inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
+      if (inp.dataset.side) {
+        const entry = sets[inp.dataset.uuid] || (sets[inp.dataset.uuid] = { actual_load: load });
+        entry[inp.dataset.side + "_reps"] = reps;
+      } else {
+        sets[inp.dataset.uuid] = { actual_reps: reps, actual_load: load };
+      }
+    });
+    return sets;
   }
 
   $("#forge-submit-trial").addEventListener("click", async () => {
@@ -830,16 +858,32 @@
         `</div>`;
       sets.forEach((s) => {
         const row = document.createElement("div");
+        // Split the final (until-failure) set of a single-leg move into Left /
+        // Right fields; every other set keeps one input.
+        const perLeg = s.is_amrap && s.is_unilateral && !meta.is_timed;
+        if (perLeg) row.dataset.unilateral = "1";
         row.className = "forge-set-row" + (s.is_amrap ? " is-amrap" : "");
         const loadStr = s.expected_load != null ? ` @ ${s.expected_load}` : "";
         const input =
           `<input type="number" min="0" class="forge-trial-input forge-actual" ` +
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" placeholder="${s.expected_reps}">`;
-        const inputCell = meta.is_timed
-          ? `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button></div>`
-          : input;
+        const legInput = (side) =>
+          `<label class="forge-leg"><span>${side === "left" ? "Left" : "Right"}</span>` +
+          `<input type="number" min="0" class="forge-trial-input forge-actual forge-leg-input" ` +
+          `data-side="${side}" data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" ` +
+          `placeholder="${s.expected_reps}" aria-label="${side}-side reps for ${name}"></label>`;
+        let inputCell;
+        if (perLeg) {
+          inputCell =
+            `<div class="forge-trial-legs">${legInput("left")}${legInput("right")}</div>` +
+            `<div class="forge-trial-asym" hidden></div>`;
+        } else if (meta.is_timed) {
+          inputCell = `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button></div>`;
+        } else {
+          inputCell = input;
+        }
         row.innerHTML =
-          `<span class="forge-set-label">Set ${s.set_index + 1}</span>` +
+          `<span class="forge-set-label">Set ${s.set_index + 1}${perLeg ? ` <span class="forge-trial-perleg">· per leg</span>` : ""}</span>` +
           `<span class="forge-set-expected">target ${s.expected_reps}${loadStr} ${unit}</span>` +
           inputCell;
         block.appendChild(row);
@@ -855,6 +899,7 @@
       }
       list.appendChild(block);
     });
+    wireAsymmetryHints(".forge-set-row[data-unilateral='1']", "count the weaker side");
     updateTodayMuscleMap();
   }
 
@@ -927,16 +972,7 @@
 
   $("#forge-log-session").addEventListener("click", async () => {
     if (!currentSession) return;
-    const sets = {};
-    $$(".forge-actual").forEach((inp) => {
-      const reps = parseInt(inp.value, 10);
-      if (!isNaN(reps)) {
-        sets[inp.dataset.uuid] = {
-          actual_reps: reps,
-          actual_load: inp.dataset.load === "" ? null : parseFloat(inp.dataset.load),
-        };
-      }
-    });
+    const sets = collectActualInputs($$(".forge-actual"));
     showLoader(true);
     try {
       const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
@@ -2171,16 +2207,10 @@
     if (!currentSession) { notify("Open a day first."); return; }
     const allSteps = buildSteps(currentSession);
     if (!allSteps.length) { notify("Nothing scheduled today."); return; }
-    // Build a map of already-filled set UUIDs directly from DOM inputs.
-    const preCollected = {};
-    $$(".forge-actual").forEach((inp) => {
-      const v = inp.value.trim();
-      if (v === "") return;
-      const n = parseFloat(v);
-      if (isNaN(n)) return;
-      const load = inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
-      preCollected[inp.dataset.uuid] = { actual_reps: n, actual_load: load };
-    });
+    // Build a map of already-filled set UUIDs directly from DOM inputs. Uses the
+    // shared collector so a manually-entered per-leg AMRAP set carries its
+    // left/right split into earphones mode instead of collapsing to one value.
+    const preCollected = collectActualInputs($$(".forge-actual"));
     const steps = allSteps.filter((s) => !(s.uuid in preCollected));
     if (!steps.length) { notify("All sets are already filled — nothing left for earphones mode."); return; }
     voice.steps = steps; voice.idx = 0; voice.collected = preCollected; voice.active = true;

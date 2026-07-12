@@ -43,6 +43,8 @@ LADDERS = {
         ("Push-up", 4, "difficulty", 5, 12, False, 8, ["bodyweight"], "Elbows ~45°; full range."),
         ("Diamond Push-up", 5, "difficulty", 5, 10, False, 15, ["bodyweight"], "Hands together; tuck elbows."),
         ("Archer Push-up", 6, "difficulty", 4, 8, False, 8, ["bodyweight"], "Shift to one arm; control."),
+        ("Typewriter Push-up", 7, "difficulty", 3, 6, False, 18, ["bodyweight"], "Stay low; glide side to side, elbows tight."),
+        ("One-Arm Push-up", 8, "difficulty", 1, 5, False, 24, ["bodyweight"], "Widen the base; brace hard, no torso twist."),
         ("Dumbbell Bench Press", 4, "load", 6, 12, False, 0, ["dumbbells", "bench"], "Drive through chest; full range."),
         ("Barbell Bench Press", 5, "load", 5, 10, False, 0, ["barbell", "bench"], "Bar to chest; tight back."),
     ],
@@ -70,6 +72,8 @@ LADDERS = {
         ("Bulgarian Split Squat", 3, "difficulty", 6, 12, False, 12, ["bodyweight", "bench"], "Rear foot elevated; sink straight."),
         ("Assisted Pistol Squat", 4, "difficulty", 4, 8, False, 12, ["bodyweight"], "Hold support; full depth."),
         ("Pistol Squat", 5, "difficulty", 3, 8, False, 6, ["bodyweight"], "One leg; controlled descent."),
+        ("Shrimp Squat", 6, "difficulty", 3, 8, False, 16, ["bodyweight"], "Grab rear foot; sit straight down, chest tall."),
+        ("Dragon Squat", 7, "difficulty", 1, 5, False, 22, ["bodyweight"], "Thread rear leg through; control the descent."),
         ("Goblet Squat", 2, "load", 6, 12, False, 0, ["dumbbells", "kettlebell"], "Weight at chest; sit between hips."),
         ("Dumbbell Bulgarian Split Squat", 3, "load", 6, 12, False, 0, ["dumbbells", "bench"], "Loaded; rear foot elevated."),
         ("Barbell Back Squat", 4, "load", 5, 10, False, 0, ["barbell"], "Bar on traps; hit depth."),
@@ -125,6 +129,8 @@ EXERCISE_MUSCLES = {
     "Push-up": ["chest", "front_delts", "triceps", "abs"],
     "Diamond Push-up": ["triceps", "chest", "front_delts"],
     "Archer Push-up": ["chest", "front_delts", "triceps", "abs"],
+    "Typewriter Push-up": ["chest", "front_delts", "triceps"],
+    "One-Arm Push-up": ["chest", "triceps", "front_delts", "obliques"],
     "Dumbbell Bench Press": ["chest", "front_delts", "triceps"],
     "Barbell Bench Press": ["chest", "front_delts", "triceps"],
     # ── Vertical Pull ──
@@ -149,6 +155,8 @@ EXERCISE_MUSCLES = {
     "Bulgarian Split Squat": ["quads", "glutes", "hamstrings"],
     "Assisted Pistol Squat": ["quads", "glutes"],
     "Pistol Squat": ["quads", "glutes", "hamstrings"],
+    "Shrimp Squat": ["quads", "glutes"],
+    "Dragon Squat": ["quads", "glutes", "hamstrings"],
     "Goblet Squat": ["quads", "glutes"],
     "Dumbbell Bulgarian Split Squat": ["quads", "glutes", "hamstrings"],
     "Barbell Back Squat": ["quads", "glutes", "hamstrings", "lower_back"],
@@ -177,6 +185,8 @@ VIDEOS = {
     "Push-up": "https://www.youtube.com/watch?v=IODxDxX7oi4",
     "Diamond Push-up": "https://www.youtube.com/watch?v=_6AvEX9-k8E",
     "Archer Push-up": "https://www.youtube.com/watch?v=MxVbNel13Ek",
+    "Typewriter Push-up": "https://www.youtube.com/watch?v=fw56EiZYvm8",
+    "One-Arm Push-up": "https://www.youtube.com/watch?v=7rqykkPtg2M",
     "Dumbbell Bench Press": "https://www.youtube.com/watch?v=pKZMNVbfUzQ",
     "Barbell Bench Press": "https://www.youtube.com/watch?v=rT7DgCr-3pg",
     "Band-Assisted Row": "https://www.youtube.com/watch?v=eOKwM5nHzj4",
@@ -198,6 +208,8 @@ VIDEOS = {
     "Bulgarian Split Squat": "https://www.youtube.com/watch?v=hiLF_pF3EJM",
     "Assisted Pistol Squat": "https://www.youtube.com/watch?v=88YkATr_7ZA",
     "Pistol Squat": "https://www.youtube.com/watch?v=hHxm3VbuS-w",
+    "Shrimp Squat": "https://www.youtube.com/watch?v=xfl7SDj0Gzs",
+    "Dragon Squat": "https://www.youtube.com/watch?v=Pic8epzj1N4",
     "Goblet Squat": "https://www.youtube.com/watch?v=6mf0oa2GGUc",
     "Dumbbell Bulgarian Split Squat": "https://www.youtube.com/watch?v=vLuhN_glFZ8",
     "Barbell Back Squat": "https://www.youtube.com/watch?v=irA7MTz96ho",
@@ -227,17 +239,22 @@ def rest_for(mode, rmin, rmax, timed):
     """Evidence-based rest after a working set, in seconds.
 
     Longer rest (~2-3 min) favours strength and heavy compounds (Schoenfeld
-    2016; Grgic 2017 review): hard/low-rep and loaded lifts get 150s. Accessory/
-    hypertrophy ranges get ~120s, endurance (>12 reps) ~75s, isometric holds
-    ~60s (a hold isn't a high-fatigue compound set).
+    2016; Grgic 2017 review): hard/low-rep and loaded lifts get the most rest,
+    accessory/hypertrophy ranges less, endurance (>12 reps) less still, and
+    isometric holds the least (a hold isn't a high-fatigue compound set).
+
+    Baselines are cut ~30% from the original prescriptions (150/120/75/60s) to
+    keep sessions denser, rounded to the nearest 5s for clean timer values:
+    heavy 150→105, hypertrophy 120→85, endurance 75→55, holds 60→40. Existing
+    catalog and prescription rows are migrated to match in 0004.
     """
     if timed:
-        return 60
+        return 40
     if rmax <= 8 or (mode == "load" and rmax <= 10):
-        return 150
+        return 105
     if rmax <= 12:
-        return 120
-    return 75
+        return 85
+    return 55
 
 
 class Command(BaseCommand):
