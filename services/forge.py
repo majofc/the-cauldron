@@ -5,7 +5,10 @@ View/API code calls into here; the pure decision logic stays in
 session snapshotting, applying a logged session).
 """
 
+from datetime import timedelta
+
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from the_cauldron.models import (
@@ -37,6 +40,13 @@ SPLIT_LAYOUTS = {
 
 UPPER_PATTERNS = {"horizontal_push", "vertical_pull", "vertical_push", "core_anti_extension"}
 LOWER_PATTERNS = {"lower_unilateral", "hinge", "core_anti_extension"}
+
+# "Full Body A" (the first day of a Full Body ×3 split) biases toward the user's
+# least-trained movements: it trains only this many patterns — the ones with the
+# lowest recent max AMRAP reps — instead of every pattern. Days B/C are unchanged.
+FULL_BODY_A_PATTERN_COUNT = 5
+# Window used to decide which patterns are "least trained" for Full Body A.
+LEAST_TRAINED_WINDOW_DAYS = 30
 
 
 def get_or_create_equipment_profile(user) -> UserEquipmentProfile:
@@ -251,17 +261,74 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
     return program
 
 
+def recent_max_reps_by_pattern(user, since_days=LEAST_TRAINED_WINDOW_DAYS) -> dict:
+    """Highest AMRAP reps the user logged per movement pattern in the last
+    ``since_days`` days, keyed by pattern id.
+
+    Only the final (AMRAP) working set of each *completed* session counts —
+    ``performed_at`` is null until a session is logged, so planned-but-unlogged
+    sessions are naturally excluded. Patterns with no qualifying set are simply
+    absent from the result (callers treat "absent" as least-trained).
+    """
+    cutoff = timezone.now() - timedelta(days=since_days)
+    rows = (
+        SetLog.objects.filter(
+            session__user=user,
+            is_amrap=True,
+            actual_reps__isnull=False,
+            session__performed_at__gte=cutoff,
+        )
+        .values("exercise__pattern_id")
+        .annotate(max_reps=Max("actual_reps"))
+    )
+    return {r["exercise__pattern_id"]: r["max_reps"] for r in rows}
+
+
+def select_day_prescriptions(user, program_day: ProgramDay) -> list:
+    """The prescriptions to actually train on ``program_day``, in display order.
+
+    Every day trains its full prescription set, except **Full Body A** (the first
+    day of a Full Body ×3 program). There we bias toward the user's least-trained
+    movements: keep only the ``FULL_BODY_A_PATTERN_COUNT`` patterns with the
+    *lowest* recent max AMRAP reps and drop the rest (the most-trained). A pattern
+    with no AMRAP logged in the window ranks as least-trained, so it is always
+    kept; ties break by the day's own display order for determinism.
+    """
+    prescriptions = list(
+        program_day.prescriptions.select_related("exercise", "pattern")
+    )
+    is_full_body_a = (
+        program_day.program.split == Program.Split.FULL_BODY_3X
+        and program_day.day_index == 0
+    )
+    if not is_full_body_a or len(prescriptions) <= FULL_BODY_A_PATTERN_COUNT:
+        return prescriptions
+
+    recent = recent_max_reps_by_pattern(user)
+    never_trained = -1  # sorts below any real rep count → always kept
+    least_trained = sorted(
+        prescriptions,
+        key=lambda p: (recent.get(p.pattern_id, never_trained), p.order),
+    )[:FULL_BODY_A_PATTERN_COUNT]
+    keep = {p.pk for p in least_trained}
+    # Preserve the day's natural order — this filters the day, it doesn't reorder.
+    return [p for p in prescriptions if p.pk in keep]
+
+
 @transaction.atomic
 def start_session(user, program_day: ProgramDay) -> WorkoutSession:
     """Open a WorkoutSession and snapshot expected reps/load from the current
-    prescriptions, so planned-vs-real survives later adaptation."""
+    prescriptions, so planned-vs-real survives later adaptation.
+
+    Full Body A trains only the least-trained subset of patterns (see
+    ``select_day_prescriptions``); all other days snapshot every prescription."""
     session = WorkoutSession.objects.create(
         user=user,
         program_day=program_day,
         scheduled_for=timezone.now().date(),
         status=WorkoutSession.Status.PLANNED,
     )
-    for presc in program_day.prescriptions.select_related("exercise"):
+    for presc in select_day_prescriptions(user, program_day):
         for set_index in range(presc.target_sets):
             is_amrap = set_index == presc.target_sets - 1
             SetLog.objects.create(
