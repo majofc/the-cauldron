@@ -2127,6 +2127,22 @@
     if (rest > 0) beginRest(rest, nextI);
     else announceStep(nextI);
   }
+  // Spoken preview of the upcoming set, appended to the rest-start announcement
+  // so earphones users know what's next without looking. Mirrors announceStep's
+  // phrasing (load shown as "at N", matching announceStep — no unit). (#16)
+  function nextExercisePhrase(step) {
+    if (!step) return "";
+    const load = step.expectedLoad != null ? ` at ${step.expectedLoad}` : "";
+    let detail;
+    if (step.isTimed) {
+      detail = step.isAmrap ? "hold as long as you can" : `hold ${step.targetReps} seconds`;
+    } else if (step.isAmrap) {
+      detail = "as many reps as you can";
+    } else {
+      detail = `target ${step.targetReps} reps${load}`;
+    }
+    return `Next: ${step.exerciseName}, ${detail}.`;
+  }
   function beginRest(total, nextI) {
     voice.state = "resting";
     let remaining = total;
@@ -2147,7 +2163,9 @@
       }
       updateTimer(remaining);
     }, 1000);
-    speak(`Rest for ${total} seconds.`).then(startListening);
+    const nextPhrase = nextExercisePhrase(voice.steps[nextI]);
+    const restLine = nextPhrase ? `Rest for ${total} seconds. ${nextPhrase}` : `Rest for ${total} seconds.`;
+    speak(restLine).then(startListening);
   }
   function skipRest() {
     if (voice.restId) { clearInterval(voice.restId); voice.restId = null; }
