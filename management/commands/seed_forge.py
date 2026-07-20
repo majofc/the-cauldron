@@ -54,8 +54,13 @@ LADDERS = {
         ("Rowing Machine", 2, "difficulty", 10, 20, False, 0, ["rowing_machine"], "Legs-hips-arms sequence."),
         ("Negative Pull-up", 3, "difficulty", 3, 6, False, 8, ["pullup_bar"], "5s lower; control the descent."),
         ("Band-Assisted Pull-up", 4, "load", 5, 10, False, 0, ["pullup_bar", "bands"], "Full hang to chin over bar."),
-        ("Pull-up", 5, "difficulty", 4, 10, False, 4, ["pullup_bar"], "Dead hang; chin over bar."),
-        ("Archer Pull-up", 6, "difficulty", 3, 6, False, 10, ["pullup_bar"], "Pull to one side; other arm straight."),
+        # Bar pull-up rungs split into two grips at the same rank; the Forge
+        # prescribes the weaker grip daily. Overhand listed first = ladder-node
+        # representative that adjacent rungs link to.
+        ("Pull-up", 5, "difficulty", 4, 10, False, 4, ["pullup_bar"], "Dead hang; chin over bar.", "overhand"),
+        ("Chin-up", 5, "difficulty", 4, 10, False, 4, ["pullup_bar"], "Underhand grip; pull chin over bar.", "underhand"),
+        ("Archer Pull-up", 6, "difficulty", 3, 6, False, 10, ["pullup_bar"], "Pull to one side; other arm straight.", "overhand"),
+        ("Archer Chin-up", 6, "difficulty", 3, 6, False, 10, ["pullup_bar"], "Underhand archer; pull to one side.", "underhand"),
         ("Dumbbell Row", 3, "load", 6, 12, False, 0, ["dumbbells"], "Flat back; row to hip."),
     ],
     "vertical_push": [
@@ -140,7 +145,9 @@ EXERCISE_MUSCLES = {
     "Negative Pull-up": ["lats", "biceps", "mid_back", "forearms"],
     "Band-Assisted Pull-up": ["lats", "biceps", "mid_back"],
     "Pull-up": ["lats", "biceps", "mid_back", "forearms"],
+    "Chin-up": ["lats", "biceps", "mid_back", "forearms"],
     "Archer Pull-up": ["lats", "biceps", "mid_back", "forearms"],
+    "Archer Chin-up": ["lats", "biceps", "mid_back", "forearms"],
     "Dumbbell Row": ["lats", "mid_back", "biceps", "rear_delts"],
     # ── Vertical Push ──
     "Incline Pike Push-up": ["front_delts", "side_delts", "triceps"],
@@ -196,6 +203,8 @@ VIDEOS = {
     "Band-Assisted Pull-up": "https://www.youtube.com/watch?v=Dx6DNiOklZI",
     "Pull-up": "https://www.youtube.com/watch?v=EOgd2jRu4OU",
     "Archer Pull-up": "https://www.youtube.com/watch?v=_LGLKUiQH5k",
+    # Chin-up / Archer Chin-up demos intentionally blank until a verified clip is
+    # sourced — a wrong (overhand) demo would mis-coach the grip. TODO: add real URLs.
     "Dumbbell Row": "https://www.youtube.com/watch?v=gfUg6qWohTk",
     "Incline Pike Push-up": "https://www.youtube.com/watch?v=HLjASz4wexo",
     "Pike Push-up": "https://www.youtube.com/watch?v=2b5t0Cu2nQI",
@@ -290,7 +299,10 @@ class Command(BaseCommand):
             pattern = patterns[pkey]
             # Build/refresh each rung.
             created = []
-            for (name, rank, mode, rmin, rmax, timed, threshold, equips, cues) in rungs:
+            for rung in rungs:
+                name, rank, mode, rmin, rmax, timed, threshold, equips, cues = rung[:9]
+                # Optional trailing grip element; defaults to n/a for normal rungs.
+                grip = rung[9] if len(rung) > 9 else Exercise.Grip.NA
                 ex, _ = Exercise.objects.update_or_create(
                     pattern=pattern,
                     name=name,
@@ -302,6 +314,7 @@ class Command(BaseCommand):
                         "is_timed": timed,
                         "placement_threshold": threshold,
                         "cues": cues,
+                        "grip": grip,
                         "video_url": VIDEOS.get(name, ""),
                         "rest_seconds": rest_for(mode, rmin, rmax, timed),
                         "is_assessment_anchor": name in ASSESSMENT_ANCHORS,
@@ -315,14 +328,36 @@ class Command(BaseCommand):
                 n_ex += 1
 
             # Link regression/progression within each mode's ladder, ordered by rank.
+            # Grip variants sharing a rank (bar pull-ups) collapse into ONE ladder
+            # node so traversal stays linear: both variants get the same adjacent
+            # rungs, and adjacent rungs link to the node's first (overhand) variant.
             for mode in ("difficulty", "load"):
                 chain = sorted(
                     [ex for m, ex in created if m == mode], key=lambda e: e.difficulty_rank
                 )
-                for i, ex in enumerate(chain):
-                    ex.regression = chain[i - 1] if i > 0 else None
-                    ex.progression = chain[i + 1] if i < len(chain) - 1 else None
-                    ex.save(update_fields=["regression", "progression"])
+                nodes = []
+                grip_node_by_rank = {}
+                for ex in chain:
+                    if ex.grip != Exercise.Grip.NA:
+                        # All grip variants of a rank share one node, regardless of
+                        # their order in the sorted chain.
+                        node = grip_node_by_rank.get(ex.difficulty_rank)
+                        if node is None:
+                            node = grip_node_by_rank[ex.difficulty_rank] = []
+                            nodes.append(node)
+                        node.append(ex)
+                    else:
+                        nodes.append([ex])
+                # Overhand first in each grip node → the rung neighbours link to.
+                for node in nodes:
+                    node.sort(key=lambda e: e.grip != Exercise.Grip.OVERHAND)
+                for i, node in enumerate(nodes):
+                    regression = nodes[i - 1][0] if i > 0 else None
+                    progression = nodes[i + 1][0] if i < len(nodes) - 1 else None
+                    for ex in node:
+                        ex.regression = regression
+                        ex.progression = progression
+                        ex.save(update_fields=["regression", "progression"])
 
         self.stdout.write(
             self.style.SUCCESS(

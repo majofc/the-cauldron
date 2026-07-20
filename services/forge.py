@@ -5,6 +5,7 @@ View/API code calls into here; the pure decision logic stays in
 session snapshotting, applying a logged session).
 """
 
+import random
 from datetime import timedelta
 
 from django.db import transaction
@@ -47,6 +48,9 @@ LOWER_PATTERNS = {"lower_unilateral", "hinge", "core_anti_extension"}
 FULL_BODY_A_PATTERN_COUNT = 5
 # Window used to decide which patterns are "least trained" for Full Body A.
 LEAST_TRAINED_WINDOW_DAYS = 30
+# Trailing window for comparing the two grips of a split bar-pull-up rung: the
+# weaker grip is the one with the lower most-recent AMRAP in this many days.
+GRIP_WINDOW_DAYS = 30
 
 
 def get_or_create_equipment_profile(user) -> UserEquipmentProfile:
@@ -176,6 +180,105 @@ def substitute_for(user, exercise):
     blocked = blocked_exercise_ids(user)
     candidates = eligible_exercises(exercise.pattern, profile, exclude_ids=blocked)
     return progression.find_substitute(exercise, candidates)
+
+
+def grip_siblings(exercise):
+    """The grip variants sharing ``exercise``'s ladder position (both overhand and
+    underhand rows at the same pattern + rank), or ``[]`` if ``exercise`` is not a
+    grip-split rung."""
+    if exercise.grip == Exercise.Grip.NA:
+        return []
+    return list(
+        Exercise.objects.filter(
+            pattern_id=exercise.pattern_id,
+            difficulty_rank=exercise.difficulty_rank,
+        ).exclude(grip=Exercise.Grip.NA)
+    )
+
+
+def _recent_amrap_by_exercise(user, exercises, cutoff) -> dict:
+    """``{exercise_id: most_recent actual_reps}`` for each of ``exercises`` within
+    the window — a single query over the whole set (no per-variant N+1)."""
+    if not exercises:
+        return {}
+    rows = (
+        SetLog.objects.filter(
+            session__user=user,
+            exercise__in=exercises,
+            is_amrap=True,
+            actual_reps__isnull=False,
+            session__performed_at__gte=cutoff,
+        )
+        .order_by("exercise_id", "-session__performed_at")
+        .values_list("exercise_id", "actual_reps")
+    )
+    most_recent = {}
+    for exercise_id, reps in rows:
+        # Ordered newest-first per exercise → first row seen is the most recent.
+        most_recent.setdefault(exercise_id, reps)
+    return most_recent
+
+
+def select_grip_variant(user, exercise):
+    """The grip variant of ``exercise`` to train today — the *weaker* grip.
+
+    Bar pull-up rungs exist as two ``Exercise`` rows at the same
+    ``difficulty_rank`` (overhand + underhand). Given either variant, return the
+    one whose most-recent AMRAP set in the trailing ``GRIP_WINDOW_DAYS`` has the
+    lower ``actual_reps`` (bilateral, so ``actual_reps`` is the score). Rules:
+
+    - A variant with no AMRAP set in the window is treated as the weaker (a
+      neglected grip → prioritised).
+    - Tie, or neither variant has history → choose randomly.
+    - A blocked or equipment-ineligible variant is never returned; the other is
+      used regardless of reps. If *both* are unavailable, fall back to a
+      substitute (mirrors ``block_exercise``) rather than a forbidden movement.
+
+    Returns ``exercise`` unchanged if it is not a grip-split rung.
+    """
+    variants = grip_siblings(exercise)
+    if len(variants) < 2:
+        return exercise  # not a grip-split rung, or missing a sibling
+
+    profile = get_or_create_equipment_profile(user)
+    eligible = {e.pk for e in eligible_exercises(exercise.pattern, profile)}
+    blocked = blocked_exercise_ids(user)
+    candidates = [v for v in variants if v.pk in eligible and v.pk not in blocked]
+    if not candidates:
+        # Every grip blocked or unusable — don't prescribe a forbidden movement.
+        return substitute_for(user, exercise) or exercise
+    if len(candidates) == 1:
+        return candidates[0]  # the other grip is unavailable — forced, ignore reps
+
+    cutoff = timezone.now() - timedelta(days=GRIP_WINDOW_DAYS)
+    recent = _recent_amrap_by_exercise(user, candidates, cutoff)
+
+    # No history in the window → weakest. If any variant is untrained, pick among
+    # those (random when more than one is untrained).
+    untrained = [v for v in candidates if v.pk not in recent]
+    if untrained:
+        return random.choice(untrained)
+    lowest = min(recent[v.pk] for v in candidates)
+    weakest = [v for v in candidates if recent[v.pk] == lowest]
+    return random.choice(weakest)
+
+
+def effective_progression_reps(user, trained_exercise, logged_reps):
+    """Reps that should drive the shared rung's difficulty progression.
+
+    A grip-split rung is one ladder position trained by two grips. Because the
+    Forge deliberately schedules the *weaker* grip, a weak-grip AMRAP must not
+    regress or stall the rung — the rung reflects the user's demonstrated pulling
+    ability, i.e. the *stronger* grip. So return the best most-recent AMRAP across
+    both grips in the window (``logged_reps`` is already persisted, so it is
+    included). Non-split movements return ``logged_reps`` unchanged.
+    """
+    variants = grip_siblings(trained_exercise)
+    if len(variants) < 2:
+        return logged_reps
+    cutoff = timezone.now() - timedelta(days=GRIP_WINDOW_DAYS)
+    recent = _recent_amrap_by_exercise(user, variants, cutoff)
+    return max([logged_reps, *recent.values()]) if recent else logged_reps
 
 
 @transaction.atomic
@@ -329,12 +432,16 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
         status=WorkoutSession.Status.PLANNED,
     )
     for presc in select_day_prescriptions(user, program_day):
+        # Bar pull-ups re-pick the weaker grip each day they're scheduled; the
+        # choice is snapshotted onto this session only (the prescription's
+        # nominal grip is untouched). Non-split rungs return unchanged.
+        session_exercise = select_grip_variant(user, presc.exercise)
         for set_index in range(presc.target_sets):
             is_amrap = set_index == presc.target_sets - 1
             SetLog.objects.create(
                 session=session,
                 prescribed_exercise=presc,
-                exercise=presc.exercise,
+                exercise=session_exercise,
                 set_index=set_index,
                 expected_reps=presc.target_reps_max if is_amrap else presc.target_reps_min,
                 expected_load=presc.target_load,
@@ -398,7 +505,11 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         presc = amrap.prescribed_exercise
         if presc is None or amrap.actual_reps is None:
             continue
-        new = progression.next_prescription(presc, amrap.actual_reps, profile)
+        # The AMRAP may have been logged on a grip variant (the weaker grip the
+        # Forge scheduled today) while ``presc`` tracks the shared rung. Drive the
+        # rung from the stronger grip so a weak-grip day never demotes/stalls it.
+        reps = effective_progression_reps(session.user, amrap.exercise, amrap.actual_reps)
+        new = progression.next_prescription(presc, reps, profile)
 
         # Earned a harder rung → don't climb automatically. Park it as a pending
         # "unlock" the user must Accept/Deny, and hold at the current rung.
