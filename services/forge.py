@@ -7,6 +7,7 @@ session snapshotting, applying a logged session).
 
 from datetime import timedelta
 
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
@@ -143,23 +144,42 @@ def peer_decile_cutoffs(user, exercise_name) -> dict:
     }
 
 
-def eligible_exercises(pattern, profile, exclude_ids=None):
+def owned_equipment_keys(profile) -> set:
+    """Equipment keys the user owns. Bodyweight is implicitly always available."""
+    return set(profile.equipment.values_list("key", flat=True)) | {"bodyweight"}
+
+
+def owned_equipment_keys_for(user) -> set:
+    """``owned_equipment_keys`` for a user, without creating a profile row — read
+    paths must not write. A user with no profile yet has bodyweight only."""
+    profile = UserEquipmentProfile.objects.filter(user=user).first()
+    return owned_equipment_keys(profile) if profile else {"bodyweight"}
+
+
+def is_performable(exercise, owned, blocked=()) -> bool:
+    """True when every piece of ``exercise``'s required equipment is in ``owned``
+    and it is not among ``blocked``. Reads ``required_equipment`` through the
+    prefetch cache, so callers should prefetch it when checking in bulk."""
+    if exercise.pk in blocked:
+        return False
+    req = {e.key for e in exercise.required_equipment.all()} or {"bodyweight"}
+    return req <= owned
+
+
+def eligible_exercises(pattern, profile, exclude_ids=None, owned=None):
     """Exercises for a pattern whose required equipment the user owns.
 
-    Bodyweight is implicitly always available. An exercise is eligible if every
-    piece of its required equipment is owned (bodyweight counts as owned).
-    ``exclude_ids`` (e.g. the user's blocked exercises) are filtered out.
+    ``exclude_ids`` (e.g. the user's blocked exercises) are filtered out. Pass
+    ``owned`` to reuse a set already computed for this user.
     """
-    owned = set(profile.equipment.values_list("key", flat=True)) | {"bodyweight"}
+    if owned is None:
+        owned = owned_equipment_keys(profile)
     exclude_ids = set(exclude_ids or ())
-    result = []
-    for ex in pattern.exercises.prefetch_related("required_equipment"):
-        if ex.pk in exclude_ids:
-            continue
-        req = set(ex.required_equipment.values_list("key", flat=True)) or {"bodyweight"}
-        if req <= owned:
-            result.append(ex)
-    return result
+    return [
+        ex
+        for ex in pattern.exercises.prefetch_related("required_equipment")
+        if is_performable(ex, owned, exclude_ids)
+    ]
 
 
 def blocked_exercise_ids(user) -> set:
@@ -178,6 +198,99 @@ def substitute_for(user, exercise):
     return progression.find_substitute(exercise, candidates)
 
 
+def _repoint_prescription(presc, exercise, profile) -> None:
+    """Move ``presc`` onto ``exercise``, resetting the rung-dependent fields."""
+    presc.exercise = exercise
+    presc.target_reps_min = exercise.rep_range_min
+    presc.target_reps_max = exercise.rep_range_max
+    presc.target_load = _initial_load(profile, exercise)
+    presc.target_rest_seconds = exercise.rest_seconds
+    presc.sessions_at_top = 0
+    presc.save()
+
+
+def _live_prescriptions(user):
+    """Prescriptions on the user's active program, ready for a performability
+    pass (equipment prefetched, so the scan costs a fixed number of queries)."""
+    return PrescribedExercise.objects.filter(
+        day__program__user=user, day__program__is_active=True
+    ).select_related("exercise__pattern", "pending_progression__pattern").prefetch_related(
+        "exercise__required_equipment", "pending_progression__required_equipment"
+    )
+
+
+def unperformable_prescription_ids(user) -> set:
+    """PKs of active-program prescriptions the user cannot perform.
+
+    Normally empty: ``sync_program_equipment`` swaps such a prescription for a
+    stand-in as soon as the equipment changes. It stays non-empty only when *no*
+    rung of that pattern is reachable at all, leaving nothing to swap in. Read
+    paths hide those rather than delete them, so the day trains one fewer pattern
+    and the movement returns on its own if the equipment does.
+    """
+    owned = owned_equipment_keys_for(user)
+    blocked = blocked_exercise_ids(user)
+    return {
+        p.pk for p in _live_prescriptions(user) if not is_performable(p.exercise, owned, blocked)
+    }
+
+
+@transaction.atomic
+def sync_program_equipment(user) -> dict:
+    """Re-point live prescriptions the user can no longer perform.
+
+    Equipment can change *after* a program was generated — the user edits their
+    profile, or staff edits it in the admin — which would otherwise leave the
+    program prescribing a movement whose gear is gone (e.g. a Rowing Machine row
+    after the machine was removed). Each prescription that is no longer
+    performable is swapped to the closest eligible stand-in, and a parked
+    ``pending_progression`` that became ineligible is cleared. Where no rung of
+    the pattern is reachable there is nothing to swap in, so the row is left for
+    the read paths to hide.
+
+    Idempotent — a program already consistent with the profile is untouched.
+    Returns ``{"swapped": [{"from", "to"}, ...], "hidden": {prescription pk}}``,
+    ``to`` being ``None`` for the rows that had no stand-in.
+    """
+    profile = get_or_create_equipment_profile(user)
+    owned = owned_equipment_keys(profile)
+    blocked = blocked_exercise_ids(user)
+
+    candidates_by_pattern = {}
+
+    def candidates(pattern):
+        if pattern.pk not in candidates_by_pattern:
+            candidates_by_pattern[pattern.pk] = eligible_exercises(
+                pattern, profile, exclude_ids=blocked, owned=owned
+            )
+        return candidates_by_pattern[pattern.pk]
+
+    swapped, hidden = [], set()
+    for presc in _live_prescriptions(user):
+        pending = presc.pending_progression
+        clear_pending = pending is not None and not is_performable(pending, owned, blocked)
+        if clear_pending:
+            presc.pending_progression = None
+        if is_performable(presc.exercise, owned, blocked):
+            if clear_pending:
+                presc.save(update_fields=["pending_progression"])
+            continue
+        substitute = progression.find_substitute(
+            presc.exercise, candidates(presc.exercise.pattern)
+        )
+        swapped.append(
+            {"from": presc.exercise.name, "to": substitute.name if substitute else None}
+        )
+        if substitute is None:
+            hidden.add(presc.pk)
+            if clear_pending:
+                presc.save(update_fields=["pending_progression"])
+        else:
+            # The full save also persists a cleared pending_progression.
+            _repoint_prescription(presc, substitute, profile)
+    return {"swapped": swapped, "hidden": hidden}
+
+
 @transaction.atomic
 def block_exercise(user, exercise, reason="") -> dict:
     """Block ``exercise`` for ``user`` and swap any live prescription using it to
@@ -188,19 +301,14 @@ def block_exercise(user, exercise, reason="") -> dict:
     )
     substitute = substitute_for(user, exercise)
     swapped = 0
+    profile = get_or_create_equipment_profile(user)
     prescriptions = PrescribedExercise.objects.filter(
         day__program__user=user, day__program__is_active=True, exercise=exercise
     )
     for presc in prescriptions:
         if substitute is None:
             continue
-        presc.exercise = substitute
-        presc.target_reps_min = substitute.rep_range_min
-        presc.target_reps_max = substitute.rep_range_max
-        presc.target_load = _initial_load(get_or_create_equipment_profile(user), substitute)
-        presc.target_rest_seconds = substitute.rest_seconds
-        presc.sessions_at_top = 0
-        presc.save()
+        _repoint_prescription(presc, substitute, profile)
         swapped += 1
     return {"blocked": exercise.pk, "substitute": substitute, "swapped": swapped}
 
@@ -293,10 +401,20 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     *lowest* recent max AMRAP reps and drop the rest (the most-trained). A pattern
     with no AMRAP logged in the window ranks as least-trained, so it is always
     kept; ties break by the day's own display order for determinism.
+
+    A prescription the user cannot perform at all is never returned, whatever the
+    day — the day trains one fewer pattern instead.
     """
-    prescriptions = list(
-        program_day.prescriptions.select_related("exercise", "pattern")
-    )
+    if program_day.program.user_id != user.pk:
+        raise PermissionDenied("program_day belongs to another user")
+    owned = owned_equipment_keys_for(user)
+    blocked = blocked_exercise_ids(user)
+    prescriptions = [
+        p
+        for p in program_day.prescriptions.select_related("exercise", "pattern")
+        .prefetch_related("exercise__required_equipment")
+        if is_performable(p.exercise, owned, blocked)
+    ]
     is_full_body_a = (
         program_day.program.split == Program.Split.FULL_BODY_3X
         and program_day.day_index == 0
@@ -321,7 +439,11 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
     prescriptions, so planned-vs-real survives later adaptation.
 
     Full Body A trains only the least-trained subset of patterns (see
-    ``select_day_prescriptions``); all other days snapshot every prescription."""
+    ``select_day_prescriptions``); all other days snapshot every prescription.
+
+    Prescriptions are reconciled against the user's current equipment first, so
+    a day never snapshots a movement they can no longer perform."""
+    sync_program_equipment(user)
     session = WorkoutSession.objects.create(
         user=user,
         program_day=program_day,
@@ -388,9 +510,13 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     session.performed_at = timezone.now()
     session.save(update_fields=["status", "performed_at"])
 
-    # Advance each prescription from its AMRAP set.
+    # Advance each prescription from its AMRAP set. The engine moves along the
+    # full ladder, so every rung it lands on is re-checked against what the user
+    # can actually do — otherwise logging a session could write back a movement
+    # whose equipment they no longer own.
     deltas = []
     blocked = blocked_exercise_ids(session.user)
+    owned = owned_equipment_keys(profile)
     amrap_sets = session.set_logs.filter(is_amrap=True).select_related(
         "prescribed_exercise", "prescribed_exercise__exercise"
     )
@@ -404,7 +530,7 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         # "unlock" the user must Accept/Deny, and hold at the current rung.
         if new.advanced:
             target = new.exercise
-            if target.pk in blocked:
+            if not is_performable(target, owned, blocked):
                 target = substitute_for(session.user, target) or target
             if presc.pending_progression_id is None:
                 presc.pending_progression = target
@@ -423,12 +549,14 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
             )
             continue
 
-        # If the engine advanced/regressed onto a blocked move, substitute it.
-        if new.exercise.pk in blocked:
+        # If the engine advanced/regressed onto a move the user can't do — blocked
+        # or needing equipment they lack — substitute it.
+        if not is_performable(new.exercise, owned, blocked):
+            reason = "is blocked" if new.exercise.pk in blocked else "needs equipment you don't have"
             sub = substitute_for(session.user, new.exercise)
             if sub is not None:
                 new.exercise = sub
-                new.message += f" (substituted {sub.name} — original is blocked)"
+                new.message += f" (substituted {sub.name} — original {reason})"
         presc.exercise = new.exercise
         presc.target_sets = new.target_sets
         presc.target_reps_min = new.target_reps_min
@@ -447,18 +575,12 @@ def accept_progression(user, prescription) -> "Exercise | None":
     prog = prescription.pending_progression
     if prog is None:
         return None
-    # Respect a block placed after the unlock was earned.
-    if prog.pk in blocked_exercise_ids(user):
-        prog = substitute_for(user, prog) or prog
     profile = get_or_create_equipment_profile(user)
-    prescription.exercise = prog
-    prescription.target_reps_min = prog.rep_range_min
-    prescription.target_reps_max = prog.rep_range_max
-    prescription.target_load = _initial_load(profile, prog)
-    prescription.target_rest_seconds = prog.rest_seconds
-    prescription.sessions_at_top = 0
+    # Respect a block — or an equipment change — since the unlock was earned.
+    if not is_performable(prog, owned_equipment_keys(profile), blocked_exercise_ids(user)):
+        prog = substitute_for(user, prog) or prog
     prescription.pending_progression = None
-    prescription.save()
+    _repoint_prescription(prescription, prog, profile)
     return prog
 
 

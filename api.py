@@ -1,5 +1,6 @@
 """The Forge DRF API. All endpoints require auth and are scoped to request.user."""
 
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -300,7 +301,22 @@ class ProgramView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        program = Program.objects.filter(user=request.user, is_active=True).first()
+        # Prescriptions are reconciled when equipment changes, so this is a plain
+        # read. Anything still unperformable had no stand-in to swap in — hide it
+        # rather than show a movement the user cannot do.
+        hidden = forge.unperformable_prescription_ids(request.user)
+        program = (
+            Program.objects.filter(user=request.user, is_active=True)
+            .prefetch_related(
+                Prefetch(
+                    "days__prescriptions",
+                    queryset=PrescribedExercise.objects.exclude(
+                        pk__in=hidden
+                    ).select_related("exercise", "pattern", "pending_progression"),
+                )
+            )
+            .first()
+        )
         if not program:
             return Response({"detail": "No active program."}, status=404)
         return Response(ProgramSerializer(program).data)
