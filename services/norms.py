@@ -56,6 +56,7 @@ EXERCISE_NORMS = {
     "Push-up": "pushup",          # horizontal push  (real)
     "Plank": "plank",             # core             (real ≤29, estimated 30+)
     "Pull-up": "pullup",          # vertical pull    (real, men only)
+    "Chin-up": "pullup",          # underhand grip of the pull-up rung — same norm
     "Australian Row": "australian_row",  # vertical pull anchor (estimated)
     "Pike Push-up": "pike_pushup",       # vertical push        (estimated)
     "Split Squat": "split_squat",        # lower unilateral     (estimated)

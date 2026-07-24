@@ -1883,6 +1883,18 @@
     choose();
     if (!voice.ttsVoice) window.speechSynthesis.onvoiceschanged = choose;
   }
+  // Spoken "3… 2… 1" cue for the final seconds of a rest or a targeted hold
+  // (earphones mode only). speak() cancels the mic while talking, so re-arm
+  // listening afterwards or the user could no longer say "stop"/"skip" in the
+  // last few seconds. Cues are driven by the rest/hold intervals, so clearing
+  // those intervals (skip, stop, exit) automatically cancels pending cues.
+  const COUNTDOWN_WORDS = { 3: "three", 2: "two", 1: "one" };
+  function speakCountdown(n) {
+    const word = COUNTDOWN_WORDS[n];
+    if (!word) return;
+    speak(word).then(() => { if (voice.active) startListening(); });
+  }
+
   function speak(text) {
     return new Promise((resolve) => {
       if (!window.speechSynthesis) return resolve();
@@ -2088,7 +2100,19 @@
     showTimer(true); updateTimer(0);
     setInstruction(micCue("Holding… say “stop” when you're done.", "Holding… tap Stop when you're done."));
     setControls([{ label: "■ Stop", act: "stop" }, { label: "Exit", act: "exit" }]);
-    voice.swId = setInterval(() => { voice.elapsed++; updateTimer(voice.elapsed); }, 1000);
+    // Spoken 3-2-1 cue as a targeted hold nears its target duration. Cue only —
+    // the hold does not auto-stop; the user still says "stop". No countdown for
+    // AMRAP ("as long as you can") holds or targets shorter than 3s.
+    const step = voice.steps[voice.idx];
+    const holdTarget = (step && !step.isAmrap && step.targetReps >= 3) ? step.targetReps : 0;
+    voice.swId = setInterval(() => {
+      voice.elapsed++;
+      updateTimer(voice.elapsed);
+      if (holdTarget) {
+        const left = holdTarget - voice.elapsed;
+        if (left >= 1 && left <= 3) speakCountdown(left);
+      }
+    }, 1000);
     speak("Go.").then(startListening);
   }
   function endHold() {
@@ -2127,6 +2151,22 @@
     if (rest > 0) beginRest(rest, nextI);
     else announceStep(nextI);
   }
+  // Spoken preview of the upcoming set, appended to the rest-start announcement
+  // so earphones users know what's next without looking. Mirrors announceStep's
+  // phrasing (load shown as "at N", matching announceStep — no unit). (#16)
+  function nextExercisePhrase(step) {
+    if (!step) return "";
+    const load = step.expectedLoad != null ? ` at ${step.expectedLoad}` : "";
+    let detail;
+    if (step.isTimed) {
+      detail = step.isAmrap ? "hold as long as you can" : `hold ${step.targetReps} seconds`;
+    } else if (step.isAmrap) {
+      detail = "as many reps as you can";
+    } else {
+      detail = `target ${step.targetReps} reps${load}`;
+    }
+    return `Next: ${step.exerciseName}, ${detail}.`;
+  }
   function beginRest(total, nextI) {
     voice.state = "resting";
     let remaining = total;
@@ -2145,9 +2185,14 @@
         speak("Rest over.").then(() => announceStep(nextI));
         return;
       }
+      // Spoken 3-2-1 heads-up before rest ends. Skip rests shorter than 3s
+      // (no room for a full countdown); the chime + "Rest over." still play at 0.
+      if (total >= 3 && remaining <= 3) speakCountdown(remaining);
       updateTimer(remaining);
     }, 1000);
-    speak(`Rest for ${total} seconds.`).then(startListening);
+    const nextPhrase = nextExercisePhrase(voice.steps[nextI]);
+    const restLine = nextPhrase ? `Rest for ${total} seconds. ${nextPhrase}` : `Rest for ${total} seconds.`;
+    speak(restLine).then(startListening);
   }
   function skipRest() {
     if (voice.restId) { clearInterval(voice.restId); voice.restId = null; }
