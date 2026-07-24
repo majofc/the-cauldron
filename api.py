@@ -374,8 +374,12 @@ class ProgressView(APIView):
             top_set = 0
             counted = False
             for sl in s.set_logs.all():
-                exercises.add(sl.exercise.name)
-                if only and sl.exercise.name != only:
+                # Grip variants of a bar pull-up collapse to one rung label so the
+                # daily grip choice stays invisible (a chin-up session still counts
+                # toward the "Pull-up" series instead of a separate line).
+                label = sl.exercise.rung_label
+                exercises.add(label)
+                if only and label != only:
                     continue
                 if muscle and not any(m.key == muscle for m in sl.exercise.muscles.all()):
                     continue

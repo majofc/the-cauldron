@@ -12,6 +12,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils.functional import cached_property
 
 
 class ForgeBaseModel(models.Model):
@@ -128,6 +129,11 @@ class Exercise(ForgeBaseModel):
         DIFFICULTY = "difficulty", "Difficulty (climb the ladder)"
         LOAD = "load", "Load (add weight/band level)"
 
+    class Grip(models.TextChoices):
+        OVERHAND = "overhand", "Overhand (pull-up)"
+        UNDERHAND = "underhand", "Underhand (chin-up)"
+        NA = "n/a", "Not applicable"
+
     pattern = models.ForeignKey(
         MovementPattern, on_delete=models.CASCADE, related_name="exercises"
     )
@@ -139,6 +145,15 @@ class Exercise(ForgeBaseModel):
         max_length=16,
         choices=ProgressionMode.choices,
         default=ProgressionMode.DIFFICULTY,
+    )
+    # Grip variant for split rungs (bar pull-ups). Two rows at the same
+    # difficulty_rank share the ladder position — one overhand, one underhand —
+    # and the Forge prescribes the weaker grip each day it is scheduled. All
+    # other exercises are grip-agnostic (``n/a``).
+    grip = models.CharField(
+        max_length=12,
+        choices=Grip.choices,
+        default=Grip.NA,
     )
     rep_range_min = models.PositiveIntegerField(default=5)
     rep_range_max = models.PositiveIntegerField(default=12)
@@ -191,6 +206,28 @@ class Exercise(ForgeBaseModel):
 
     def __str__(self):
         return f"{self.name} ({self.pattern.name} · rank {self.difficulty_rank})"
+
+    @cached_property
+    def rung_label(self):
+        """Name used to aggregate this exercise in progress charts and peer views.
+
+        The two grips of a bar pull-up rung are one ladder position; collapsing
+        the underhand variant onto its overhand sibling's name keeps the daily
+        grip choice invisible (no stray "Chin-up" series, no gaps in the pull-up
+        line). Non-underhand exercises use their own name.
+        """
+        if self.grip != self.Grip.UNDERHAND:
+            return self.name
+        base = (
+            Exercise.objects.filter(
+                pattern_id=self.pattern_id,
+                difficulty_rank=self.difficulty_rank,
+                grip=self.Grip.OVERHAND,
+            )
+            .values_list("name", flat=True)
+            .first()
+        )
+        return base or self.name
 
 
 # ─────────────────────────────────────────────────────────────────────────────
