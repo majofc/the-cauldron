@@ -198,14 +198,19 @@ centred, native spinners removed. Focus brightens the underline, adds an ember
 `text-shadow`, and shifts the text to cream. Never give these a filled box or
 rounded border — that's the boring look this replaced.
 
-### Unilateral (per-leg) testing (`.forge-trial-legs`, `.forge-leg`, `.forge-trial-asym`)
+### Per-side testing (`.forge-trial-legs`, `.forge-leg`, `.forge-trial-asym`)
 
-Single-limb movements (pattern `lower_unilateral`, exposed as
+Per-side movements (`Exercise.is_per_side`, exposed as
 `ExerciseSerializer.is_unilateral`) are tested **per side**: two `.forge-leg`
-fields labelled Left/Right. Placement uses the **weaker** leg (the min), and
+fields labelled Left/Right. Placement uses the **weaker** side (the min), and
 `.forge-trial-asym` shows an italic Cormorant note when the sides differ ≥20%.
 Each Trial move also shows its recommended rest (`.forge-trial-rest`) — "between
-sides" for unilateral, "before testing" otherwise.
+sides" for per-side moves, "before testing" otherwise.
+
+In a logged session only the final to-failure (AMRAP) set splits into Left/Right;
+earlier working sets keep one input. Per-side **timed** holds are the exception —
+every set splits, and each `.forge-leg` carries its own `.forge-timer-btn`
+stopwatch. The `· per side` tag (`.forge-trial-perleg`) marks a split row.
 
 ## Exercise catalog & blocking (`.forge-cat-*`)
 

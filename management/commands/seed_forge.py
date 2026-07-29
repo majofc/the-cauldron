@@ -243,6 +243,24 @@ ASSESSMENT_ANCHORS = {
     "Push-up", "Australian Row", "Pike Push-up", "Split Squat", "Plank", "Glute Bridge",
 }
 
+# Movements performed one side at a time. Their rep targets are forced even (so
+# both sides get equal work) and their to-failure set is logged Left/Right.
+# Note the lower ladder is NOT wholly per-side: Goblet Squat and Barbell Back
+# Squat sit on the unilateral pattern but are two-legged lifts.
+# Keep in sync with migration 0009's PER_SIDE list.
+PER_SIDE = {
+    # Lower (unilateral)
+    "Assisted Split Squat", "Split Squat", "Bulgarian Split Squat",
+    "Dumbbell Bulgarian Split Squat", "Assisted Pistol Squat", "Pistol Squat",
+    "Shrimp Squat", "Dragon Squat",
+    # Horizontal push
+    "Archer Push-up", "Typewriter Push-up", "One-Arm Push-up",
+    # Vertical pull
+    "Archer Pull-up", "Archer Chin-up",
+    # Hinge
+    "Single-Leg Glute Bridge",
+}
+
 
 def rest_for(mode, rmin, rmax, timed):
     """Evidence-based rest after a working set, in seconds.
@@ -312,6 +330,7 @@ class Command(BaseCommand):
                         "rep_range_min": rmin,
                         "rep_range_max": rmax,
                         "is_timed": timed,
+                        "is_per_side": name in PER_SIDE,
                         "placement_threshold": threshold,
                         "cues": cues,
                         "grip": grip,

@@ -304,8 +304,9 @@ def effective_progression_reps(user, trained_exercise, logged_reps):
 def _repoint_prescription(presc, exercise, profile) -> None:
     """Move ``presc`` onto ``exercise``, resetting the rung-dependent fields."""
     presc.exercise = exercise
-    presc.target_reps_min = exercise.rep_range_min
-    presc.target_reps_max = exercise.rep_range_max
+    presc.target_reps_min, presc.target_reps_max = progression.rep_targets_for(
+        exercise, exercise.rep_range_min, exercise.rep_range_max
+    )
     presc.target_load = _initial_load(profile, exercise)
     presc.target_rest_seconds = exercise.rest_seconds
     presc.sessions_at_top = 0
@@ -458,13 +459,16 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
             keys = [k for k in placements if k in (UPPER_PATTERNS if day_index % 2 == 0 else LOWER_PATTERNS)]
         for order, key in enumerate(keys):
             ex = placements[key]
+            reps_min, reps_max = progression.rep_targets_for(
+                ex, ex.rep_range_min, ex.rep_range_max
+            )
             PrescribedExercise.objects.create(
                 day=day,
                 pattern=ex.pattern,
                 exercise=ex,
                 target_sets=3,
-                target_reps_min=ex.rep_range_min,
-                target_reps_max=ex.rep_range_max,
+                target_reps_min=reps_min,
+                target_reps_max=reps_max,
                 target_load=_initial_load(profile, ex),
                 target_rest_seconds=ex.rest_seconds,
                 order=order,
@@ -670,8 +674,11 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
                 new.message += f" (substituted {sub.name} — original {reason})"
         presc.exercise = new.exercise
         presc.target_sets = new.target_sets
-        presc.target_reps_min = new.target_reps_min
-        presc.target_reps_max = new.target_reps_max
+        # Parity is re-evaluated against the rung we actually landed on — a
+        # regression/advance can move onto (or off) a per-side movement.
+        presc.target_reps_min, presc.target_reps_max = progression.rep_targets_for(
+            new.exercise, new.target_reps_min, new.target_reps_max
+        )
         presc.target_load = new.target_load
         presc.sessions_at_top = new.sessions_at_top
         presc.save()
