@@ -118,7 +118,9 @@
   // Count-up stopwatch: fills the row's number input each second until toggled.
   const swTimers = new WeakMap();
   function toggleStopwatch(btn) {
-    const cell = btn.closest(".forge-set-row, .forge-trial-row");
+    // A per-side hold has one stopwatch per side, so prefer the enclosing
+    // .forge-leg; otherwise the row holds the single input.
+    const cell = btn.closest(".forge-leg, .forge-set-row, .forge-trial-row");
     const input = cell && cell.querySelector("input[type=number]");
     if (!input) return;
     if (swTimers.has(input)) {
@@ -644,13 +646,13 @@
         ? `<a class="forge-video-link" href="${anchor.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
         : "";
       const unit = anchor.is_timed ? "seconds" : "reps";
-      // Rest hint: between sides for unilateral, otherwise before the test set.
+      // Rest hint: between sides for per-side moves, otherwise before the test set.
       const rest = anchor.rest_seconds
         ? `<div class="forge-trial-rest">⏱ Rest ${fmtRest(anchor.rest_seconds)} ${
             anchor.is_unilateral ? "between sides" : "before testing"
           }</div>`
         : "";
-      // Input(s): two per-leg fields for unilateral moves, one otherwise.
+      // Input(s): two per-side fields for per-side moves, one otherwise.
       const inputs = anchor.is_unilateral
         ? `<div class="forge-trial-legs">` +
           `<label class="forge-leg"><span>Left</span>` +
@@ -669,7 +671,7 @@
         `<div>` +
         `<div class="forge-trial-pattern">${PATTERN_LABELS[p.key] || p.key}</div>` +
         `<div class="forge-trial-move">${anchor.name}${
-          anchor.is_unilateral ? ` <span class="forge-trial-perleg">· per leg</span>` : ""
+          anchor.is_unilateral ? ` <span class="forge-trial-perleg">· per side</span>` : ""
         }</div>` +
         `<div class="forge-trial-cues">${anchor.cues || ""} (${unit})</div>` +
         rest +
@@ -682,7 +684,7 @@
   }
 
   // Show an imbalance hint when both legs are entered and differ ≥20%. Shared by
-  // the Trial (place from the weaker side) and the Today per-leg AMRAP set (count
+  // the Trial (place from the weaker side) and the Today per-side AMRAP set (count
   // the weaker side); parameterised by row selector + verb so the ≥20% rule and
   // weaker-side math live in one place.
   function wireAsymmetryHints(
@@ -709,10 +711,10 @@
   }
 
   // Merge a list of `.forge-actual` inputs into a {setUuid: {...}} results map.
-  // A unilateral AMRAP set has two per-leg inputs sharing one uuid; they merge
+  // A per-side set has two side inputs sharing one uuid; they merge
   // into {left_reps, right_reps, actual_load}. Every other set is a single input
   // → {actual_reps, actual_load}. Used by both manual Save and earphones mode so
-  // the per-leg split is preserved on either path.
+  // the per-side split is preserved on either path.
   function collectActualInputs(inputs) {
     const sets = {};
     inputs.forEach((inp) => {
@@ -858,22 +860,30 @@
         `</div>`;
       sets.forEach((s) => {
         const row = document.createElement("div");
-        // Split the final (until-failure) set of a single-leg move into Left /
-        // Right fields; every other set keeps one input.
-        const perLeg = s.is_amrap && s.is_unilateral && !meta.is_timed;
-        if (perLeg) row.dataset.unilateral = "1";
+        // Split the final (until-failure) set of a per-side move into Left /
+        // Right fields; every other rep set keeps one input. Per-side timed
+        // holds are logged per side on every set — each side is held separately,
+        // so there is no single number to write.
+        const perSide = s.is_unilateral && (s.is_amrap || meta.is_timed);
+        if (perSide) row.dataset.unilateral = "1";
         row.className = "forge-set-row" + (s.is_amrap ? " is-amrap" : "");
         const loadStr = s.expected_load != null ? ` @ ${s.expected_load}` : "";
         const input =
           `<input type="number" min="0" class="forge-trial-input forge-actual" ` +
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" placeholder="${s.expected_reps}">`;
+        // A per-side timed hold gets its own stopwatch per side (the timer
+        // writes into the nearest .forge-leg input).
+        const timerBtn =
+          `<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button>`;
         const legInput = (side) =>
           `<label class="forge-leg"><span>${side === "left" ? "Left" : "Right"}</span>` +
           `<input type="number" min="0" class="forge-trial-input forge-actual forge-leg-input" ` +
           `data-side="${side}" data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" ` +
-          `placeholder="${s.expected_reps}" aria-label="${side}-side reps for ${name}"></label>`;
+          `placeholder="${s.expected_reps}" aria-label="${side}-side ${
+            meta.is_timed ? "seconds" : "reps"
+          } for ${name}">${meta.is_timed ? timerBtn : ""}</label>`;
         let inputCell;
-        if (perLeg) {
+        if (perSide) {
           inputCell =
             `<div class="forge-trial-legs">${legInput("left")}${legInput("right")}</div>` +
             `<div class="forge-trial-asym" hidden></div>`;
@@ -883,7 +893,7 @@
           inputCell = input;
         }
         row.innerHTML =
-          `<span class="forge-set-label">Set ${s.set_index + 1}${perLeg ? ` <span class="forge-trial-perleg">· per leg</span>` : ""}</span>` +
+          `<span class="forge-set-label">Set ${s.set_index + 1}${perSide ? ` <span class="forge-trial-perleg">· per side</span>` : ""}</span>` +
           `<span class="forge-set-expected">target ${s.expected_reps}${loadStr} ${unit}</span>` +
           inputCell;
         block.appendChild(row);
@@ -2253,7 +2263,7 @@
     const allSteps = buildSteps(currentSession);
     if (!allSteps.length) { notify("Nothing scheduled today."); return; }
     // Build a map of already-filled set UUIDs directly from DOM inputs. Uses the
-    // shared collector so a manually-entered per-leg AMRAP set carries its
+    // shared collector so a manually-entered per-side AMRAP set carries its
     // left/right split into earphones mode instead of collapsing to one value.
     const preCollected = collectActualInputs($$(".forge-actual"));
     const steps = allSteps.filter((s) => !(s.uuid in preCollected));

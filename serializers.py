@@ -52,9 +52,10 @@ class ExerciseSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_unilateral(self, obj):
-        # Single-limb movements are tested per side; derived from the pattern so
-        # no per-row data is needed.
-        return obj.pattern.key == "lower_unilateral"
+        # Per-side movements are tested/logged one side at a time. Read from the
+        # explicit flag (not the pattern) so archer/typewriter upper-body moves
+        # are covered and bilateral squats on the unilateral ladder are not.
+        return obj.is_per_side
 
 
 class UserEquipmentProfileSerializer(serializers.ModelSerializer):
@@ -158,9 +159,9 @@ class SetLogSerializer(serializers.ModelSerializer):
         return obj.exercise.rest_seconds
 
     def get_is_unilateral(self, obj):
-        # Single-limb moves are logged per side; derived from the pattern to
-        # match ExerciseSerializer.is_unilateral.
-        return obj.exercise.pattern.key == "lower_unilateral"
+        # Per-side moves are logged per side; reads the same flag as
+        # ExerciseSerializer.is_unilateral.
+        return obj.exercise.is_per_side
 
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):

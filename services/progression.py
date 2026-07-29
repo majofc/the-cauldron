@@ -38,6 +38,30 @@ class Prescription:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Per-side rep parity
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def even_up(n: int) -> int:
+    """Round ``n`` UP to the nearest even integer (3 → 4, 4 → 4)."""
+    return n if n % 2 == 0 else n + 1
+
+
+def rep_targets_for(exercise, rmin: int, rmax: int) -> tuple:
+    """The rep targets to store for ``exercise``, as ``(min, max)``.
+
+    Per-side movements are performed one side at a time, so an odd target would
+    hand one side an extra rep — both ends are rounded UP to even. Timed holds
+    are exempt: their values are seconds, not reps. Every path that writes
+    ``PrescribedExercise.target_reps_*`` (generation, substitution, progression)
+    goes through here so the parity rule lives in one place.
+    """
+    if not getattr(exercise, "is_per_side", False) or exercise.is_timed:
+        return rmin, rmax
+    return even_up(rmin), even_up(rmax)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Assessment placement
 # ─────────────────────────────────────────────────────────────────────────────
 
