@@ -50,6 +50,7 @@ Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
 | `progression_mode` | `difficulty` (ladder) or `load` (weight progression) |
 | `rep_range_min/max` | working rep range |
 | `is_timed` | if True, reps = seconds (holds) |
+| `is_per_side` | if True, worked one side at a time — rep targets forced even (`progression.rep_targets_for`), to-failure set logged L/R |
 | `required_equipment` | M2M Equipment |
 | `is_assessment_anchor` | used during trial |
 | `placement_threshold` | AMRAP reps that place here |
@@ -94,7 +95,7 @@ Fields: `user`, `program_day`, `scheduled_for`, `performed_at`, `status` (planne
 
 **SetLog** — one actual set
 Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `left_reps`, `right_reps`, `is_amrap`, `rir`.
-For unilateral moves the AMRAP set is logged per side: `left_reps`/`right_reps` are stored and `actual_reps` holds the weaker side (the min), mirroring `AssessmentResult`. `SetLogSerializer.is_unilateral` (computed from the pattern) tells the client to render the per-leg split.
+For per-side moves the AMRAP set is logged per side: `left_reps`/`right_reps` are stored and `actual_reps` holds the weaker side (the min), mirroring `AssessmentResult`. `SetLogSerializer.is_unilateral` (read from `Exercise.is_per_side`) tells the client to render the split. Only the AMRAP set splits — except per-side *timed* holds, where every set does.
 
 **BlockedExercise** — user-forbidden movements
 Fields: `user`, `exercise`, `reason`. Unique `(user, exercise)`.

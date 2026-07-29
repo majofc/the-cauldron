@@ -160,6 +160,16 @@ class Exercise(ForgeBaseModel):
     is_timed = models.BooleanField(
         default=False, help_text="True for holds (planks); values are seconds."
     )
+    # Per-side (unilateral) movements — pistol/split squats, archer and
+    # typewriter push-ups/pull-ups — work one side at a time, so their rep
+    # targets are forced even (both ends rounded UP) and their to-failure set is
+    # logged Left/Right. Timed per-side holds keep their seconds untouched but
+    # still log both sides. See services.progression.rep_targets_for.
+    is_per_side = models.BooleanField(
+        default=False,
+        help_text="True for movements performed one side at a time; rep targets "
+        "are forced even and the to-failure set is logged per side.",
+    )
     required_equipment = models.ManyToManyField(
         Equipment, related_name="exercises", blank=True
     )
