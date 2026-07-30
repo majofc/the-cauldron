@@ -45,12 +45,12 @@
     <h1 class="forge-title">The Forge</h1>
     <p class="forge-subtitle">A calisthenics program that adapts to you — and to what you own.</p>
     <nav class="forge-tabs" aria-label="Forge sections">
-      <button class="forge-tab is-active" data-tab="equipment">Equipment</button>
-      <button class="forge-tab" data-tab="trial">The Trial</button>
-      <button class="forge-tab" data-tab="today">Today</button>
-      <button class="forge-tab" data-tab="exercises">Exercises</button>
-      <button class="forge-tab" data-tab="progress">Progress</button>
-      <button class="forge-tab" data-tab="about">About</button>
+      <button class="forge-tab{% if initial_tab == 'equipment' %} is-active{% endif %}" data-tab="equipment">Equipment</button>
+      <button class="forge-tab{% if initial_tab == 'trial' %} is-active{% endif %}" data-tab="trial">The Trial</button>
+      <button class="forge-tab{% if initial_tab == 'today' %} is-active{% endif %}" data-tab="today">Today</button>
+      <button class="forge-tab{% if initial_tab == 'exercises' %} is-active{% endif %}" data-tab="exercises">Exercises</button>
+      <button class="forge-tab{% if initial_tab == 'progress' %} is-active{% endif %}" data-tab="progress">Progress</button>
+      <button class="forge-tab{% if initial_tab == 'about' %} is-active{% endif %}" data-tab="about">About</button>
     </nav>
   </header>
 
@@ -58,7 +58,7 @@
   <div class="forge-toast" id="forge-toast" role="status" aria-live="polite" hidden></div>
 
   <!-- ── Equipment ─────────────────────────────────────────── -->
-  <section class="forge-panel is-active" data-panel="equipment">
+  <section class="forge-panel{% if initial_tab == 'equipment' %} is-active{% endif %}" data-panel="equipment">
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -119,7 +119,7 @@
   </section>
 
   <!-- ── The Trial ─────────────────────────────────────────── -->
-  <section class="forge-panel" data-panel="trial">
+  <section class="forge-panel{% if initial_tab == 'trial' %} is-active{% endif %}" data-panel="trial">
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -135,7 +135,7 @@
   </section>
 
   <!-- ── Today ─────────────────────────────────────────────── -->
-  <section class="forge-panel" data-panel="today">
+  <section class="forge-panel{% if initial_tab == 'today' %} is-active{% endif %}" data-panel="today">
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -179,7 +179,7 @@
   </section>
 
   <!-- ── Exercises (catalog + blocking) ────────────────────── -->
-  <section class="forge-panel" data-panel="exercises">
+  <section class="forge-panel{% if initial_tab == 'exercises' %} is-active{% endif %}" data-panel="exercises">
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -223,7 +223,7 @@
   </div>
 
   <!-- ── Progress ──────────────────────────────────────────── -->
-  <section class="forge-panel" data-panel="progress">
+  <section class="forge-panel{% if initial_tab == 'progress' %} is-active{% endif %}" data-panel="progress">
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -347,7 +347,7 @@
   </div>
 
   <!-- ── About (how & why the Forge works) ─────────────────── -->
-  <section class="forge-panel" data-panel="about">
+  <section class="forge-panel{% if initial_tab == 'about' %} is-active{% endif %}" data-panel="about">
     <div class="cauldron-card forge-card forge-about">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
@@ -410,7 +410,11 @@
 
 </main>
 
-<script>window.FORGE_API = "{% url 'the_cauldron:forge' %}".replace(/forge\/$/, "api/");</script>
+<script>
+  window.FORGE_API = "{% url 'the_cauldron:forge-api:api-root' %}";
+  window.FORGE_ROOT = "{% url 'the_cauldron:forge' %}";
+  window.FORGE_INITIAL_TAB = "{{ initial_tab|default:'equipment' }}";
+</script>
 {% endblock %}
 
 {% block app_scripts %}

@@ -260,6 +260,10 @@ class UserEquipmentProfile(ForgeBaseModel):
         related_name="forge_equipment_profile",
     )
     equipment = models.ManyToManyField(Equipment, related_name="owners", blank=True)
+    # Set the first time the user saves the Equipment form. The row itself is
+    # created on the Forge's first API read, so its existence says nothing about
+    # whether the user has actually chosen their gear — this does.
+    configured_at = models.DateTimeField(null=True, blank=True)
     # Optional demographics — used only for the peer-comparison ("flames") score,
     # which needs age + sex to look up published normative percentiles.
     birth_year = models.PositiveIntegerField(null=True, blank=True)
