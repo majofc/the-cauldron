@@ -180,6 +180,9 @@ class EquipmentProfileView(APIView):
         serializer = UserEquipmentProfileSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        if profile.configured_at is None:
+            profile.configured_at = timezone.now()
+            profile.save(update_fields=["configured_at", "updated_at"])
         return Response(serializer.data)
 
 

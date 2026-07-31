@@ -4,6 +4,17 @@
   "use strict";
 
   const API = window.FORGE_API; // e.g. /cauldron/api/
+  const FORGE_ROOT = window.FORGE_ROOT || "/cauldron/forge/"; // e.g. /cauldron/forge/
+  // data-tab key → URL slug. Mirrors FORGE_SECTIONS in views.py; keep in step.
+  const TAB_SLUGS = {
+    equipment: "equipment",
+    trial: "the-trial",
+    today: "today",
+    exercises: "exercises",
+    progress: "progress",
+    about: "about",
+  };
+  const SLUG_TABS = Object.fromEntries(Object.entries(TAB_SLUGS).map(([t, s]) => [s, t]));
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -66,9 +77,31 @@
     toastTimer = setTimeout(() => (toast.hidden = true), 4000);
   }
 
-  function switchTab(name) {
+  // ── Section URLs ───────────────────────────────────────────────────────────
+  // Every section has its own URL; the app itself never reloads. `switchTab` is
+  // the single choke point for section changes, so history lives there.
+  function sectionUrl(name) {
+    const slug = TAB_SLUGS[name];
+    return slug ? FORGE_ROOT + slug + "/" : null;
+  }
+
+  function writeHistory(name, replace) {
+    const url = sectionUrl(name);
+    if (!url) return;
+    // Re-selecting the current section shouldn't stack a duplicate entry.
+    if (!replace && url === location.pathname) return;
+    history[replace ? "replaceState" : "pushState"]({ tab: name }, "", url);
+  }
+
+  function tabFromPath(pathname) {
+    const m = pathname.match(/\/forge\/([^/]+)\/?$/);
+    return m ? SLUG_TABS[m[1]] : null;
+  }
+
+  function switchTab(name, push = true) {
     $$(".forge-tab").forEach((t) => t.classList.toggle("is-active", t.dataset.tab === name));
     $$(".forge-panel").forEach((p) => p.classList.toggle("is-active", p.dataset.panel === name));
+    if (push) writeHistory(name);
     if (name === "trial") loadTrial();
     if (name === "today") loadToday();
     if (name === "exercises") {
@@ -79,6 +112,11 @@
   }
 
   $$(".forge-tab").forEach((t) => t.addEventListener("click", () => switchTab(t.dataset.tab)));
+
+  window.addEventListener("popstate", (e) => {
+    const name = (e.state && e.state.tab) || tabFromPath(location.pathname);
+    if (name) switchTab(name, false);
+  });
 
   // ── Forge sound + timers ───────────────────────────────────────────────────
   // Mystical "ping" presets synthesised with the Web Audio API (no asset files).
@@ -2329,5 +2367,10 @@
   }
 
   // ── Init ─────────────────────────────────────────────────────────────────--
+  const initialTab = window.FORGE_INITIAL_TAB || "equipment";
+  // The server already rendered this section active; stamp the entry so
+  // back/forward has state to return to.
+  writeHistory(initialTab, true);
   loadEquipment();
+  if (initialTab !== "equipment") switchTab(initialTab, false);
 })();
