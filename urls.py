@@ -31,6 +31,7 @@ api_urlpatterns = [
 urlpatterns = [
     path('', views.landing_view, name='landing'),
     path('forge/', views.forge_view, name='forge'),
+    path('forge/<slug:section>/', views.forge_view, name='forge-section'),
     path(
         'login/',
         auth_views.LoginView.as_view(
