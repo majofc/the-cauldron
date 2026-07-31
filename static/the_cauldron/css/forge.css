@@ -194,6 +194,80 @@
   font-family: "Cormorant Garamond", serif; font-style: italic; font-size: .82rem;
   color: var(--cauldron-paprika-light); max-width: 240px; text-align: right;
 }
+.forge-trial-asym.is-warn { color: var(--cauldron-ember); }
+
+/* Trial evolution — collapsible per-row history */
+.forge-evolution { margin-top: .6rem; }
+.forge-evolution-toggle {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: none; border: none; cursor: pointer; padding: .2rem 0;
+  font-family: "Inter", sans-serif; font-size: .82rem; letter-spacing: .04em;
+  color: var(--cauldron-cream-muted); transition: var(--arcano-transition, all .2s ease);
+}
+.forge-evolution-toggle:hover { color: var(--cauldron-paprika-light); }
+.forge-evolution-caret { font-size: .7rem; }
+.forge-evolution-count {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted); opacity: .8;
+}
+.forge-evolution-panel {
+  margin-top: .6rem; padding: .8rem;
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 10px;
+  background: var(--cauldron-bg-deep);
+}
+.forge-evolution-verdict {
+  font-family: "Cormorant Garamond", serif; font-size: .9rem;
+  color: var(--cauldron-cream-dim); margin-bottom: .7rem;
+}
+.forge-verdict--progress { color: var(--cauldron-paprika-light); }
+.forge-verdict--setback { color: var(--cauldron-ember); }
+.forge-evolution-chart + .forge-evolution-chart { margin-top: .9rem; }
+.forge-evolution-label {
+  font-family: "Inter", sans-serif; font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--cauldron-cream-muted); margin-bottom: .3rem;
+}
+.forge-evolution-svg { width: 100%; max-width: 340px; height: auto; }
+.forge-evolution-empty { margin: 0; font-size: .85rem; }
+
+/* Retest nudge — inline, dismissible, never blocking */
+.forge-retest-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin: 0 0 1.2rem; padding: .9rem 1.1rem;
+  border: 1px solid var(--cauldron-paprika); border-radius: 10px;
+  background: var(--cauldron-paprika-subtle);
+  color: var(--cauldron-cream-dim);
+}
+.forge-retest-text { font-size: .92rem; line-height: 1.5; flex: 1 1 260px; }
+.forge-retest-text strong { color: var(--cauldron-cream); }
+.forge-retest-actions { display: flex; align-items: center; gap: .6rem; }
+.forge-retest-dismiss {
+  background: none; border: none; cursor: pointer; font-size: 1rem;
+  color: var(--cauldron-cream-muted); padding: .25rem .4rem; line-height: 1;
+  transition: var(--arcano-transition, all .2s ease);
+}
+.forge-retest-dismiss:hover { color: var(--cauldron-cream); }
+
+/* Signed left/right figures in the Trial verdict */
+.forge-verdict-asym { margin-top: 1.2rem; text-align: left; }
+.forge-verdict-asym-title {
+  font-family: "Playfair Display", serif; font-size: 1rem;
+  color: var(--cauldron-cream); margin: 0 0 .5rem;
+}
+.forge-verdict-asym-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: .6rem;
+  align-items: baseline; padding: .4rem .6rem; margin-bottom: .3rem;
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 8px;
+  font-size: .87rem;
+}
+.forge-verdict-asym-row.is-warn {
+  border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-subtle);
+}
+.forge-verdict-asym-ex { color: var(--cauldron-cream); }
+.forge-verdict-asym-val { color: var(--cauldron-paprika-light); }
+.forge-verdict-asym-raw {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-cream-muted);
+}
 
 /* Today rows */
 .forge-today-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }

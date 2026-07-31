@@ -194,13 +194,13 @@ def test_progression_writes_back_even_targets(seeded, user):
     assert (presc.target_reps_min, presc.target_reps_max) == (4, 8)
 
 
-# ── Per-side logging on an upper-body move ───────────────────────────────────
+# ── Workout logging: one input per set ───────────────────────────────────────
 
 
-def test_amrap_only_split_for_upper_body_per_side_move(seeded, client, user):
-    """An archer push-up now gets the per-side treatment archers never had: the
-    session flags its sets as per-side, and only the last one is the to-failure
-    set the UI splits into Left/Right."""
+def test_per_side_sets_log_a_single_reps_per_side_value(seeded, client, user):
+    """Limb measurement lives in the Trial now. A per-side move is still flagged
+    ``is_unilateral`` (the UI labels it "per side") but every set — including the
+    to-failure one — records ONE value meaning reps per side."""
     _own(user, "bodyweight")
     archer = Exercise.objects.get(name="Archer Push-up")
     presc = _program_on(user, archer)
@@ -210,11 +210,35 @@ def test_amrap_only_split_for_upper_body_per_side_move(seeded, client, user):
     sets = today.json()["set_logs"]
 
     assert [s["is_unilateral"] for s in sets] == [True] * len(sets)
-    # Exactly one to-failure set, and it is the last one — the only row the
-    # client renders as a Left/Right split.
+    # To-failure remains the last set only.
     assert [s["is_amrap"] for s in sets] == [False] * (len(sets) - 1) + [True]
 
     amrap = sets[-1]
+    resp = client.post(
+        f"/cauldron/api/sessions/{today.json()['uuid']}/log/",
+        {"sets": {s["uuid"]: {"actual_reps": 7, "actual_load": None} for s in sets}},
+        format="json",
+    )
+    assert resp.status_code == 200
+
+    from the_cauldron.models import SetLog
+
+    logged = SetLog.objects.get(uuid=amrap["uuid"])
+    assert logged.actual_reps == 7
+    # Nothing writes the per-side columns any more.
+    assert (logged.left_reps, logged.right_reps) == (None, None)
+
+
+def test_legacy_per_side_payload_is_still_accepted(seeded, client, user):
+    """``left_reps``/``right_reps`` are read-only historical fields, but a client
+    cached from before the change must not start erroring — the server still
+    collapses them to the weaker side."""
+    _own(user, "bodyweight")
+    presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
+    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
+    sets = today.json()["set_logs"]
+    amrap = sets[-1]
+
     resp = client.post(
         f"/cauldron/api/sessions/{today.json()['uuid']}/log/",
         {"sets": {
@@ -231,3 +255,23 @@ def test_amrap_only_split_for_upper_body_per_side_move(seeded, client, user):
     logged = SetLog.objects.get(uuid=amrap["uuid"])
     assert (logged.left_reps, logged.right_reps) == (9, 5)
     assert logged.actual_reps == 5  # weaker side drives progression
+
+
+def test_historical_per_side_rows_still_render(seeded, client, user):
+    """Rows written before the change keep their values and must serialise
+    without error — there was no backfill."""
+    _own(user, "bodyweight")
+    presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
+    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
+    session_uuid = today.json()["uuid"]
+
+    from the_cauldron.models import SetLog
+
+    stale = SetLog.objects.filter(session__uuid=session_uuid, is_amrap=True).first()
+    stale.left_reps, stale.right_reps, stale.actual_reps = 11, 6, 6
+    stale.save(update_fields=["left_reps", "right_reps", "actual_reps"])
+
+    resp = client.get(f"/cauldron/api/sessions/{session_uuid}/")
+    assert resp.status_code == 200
+    row = next(s for s in resp.json()["set_logs"] if s["is_amrap"])
+    assert (row["left_reps"], row["right_reps"]) == (11, 6)
