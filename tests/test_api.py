@@ -445,14 +445,14 @@ def test_blocked_excluded_from_generated_program(seeded, client, user):
     assert "Push-up" not in used
 
 
-# ── Full Body A least-trained selection ──────────────────────────────────────
+# ── Full Body A least-used selection ─────────────────────────────────────────
 
 
 def _log_amrap(user, day, exercise, reps, when):
     """Record a completed session with a single AMRAP set for ``exercise``.
 
-    ``performed_at`` is what the 30-day window filters on, so pass ``when`` to
-    place the set inside or outside the window."""
+    ``performed_at`` is what the event window filters on, so pass ``when`` to
+    place the session inside or outside the window."""
     session = WorkoutSession.objects.create(
         user=user,
         program_day=day,
@@ -469,14 +469,40 @@ def _log_amrap(user, day, exercise, reps, when):
     return session
 
 
+def _log_session(user, day, exercises, when, reps=8, sets=1):
+    """One completed session on ``day`` logging ``sets`` sets of each exercise."""
+    session = WorkoutSession.objects.create(
+        user=user,
+        program_day=day,
+        performed_at=when,
+        status=WorkoutSession.Status.COMPLETED,
+    )
+    for exercise in exercises:
+        for index in range(sets):
+            SetLog.objects.create(
+                session=session,
+                exercise=exercise,
+                set_index=index,
+                actual_reps=reps,
+            )
+    return session
+
+
+def _counts_for(user, exercises):
+    """``{exercise: event count}`` through the chain map, for readable asserts."""
+    chain_of = forge.chain_map_for({e.pattern_id for e in exercises})
+    counts = forge.chain_event_counts(user, chain_of)
+    return {e: counts.get(chain_of.get(e.pk), 0) for e in exercises}
+
+
 def _active_program(user):
     program = Program.objects.get(user=user, is_active=True)
     return program
 
 
-def test_full_body_a_keeps_least_trained_and_drops_most_trained(seeded, client, user):
-    """Full Body A trains the 5 patterns with the lowest recent max AMRAP reps.
-    A never-trained pattern is kept; the single highest-rep pattern is dropped."""
+def test_full_body_a_keeps_least_used_and_drops_most_used(seeded, client, user):
+    """Full Body A trains the 5 chains with the fewest recent usage events.
+    A never-used chain is kept; the most-used one is dropped."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
@@ -484,31 +510,112 @@ def test_full_body_a_keeps_least_trained_and_drops_most_trained(seeded, client, 
     prescs = list(day0.prescriptions.select_related("exercise", "pattern"))
     assert len(prescs) == 6  # full body trains all six patterns
 
-    # Give five patterns increasing recent AMRAP reps; leave the sixth untouched.
-    trained, never_trained = prescs[:5], prescs[5]
-    for reps, presc in zip((10, 20, 30, 40, 50), trained):
-        _log_amrap(user, day0, presc.exercise, reps, timezone.now())
+    # Give five chains an increasing number of events; leave the sixth untouched.
+    used, never_used = prescs[:5], prescs[5]
+    now = timezone.now()
+    for events, presc in enumerate(used, start=1):
+        for n in range(events):
+            _log_session(user, day0, [presc.exercise], now - timedelta(hours=n + 1))
 
     selected = forge.select_day_prescriptions(user, day0)
     keys = {p.pattern.key for p in selected}
 
     assert len(selected) == forge.FULL_BODY_A_PATTERN_COUNT == 5
-    # The most-trained pattern (50 reps) is dropped …
-    assert trained[-1].pattern.key not in keys
-    # … while the never-trained pattern survives (ranks as least-trained).
-    assert never_trained.pattern.key in keys
+    # The most-used chain (5 events) is dropped …
+    assert used[-1].pattern.key not in keys
+    # … while the never-used chain survives (zero events).
+    assert never_used.pattern.key in keys
     # Selection preserves the day's display order (it filters, it doesn't reorder).
     assert [p.order for p in selected] == sorted(p.order for p in selected)
 
 
+def test_all_zero_counts_tie_break_on_order(seeded, client, user):
+    """With no history every chain ties at zero, so the day's order decides."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    selected = forge.select_day_prescriptions(user, day0)
+
+    by_order = sorted(day0.prescriptions.all(), key=lambda p: p.order)
+    assert [p.pk for p in selected] == [p.pk for p in by_order[:5]]
+
+
+def test_events_count_distinct_sessions_not_sets(seeded, client, user):
+    """Four sets in one session are one event, not four."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    presc = day0.prescriptions.select_related("exercise").first()
+
+    _log_session(user, day0, [presc.exercise], timezone.now(), sets=4)
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 1
+
+    _log_session(user, day0, [presc.exercise], timezone.now() - timedelta(hours=2))
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 2
+
+
+def test_events_follow_the_chain_across_a_rung_change(seeded, client, user):
+    """Reps logged on one rung still count once the prescription advances."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    archer = Exercise.objects.get(name="Archer Push-up")
+    typewriter = Exercise.objects.get(name="Typewriter Push-up")
+
+    _log_session(user, day0, [archer], timezone.now())
+    # The user climbs a rung; the earlier work still belongs to this chain.
+    assert _counts_for(user, [typewriter])[typewriter] == 1
+
+
+def test_grip_siblings_share_one_count(seeded, client, user):
+    """Pull-up and Chin-up are the same ladder position → the same chain."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    pullup = Exercise.objects.get(name="Pull-up")
+    chinup = Exercise.objects.get(name="Chin-up")
+
+    chain_of = forge.chain_map_for({pullup.pattern_id})
+    assert chain_of[pullup.pk] == chain_of[chinup.pk]
+
+    # Alternating grips across two sessions must total 2, not 1 each.
+    _log_session(user, day0, [pullup], timezone.now() - timedelta(hours=2))
+    _log_session(user, day0, [chinup], timezone.now())
+    assert _counts_for(user, [pullup])[pullup] == 2
+
+
+def test_bodyweight_and_loaded_chains_are_counted_separately(seeded, client, user):
+    """A pattern's two ladders are separate connected components."""
+    _set_equipment(client, ["bodyweight", "pullup_bar", "dumbbells", "bench"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    pushup = Exercise.objects.get(name="Push-up")
+    db_press = Exercise.objects.get(name="Dumbbell Bench Press")
+
+    chain_of = forge.chain_map_for({pushup.pattern_id})
+    assert chain_of[pushup.pk] != chain_of[db_press.pk]
+
+    _log_session(user, day0, [db_press], timezone.now())
+    counts = _counts_for(user, [pushup, db_press])
+    assert counts[db_press] == 1
+    assert counts[pushup] == 0
+
+
 def test_full_body_a_filters_the_opened_session(seeded, client, user):
-    """Opening Today for day 0 snapshots only the least-trained subset."""
+    """Opening Today for day 0 snapshots only the least-used subset."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
     day0 = _active_program(user).days.get(day_index=0)
     hot = day0.prescriptions.select_related("exercise", "pattern").first()
-    _log_amrap(user, day0, hot.exercise, 60, timezone.now())
+    now = timezone.now()
+    for n in range(3):
+        _log_session(user, day0, [hot.exercise], now - timedelta(hours=n + 1))
 
     resp = client.get("/cauldron/api/today/?day=0")
     assert resp.status_code == 201
@@ -522,33 +629,93 @@ def test_full_body_a_filters_the_opened_session(seeded, client, user):
 
 def test_other_days_train_every_pattern(seeded, client, user):
     """Days other than Full Body A are unaffected — all patterns are trained
-    even when history would rank some as most-trained."""
+    even when history would rank some as most-used."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
     day1 = _active_program(user).days.get(day_index=1)
     any_presc = day1.prescriptions.first()
-    _log_amrap(user, day1, any_presc.exercise, 99, timezone.now())
+    _log_session(user, day1, [any_presc.exercise], timezone.now())
 
     selected = forge.select_day_prescriptions(user, day1)
     assert len(selected) == day1.prescriptions.count() == 6
 
 
-def test_recent_max_reps_ignores_sets_older_than_window(seeded, client, user):
-    """AMRAP sets outside the 30-day window don't count toward 'most trained'."""
+def test_events_outside_the_window_do_not_count(seeded, client, user):
+    """Sessions completed more than CHAIN_EVENT_WINDOW_DAYS ago are ignored."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
     day0 = _active_program(user).days.get(day_index=0)
     presc = day0.prescriptions.select_related("exercise").first()
 
-    stale = timezone.now() - timedelta(days=forge.LEAST_TRAINED_WINDOW_DAYS + 5)
-    _log_amrap(user, day0, presc.exercise, 50, stale)
-
-    recent = forge.recent_max_reps_by_pattern(user)
-    assert presc.pattern_id not in recent  # too old to count
+    stale = timezone.now() - timedelta(days=forge.CHAIN_EVENT_WINDOW_DAYS + 1)
+    _log_session(user, day0, [presc.exercise], stale)
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 0
 
     fresh = timezone.now() - timedelta(days=1)
-    _log_amrap(user, day0, presc.exercise, 33, fresh)
-    recent = forge.recent_max_reps_by_pattern(user)
-    assert recent[presc.pattern_id] == 33
+    _log_session(user, day0, [presc.exercise], fresh)
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 1
+
+
+def test_events_on_other_days_do_not_count(seeded, client, user):
+    """Full Body B/C work never affects Full Body A selection."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    program = _active_program(user)
+    day0 = program.days.get(day_index=0)
+    day1 = program.days.get(day_index=1)
+    presc = day0.prescriptions.select_related("exercise").first()
+
+    _log_session(user, day1, [presc.exercise], timezone.now())
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 0
+
+
+def test_unlogged_and_zero_rep_sets_do_not_count(seeded, client, user):
+    """An opened-but-unlogged session, and null/0 reps, are not events."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    presc = day0.prescriptions.select_related("exercise").first()
+
+    # Opened session: still planned, no performed_at.
+    opened = WorkoutSession.objects.create(user=user, program_day=day0)
+    SetLog.objects.create(
+        session=opened, exercise=presc.exercise, set_index=0, actual_reps=None
+    )
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 0
+
+    # Completed session, but nothing actually performed.
+    _log_session(user, day0, [presc.exercise], timezone.now(), reps=0)
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 0
+
+
+def test_chain_resolution_is_one_query_each(seeded, client, user, django_assert_num_queries):
+    """Chain resolution never grows with the number of prescriptions."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    prescs = list(day0.prescriptions.select_related("exercise"))
+    _log_session(user, day0, [p.exercise for p in prescs], timezone.now())
+
+    pattern_ids = {p.exercise.pattern_id for p in prescs}
+    with django_assert_num_queries(1):
+        chain_of = forge.chain_map_for(pattern_ids)
+    with django_assert_num_queries(1):
+        forge.chain_event_counts(user, chain_of)
+
+
+def test_timed_holds_count_on_seconds(seeded, client, user):
+    """Holds store seconds in actual_reps, so >= 1 second is an event."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    plank = Exercise.objects.get(name="Plank")
+    assert plank.is_timed
+
+    _log_session(user, day0, [plank], timezone.now(), reps=30)
+    assert _counts_for(user, [plank])[plank] == 1

@@ -10,7 +10,6 @@ from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Max
 from django.utils import timezone
 
 from the_cauldron.models import (
@@ -43,11 +42,14 @@ SPLIT_LAYOUTS = {
 UPPER_PATTERNS = {"horizontal_push", "vertical_pull", "vertical_push", "core_anti_extension"}
 LOWER_PATTERNS = {"lower_unilateral", "hinge", "core_anti_extension"}
 
-# "Full Body A" (the first day of a Full Body ×3 split) biases toward the user's
-# least-trained movements: it trains only this many patterns — the ones with the
-# lowest recent max AMRAP reps — instead of every pattern. Days B/C are unchanged.
+# "Full Body A" (the first day of a Full Body ×3 split) biases toward the
+# movements the user has seen least often lately: it trains only this many
+# patterns — the ones whose progression chains have the fewest recent usage
+# events — instead of every pattern. Days B/C are unchanged.
 FULL_BODY_A_PATTERN_COUNT = 5
-# Window used to decide which patterns are "least trained" for Full Body A.
+# Trailing window for counting Full Body A usage events per progression chain.
+CHAIN_EVENT_WINDOW_DAYS = 14
+# Window used when comparing recent AMRAP work (grip selection).
 LEAST_TRAINED_WINDOW_DAYS = 30
 # Trailing window for comparing the two grips of a split bar-pull-up rung: the
 # weaker grip is the one with the lower most-recent AMRAP in this many days.
@@ -476,38 +478,106 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
     return program
 
 
-def recent_max_reps_by_pattern(user, since_days=LEAST_TRAINED_WINDOW_DAYS) -> dict:
-    """Highest AMRAP reps the user logged per movement pattern in the last
-    ``since_days`` days, keyed by pattern id.
+def chain_map_for(pattern_ids) -> dict:
+    """``{exercise_id: chain_key}`` for every exercise of ``pattern_ids``.
 
-    Only the final (AMRAP) working set of each *completed* session counts —
-    ``performed_at`` is null until a session is logged, so planned-but-unlogged
-    sessions are naturally excluded. Patterns with no qualifying set are simply
-    absent from the result (callers treat "absent" as least-trained).
+    A chain is a connected component of the ``progression``/``regression`` links,
+    so a pattern's bodyweight ladder and its loaded ladder are separate chains.
+    Grip variants sharing a ladder position (Pull-up / Chin-up) are unioned into
+    the same chain: only the overhand row is guaranteed to be what neighbouring
+    rungs link to, and ``select_grip_variant`` alternates grips day to day, so
+    counting them apart would halve a chain's tally.
+
+    One query plus in-memory union-find — never a walk per prescription.
     """
+    if not pattern_ids:
+        return {}
+    rows = list(
+        Exercise.objects.filter(pattern_id__in=pattern_ids).values(
+            "uuid", "pattern_id", "progression_id", "regression_id", "difficulty_rank", "grip"
+        )
+    )
+    parent = {r["uuid"]: r["uuid"] for r in rows}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        if b is None or a not in parent or b not in parent:
+            return
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    for r in rows:
+        union(r["uuid"], r["progression_id"])
+        union(r["uuid"], r["regression_id"])
+    # Grip siblings share a ladder position → same chain.
+    by_position = {}
+    for r in rows:
+        if r["grip"] == Exercise.Grip.NA:
+            continue
+        key = (r["pattern_id"], r["difficulty_rank"])
+        if key in by_position:
+            union(by_position[key], r["uuid"])
+        else:
+            by_position[key] = r["uuid"]
+
+    return {r["uuid"]: find(r["uuid"]) for r in rows}
+
+
+def chain_event_counts(user, chain_of, since_days=CHAIN_EVENT_WINDOW_DAYS) -> dict:
+    """``{chain_key: number of recent Full Body A usage events}``.
+
+    One event is one distinct *completed* Full Body A session in which any
+    exercise of that chain was actually worked (a ``SetLog`` with at least one
+    rep — or, for holds, one second, since timed moves store seconds in
+    ``actual_reps``). Counting distinct sessions rather than sets keeps a
+    four-set movement from reading as four times as used as a one-set movement.
+
+    Only Full Body A sessions count. B and C train every pattern equally, so
+    including them would flatten every chain into a permanent tie and leave the
+    tie-break deciding each day. Sessions that are open but unlogged have a null
+    ``performed_at`` and are excluded by the window, matching today's behaviour.
+    """
+    if not chain_of:
+        return {}
     cutoff = timezone.now() - timedelta(days=since_days)
     rows = (
         SetLog.objects.filter(
             session__user=user,
-            is_amrap=True,
-            actual_reps__isnull=False,
+            session__status=WorkoutSession.Status.COMPLETED,
             session__performed_at__gte=cutoff,
+            session__program_day__day_index=0,
+            session__program_day__program__split=Program.Split.FULL_BODY_3X,
+            actual_reps__gte=1,
         )
-        .values("exercise__pattern_id")
-        .annotate(max_reps=Max("actual_reps"))
+        .values_list("exercise_id", "session_id")
+        .distinct()
     )
-    return {r["exercise__pattern_id"]: r["max_reps"] for r in rows}
+    sessions_by_chain = {}
+    for exercise_id, session_id in rows:
+        chain = chain_of.get(exercise_id)
+        if chain is not None:
+            sessions_by_chain.setdefault(chain, set()).add(session_id)
+    return {chain: len(sessions) for chain, sessions in sessions_by_chain.items()}
 
 
 def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     """The prescriptions to actually train on ``program_day``, in display order.
 
     Every day trains its full prescription set, except **Full Body A** (the first
-    day of a Full Body ×3 program). There we bias toward the user's least-trained
-    movements: keep only the ``FULL_BODY_A_PATTERN_COUNT`` patterns with the
-    *lowest* recent max AMRAP reps and drop the rest (the most-trained). A pattern
-    with no AMRAP logged in the window ranks as least-trained, so it is always
-    kept; ties break by the day's own display order for determinism.
+    day of a Full Body ×3 program). There we bias toward the movements the user
+    has seen least often: keep only the ``FULL_BODY_A_PATTERN_COUNT`` whose
+    progression chains have the fewest usage events in the trailing
+    ``CHAIN_EVENT_WINDOW_DAYS``, and drop the rest. Counting per chain rather
+    than per exercise means climbing a ladder carries the tally forward — reps
+    logged on Archer Push-up still count once the prescription has advanced to
+    Typewriter Push-up. A chain never used in the window counts zero, so it is
+    always kept; ties break by the day's own display order for determinism.
 
     A prescription the user cannot perform at all is never returned, whatever the
     day — the day trains one fewer pattern instead.
@@ -529,13 +599,15 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     if not is_full_body_a or len(prescriptions) <= FULL_BODY_A_PATTERN_COUNT:
         return prescriptions
 
-    recent = recent_max_reps_by_pattern(user)
-    never_trained = -1  # sorts below any real rep count → always kept
-    least_trained = sorted(
+    # Chains are keyed off each prescription's *current* exercise, which
+    # progression/equipment changes repoint in place.
+    chain_of = chain_map_for({p.exercise.pattern_id for p in prescriptions})
+    counts = chain_event_counts(user, chain_of)
+    least_used = sorted(
         prescriptions,
-        key=lambda p: (recent.get(p.pattern_id, never_trained), p.order),
+        key=lambda p: (counts.get(chain_of.get(p.exercise_id), 0), p.order),
     )[:FULL_BODY_A_PATTERN_COUNT]
-    keep = {p.pk for p in least_trained}
+    keep = {p.pk for p in least_used}
     # Preserve the day's natural order — this filters the day, it doesn't reorder.
     return [p for p in prescriptions if p.pk in keep]
 
