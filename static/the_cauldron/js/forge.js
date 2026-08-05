@@ -741,7 +741,7 @@
     const parts = [];
     Object.entries(orphans || {}).forEach(([implement, plates]) => {
       (plates || []).forEach((p) => {
-        parts.push(`${p.count} × ${p.weight}${loadUnit} (${implement})`);
+        parts.push(`${p.count} × ${fmtLoad(p.weight, loadUnit)} (${implement})`);
       });
     });
     box.hidden = !parts.length;

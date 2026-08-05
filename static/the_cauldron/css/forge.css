@@ -1170,6 +1170,13 @@ body.forge-overlay-open { overflow: hidden; }
 }
 .forge-unit-note { flex-basis: 100%; margin: 0; }
 
+/* `.forge-field` sets `display: block`, which outranks the browser default for
+   `[hidden]` — so a hidden field would still render. Restate it at higher
+   specificity for every element this feature toggles. */
+.forge-field[hidden],
+.forge-implement[hidden],
+[data-mode-panel][hidden] { display: none; }
+
 /* One block per loadable implement. */
 .forge-implement {
   padding: .9rem 1rem;
