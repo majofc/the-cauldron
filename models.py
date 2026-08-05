@@ -270,15 +270,55 @@ class UserEquipmentProfile(ForgeBaseModel):
     sex = models.CharField(
         max_length=12, choices=Sex.choices, default=Sex.UNDISCLOSED
     )
-    # Concrete loadable details:
+    # Concrete loadable details.
+    #
+    # Each implement is either FIXED (a list of whole weights the user owns) or
+    # PLATES (an inventory of denominations + counts loaded onto a handle/bar).
+    # Plate lists are ``[{"weight": 2.0, "count": 4}, ...]`` — the denomination
+    # plus how many of them the user owns. ``services.loads`` turns an inventory
+    # into the set of loads that can actually be assembled.
+    class LoadMode(models.TextChoices):
+        FIXED = "fixed", "Fixed weights"
+        PLATES = "plates", "Plate-loaded"
+
+    dumbbell_mode = models.CharField(
+        max_length=8, choices=LoadMode.choices, default=LoadMode.FIXED
+    )
     dumbbell_weights = models.JSONField(
         default=list, blank=True, help_text="Available dumbbell weights, e.g. [5,10,15]."
+    )
+    dumbbell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Adjustable-dumbbell plates, e.g. [{"weight": 2.5, "count": 8}].',
+    )
+    dumbbell_handle_weight = models.FloatField(
+        default=2.0, help_text="Weight of one empty adjustable dumbbell handle."
     )
     band_levels = models.JSONField(
         default=list, blank=True, help_text="Ordered band tensions/labels, easiest first."
     )
-    barbell_min_increment = models.FloatField(default=2.5)
-    barbell_plates = models.JSONField(default=list, blank=True)
+    barbell_min_increment = models.FloatField(
+        default=2.5,
+        help_text="Fallback step used only when no barbell plates are entered.",
+    )
+    barbell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Barbell plates, e.g. [{"weight": 20, "count": 4}].',
+    )
+    bar_weight = models.FloatField(default=20.0, help_text="Weight of the empty bar.")
+    kettlebell_mode = models.CharField(
+        max_length=8, choices=LoadMode.choices, default=LoadMode.FIXED
+    )
+    kettlebell_weights = models.JSONField(
+        default=list, blank=True, help_text="Fixed kettlebell weights, e.g. [12,16,24]."
+    )
+    kettlebell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Adjustable-kettlebell plates, e.g. [{"weight": 2, "count": 6}].',
+    )
+    kettlebell_handle_weight = models.FloatField(
+        default=6.0, help_text="Weight of the empty adjustable kettlebell shell."
+    )
     load_unit = models.CharField(
         max_length=16,
         choices=Equipment.LoadUnit.choices,

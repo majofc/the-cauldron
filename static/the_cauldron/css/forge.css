@@ -1147,3 +1147,88 @@ body.forge-overlay-open { overflow: hidden; }
   stroke: var(--cauldron-ember-white); stroke-width: 1.2;
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--cauldron-ember) 70%, transparent));
 }
+
+/* ── Plate inventory & load recipes ────────────────────────────────────────── */
+
+/* Unit toggle — kg/lb. Mirrors the sex button group. */
+.forge-unit-row { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin: 1rem 0 .25rem; }
+.forge-unit-label { color: var(--cauldron-cream-dim); font-size: .9rem; }
+.forge-unit-btns { display: inline-flex; gap: .4rem; }
+.forge-unit-btn {
+  padding: .35rem .8rem;
+  background: transparent;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 8px; color: var(--cauldron-cream-dim);
+  font-family: inherit; font-size: .9rem; cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.forge-unit-btn:hover { border-color: var(--cauldron-paprika); color: var(--cauldron-cream); }
+.forge-unit-btn.is-on {
+  background: var(--cauldron-paprika-dim);
+  border-color: var(--cauldron-paprika);
+  color: var(--cauldron-cream);
+}
+.forge-unit-note { flex-basis: 100%; margin: 0; }
+
+/* One block per loadable implement. */
+.forge-implement {
+  padding: .9rem 1rem;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 10px;
+  background: var(--cauldron-bg-card);
+  margin-bottom: .85rem;
+}
+.forge-implement-head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: .5rem; margin-bottom: .6rem;
+}
+.forge-implement-name { color: var(--cauldron-cream); font-size: .95rem; }
+.forge-mode-btns { display: inline-flex; gap: .4rem; }
+.forge-mode-btn {
+  padding: .3rem .7rem;
+  background: transparent;
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 8px; color: var(--cauldron-cream-dim);
+  font-family: inherit; font-size: .82rem; cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.forge-mode-btn:hover { border-color: var(--cauldron-paprika); color: var(--cauldron-cream); }
+.forge-mode-btn.is-on {
+  background: var(--cauldron-paprika-dim);
+  border-color: var(--cauldron-paprika);
+  color: var(--cauldron-cream);
+}
+
+/* Stranded plates and inventory errors. */
+.forge-orphans { color: var(--cauldron-cream-muted); font-size: .82rem; margin: .4rem 0 0; }
+.forge-equip-error { color: var(--cauldron-paprika-light); font-size: .85rem; margin: .5rem 0 0; }
+
+/* A displayed load that opens its how-to-build recipe. */
+.forge-load-btn {
+  padding: .05rem .4rem;
+  background: var(--cauldron-paprika-subtle);
+  border: 1px solid var(--cauldron-paprika-border);
+  border-radius: 6px;
+  color: var(--cauldron-cream);
+  font-family: inherit; font-size: inherit; cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.forge-load-btn:hover { border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-dim); }
+.forge-load-plain { color: var(--cauldron-cream); }
+
+/* Per-set actual load entry. */
+.forge-load-actual { display: inline-flex; align-items: center; gap: .35rem; }
+.forge-load-actual-label { color: var(--cauldron-cream-muted); font-size: .78rem; }
+.forge-load-actual .forge-trial-input { width: 5rem; }
+.forge-load-unit { color: var(--cauldron-cream-dim); font-size: .8rem; }
+
+/* Recipe modal body. */
+.forge-recipe-list { list-style: none; margin: 0 0 .5rem; padding: 0; }
+.forge-recipe-row {
+  display: flex; align-items: baseline; gap: .5rem;
+  padding: .25rem 0;
+  border-bottom: 1px solid var(--cauldron-paprika-subtle);
+  color: var(--cauldron-cream);
+}
+.forge-recipe-row:last-child { border-bottom: none; }
+.forge-recipe-count { color: var(--cauldron-paprika-light); }
