@@ -216,6 +216,7 @@ class AssessmentView(APIView):
 
         blocked = forge.blocked_exercise_ids(request.user)
         peer = []
+        asymmetry = []
         for item in results:
             pattern = get_object_or_404(MovementPattern, key=item["pattern_key"])
             tested = get_object_or_404(Exercise, uuid=item["tested_exercise"])
@@ -230,6 +231,7 @@ class AssessmentView(APIView):
                 score = int(item["reps_or_seconds"])
             ladder = forge.eligible_exercises(pattern, profile, exclude_ids=blocked)
             placed = progression.place_from_assessment(ladder, score)
+            pct = AssessmentResult.compute_asymmetry_pct(left, right)
             session.results.update_or_create(
                 pattern=pattern,
                 defaults={
@@ -237,6 +239,7 @@ class AssessmentView(APIView):
                     "reps_or_seconds": score,
                     "left_reps": left,
                     "right_reps": right,
+                    "asymmetry_pct": pct,
                     "placed_exercise": placed,
                 },
             )
@@ -248,6 +251,16 @@ class AssessmentView(APIView):
                     "score": forge.peer_score(request.user, tested.name, score),
                 }
             )
+            if pct is not None:
+                asymmetry.append(
+                    {
+                        "pattern_key": pattern.key,
+                        "exercise": tested.name,
+                        "left": left,
+                        "right": right,
+                        "asymmetry_pct": pct,
+                    }
+                )
 
         session.completed_at = timezone.now()
         session.save(update_fields=["completed_at"])
@@ -259,6 +272,7 @@ class AssessmentView(APIView):
                 "assessment": AssessmentSessionSerializer(session).data,
                 "program": ProgramSerializer(program).data,
                 "peer": peer,
+                "asymmetry": asymmetry,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -327,7 +341,12 @@ class ProgramView(APIView):
 
 class TodayView(APIView):
     """GET ?day=<index> → open a WorkoutSession (snapshotting expected values)
-    for that day of the active program and return it."""
+    for that day of the active program and return it.
+
+    The payload also carries the retest nudge (``retest_due``, ``last_trial_at``,
+    ``days_since_last_trial``) so the Today panel can render its banner without a
+    second round-trip.
+    """
 
     permission_classes = [IsAuthenticated]
 
@@ -338,7 +357,33 @@ class TodayView(APIView):
         day_index = int(request.query_params.get("day", 0))
         day = get_object_or_404(ProgramDay, program=program, day_index=day_index)
         session = forge.start_session(request.user, day)
-        return Response(WorkoutSessionSerializer(session).data, status=201)
+        payload = WorkoutSessionSerializer(session).data
+        payload.update(forge.retest_status(request.user))
+        return Response(payload, status=201)
+
+
+class RetestReminderDismissView(APIView):
+    """POST → suppress the retest nudge for a few days (it returns if still due)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        forge.dismiss_retest_prompt(request.user)
+        return Response(forge.retest_status(request.user))
+
+
+class AssessmentHistoryView(APIView):
+    """GET → per-pattern Trial series for the Evolution charts.
+
+    One entry per movement pattern, each with its points oldest-first: the raw
+    result, the signed asymmetry (asymmetry anchors only), the ladder-normalised
+    score, and the verdict against the previous Trial.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(forge.trial_history(request.user))
 
 
 class NormsView(APIView):

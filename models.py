@@ -190,6 +190,17 @@ class Exercise(ForgeBaseModel):
     # per pattern, bodyweight so it's always eligible). Gives a stable, sensible
     # test example regardless of owned equipment.
     is_assessment_anchor = models.BooleanField(default=False)
+    # Trial-only: capture Left/Right separately and track the signed asymmetry
+    # across Trials. Deliberately NOT derived from ``is_per_side`` — a Split
+    # Squat is still performed one side at a time (so its rep targets stay even)
+    # but is tested with a single "reps per side" box. Exactly three anchors
+    # carry this flag: one unilateral push, one unilateral pull, one unilateral
+    # hinge, so both arms and both legs are measured.
+    measures_asymmetry = models.BooleanField(
+        default=False,
+        help_text="Trial captures Left/Right separately and tracks signed "
+        "asymmetry across Trials.",
+    )
     # AMRAP score on this exercise at/above which the user is placed here during
     # the assessment (used by place_from_assessment).
     placement_threshold = models.PositiveIntegerField(
@@ -270,15 +281,60 @@ class UserEquipmentProfile(ForgeBaseModel):
     sex = models.CharField(
         max_length=12, choices=Sex.choices, default=Sex.UNDISCLOSED
     )
-    # Concrete loadable details:
+    # Concrete loadable details.
+    #
+    # Each implement is either FIXED (a list of whole weights the user owns) or
+    # PLATES (an inventory of denominations + counts loaded onto a handle/bar).
+    # Plate lists are ``[{"weight": 2.0, "count": 4}, ...]`` — the denomination
+    # plus how many of them the user owns. ``services.loads`` turns an inventory
+    # into the set of loads that can actually be assembled.
+    class LoadMode(models.TextChoices):
+        FIXED = "fixed", "Fixed weights"
+        PLATES = "plates", "Plate-loaded"
+
+    dumbbell_mode = models.CharField(
+        max_length=8, choices=LoadMode.choices, default=LoadMode.FIXED
+    )
     dumbbell_weights = models.JSONField(
         default=list, blank=True, help_text="Available dumbbell weights, e.g. [5,10,15]."
+    )
+    dumbbell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Adjustable-dumbbell plates, e.g. [{"weight": 2.5, "count": 8}].',
+    )
+    dumbbell_handle_weight = models.FloatField(
+        default=2.0, help_text="Weight of one empty adjustable dumbbell handle."
     )
     band_levels = models.JSONField(
         default=list, blank=True, help_text="Ordered band tensions/labels, easiest first."
     )
-    barbell_min_increment = models.FloatField(default=2.5)
-    barbell_plates = models.JSONField(default=list, blank=True)
+    barbell_min_increment = models.FloatField(
+        default=2.5,
+        help_text="Fallback step used only when no barbell plates are entered.",
+    )
+    barbell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Barbell plates, e.g. [{"weight": 20, "count": 4}].',
+    )
+    bar_weight = models.FloatField(default=20.0, help_text="Weight of the empty bar.")
+    kettlebell_mode = models.CharField(
+        max_length=8, choices=LoadMode.choices, default=LoadMode.FIXED
+    )
+    kettlebell_weights = models.JSONField(
+        default=list, blank=True, help_text="Fixed kettlebell weights, e.g. [12,16,24]."
+    )
+    kettlebell_plates = models.JSONField(
+        default=list, blank=True,
+        help_text='Adjustable-kettlebell plates, e.g. [{"weight": 2, "count": 6}].',
+    )
+    kettlebell_handle_weight = models.FloatField(
+        default=6.0, help_text="Weight of the empty adjustable kettlebell shell."
+    )
+    # When the user last dismissed the "time to retest" nudge (or started a
+    # retake, which counts as acting on it). Suppresses the banner for
+    # RETEST_DISMISS_DAYS; the 30-day clock itself is driven by completed
+    # assessments, not by this. See services.forge.retest_status.
+    retest_prompt_dismissed_at = models.DateTimeField(null=True, blank=True)
     load_unit = models.CharField(
         max_length=16,
         choices=Equipment.LoadUnit.choices,
@@ -318,18 +374,39 @@ class AssessmentResult(ForgeBaseModel):
     tested_exercise = models.ForeignKey(
         Exercise, on_delete=models.PROTECT, related_name="+"
     )
-    # For unilateral moves we record each side; ``reps_or_seconds`` holds the
-    # value used for placement (the weaker side). For bilateral moves the per-leg
-    # fields stay null and ``reps_or_seconds`` is the single result.
+    # For the three asymmetry anchors we record each side; ``reps_or_seconds``
+    # holds the value used for placement (the weaker side). Every other row
+    # leaves the per-side fields null and ``reps_or_seconds`` is the single
+    # result — including per-side moves tested with one "reps per side" box.
     reps_or_seconds = models.PositiveIntegerField()
     left_reps = models.PositiveIntegerField(null=True, blank=True)
     right_reps = models.PositiveIntegerField(null=True, blank=True)
+    # Signed left/right disparity, right-stronger positive:
+    #   round((right - left) / max(left, right) * 100)
+    # Null when either side is missing or both are 0. Stored rather than derived
+    # so the Trial-history query stays a plain read.
+    asymmetry_pct = models.IntegerField(null=True, blank=True)
     placed_exercise = models.ForeignKey(
         Exercise, on_delete=models.PROTECT, related_name="+", null=True, blank=True
     )
 
     class Meta:
         unique_together = [("session", "pattern")]
+
+    @staticmethod
+    def compute_asymmetry_pct(left, right):
+        """Signed asymmetry for a left/right pair; ``None`` when not measurable.
+
+        Positive = right side stronger. Normalising by the STRONGER side keeps
+        the figure bounded to ±100% and reads naturally ("the weak side is 20%
+        behind"). Both-zero is not an imbalance, it's an absence of data.
+        """
+        if left is None or right is None:
+            return None
+        strongest = max(left, right)
+        if strongest == 0:
+            return None
+        return round((right - left) / strongest * 100)
 
     def __str__(self):
         return f"{self.pattern} → {self.reps_or_seconds}"
@@ -468,9 +545,11 @@ class SetLog(ForgeBaseModel):
     expected_load = models.FloatField(null=True, blank=True)
     actual_reps = models.PositiveIntegerField(null=True, blank=True)
     actual_load = models.FloatField(null=True, blank=True)
-    # For unilateral (single-leg) moves the AMRAP set is logged per side; both
-    # are stored and ``actual_reps`` holds the weaker side (the min), mirroring
-    # AssessmentResult. Null for bilateral sets.
+    # Historical only. Workout logging used to split per-side sets into Left/
+    # Right; it now records a single "reps per side" value in ``actual_reps``
+    # and limb measurement lives in the Trial. Rows written before that change
+    # keep their values and must still render — nothing new writes these, and
+    # ``apply_session_log`` still accepts them so older clients don't break.
     left_reps = models.PositiveIntegerField(null=True, blank=True)
     right_reps = models.PositiveIntegerField(null=True, blank=True)
     is_amrap = models.BooleanField(default=False)

@@ -16,6 +16,16 @@ api_urlpatterns = [
     path("equipment/", api.EquipmentProfileView.as_view(), name="forge-equipment"),
     path("assessment/", api.AssessmentView.as_view(), name="forge-assessment"),
     path("assessment/retake/", api.RetakeAssessmentView.as_view(), name="forge-retake"),
+    path(
+        "assessment/history/",
+        api.AssessmentHistoryView.as_view(),
+        name="forge-assessment-history",
+    ),
+    path(
+        "assessment/reminder/dismiss/",
+        api.RetestReminderDismissView.as_view(),
+        name="forge-retest-dismiss",
+    ),
     path("program/", api.ProgramView.as_view(), name="forge-program"),
     path(
         "progression/<uuid:presc_uuid>/<str:action>/",

@@ -24,7 +24,7 @@ from the_cauldron.models import (
     UserEquipmentProfile,
     WorkoutSession,
 )
-from the_cauldron.services import norms, progression
+from the_cauldron.services import loads, norms, progression
 
 # Which patterns go on which day for each split.
 SPLIT_LAYOUTS = {
@@ -54,6 +54,13 @@ LEAST_TRAINED_WINDOW_DAYS = 30
 # Trailing window for comparing the two grips of a split bar-pull-up rung: the
 # weaker grip is the one with the lower most-recent AMRAP in this many days.
 GRIP_WINDOW_DAYS = 30
+
+# The Trial is a recurring measurement: nudge a retest once the last COMPLETED
+# assessment is this old. Completed, not merely opened — an abandoned retake
+# must not reset the clock.
+RETEST_INTERVAL_DAYS = 30
+# How long dismissing the nudge suppresses it before it returns (if still due).
+RETEST_DISMISS_DAYS = 3
 
 
 def get_or_create_equipment_profile(user) -> UserEquipmentProfile:
@@ -378,8 +385,14 @@ def sync_program_equipment(user) -> dict:
         if clear_pending:
             presc.pending_progression = None
         if is_performable(presc.exercise, owned, blocked):
-            if clear_pending:
-                presc.save(update_fields=["pending_progression"])
+            # The movement still works, but the inventory behind its load may
+            # not: a plate the user sold can leave target_load unbuildable. Snap
+            # it back to the nearest load they can actually assemble.
+            fields = ["pending_progression"] if clear_pending else []
+            if _resnap_load(presc, profile):
+                fields.append("target_load")
+            if fields:
+                presc.save(update_fields=fields)
             continue
         substitute = progression.find_substitute(
             presc.exercise, candidates(presc.exercise.pattern)
@@ -429,6 +442,25 @@ def _initial_load(profile, exercise):
     if exercise.progression_mode != Exercise.ProgressionMode.LOAD:
         return None
     return progression.next_load_up(profile, exercise, None)
+
+
+def _resnap_load(presc, profile) -> bool:
+    """Pull ``presc.target_load`` onto the nearest buildable load.
+
+    Returns True when the value changed. A load-mode prescription whose load is
+    already assemblable is left exactly as it is, so this stays idempotent.
+    """
+    if presc.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
+        return False
+    if presc.target_load is None:
+        return False
+    if loads.recipe_for(profile, presc.exercise, presc.target_load) is not None:
+        return False
+    snapped = loads.nearest_buildable(profile, presc.exercise, presc.target_load)
+    if snapped is None or snapped == presc.target_load:
+        return False
+    presc.target_load = snapped
+    return True
 
 
 @transaction.atomic
@@ -668,6 +700,18 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         except (TypeError, ValueError):
             return None
 
+    def _load_or_none(v):
+        """The user may log a weight different from the prescribed one, so this
+        is free-form input and gets the same treatment as reps: junk and
+        negatives become None rather than being persisted verbatim."""
+        if v in (None, ""):
+            return None
+        try:
+            load = float(v)
+        except (TypeError, ValueError):
+            return None
+        return None if load < 0 else load
+
     # Save actuals.
     for set_log in session.set_logs.all():
         res = set_results.get(str(set_log.uuid))
@@ -683,7 +727,9 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
             set_log.actual_reps = min(sides)
         else:
             set_log.actual_reps = _int_or_none(res.get("actual_reps"))
-        set_log.actual_load = res.get("actual_load")
+        # Recorded for history only — next_prescription still advances from
+        # target_load, so logging a heavier day never moves the programme.
+        set_log.actual_load = _load_or_none(res.get("actual_load"))
         set_log.rir = res.get("rir")
         set_log.save(update_fields=[
             "actual_reps", "actual_load", "rir", "left_reps", "right_reps",
@@ -789,4 +835,135 @@ def retake_assessment(user) -> AssessmentSession:
     History is preserved (rows are kept, just flagged inactive)."""
     AssessmentSession.objects.filter(user=user, is_active=True).update(is_active=False)
     Program.objects.filter(user=user, is_active=True).update(is_active=False)
+    # Starting a retake IS acting on the nudge — suppress it while the user works
+    # through the Trial, otherwise the banner nags through the very flow it asked
+    # for. The 30-day clock only clears once the retake is completed.
+    dismiss_retest_prompt(user)
     return AssessmentSession.objects.create(user=user, is_active=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Retest nudge
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def dismiss_retest_prompt(user) -> None:
+    """Suppress the retest banner for ``RETEST_DISMISS_DAYS``."""
+    profile = get_or_create_equipment_profile(user)
+    profile.retest_prompt_dismissed_at = timezone.now()
+    profile.save(update_fields=["retest_prompt_dismissed_at", "updated_at"])
+
+
+def retest_status(user) -> dict:
+    """Whether to nudge the user to retake the Trial, and the age of the last one.
+
+    Due when the last COMPLETED assessment is at least ``RETEST_INTERVAL_DAYS``
+    old AND the nudge has not been dismissed within ``RETEST_DISMISS_DAYS``.
+    Keying off completion means an abandoned retake never resets the clock.
+    A user who has never completed a Trial is not nudged — they are already
+    being sent to the Trial by the empty-program path.
+    """
+    last = (
+        AssessmentSession.objects.filter(user=user, completed_at__isnull=False)
+        .order_by("-completed_at")
+        .first()
+    )
+    now = timezone.now()
+    if last is None:
+        return {
+            "retest_due": False,
+            "last_trial_at": None,
+            "days_since_last_trial": None,
+        }
+
+    days_since = (now - last.completed_at).days
+    due = days_since >= RETEST_INTERVAL_DAYS
+    if due:
+        dismissed_at = get_or_create_equipment_profile(user).retest_prompt_dismissed_at
+        if dismissed_at is not None and dismissed_at > now - timedelta(
+            days=RETEST_DISMISS_DAYS
+        ):
+            due = False
+    return {
+        "retest_due": due,
+        "last_trial_at": last.completed_at.isoformat(),
+        "days_since_last_trial": days_since,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trial history
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def ladder_score(result) -> float:
+    """Where a Trial result sits on the ladder, as a single comparable number.
+
+    ``difficulty_rank`` of the rung the user was placed on, plus the fraction of
+    that rung's rep range they achieved. Normalising this way means climbing a
+    rung reads as progress even though the raw reps reset — comparing bare reps
+    across rungs would report a promotion as a setback.
+    """
+    placed = result.placed_exercise
+    if placed is None:
+        return 0.0
+    rep_max = placed.rep_range_max or 1
+    return placed.difficulty_rank + min(1.0, (result.reps_or_seconds or 0) / rep_max)
+
+
+def _verdict(delta) -> str:
+    if delta is None:
+        return "none"
+    if delta > 0:
+        return "progress"
+    if delta < 0:
+        return "setback"
+    return "no change"
+
+
+def trial_history(user) -> dict:
+    """Per-pattern Trial series, oldest first, for the Evolution charts.
+
+    Only completed Trials are included — an open retake has no results yet and
+    would plot as a phantom zero. Each point carries its verdict against the
+    immediately prior Trial *of the same pattern*, computed on ``ladder_score``.
+    """
+    results = (
+        AssessmentResult.objects.filter(
+            session__user=user, session__completed_at__isnull=False
+        )
+        .select_related("session", "pattern", "tested_exercise", "placed_exercise")
+        .order_by("session__completed_at", "session__created_at")
+    )
+
+    by_pattern = {}
+    for r in results:
+        entry = by_pattern.setdefault(
+            r.pattern.key,
+            {
+                "pattern_key": r.pattern.key,
+                "pattern_name": r.pattern.name,
+                "measures_asymmetry": False,
+                "points": [],
+            },
+        )
+        score = ladder_score(r)
+        prev = entry["points"][-1] if entry["points"] else None
+        delta = None if prev is None else round(score - prev["ladder_score"], 3)
+        if r.tested_exercise.measures_asymmetry:
+            entry["measures_asymmetry"] = True
+        entry["points"].append(
+            {
+                "date": r.session.completed_at.isoformat(),
+                "exercise": r.tested_exercise.name,
+                "reps_or_seconds": r.reps_or_seconds,
+                "is_timed": r.tested_exercise.is_timed,
+                "left_reps": r.left_reps,
+                "right_reps": r.right_reps,
+                "asymmetry_pct": r.asymmetry_pct,
+                "ladder_score": round(score, 3),
+                "delta_vs_prev": delta,
+                "verdict": _verdict(delta),
+            }
+        )
+    return {"patterns": list(by_pattern.values())}
