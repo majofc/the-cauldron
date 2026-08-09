@@ -41,10 +41,14 @@ LADDERS = {
         ("Incline Push-up", 2, "difficulty", 8, 15, False, 10, ["bodyweight"], "Hands elevated; brace core."),
         ("Knee Push-up", 3, "difficulty", 6, 12, False, 12, ["bodyweight"], "Hips down; chest to floor."),
         ("Push-up", 4, "difficulty", 5, 12, False, 8, ["bodyweight"], "Elbows ~45°; full range."),
-        ("Diamond Push-up", 5, "difficulty", 5, 10, False, 15, ["bodyweight"], "Hands together; tuck elbows."),
-        ("Archer Push-up", 6, "difficulty", 4, 8, False, 8, ["bodyweight"], "Shift to one arm; control."),
-        ("Typewriter Push-up", 7, "difficulty", 3, 6, False, 18, ["bodyweight"], "Stay low; glide side to side, elbows tight."),
-        ("One-Arm Push-up", 8, "difficulty", 1, 5, False, 24, ["bodyweight"], "Widen the base; brace hard, no torso twist."),
+        # Scaled single-arm entry: the Trial's push asymmetry anchor. Threshold 0
+        # so a beginner always completes it — raise the hands (bench, table, wall)
+        # until the weak arm can work through full range.
+        ("Incline Archer Push-up", 5, "difficulty", 4, 10, False, 0, ["bodyweight"], "Hands elevated; shift onto one arm, other arm straight."),
+        ("Diamond Push-up", 6, "difficulty", 5, 10, False, 15, ["bodyweight"], "Hands together; tuck elbows."),
+        ("Archer Push-up", 7, "difficulty", 4, 8, False, 8, ["bodyweight"], "Shift to one arm; control."),
+        ("Typewriter Push-up", 8, "difficulty", 3, 6, False, 18, ["bodyweight"], "Stay low; glide side to side, elbows tight."),
+        ("One-Arm Push-up", 9, "difficulty", 1, 5, False, 24, ["bodyweight"], "Widen the base; brace hard, no torso twist."),
         ("Dumbbell Bench Press", 4, "load", 6, 12, False, 0, ["dumbbells", "bench"], "Drive through chest; full range."),
         ("Barbell Bench Press", 5, "load", 5, 10, False, 0, ["barbell", "bench"], "Bar to chest; tight back."),
     ],
@@ -52,7 +56,11 @@ LADDERS = {
         ("Band-Assisted Row", 1, "load", 8, 15, False, 0, ["bands"], "Squeeze shoulder blades."),
         ("Australian Row", 2, "difficulty", 8, 15, False, 6, ["bodyweight", "pullup_bar"], "Body straight; pull chest to bar."),
         ("Rowing Machine", 2, "difficulty", 10, 20, False, 0, ["rowing_machine"], "Legs-hips-arms sequence."),
-        ("Negative Pull-up", 3, "difficulty", 3, 6, False, 8, ["pullup_bar"], "5s lower; control the descent."),
+        # Scaled single-arm row: the Trial's pull asymmetry anchor. Same gear as
+        # the Australian Row it replaces as anchor; threshold 0 so a beginner
+        # always completes it — walk the feet in / raise the bar to scale.
+        ("Single-Arm Australian Row", 3, "difficulty", 4, 10, False, 0, ["bodyweight", "pullup_bar"], "One hand on the bar; body straight, pull chest to that hand."),
+        ("Negative Pull-up", 4, "difficulty", 3, 6, False, 8, ["pullup_bar"], "5s lower; control the descent."),
         ("Band-Assisted Pull-up", 4, "load", 5, 10, False, 0, ["pullup_bar", "bands"], "Full hang to chin over bar."),
         # Bar pull-up rungs split into two grips at the same rank; the Forge
         # prescribes the weaker grip daily. Overhand listed first = ladder-node
@@ -132,6 +140,7 @@ EXERCISE_MUSCLES = {
     "Incline Push-up": ["chest", "front_delts", "triceps"],
     "Knee Push-up": ["chest", "front_delts", "triceps"],
     "Push-up": ["chest", "front_delts", "triceps", "abs"],
+    "Incline Archer Push-up": ["chest", "front_delts", "triceps", "obliques"],
     "Diamond Push-up": ["triceps", "chest", "front_delts"],
     "Archer Push-up": ["chest", "front_delts", "triceps", "abs"],
     "Typewriter Push-up": ["chest", "front_delts", "triceps"],
@@ -141,6 +150,7 @@ EXERCISE_MUSCLES = {
     # ── Vertical Pull ──
     "Band-Assisted Row": ["lats", "mid_back", "biceps", "rear_delts"],
     "Australian Row": ["lats", "mid_back", "biceps", "rear_delts"],
+    "Single-Arm Australian Row": ["lats", "mid_back", "biceps", "rear_delts", "obliques"],
     "Rowing Machine": ["lats", "mid_back", "biceps", "quads", "hamstrings"],
     "Negative Pull-up": ["lats", "biceps", "mid_back", "forearms"],
     "Band-Assisted Pull-up": ["lats", "biceps", "mid_back"],
@@ -205,6 +215,9 @@ VIDEOS = {
     "Archer Pull-up": "https://www.youtube.com/watch?v=_LGLKUiQH5k",
     # Chin-up / Archer Chin-up demos intentionally blank until a verified clip is
     # sourced — a wrong (overhand) demo would mis-coach the grip. TODO: add real URLs.
+    # Same for Incline Archer Push-up / Single-Arm Australian Row: both are Trial
+    # asymmetry anchors, so a demo of the wrong variant would corrupt the measure
+    # itself. Left blank (the UI simply hides the link). TODO: add real URLs.
     "Dumbbell Row": "https://www.youtube.com/watch?v=gfUg6qWohTk",
     "Incline Pike Push-up": "https://www.youtube.com/watch?v=HLjASz4wexo",
     "Pike Push-up": "https://www.youtube.com/watch?v=2b5t0Cu2nQI",
@@ -240,7 +253,19 @@ VIDEOS = {
 # Curated test movement per pattern: a stable, always-eligible bodyweight move
 # so the Trial gives a sensible example regardless of owned equipment.
 ASSESSMENT_ANCHORS = {
-    "Push-up", "Australian Row", "Pike Push-up", "Split Squat", "Plank", "Glute Bridge",
+    "Incline Archer Push-up", "Single-Arm Australian Row", "Pike Push-up",
+    "Split Squat", "Plank", "Single-Leg Glute Bridge",
+}
+
+# The three anchors whose Left/Right sides are measured separately in the Trial
+# and tracked as a signed asymmetry across Trials. One unilateral push, one
+# unilateral pull, one unilateral hinge — so both arms and both legs are covered.
+# Deliberately a subset of ASSESSMENT_ANCHORS ∩ PER_SIDE: the Split Squat is
+# per-side too, but is tested with a single "reps per side" box.
+ASYMMETRY_ANCHORS = {
+    "Incline Archer Push-up",
+    "Single-Arm Australian Row",
+    "Single-Leg Glute Bridge",
 }
 
 # Movements performed one side at a time. Their rep targets are forced even (so
@@ -254,9 +279,10 @@ PER_SIDE = {
     "Dumbbell Bulgarian Split Squat", "Assisted Pistol Squat", "Pistol Squat",
     "Shrimp Squat", "Dragon Squat",
     # Horizontal push
-    "Archer Push-up", "Typewriter Push-up", "One-Arm Push-up",
+    "Incline Archer Push-up", "Archer Push-up", "Typewriter Push-up",
+    "One-Arm Push-up",
     # Vertical pull
-    "Archer Pull-up", "Archer Chin-up",
+    "Single-Arm Australian Row", "Archer Pull-up", "Archer Chin-up",
     # Hinge
     "Single-Leg Glute Bridge",
 }
@@ -337,6 +363,7 @@ class Command(BaseCommand):
                         "video_url": VIDEOS.get(name, ""),
                         "rest_seconds": rest_for(mode, rmin, rmax, timed),
                         "is_assessment_anchor": name in ASSESSMENT_ANCHORS,
+                        "measures_asymmetry": name in ASYMMETRY_ANCHORS,
                     },
                 )
                 ex.required_equipment.set([equipment[e] for e in equips])

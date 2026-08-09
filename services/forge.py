@@ -55,6 +55,13 @@ LEAST_TRAINED_WINDOW_DAYS = 30
 # weaker grip is the one with the lower most-recent AMRAP in this many days.
 GRIP_WINDOW_DAYS = 30
 
+# The Trial is a recurring measurement: nudge a retest once the last COMPLETED
+# assessment is this old. Completed, not merely opened — an abandoned retake
+# must not reset the clock.
+RETEST_INTERVAL_DAYS = 30
+# How long dismissing the nudge suppresses it before it returns (if still due).
+RETEST_DISMISS_DAYS = 3
+
 
 def get_or_create_equipment_profile(user) -> UserEquipmentProfile:
     profile, _ = UserEquipmentProfile.objects.get_or_create(user=user)
@@ -828,4 +835,135 @@ def retake_assessment(user) -> AssessmentSession:
     History is preserved (rows are kept, just flagged inactive)."""
     AssessmentSession.objects.filter(user=user, is_active=True).update(is_active=False)
     Program.objects.filter(user=user, is_active=True).update(is_active=False)
+    # Starting a retake IS acting on the nudge — suppress it while the user works
+    # through the Trial, otherwise the banner nags through the very flow it asked
+    # for. The 30-day clock only clears once the retake is completed.
+    dismiss_retest_prompt(user)
     return AssessmentSession.objects.create(user=user, is_active=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Retest nudge
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def dismiss_retest_prompt(user) -> None:
+    """Suppress the retest banner for ``RETEST_DISMISS_DAYS``."""
+    profile = get_or_create_equipment_profile(user)
+    profile.retest_prompt_dismissed_at = timezone.now()
+    profile.save(update_fields=["retest_prompt_dismissed_at", "updated_at"])
+
+
+def retest_status(user) -> dict:
+    """Whether to nudge the user to retake the Trial, and the age of the last one.
+
+    Due when the last COMPLETED assessment is at least ``RETEST_INTERVAL_DAYS``
+    old AND the nudge has not been dismissed within ``RETEST_DISMISS_DAYS``.
+    Keying off completion means an abandoned retake never resets the clock.
+    A user who has never completed a Trial is not nudged — they are already
+    being sent to the Trial by the empty-program path.
+    """
+    last = (
+        AssessmentSession.objects.filter(user=user, completed_at__isnull=False)
+        .order_by("-completed_at")
+        .first()
+    )
+    now = timezone.now()
+    if last is None:
+        return {
+            "retest_due": False,
+            "last_trial_at": None,
+            "days_since_last_trial": None,
+        }
+
+    days_since = (now - last.completed_at).days
+    due = days_since >= RETEST_INTERVAL_DAYS
+    if due:
+        dismissed_at = get_or_create_equipment_profile(user).retest_prompt_dismissed_at
+        if dismissed_at is not None and dismissed_at > now - timedelta(
+            days=RETEST_DISMISS_DAYS
+        ):
+            due = False
+    return {
+        "retest_due": due,
+        "last_trial_at": last.completed_at.isoformat(),
+        "days_since_last_trial": days_since,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trial history
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def ladder_score(result) -> float:
+    """Where a Trial result sits on the ladder, as a single comparable number.
+
+    ``difficulty_rank`` of the rung the user was placed on, plus the fraction of
+    that rung's rep range they achieved. Normalising this way means climbing a
+    rung reads as progress even though the raw reps reset — comparing bare reps
+    across rungs would report a promotion as a setback.
+    """
+    placed = result.placed_exercise
+    if placed is None:
+        return 0.0
+    rep_max = placed.rep_range_max or 1
+    return placed.difficulty_rank + min(1.0, (result.reps_or_seconds or 0) / rep_max)
+
+
+def _verdict(delta) -> str:
+    if delta is None:
+        return "none"
+    if delta > 0:
+        return "progress"
+    if delta < 0:
+        return "setback"
+    return "no change"
+
+
+def trial_history(user) -> dict:
+    """Per-pattern Trial series, oldest first, for the Evolution charts.
+
+    Only completed Trials are included — an open retake has no results yet and
+    would plot as a phantom zero. Each point carries its verdict against the
+    immediately prior Trial *of the same pattern*, computed on ``ladder_score``.
+    """
+    results = (
+        AssessmentResult.objects.filter(
+            session__user=user, session__completed_at__isnull=False
+        )
+        .select_related("session", "pattern", "tested_exercise", "placed_exercise")
+        .order_by("session__completed_at", "session__created_at")
+    )
+
+    by_pattern = {}
+    for r in results:
+        entry = by_pattern.setdefault(
+            r.pattern.key,
+            {
+                "pattern_key": r.pattern.key,
+                "pattern_name": r.pattern.name,
+                "measures_asymmetry": False,
+                "points": [],
+            },
+        )
+        score = ladder_score(r)
+        prev = entry["points"][-1] if entry["points"] else None
+        delta = None if prev is None else round(score - prev["ladder_score"], 3)
+        if r.tested_exercise.measures_asymmetry:
+            entry["measures_asymmetry"] = True
+        entry["points"].append(
+            {
+                "date": r.session.completed_at.isoformat(),
+                "exercise": r.tested_exercise.name,
+                "reps_or_seconds": r.reps_or_seconds,
+                "is_timed": r.tested_exercise.is_timed,
+                "left_reps": r.left_reps,
+                "right_reps": r.right_reps,
+                "asymmetry_pct": r.asymmetry_pct,
+                "ladder_score": round(score, 3),
+                "delta_vs_prev": delta,
+                "verdict": _verdict(delta),
+            }
+        )
+    return {"patterns": list(by_pattern.values())}

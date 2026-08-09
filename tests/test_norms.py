@@ -74,14 +74,28 @@ def test_female_pushup_carries_modified_position_note():
 # ── Estimated norms: every Trial anchor is scoreable, flagged estimated ───────
 
 
-def test_all_trial_anchors_are_scoreable():
-    anchors = ["Push-up", "Australian Row", "Pike Push-up", "Split Squat",
-               "Plank", "Glute Bridge"]
-    for name in anchors:
+def test_normed_movements_are_scoreable():
+    normed = ["Push-up", "Australian Row", "Pike Push-up", "Split Squat",
+              "Plank", "Glute Bridge"]
+    for name in normed:
         for sex in ("male", "female"):
             s = norms.score(name, 12, sex, 35)
             assert s.has_data is True, f"{name}/{sex} should score"
             assert 1 <= s.flames <= 10
+
+
+def test_asymmetry_anchors_are_deliberately_unscored():
+    """The three unilateral Trial anchors have no published normative data.
+
+    Reps on an Incline Archer Push-up are NOT comparable to a standard push-up
+    norm — this module only scores a movement at the difficulty its norm was
+    measured at. Mapping them onto the nearest table would invent a rating, so
+    they return has_data=False and the verdict simply omits their flames.
+    Delete this test the day real norms are sourced for them.
+    """
+    for name in ("Incline Archer Push-up", "Single-Arm Australian Row",
+                 "Single-Leg Glute Bridge"):
+        assert norms.score(name, 12, "male", 35).has_data is False
 
 
 def test_crowdsourced_norms_real_in_prime_estimated_when_old():

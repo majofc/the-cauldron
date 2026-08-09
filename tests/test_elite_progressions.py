@@ -21,7 +21,7 @@ class TestHorizontalPushTop:
         archer = _get("Archer Push-up")
         typewriter = _get("Typewriter Push-up")
         one_arm = _get("One-Arm Push-up")
-        # Ladder order by rank: Archer(6) → Typewriter(7) → One-Arm(8).
+        # Ladder order by rank: Archer(7) → Typewriter(8) → One-Arm(9).
         assert archer.progression == typewriter
         assert typewriter.regression == archer
         assert typewriter.progression == one_arm
