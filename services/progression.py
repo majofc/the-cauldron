@@ -15,6 +15,8 @@ bodyweight alone.
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
+from the_cauldron.services import loads
+
 # How many consecutive top-of-range sessions before a difficulty-mode exercise
 # advances to the next (harder) rung.
 SESSIONS_TO_ADVANCE = 2
@@ -119,18 +121,14 @@ def find_substitute(blocked, candidates: Sequence):
 def available_loads(equipment_profile, exercise) -> list:
     """Ordered list of selectable loads for a load-mode exercise, given what the
     user owns. Returns [] when the exercise isn't load-progressable for this user.
+
+    Every value here is a load the user can physically assemble from the plates
+    they declared — ``services.loads`` owns that arithmetic, including which
+    implement ``exercise`` calls for. This returns only the totals; the recipe
+    for a chosen load is fetched separately via ``loads.recipe_for`` so the
+    progression maths below stays plain float comparison.
     """
-    weights = list(equipment_profile.dumbbell_weights or [])
-    if weights:
-        return sorted(set(float(w) for w in weights))
-    bands = list(equipment_profile.band_levels or [])
-    if bands:
-        # Bands are discrete ordered levels; index acts as the load value.
-        return [float(i) for i in range(len(bands))]
-    inc = getattr(equipment_profile, "barbell_min_increment", None)
-    if inc:
-        return [round(inc * n, 2) for n in range(1, 41)]  # up to 40 increments
-    return []
+    return [l.total for l in loads.buildable_loads(equipment_profile, exercise)]
 
 
 def next_load_up(equipment_profile, exercise, current_load: Optional[float]) -> Optional[float]:

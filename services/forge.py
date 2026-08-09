@@ -24,7 +24,7 @@ from the_cauldron.models import (
     UserEquipmentProfile,
     WorkoutSession,
 )
-from the_cauldron.services import norms, progression
+from the_cauldron.services import loads, norms, progression
 
 # Which patterns go on which day for each split.
 SPLIT_LAYOUTS = {
@@ -378,8 +378,14 @@ def sync_program_equipment(user) -> dict:
         if clear_pending:
             presc.pending_progression = None
         if is_performable(presc.exercise, owned, blocked):
-            if clear_pending:
-                presc.save(update_fields=["pending_progression"])
+            # The movement still works, but the inventory behind its load may
+            # not: a plate the user sold can leave target_load unbuildable. Snap
+            # it back to the nearest load they can actually assemble.
+            fields = ["pending_progression"] if clear_pending else []
+            if _resnap_load(presc, profile):
+                fields.append("target_load")
+            if fields:
+                presc.save(update_fields=fields)
             continue
         substitute = progression.find_substitute(
             presc.exercise, candidates(presc.exercise.pattern)
@@ -429,6 +435,25 @@ def _initial_load(profile, exercise):
     if exercise.progression_mode != Exercise.ProgressionMode.LOAD:
         return None
     return progression.next_load_up(profile, exercise, None)
+
+
+def _resnap_load(presc, profile) -> bool:
+    """Pull ``presc.target_load`` onto the nearest buildable load.
+
+    Returns True when the value changed. A load-mode prescription whose load is
+    already assemblable is left exactly as it is, so this stays idempotent.
+    """
+    if presc.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
+        return False
+    if presc.target_load is None:
+        return False
+    if loads.recipe_for(profile, presc.exercise, presc.target_load) is not None:
+        return False
+    snapped = loads.nearest_buildable(profile, presc.exercise, presc.target_load)
+    if snapped is None or snapped == presc.target_load:
+        return False
+    presc.target_load = snapped
+    return True
 
 
 @transaction.atomic
@@ -668,6 +693,18 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         except (TypeError, ValueError):
             return None
 
+    def _load_or_none(v):
+        """The user may log a weight different from the prescribed one, so this
+        is free-form input and gets the same treatment as reps: junk and
+        negatives become None rather than being persisted verbatim."""
+        if v in (None, ""):
+            return None
+        try:
+            load = float(v)
+        except (TypeError, ValueError):
+            return None
+        return None if load < 0 else load
+
     # Save actuals.
     for set_log in session.set_logs.all():
         res = set_results.get(str(set_log.uuid))
@@ -683,7 +720,9 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
             set_log.actual_reps = min(sides)
         else:
             set_log.actual_reps = _int_or_none(res.get("actual_reps"))
-        set_log.actual_load = res.get("actual_load")
+        # Recorded for history only — next_prescription still advances from
+        # target_load, so logging a heavier day never moves the programme.
+        set_log.actual_load = _load_or_none(res.get("actual_load"))
         set_log.rir = res.get("rir")
         set_log.save(update_fields=[
             "actual_reps", "actual_load", "rir", "left_reps", "right_reps",
