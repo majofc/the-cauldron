@@ -13,6 +13,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     MovementPattern,
+    PrescribedExercise,
     Program,
     SetLog,
     WorkoutSession,
@@ -719,3 +720,156 @@ def test_timed_holds_count_on_seconds(seeded, client, user):
 
     _log_session(user, day0, [plank], timezone.now(), reps=30)
     assert _counts_for(user, [plank])[plank] == 1
+
+
+# ── Plate inventory: validation, recipes, unit switching ─────────────────────
+
+
+def _plate_equipment(client, **extra):
+    return _set_equipment(
+        client,
+        ["bodyweight", "dumbbells"],
+        dumbbell_mode="plates",
+        dumbbell_plates=[{"weight": 2.5, "count": 8}, {"weight": 1.25, "count": 4}],
+        dumbbell_handle_weight=2.0,
+        **extra,
+    )
+
+
+def test_invalid_plate_inventory_is_rejected_not_stored(seeded, client):
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"],
+                          dumbbell_plates=[{"weight": -5, "count": 4}])
+    assert resp.status_code == 400
+    assert "dumbbell_plates" in resp.json()
+
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"],
+                          dumbbell_plates=[{"weight": 2.5, "count": 0}])
+    assert resp.status_code == 400
+
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights="hello")
+    assert resp.status_code == 400
+
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights=[-5])
+    assert resp.status_code == 400
+
+
+def test_negative_bar_weight_is_rejected(seeded, client):
+    resp = _set_equipment(client, ["bodyweight", "barbell"], bar_weight=-1)
+    assert resp.status_code == 400
+
+
+def test_orphan_plates_are_reported_back(seeded, client):
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"],
+                          dumbbell_mode="plates",
+                          dumbbell_plates=[{"weight": 2, "count": 6}])
+    assert resp.status_code == 200
+    assert resp.json()["orphan_plates"]["dumbbells"] == [{"weight": 2.0, "count": 2}]
+
+
+def test_switching_load_unit_clears_the_inventory(seeded, client, user):
+    assert _plate_equipment(client).status_code == 200
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"], load_unit="lb")
+    assert resp.status_code == 200
+    body = resp.json()
+    # Denominations belong to their unit — they are dropped, never converted.
+    assert body["dumbbell_plates"] == []
+    assert body["dumbbell_handle_weight"] == 0
+    assert body["load_unit"] == "lb"
+
+
+def test_switching_unit_keeps_an_inventory_supplied_in_the_same_request(seeded, client):
+    assert _plate_equipment(client).status_code == 200
+    resp = _set_equipment(client, ["bodyweight", "dumbbells"], load_unit="lb",
+                          dumbbell_plates=[{"weight": 5, "count": 8}])
+    assert resp.status_code == 200
+    assert resp.json()["dumbbell_plates"] == [{"weight": 5.0, "count": 8}]
+
+
+def test_prescribed_load_is_buildable_and_carries_its_recipe(seeded, client):
+    _plate_equipment(client)
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = client.get("/cauldron/api/today/?day=0").json()
+
+    loaded = [s for s in session["set_logs"] if s["expected_load"] is not None]
+    for s in loaded:
+        # 8 x 2.5 and 4 x 1.25 on a 2 kg handle -> one bell weighs one of these.
+        assert s["expected_load"] in [2.0, 4.5, 7.0, 9.5, 12.0, 14.5]
+        assert s["load_unit"] == "kg"
+        recipe = s["expected_load_recipe"]
+        assert recipe is not None
+        assert recipe["total"] == s["expected_load"]
+        assert recipe["stacked"] is False
+
+
+def test_user_logged_load_persists_without_moving_progression(seeded, client):
+    _plate_equipment(client)
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = client.get("/cauldron/api/today/?day=0").json()
+
+    target = next((s for s in session["set_logs"]
+                   if s["expected_load"] is not None and s["is_amrap"]), None)
+    if target is None:
+        pytest.skip("seed catalogue produced no load-mode AMRAP set")
+    presc_before = SetLog.objects.get(uuid=target["uuid"]).prescribed_exercise
+    load_before = presc_before.target_load
+
+    # Log a weight that is NOT the prescribed one. The AMRAP set lands just
+    # inside the range (its expected_reps IS the top, which would legitimately
+    # progress) so any load movement could only have come from actual_load.
+    set_results = {
+        s["uuid"]: {"actual_reps": s["expected_reps"], "actual_load": s["expected_load"]}
+        for s in session["set_logs"]
+    }
+    set_results[target["uuid"]] = {
+        "actual_reps": max(1, target["expected_reps"] - 1), "actual_load": 99.5,
+    }
+    resp = client.post(f"/cauldron/api/sessions/{session['uuid']}/log/",
+                       {"sets": set_results}, format="json")
+    assert resp.status_code == 200
+
+    stored = SetLog.objects.get(uuid=target["uuid"])
+    assert stored.actual_load == 99.5          # recorded as history
+    presc_before.refresh_from_db()
+    assert presc_before.target_load == load_before  # engine unmoved
+
+
+def test_negative_actual_load_is_not_persisted(seeded, client):
+    _plate_equipment(client)
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = client.get("/cauldron/api/today/?day=0").json()
+    first = session["set_logs"][0]
+    client.post(f"/cauldron/api/sessions/{session['uuid']}/log/",
+                {"sets": {first["uuid"]: {"actual_reps": 5, "actual_load": -20}}},
+                format="json")
+    assert SetLog.objects.get(uuid=first["uuid"]).actual_load is None
+
+
+def test_existing_fixed_dumbbell_users_keep_their_loads(seeded, client):
+    # No mode sent at all - the migration default is `fixed`, so a pre-existing
+    # weight list must behave exactly as before.
+    _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights=[5, 10, 15])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = client.get("/cauldron/api/today/?day=0").json()
+    loaded = [s["expected_load"] for s in session["set_logs"] if s["expected_load"] is not None]
+    assert loaded, "expected at least one load-mode set"
+    assert all(l in (5.0, 10.0, 15.0) for l in loaded)
+
+
+def test_shrinking_the_inventory_resnaps_a_stranded_load(seeded, client, user):
+    _plate_equipment(client)
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    presc = PrescribedExercise.objects.filter(
+        day__program__user=user, target_load__isnull=False
+    ).first()
+    if presc is None:
+        pytest.skip("seed catalogue produced no load-mode prescription")
+    presc.target_load = 14.5   # top of the old inventory
+    presc.save(update_fields=["target_load"])
+
+    # Sell the 1.25s and half the 2.5s: 14.5 is no longer assemblable.
+    _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_mode="plates",
+                   dumbbell_plates=[{"weight": 2.5, "count": 4}],
+                   dumbbell_handle_weight=2.0)
+    forge.sync_program_equipment(user)
+    presc.refresh_from_db()
+    assert presc.target_load == 7.0  # nearest load that can still be built

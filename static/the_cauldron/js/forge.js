@@ -51,6 +51,24 @@
     return resp.status === 204 ? null : resp.json();
   }
 
+  // Pull a readable line out of an `api()` rejection. DRF field errors arrive as
+  // `{"dumbbell_plates": ["..."]}` behind a "400: " prefix — surface the message
+  // itself so a rejected inventory tells the user what was wrong with it.
+  function apiErrorText(err) {
+    const raw = String((err && err.message) || "");
+    const body = raw.replace(/^\d+:\s*/, "");
+    try {
+      const data = JSON.parse(body);
+      const msgs = [];
+      Object.entries(data).forEach(([field, val]) => {
+        const list = Array.isArray(val) ? val : [val];
+        list.forEach((m) => msgs.push(field === "detail" ? String(m) : `${field}: ${m}`));
+      });
+      if (msgs.length) return msgs.join(" ");
+    } catch (e) { /* not JSON — fall through to the raw text */ }
+    return body || "Something went wrong.";
+  }
+
   // ── UI helpers ─────────────────────────────────────────────────────────────
   const loader = $("#forge-loader");
   const toast = $("#forge-toast");
@@ -489,6 +507,17 @@
       $("#forge-dumbbells").value = (profile.dumbbell_weights || []).join(", ");
       $("#forge-bands").value = (profile.band_levels || []).join(", ");
       $("#forge-barbell-inc").value = profile.barbell_min_increment || "";
+      $("#forge-dumbbell-plates").value = fmtPlates(profile.dumbbell_plates);
+      $("#forge-dumbbell-handle").value = profile.dumbbell_handle_weight ?? "";
+      $("#forge-barbell-plates").value = fmtPlates(profile.barbell_plates);
+      $("#forge-bar-weight").value = profile.bar_weight ?? "";
+      $("#forge-kettlebells").value = (profile.kettlebell_weights || []).join(", ");
+      $("#forge-kettlebell-plates").value = fmtPlates(profile.kettlebell_plates);
+      $("#forge-kettlebell-handle").value = profile.kettlebell_handle_weight ?? "";
+      setLoadUnit(profile.load_unit === "lb" ? "lb" : "kg");
+      setImplementMode("dumbbell", profile.dumbbell_mode || "fixed");
+      setImplementMode("kettlebell", profile.kettlebell_mode || "fixed");
+      renderOrphans(profile.orphan_plates);
       $("#forge-birth-year").value = profile.birth_year || "";
       setSexValue(profile.sex || "undisclosed");
     } catch (e) {
@@ -620,6 +649,158 @@
     return str.split(",").map((s) => s.trim()).filter(Boolean);
   }
 
+  // ── Plate inventory ────────────────────────────────────────────────────────
+  // Inventories are typed as "2.5x8, 1.25x4" — a denomination and how many of
+  // them are owned. Parsing THROWS on junk instead of silently dropping it: a
+  // quietly discarded plate means loads the user can build never get offered.
+
+  function parsePlates(str, label) {
+    return parseList(str).map((chunk) => {
+      const m = chunk.match(/^([\d.]+)\s*[x×*]\s*(\d+)$/i);
+      if (!m) {
+        throw new Error(`${label}: write "${chunk}" as weight x how many, e.g. 2.5x8.`);
+      }
+      const weight = parseFloat(m[1]);
+      const count = parseInt(m[2], 10);
+      if (isNaN(weight) || weight <= 0) throw new Error(`${label}: "${chunk}" needs a weight above zero.`);
+      if (isNaN(count) || count <= 0) throw new Error(`${label}: "${chunk}" needs a count above zero.`);
+      return { weight, count };
+    });
+  }
+
+  function parseWeights(str, label) {
+    return parseList(str).map((chunk) => {
+      const n = Number(chunk);
+      if (isNaN(n)) throw new Error(`${label}: "${chunk}" isn't a number.`);
+      if (n <= 0) throw new Error(`${label}: "${chunk}" must be above zero.`);
+      return n;
+    });
+  }
+
+  function fmtPlates(plates) {
+    return (plates || []).map((p) => `${p.weight}x${p.count}`).join(", ");
+  }
+
+  // Which unit every weight on the page is expressed in. Never converted —
+  // switching wipes the inventory instead (see setLoadUnit).
+  let loadUnit = "kg";
+
+  function setLoadUnit(unit) {
+    loadUnit = unit;
+    $$(".forge-unit-btn", $("#forge-unit")).forEach((btn) => {
+      const on = btn.dataset.unit === unit;
+      btn.classList.toggle("is-on", on);
+      btn.setAttribute("aria-pressed", String(on));
+    });
+    $$(".forge-unit-tag").forEach((tag) => { tag.textContent = unit; });
+  }
+
+  function clearInventoryInputs() {
+    ["#forge-dumbbells", "#forge-dumbbell-plates", "#forge-dumbbell-handle",
+     "#forge-barbell-plates", "#forge-bar-weight",
+     "#forge-kettlebells", "#forge-kettlebell-plates", "#forge-kettlebell-handle",
+    ].forEach((sel) => { const el = $(sel); if (el) el.value = ""; });
+    renderOrphans(null);
+  }
+
+  (function wireUnitBtns() {
+    const host = $("#forge-unit");
+    if (!host) return;
+    $$(".forge-unit-btn", host).forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const next = btn.dataset.unit;
+        if (next === loadUnit) return;
+        // A 2.5 kg plate is not 2.5 lb, and converting would invent
+        // denominations nobody owns — so the inventory goes, not the numbers.
+        const ok = window.confirm(
+          `Switching to ${next} clears the weights and plates you've entered — ` +
+          `they'd no longer match anything you own. Continue?`
+        );
+        if (!ok) return;
+        setLoadUnit(next);
+        clearInventoryInputs();
+      });
+    });
+  }());
+
+  function setImplementMode(implement, mode) {
+    const host = $(`[data-mode-for="${implement}"]`);
+    if (host) {
+      $$(".forge-mode-btn", host).forEach((btn) => {
+        const on = btn.dataset.mode === mode;
+        btn.classList.toggle("is-on", on);
+        btn.setAttribute("aria-pressed", String(on));
+      });
+    }
+    ["fixed", "plates"].forEach((m) => {
+      const panel = $(`[data-mode-panel="${implement}-${m}"]`);
+      if (panel) panel.hidden = m !== mode;
+    });
+  }
+
+  function implementMode(implement) {
+    const on = $(`[data-mode-for="${implement}"] .forge-mode-btn.is-on`);
+    return on ? on.dataset.mode : "fixed";
+  }
+
+  (function wireModeBtns() {
+    $$("[data-mode-for]").forEach((host) => {
+      const implement = host.dataset.modeFor;
+      $$(".forge-mode-btn", host).forEach((btn) => {
+        btn.addEventListener("click", () => setImplementMode(implement, btn.dataset.mode));
+      });
+    });
+  }());
+
+  // Odd counts strand plates that can never be used (a dumbbell pair eats 4 at a
+  // time). Say so rather than leaving the user wondering why 6 × 2 kg only
+  // yields one step.
+  function renderOrphans(orphans) {
+    const box = $("#forge-orphans");
+    if (!box) return;
+    const parts = [];
+    Object.entries(orphans || {}).forEach(([implement, plates]) => {
+      (plates || []).forEach((p) => {
+        parts.push(`${p.count} × ${fmtLoad(p.weight, loadUnit)} (${implement})`);
+      });
+    });
+    box.hidden = !parts.length;
+    box.textContent = parts.length
+      ? `Unused — not enough to make a set: ${parts.join(", ")}.`
+      : "";
+  }
+
+  function showEquipError(msg) {
+    const box = $("#forge-equip-error");
+    if (!box) return;
+    box.hidden = !msg;
+    box.textContent = msg || "";
+  }
+
+  // ── Load display ───────────────────────────────────────────────────────────
+  // Bands are ordered levels, not weights, so they never get a kg/lb suffix.
+
+  function unitLabel(unit) {
+    return unit === "kg" || unit === "lb" ? unit : "";
+  }
+
+  function fmtLoad(load, unit) {
+    if (load == null) return "";
+    const u = unitLabel(unit);
+    return u ? `${load} ${u}` : String(load);
+  }
+
+  // "2 × 2.5 kg + 1 × 1.25 kg per side" — the fewest plates that make the load.
+  function fmtRecipe(recipe, unit) {
+    if (!recipe) return "";
+    const plates = recipe.per_side || [];
+    const u = unitLabel(unit);
+    if (!plates.length) return "just the bare bar / empty handle";
+    const parts = plates.map((p) => `${p.count} × ${p.weight}${u ? ` ${u}` : ""}`);
+    // Kettlebell plates stack in one shell; everything else is mirrored.
+    return parts.join(" + ") + (recipe.stacked ? " in the bell" : " per side");
+  }
+
   function fmtRest(sec) {
     if (sec >= 60) {
       const m = Math.floor(sec / 60);
@@ -630,24 +811,47 @@
   }
 
   $("#forge-save-equipment").addEventListener("click", async () => {
+    const num = (sel, fallback) => {
+      const v = parseFloat($(sel).value);
+      return isNaN(v) ? fallback : v;
+    };
+    let body;
+    try {
+      showEquipError("");
+      const birthYear = parseInt($("#forge-birth-year").value, 10);
+      body = {
+        equipment: selectedEquipment(),
+        load_unit: loadUnit,
+        dumbbell_mode: implementMode("dumbbell"),
+        dumbbell_weights: parseWeights($("#forge-dumbbells").value, "Dumbbell weights"),
+        dumbbell_plates: parsePlates($("#forge-dumbbell-plates").value, "Dumbbell plates"),
+        dumbbell_handle_weight: num("#forge-dumbbell-handle", 0),
+        band_levels: parseList($("#forge-bands").value),
+        barbell_min_increment: num("#forge-barbell-inc", 2.5),
+        barbell_plates: parsePlates($("#forge-barbell-plates").value, "Barbell plates"),
+        bar_weight: num("#forge-bar-weight", 0),
+        kettlebell_mode: implementMode("kettlebell"),
+        kettlebell_weights: parseWeights($("#forge-kettlebells").value, "Kettlebell weights"),
+        kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, "Kettlebell plates"),
+        kettlebell_handle_weight: num("#forge-kettlebell-handle", 0),
+        birth_year: isNaN(birthYear) ? null : birthYear,
+        sex: sexValue(),
+      };
+    } catch (err) {
+      // A parse failure is the user's typo, not a server problem — show exactly
+      // what to fix instead of dropping the entry and saving something else.
+      showEquipError(err.message);
+      notify("Check your weights — something didn't parse.");
+      return;
+    }
     showLoader(true);
     try {
-      const dumbbells = parseList($("#forge-dumbbells").value).map(Number).filter((n) => !isNaN(n));
-      const birthYear = parseInt($("#forge-birth-year").value, 10);
-      await api("equipment/", {
-        method: "PUT",
-        body: {
-          equipment: selectedEquipment(),
-          dumbbell_weights: dumbbells,
-          band_levels: parseList($("#forge-bands").value),
-          barbell_min_increment: parseFloat($("#forge-barbell-inc").value) || 2.5,
-          birth_year: isNaN(birthYear) ? null : birthYear,
-          sex: sexValue(),
-        },
-      });
+      const saved = await api("equipment/", { method: "PUT", body });
+      renderOrphans(saved.orphan_plates);
       notify("Equipment saved. Now take the Trial.");
       switchTab("trial");
     } catch (e) {
+      showEquipError(apiErrorText(e));
       notify("Couldn't save equipment.");
     } finally {
       showLoader(false);
@@ -959,6 +1163,18 @@
   }
 
   // Merge a list of `.forge-actual` inputs into a {setUuid: {...}} results map.
+  // What the user actually lifted for a set: the weight they typed if they typed
+  // one, otherwise the prescribed load carried on the reps input. Blank stays
+  // blank rather than defaulting to the target.
+  function actualLoadFor(inp) {
+    const field = $(`.forge-actual-load[data-uuid="${inp.dataset.uuid}"]`);
+    if (field && field.value.trim() !== "") {
+      const typed = parseFloat(field.value);
+      if (!isNaN(typed) && typed >= 0) return typed;
+    }
+    return inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
+  }
+
   // One input per set — for a per-side movement the value means "reps per side".
   // Limb measurement lives in the Trial, so workout logging no longer splits
   // Left/Right. Used by both manual Save and earphones mode.
@@ -967,8 +1183,7 @@
     inputs.forEach((inp) => {
       const reps = parseInt(inp.value, 10);
       if (isNaN(reps)) return;
-      const load = inp.dataset.load === "" ? null : parseFloat(inp.dataset.load);
-      sets[inp.dataset.uuid] = { actual_reps: reps, actual_load: load };
+      sets[inp.dataset.uuid] = { actual_reps: reps, actual_load: actualLoadFor(inp) };
     });
     return sets;
   }
@@ -1107,13 +1322,25 @@
   // Map each set-log uuid → the muscles its exercise trains, for the daily
   // worked-muscle diagram (revealed once every set is logged).
   let muscleBySetUuid = {};
+  // Recipes are computed server-side and cached per rendered row, so clicking a
+  // load never re-derives plate maths in the browser.
+  let recipeBySetUuid = {};
+  let recipeByPrescriptionUuid = {};
+  let prescriptionByExerciseName = {};
 
   function renderToday(session) {
     const list = $("#forge-today-list");
     list.innerHTML = "";
     muscleBySetUuid = {};
+    recipeBySetUuid = {};
     (session.set_logs || []).forEach((s) => {
       muscleBySetUuid[s.uuid] = s.muscles || [];
+      if (s.expected_load_recipe) {
+        recipeBySetUuid[s.uuid] = Object.assign({}, s.expected_load_recipe, {
+          unit: s.load_unit,
+          exerciseName: s.exercise_name,
+        });
+      }
     });
     // Group set logs by exercise.
     const groups = {};
@@ -1142,11 +1369,28 @@
       sets.forEach((s) => {
         const row = document.createElement("div");
         row.className = "forge-set-row" + (s.is_amrap ? " is-amrap" : "");
-        const loadStr = s.expected_load != null ? ` @ ${s.expected_load}` : "";
         // One input per set, always. For a per-side movement the number means
         // "reps per side" — limb measurement belongs to the Trial, not to daily
         // logging, so nothing here splits Left/Right any more (timed per-side
         // holds included).
+        // The load carries its unit, and — when we know how to assemble it —
+        // becomes a button that opens the plate recipe.
+        const loadCell = s.expected_load == null
+          ? ""
+          : recipeBySetUuid[s.uuid]
+          ? `<button type="button" class="forge-load-btn" data-recipe-uuid="${s.uuid}" ` +
+            `title="How to build this load">${esc(fmtLoad(s.expected_load, s.load_unit))}</button>`
+          : `<span class="forge-load-plain">${esc(fmtLoad(s.expected_load, s.load_unit))}</span>`;
+        // A logged weight may differ from the prescribed one (a plate went
+        // missing, or the day felt strong). It is recorded as history only —
+        // progression still advances from the prescription.
+        const loadInput = s.expected_load == null
+          ? ""
+          : `<label class="forge-load-actual"><span class="forge-load-actual-label">Load</span>` +
+            `<input type="number" min="0" step="0.25" class="forge-trial-input forge-actual-load" ` +
+            `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
+            `aria-label="weight used for set ${s.set_index + 1} of ${esc(name)}">` +
+            `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
         const input =
           `<input type="number" min="0" class="forge-trial-input forge-actual" ` +
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" placeholder="${s.expected_reps}">`;
@@ -1157,8 +1401,10 @@
           `<span class="forge-set-label">Set ${s.set_index + 1}${
             s.is_unilateral ? ` <span class="forge-trial-perleg">· per side</span>` : ""
           }</span>` +
-          `<span class="forge-set-expected">target ${s.expected_reps}${loadStr} ${unit}</span>` +
-          inputCell;
+          `<span class="forge-set-expected">target ${s.expected_reps} ${unit}${
+            loadCell ? " @ " : ""}${loadCell}</span>` +
+          inputCell +
+          loadInput;
         block.appendChild(row);
       });
       // Rest timer that pings when done (mystical chime).
@@ -1518,11 +1764,22 @@
         g.exercises.forEach((ex) => { catalogMap[ex.uuid] = ex; });
       });
       const currentByPattern = {};
+      prescriptionByExerciseName = {};
+      recipeByPrescriptionUuid = {};
       if (program) {
         program.days.forEach((d) => {
           d.prescriptions.forEach((p) => {
             if (!currentByPattern[p.pattern_key]) currentByPattern[p.pattern_key] = new Set();
             currentByPattern[p.pattern_key].add(p.exercise_name);
+            // Keep the prescribed load so the exercise modal can show what the
+            // programme currently asks for, recipe and all.
+            prescriptionByExerciseName[p.exercise_name] = p;
+            if (p.target_load_recipe) {
+              recipeByPrescriptionUuid[p.uuid] = Object.assign({}, p.target_load_recipe, {
+                unit: p.load_unit,
+                exerciseName: p.exercise_name,
+              });
+            }
           });
         });
       }
@@ -1709,6 +1966,14 @@
 
     const reps = fmtRepsRange(ex);
     if (reps) addSection("Target", `<div class="forge-ex-modal-value">${reps}</div>`);
+    const presc = prescriptionByExerciseName[ex.name];
+    if (presc && presc.target_load != null) {
+      const body = presc.target_load_recipe
+        ? `<button type="button" class="forge-load-btn" data-recipe-prescription="${presc.uuid}" ` +
+          `title="How to build this load">${esc(fmtLoad(presc.target_load, presc.load_unit))}</button>`
+        : `<div class="forge-ex-modal-value">${esc(fmtLoad(presc.target_load, presc.load_unit))}</div>`;
+      addSection("Prescribed load", body);
+    }
     if (ex.muscles && ex.muscles.length) {
       const chips = ex.muscles
         .map((m) => `<span class="forge-muscle-chip">${esc(m.name)}</span>`)
@@ -1775,6 +2040,62 @@
     exModal.hidden = true;
     document.body.classList.remove("forge-overlay-open");
   }
+
+  // ── Load recipe modal ─────────────────────────────────────────────────────
+  // Reuses the exercise overlay's card and close/backdrop behaviour; it only
+  // swaps in different content and offers no exercise actions.
+  function openRecipeModal(load, recipe, unit, exerciseName) {
+    exModalBody.innerHTML = "";
+    exModalActions.innerHTML = "";
+    exModalBody.innerHTML =
+      `<p class="forge-ex-modal-name">${esc(fmtLoad(load, unit))}</p>` +
+      (exerciseName ? `<p class="forge-ex-modal-pattern">${esc(exerciseName)}</p>` : "");
+
+    const section = (label, html) => {
+      const sec = document.createElement("div");
+      sec.className = "forge-ex-modal-section";
+      sec.innerHTML = `<div class="forge-ex-modal-label">${label}</div>${html}`;
+      exModalBody.appendChild(sec);
+    };
+
+    const plates = (recipe && recipe.per_side) || [];
+    if (!plates.length) {
+      section("How to build it", `<div class="forge-ex-modal-value">Bare bar / empty handle — no plates.</div>`);
+    } else {
+      const rows = plates
+        .map((p) => `<li class="forge-recipe-row"><span class="forge-recipe-count">${p.count} ×</span> ` +
+          `<span class="forge-recipe-plate">${esc(String(p.weight))}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}</span></li>`)
+        .join("");
+      section(
+        recipe.stacked ? "Load into the bell" : "Load per side",
+        `<ul class="forge-recipe-list">${rows}</ul>` +
+        `<div class="forge-ex-modal-cues">${esc(fmtRecipe(recipe, unit))}</div>`
+      );
+    }
+    const left = (recipe && recipe.leftover_plates) || [];
+    if (left.length) {
+      section(
+        "Still in the box",
+        `<div class="forge-ex-modal-value">${esc(
+          left.map((p) => `${p.count} × ${p.weight}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}`).join(", ")
+        )}</div>`
+      );
+    }
+    exModal.hidden = false;
+    document.body.classList.add("forge-overlay-open");
+  }
+
+  // Any load anywhere on the page opens its recipe — Today rows and the program
+  // view both mark their buttons with the recipe's source.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest && e.target.closest(".forge-load-btn");
+    if (!btn) return;
+    const setUuid = btn.dataset.recipeUuid;
+    const presUuid = btn.dataset.recipePrescription;
+    const entry = setUuid ? recipeBySetUuid[setUuid] : presUuid ? recipeByPrescriptionUuid[presUuid] : null;
+    if (!entry) return;
+    openRecipeModal(entry.total, entry, entry.unit, entry.exerciseName);
+  });
 
   const exModalCloseBtn = $("#forge-ex-modal-close");
   if (exModalCloseBtn) exModalCloseBtn.addEventListener("click", closeExerciseModal);
@@ -2291,6 +2612,8 @@
         isAmrap: !!s.is_amrap,
         targetReps: s.expected_reps,
         expectedLoad: s.expected_load,
+        loadUnit: s.load_unit,
+        loadRecipe: s.expected_load_recipe || null,
         restSeconds: s.rest_seconds || 0,
         cues: s.cues || "",
         setNumber: seen[s.exercise_name],
@@ -2308,13 +2631,16 @@
     setProgress(`Set ${s.setNumber} of ${s.totalSets}${s.isAmrap && !s.isTimed ? " · AMRAP" : ""}`);
     setExercise(s.exerciseName);
     const unit = s.isTimed ? "seconds" : "reps";
-    const loadStr = s.expectedLoad != null ? ` at ${s.expectedLoad}` : "";
+    // Hands-free: the weight is useless without its unit, and a short recipe
+    // saves walking back to the screen to see which plates to grab.
+    const loadStr = s.expectedLoad != null ? ` at ${fmtLoad(s.expectedLoad, s.loadUnit)}` : "";
+    const recipeStr = s.loadRecipe ? ` — ${fmtRecipe(s.loadRecipe, s.loadUnit)}` : "";
     setTarget(
       s.isTimed
         ? (s.isAmrap ? "Hold as long as you can" : `Target hold ${s.targetReps} seconds`)
         : s.isAmrap
         ? `As many reps as possible (target ${s.targetReps}+)`
-        : `Target ${s.targetReps}${loadStr} ${unit}`
+        : `Target ${s.targetReps} ${unit}${loadStr}`
     );
 
     const startHint = micCue("Say start when you're ready.", "Tap start when you're ready.");
@@ -2325,9 +2651,9 @@
         ? `Hold as long as you can. ${startHint}`
         : `Target hold, ${s.targetReps} seconds. ${startHint}`;
     } else if (s.isAmrap) {
-      say += `As many reps as you can. ${repsHint}`;
+      say += `As many reps as you can${loadStr}${recipeStr}. ${repsHint}`;
     } else {
-      say += `Target ${s.targetReps} reps${loadStr}. ${repsHint}`;
+      say += `Target ${s.targetReps} reps${loadStr}${recipeStr}. ${repsHint}`;
     }
     if (s.setNumber === 1 && s.cues) say += ` ${s.cues}`;
     voice.lastAnnounce = say;

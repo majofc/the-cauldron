@@ -67,19 +67,89 @@
         program adapt to it. Loadable gear lets the engine add weight instead of only changing difficulty.</p>
       <div class="forge-equip-cards" id="forge-equipment-grid"></div>
 
+      <div class="forge-unit-row">
+        <span class="forge-unit-label">Weights are in</span>
+        <div class="forge-unit-btns" id="forge-unit">
+          <button type="button" class="forge-unit-btn is-on" data-unit="kg" aria-pressed="true">kg</button>
+          <button type="button" class="forge-unit-btn" data-unit="lb" aria-pressed="false">lb</button>
+        </div>
+        <span class="forge-help forge-unit-note">Switching clears your weights — plate sizes belong to their unit.</span>
+      </div>
+
       <div class="forge-loadable" id="forge-loadable">
-        <label class="forge-field" data-for="dumbbells" hidden>
-          <span>Dumbbell weights you have (kg, comma-separated)</span>
-          <input type="text" id="forge-dumbbells" placeholder="5, 10, 15, 20">
-        </label>
+        <div class="forge-implement" data-for="dumbbells" hidden>
+          <div class="forge-implement-head">
+            <span class="forge-implement-name">Dumbbells</span>
+            <div class="forge-mode-btns" data-mode-for="dumbbell">
+              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">Fixed</button>
+              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">Plate-loaded</button>
+            </div>
+          </div>
+          <label class="forge-field" data-mode-panel="dumbbell-fixed">
+            <span>Dumbbell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated)</span>
+            <input type="text" id="forge-dumbbells" placeholder="5, 10, 15, 20">
+          </label>
+          <div data-mode-panel="dumbbell-plates" hidden>
+            <label class="forge-field">
+              <span>Plates you own — <code>weight x how many</code></span>
+              <input type="text" id="forge-dumbbell-plates" placeholder="2.5x8, 1.25x4">
+            </label>
+            <label class="forge-field">
+              <span>Weight of one empty handle (<span class="forge-unit-tag">kg</span>)</span>
+              <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="2">
+            </label>
+            <p class="forge-help">A pair needs 4 of a plate — one per side, per dumbbell. The weight shown
+              is what <em>one</em> dumbbell weighs.</p>
+          </div>
+        </div>
+
+        <div class="forge-implement" data-for="barbell" hidden>
+          <div class="forge-implement-head"><span class="forge-implement-name">Barbell</span></div>
+          <label class="forge-field">
+            <span>Plates you own — <code>weight x how many</code></span>
+            <input type="text" id="forge-barbell-plates" placeholder="20x4, 10x2, 2.5x2">
+          </label>
+          <label class="forge-field">
+            <span>Empty bar weight (<span class="forge-unit-tag">kg</span>)</span>
+            <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="20">
+          </label>
+          <label class="forge-field">
+            <span>Smallest increment (<span class="forge-unit-tag">kg</span>) — used only if you list no plates</span>
+            <input type="number" id="forge-barbell-inc" step="0.5" placeholder="2.5">
+          </label>
+        </div>
+
+        <div class="forge-implement" data-for="kettlebell" hidden>
+          <div class="forge-implement-head">
+            <span class="forge-implement-name">Kettlebell</span>
+            <div class="forge-mode-btns" data-mode-for="kettlebell">
+              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">Fixed</button>
+              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">Adjustable</button>
+            </div>
+          </div>
+          <label class="forge-field" data-mode-panel="kettlebell-fixed">
+            <span>Kettlebell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated)</span>
+            <input type="text" id="forge-kettlebells" placeholder="12, 16, 24">
+          </label>
+          <div data-mode-panel="kettlebell-plates" hidden>
+            <label class="forge-field">
+              <span>Plates you own — <code>weight x how many</code></span>
+              <input type="text" id="forge-kettlebell-plates" placeholder="2x6">
+            </label>
+            <label class="forge-field">
+              <span>Empty shell weight (<span class="forge-unit-tag">kg</span>)</span>
+              <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="6">
+            </label>
+          </div>
+        </div>
+
         <label class="forge-field" data-for="bands" hidden>
           <span>Band levels, easiest first (comma-separated)</span>
           <input type="text" id="forge-bands" placeholder="light, medium, heavy">
         </label>
-        <label class="forge-field" data-for="barbell" hidden>
-          <span>Barbell smallest increment (kg)</span>
-          <input type="number" id="forge-barbell-inc" step="0.5" placeholder="2.5">
-        </label>
+
+        <p class="forge-orphans" id="forge-orphans" hidden></p>
+        <p class="forge-equip-error" id="forge-equip-error" role="alert" hidden></p>
       </div>
 
       <div class="forge-demographics">
