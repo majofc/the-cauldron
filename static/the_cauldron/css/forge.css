@@ -566,7 +566,9 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-auth { display: flex; justify-content: center; padding: 4rem 1.25rem; }
 .forge-auth-card { position: relative; width: 100%; max-width: 420px; padding: 2.5rem; text-align: center; }
 .forge-form { text-align: left; margin-top: 1.2rem; }
-.forge-form .btn-cauldron { width: 100%; margin-top: .5rem; }
+/* Full-width submit: .btn-cauldron is inline-flex, so its label needs explicit
+   centring — the card's text-align is reset to left by .forge-form above. */
+.forge-form .btn-cauldron { width: 100%; margin-top: .5rem; justify-content: center; }
 .forge-error { color: var(--cauldron-paprika-light); font-size: .9rem; }
 
 /* Loader — blocking fixed overlay */
