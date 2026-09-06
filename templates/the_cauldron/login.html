@@ -4,6 +4,8 @@
 {% block title %}Enter The Cauldron{% endblock %}
 {% block meta_description %}Sign in to The Cauldron.{% endblock %}
 
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
 {% block app_styles %}
 <link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
@@ -52,4 +54,8 @@
     </form>
   </div>
 </section>
+{% endblock %}
+
+{% block nav_auto_loader %}
+<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
 {% endblock %}

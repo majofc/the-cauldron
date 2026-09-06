@@ -147,5 +147,12 @@
     window.CauldronLoader.showPage();
   });
 
+  /* Full-page form posts (e.g. the login form) get the loader too — mirrors
+     Arcano's nav wiring, which this file replaces on Cauldron pages. */
+  document.addEventListener('submit', function (e) {
+    if (e.defaultPrevented || e.target.hasAttribute('data-no-loader')) return;
+    window.CauldronLoader.showPage();
+  });
+
   window.addEventListener('pageshow', function () { window.CauldronLoader.hidePage(); });
 }());

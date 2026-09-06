@@ -181,8 +181,8 @@ def test_unperformable_prescription_is_hidden_from_both_read_paths(user, client,
     _own(user, "bodyweight")
     _program_on(user, rowing)
 
-    today = client.get("/cauldron/api/today/?day=0")
-    assert today.status_code == 201
+    today = client.get("/cauldron/api/today/")
+    assert today.status_code == 200
     assert today.json()["set_logs"] == []
 
     program = client.get("/cauldron/api/program/")

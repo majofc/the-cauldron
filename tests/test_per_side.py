@@ -122,7 +122,7 @@ def _own(user, *keys):
 def _program_on(user, exercise) -> PrescribedExercise:
     """An active one-day program prescribing ``exercise`` (raw odd targets)."""
     program = Program.objects.create(user=user, is_active=True)
-    day = ProgramDay.objects.create(program=program, day_index=0, name="Full Body A")
+    day = ProgramDay.objects.create(program=program, day_index=0, name="Today's Forge")
     return PrescribedExercise.objects.create(
         day=day,
         pattern=exercise.pattern,
@@ -133,6 +133,29 @@ def _program_on(user, exercise) -> PrescribedExercise:
         target_rest_seconds=exercise.rest_seconds,
         order=0,
     )
+
+
+def _open_today(client):
+    """The plan, persisted. Opening Today writes nothing, so a test that needs a
+    session to log against has to post the snapshot the way the browser does."""
+    plan = client.get("/cauldron/api/today/")
+    assert plan.status_code == 200
+    created = client.post(
+        "/cauldron/api/sessions/",
+        {
+            "sets": [
+                {
+                    "exercise": s["exercise"],
+                    "prescription": s["prescription"],
+                    "set_index": s["set_index"],
+                }
+                for s in plan.json()["set_logs"]
+            ]
+        },
+        format="json",
+    )
+    assert created.status_code == 201
+    return created.json()
 
 
 def test_generation_prescribes_even_targets(seeded, user):
@@ -205,9 +228,8 @@ def test_per_side_sets_log_a_single_reps_per_side_value(seeded, client, user):
     archer = Exercise.objects.get(name="Archer Push-up")
     presc = _program_on(user, archer)
 
-    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
-    assert today.status_code == 201
-    sets = today.json()["set_logs"]
+    session = _open_today(client)
+    sets = session["set_logs"]
 
     assert [s["is_unilateral"] for s in sets] == [True] * len(sets)
     # To-failure remains the last set only.
@@ -215,7 +237,7 @@ def test_per_side_sets_log_a_single_reps_per_side_value(seeded, client, user):
 
     amrap = sets[-1]
     resp = client.post(
-        f"/cauldron/api/sessions/{today.json()['uuid']}/log/",
+        f"/cauldron/api/sessions/{session['uuid']}/log/",
         {"sets": {s["uuid"]: {"actual_reps": 7, "actual_load": None} for s in sets}},
         format="json",
     )
@@ -235,12 +257,12 @@ def test_legacy_per_side_payload_is_still_accepted(seeded, client, user):
     collapses them to the weaker side."""
     _own(user, "bodyweight")
     presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
-    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
-    sets = today.json()["set_logs"]
+    session = _open_today(client)
+    sets = session["set_logs"]
     amrap = sets[-1]
 
     resp = client.post(
-        f"/cauldron/api/sessions/{today.json()['uuid']}/log/",
+        f"/cauldron/api/sessions/{session['uuid']}/log/",
         {"sets": {
             **{s["uuid"]: {"actual_reps": s["expected_reps"], "actual_load": None}
                for s in sets[:-1]},
@@ -262,8 +284,7 @@ def test_historical_per_side_rows_still_render(seeded, client, user):
     without error — there was no backfill."""
     _own(user, "bodyweight")
     presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
-    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
-    session_uuid = today.json()["uuid"]
+    session_uuid = _open_today(client)["uuid"]
 
     from the_cauldron.models import SetLog
 

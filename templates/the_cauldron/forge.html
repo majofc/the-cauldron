@@ -4,6 +4,8 @@
 {% block title %}The Forge — Adaptive Calisthenics{% endblock %}
 {% block meta_description %}Take the Trial and forge a calisthenics program that adapts to you and your equipment.{% endblock %}
 
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
 {% block app_styles %}
 <link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
 <link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
@@ -212,9 +214,6 @@
       <div class="forge-today-head">
         <h2 class="forge-h2">Today's session</h2>
         <div class="forge-today-controls">
-          <label class="forge-day-pick">Day
-            <select id="forge-day-select"></select>
-          </label>
           <label class="forge-day-pick">Rest ping
             <select id="forge-chime-select">
               <option value="cauldron">Cauldron Chime</option>
@@ -290,6 +289,18 @@
       <button type="button" class="forge-voice-exit" id="forge-ex-modal-close" aria-label="Close">✕</button>
       <div id="forge-ex-modal-body"></div>
       <div id="forge-ex-modal-actions" class="forge-reveal-actions"></div>
+    </div>
+  </div>
+
+  <!-- ── ⇄ Change exercise modal ───────────────────────────── -->
+  <div class="forge-overlay" id="forge-swap-modal" hidden role="dialog" aria-modal="true"
+       aria-labelledby="forge-swap-title">
+    <div class="cauldron-card forge-swap-card">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <button type="button" class="forge-voice-exit" id="forge-swap-close" aria-label="Close">✕</button>
+      <h3 class="forge-h3" id="forge-swap-title">Change exercise</h3>
+      <div id="forge-swap-body"></div>
     </div>
   </div>
 
