@@ -1,5 +1,7 @@
 """The Forge DRF API. All endpoints require auth and are scoped to request.user."""
 
+import uuid as uuid_module
+
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -18,13 +20,13 @@ from the_cauldron.models import (
     Muscle,
     PrescribedExercise,
     Program,
-    ProgramDay,
     WorkoutSession,
 )
 from the_cauldron.serializers import (
     AssessmentSessionSerializer,
     ExerciseSerializer,
     MovementPatternSerializer,
+    PlannedSetLogSerializer,
     ProgramSerializer,
     UserEquipmentProfileSerializer,
     WorkoutSessionSerializer,
@@ -189,8 +191,11 @@ class EquipmentProfileView(APIView):
 class AssessmentView(APIView):
     """POST AMRAP results → place the user and generate a program.
 
-    Body: {"split": "full_body_3x", "results": [
+    Body: {"results": [
         {"pattern_key": "...", "tested_exercise": "<uuid>", "reps_or_seconds": 8}, ...]}
+
+    A ``split`` key is accepted and ignored — every program is one all-patterns
+    day now — so an older cached client still forges a program.
     """
 
     permission_classes = [IsAuthenticated]
@@ -265,8 +270,10 @@ class AssessmentView(APIView):
         session.completed_at = timezone.now()
         session.save(update_fields=["completed_at"])
 
-        split = request.data.get("split", Program.Split.FULL_BODY_3X)
-        program = forge.generate_program(request.user, session, split=split)
+        # The Trial no longer asks for a split — every program is the same single
+        # all-patterns day. ``Program.split`` keeps its default so historical rows
+        # (and anything still reading the field) resolve.
+        program = forge.generate_program(request.user, session)
         return Response(
             {
                 "assessment": AssessmentSessionSerializer(session).data,
@@ -340,8 +347,14 @@ class ProgramView(APIView):
 
 
 class TodayView(APIView):
-    """GET ?day=<index> → open a WorkoutSession (snapshotting expected values)
-    for that day of the active program and return it.
+    """GET → the plan for today. **Writes nothing.**
+
+    There is one day, so there is no ``?day=`` to choose. The response is a
+    computed plan (``persisted: false``, synthetic set ids) — the session is only
+    written when the user logs their first real value, via ``POST /sessions/``.
+    The one exception is resuming: an unfinished session already scheduled for
+    today is returned as-is, so logged values and swapped-in exercises survive a
+    reload.
 
     The payload also carries the retest nudge (``retest_due``, ``last_trial_at``,
     ``days_since_last_trial``) so the Today panel can render its banner without a
@@ -351,15 +364,42 @@ class TodayView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        program = Program.objects.filter(user=request.user, is_active=True).first()
-        if not program:
+        day = forge.active_day(request.user)
+        if day is None:
             return Response({"detail": "No active program."}, status=404)
-        day_index = int(request.query_params.get("day", 0))
-        day = get_object_or_404(ProgramDay, program=program, day_index=day_index)
-        session = forge.start_session(request.user, day)
-        payload = WorkoutSessionSerializer(session).data
+        existing = forge.resumable_session(request.user)
+        if existing is not None:
+            payload = WorkoutSessionSerializer(existing).data
+        else:
+            planned = forge.build_today_plan(request.user, day)
+            payload = {
+                "uuid": None,
+                "day": str(day.uuid),
+                "day_name": day.name,
+                "scheduled_for": timezone.now().date().isoformat(),
+                "performed_at": None,
+                "status": WorkoutSession.Status.PLANNED,
+                "persisted": False,
+                "set_logs": PlannedSetLogSerializer(planned, many=True).data,
+            }
         payload.update(forge.retest_status(request.user))
-        return Response(payload, status=201)
+        return Response(payload)
+
+
+class SwapCandidatesView(APIView):
+    """GET → every progression chain the user could swap onto, least-trained
+    first.
+
+    One entry per chain, each with its pattern, the rung the user is currently at
+    on it, that rung's own targets, and its completed-session event count. The
+    client drops the chains already on screen — including ones an earlier swap
+    put there — and offers the rest.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(forge.swap_candidates(request.user))
 
 
 class RetestReminderDismissView(APIView):
@@ -483,8 +523,26 @@ class ProgressView(APIView):
         )
 
 
+def _exercise_or_400(value):
+    """Resolve a client-supplied exercise uuid, or ``None`` if it is not a uuid.
+
+    ``get_object_or_404`` raises on a malformed uuid rather than 404ing, so the
+    parse is done here and a bad value becomes a 400 instead of a 500.
+    """
+    try:
+        return Exercise.objects.filter(uuid=uuid_module.UUID(str(value))).first()
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
 class SessionViewSet(viewsets.ReadOnlyModelViewSet):
-    """List/retrieve saved sessions; POST /sessions/{uuid}/log/ to record results."""
+    """Saved sessions.
+
+    - ``POST /sessions/`` — persist the on-screen plan (first logged value)
+    - ``POST /sessions/{uuid}/sets/`` — record values, session stays ``planned``
+    - ``POST /sessions/{uuid}/swap/`` — replace an untouched movement
+    - ``POST /sessions/{uuid}/log/`` — finalize: progression + ``completed``
+    """
 
     permission_classes = [IsAuthenticated]
     serializer_class = WorkoutSessionSerializer
@@ -494,6 +552,68 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
         return WorkoutSession.objects.filter(user=self.request.user).prefetch_related(
             "set_logs__exercise__pattern", "set_logs__exercise__muscles"
         )
+
+    def create(self, request):
+        """Write the plan the user is looking at, on their first logged value.
+
+        Body: ``{"sets": [{"exercise", "prescription"|null, "set_index", ...}]}``
+        — the on-screen snapshot. Targets are recomputed server-side; the client
+        only chooses which movements are on the day. Returns the real session, so
+        the client can re-key its inputs onto the persisted set uuids.
+        """
+        day = forge.active_day(request.user)
+        if day is None:
+            return Response({"detail": "No active program."}, status=404)
+        # Two inputs racing the first keystroke must not create two sessions.
+        existing = forge.resumable_session(request.user)
+        if existing is not None:
+            return Response(WorkoutSessionSerializer(existing).data, status=200)
+        try:
+            session = forge.create_session_from_plan(
+                request.user, day, request.data.get("sets", [])
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            WorkoutSessionSerializer(session).data, status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=["post"])
+    def sets(self, request, uuid=None):
+        """Record values without finishing the session — the incremental save
+        behind every edit after the first. Progression does not run here."""
+        session = self.get_object()
+        if session.status == WorkoutSession.Status.COMPLETED:
+            return Response({"detail": "Session already finalized."}, status=409)
+        forge.save_session_values(session, request.data.get("sets", {}))
+        session.refresh_from_db()
+        return Response(WorkoutSessionSerializer(session).data)
+
+    @action(detail=True, methods=["post"])
+    def swap(self, request, uuid=None):
+        """Replace an untouched movement with one from another chain.
+
+        Body: ``{"from_exercise": "<uuid>", "to_exercise": "<uuid>"}``. 409 when
+        the movement being replaced already has logged sets.
+        """
+        session = self.get_object()
+        if session.status == WorkoutSession.Status.COMPLETED:
+            return Response({"detail": "Session already finalized."}, status=409)
+        from_exercise = _exercise_or_400(request.data.get("from_exercise"))
+        to_exercise = _exercise_or_400(request.data.get("to_exercise"))
+        if from_exercise is None or to_exercise is None:
+            return Response(
+                {"detail": "from_exercise and to_exercise must be exercise uuids."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            forge.swap_session_exercise(session, from_exercise, to_exercise)
+        except forge.SetsAlreadyLogged as exc:
+            return Response({"detail": str(exc)}, status=409)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        session.refresh_from_db()
+        return Response(WorkoutSessionSerializer(session).data)
 
     @action(detail=True, methods=["post"])
     def log(self, request, uuid=None):

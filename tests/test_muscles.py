@@ -86,17 +86,40 @@ def _assessment_payload():
         results.append(
             {"pattern_key": pattern.key, "tested_exercise": str(ex.uuid), "reps_or_seconds": 6}
         )
-    return {"split": "full_body_3x", "results": results}
+    return {"results": results}
+
+
+def _open_today(client):
+    """The plan, persisted. Opening Today writes nothing, so a test that needs a
+    session to log against has to post the snapshot the way the browser does."""
+    plan = client.get("/cauldron/api/today/")
+    assert plan.status_code == 200
+    created = client.post(
+        "/cauldron/api/sessions/",
+        {
+            "sets": [
+                {
+                    "exercise": s["exercise"],
+                    "prescription": s["prescription"],
+                    "set_index": s["set_index"],
+                }
+                for s in plan.json()["set_logs"]
+            ]
+        },
+        format="json",
+    )
+    assert created.status_code == 201
+    return created.json()
 
 
 def test_today_set_logs_expose_muscles_for_diagram(seeded, client):
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
-    today = client.get("/cauldron/api/today/?day=0")
-    assert today.status_code == 201
+    today = client.get("/cauldron/api/today/")
+    assert today.status_code == 200
     set_logs = today.json()["set_logs"]
-    assert set_logs, "expected at least one prescribed set for day 0"
+    assert set_logs, "expected at least one prescribed set on the day"
     # Every set log carries its exercise's muscle list, and at least one set in
     # the day reports trained muscles — enough to render the worked-muscle map.
     assert all("muscles" in s for s in set_logs)
@@ -121,8 +144,8 @@ def test_catalog_exercises_include_muscles_for_filtering(seeded, client):
 def test_progress_lists_muscles_and_filters_by_muscle(seeded, client):
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
-    # Complete day 0 so there is a session with set logs to chart.
-    session = client.get("/cauldron/api/today/?day=0").json()
+    # Complete the day so there is a session with set logs to chart.
+    session = _open_today(client)
     trained = {m["key"] for s in session["set_logs"] for m in s["muscles"]}
     set_results = {
         s["uuid"]: {"actual_reps": (s["expected_reps"] or 5), "actual_load": s["expected_load"]}

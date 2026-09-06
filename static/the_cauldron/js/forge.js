@@ -235,7 +235,20 @@
     const pv = e.target.closest(".forge-chime-preview");
     if (pv) { e.preventDefault(); playChime(getChime()); return; }
     const sk = e.target.closest(".forge-skip-ex-btn");
-    if (sk) { e.preventDefault(); sk.closest(".forge-ex-block")?.remove(); updateTodayMuscleMap(); return; }
+    if (sk) {
+      e.preventDefault();
+      sk.closest(".forge-ex-block")?.remove();
+      updateTodayMuscleMap();
+      // Skipping frees that chain up again, so the ⇄ options change with it.
+      refreshSwapButtons();
+      return;
+    }
+    const sw2 = e.target.closest(".forge-swap-ex-btn");
+    if (sw2) {
+      e.preventDefault();
+      if (!sw2.disabled) openSwapModal(sw2.closest(".forge-ex-block"));
+      return;
+    }
   });
 
   // ── Results reveal + unlock celebration ────────────────────────────────────
@@ -1215,7 +1228,8 @@
     if (!results.length) return notify("Set your equipment first.");
     showLoader(true);
     try {
-      const res = await api("assessment/", { method: "POST", body: { split: "full_body_3x", results } });
+      // No split to choose any more — every program is one all-patterns day.
+      const res = await api("assessment/", { method: "POST", body: { results } });
       showLoader(false);
       await showResults({
         peer: res.peer || [],
@@ -1247,39 +1261,26 @@
   // ── Today ────────────────────────────────────────────────────────────────--
   let currentSession = null;
 
+  // There is one day. Opening it writes nothing — `today/` hands back a computed
+  // plan whose set ids are synthetic, and the session is only created once the
+  // user logs their first real value. `persisted` says which of the two we hold.
   async function loadToday() {
     showLoader(true);
     try {
-      const program = await api("program/").catch(() => null);
-      const select = $("#forge-day-select");
-      if (!program) {
+      currentSession = await api("today/").catch(() => null);
+      if (!currentSession) {
         $("#forge-today-list").innerHTML = `<p class="forge-help">No program yet — take the Trial.</p>`;
         $("#forge-log-session").hidden = true;
         $("#forge-earphones").hidden = true;
         return;
       }
-      select.innerHTML = program.days
-        .map((d) => `<option value="${d.day_index}">${d.name}</option>`)
-        .join("");
-      select.onchange = () => openDay(parseInt(select.value, 10));
-      openDay(parseInt(select.value, 10));
-    } catch (e) {
-      notify("Couldn't load today.");
-    } finally {
-      showLoader(false);
-    }
-  }
-
-  async function openDay(dayIndex) {
-    showLoader(true);
-    try {
-      currentSession = await api(`today/?day=${dayIndex}`);
       renderToday(currentSession);
       renderRetestBanner(currentSession);
       $("#forge-log-session").hidden = false;
       $("#forge-earphones").hidden = !voiceSupported();
+      loadSwapCandidates();
     } catch (e) {
-      notify("Couldn't open that day.");
+      notify("Couldn't load today.");
     } finally {
       showLoader(false);
     }
@@ -1342,15 +1343,22 @@
         });
       }
     });
-    // Group set logs by exercise.
-    const groups = {};
+    // Group set logs by exercise. Keyed on the uuid, not the name — a ⇄ swap can
+    // put two rungs of related movements on the day at once.
+    const groups = new Map();
     session.set_logs.forEach((s) => {
-      (groups[s.exercise_name] = groups[s.exercise_name] || []).push(s);
+      if (!groups.has(s.exercise)) groups.set(s.exercise, []);
+      groups.get(s.exercise).push(s);
     });
-    Object.entries(groups).forEach(([name, sets]) => {
+    groups.forEach((sets, exerciseUuid) => {
+      const meta = sets[0] || {};
+      const name = meta.exercise_name;
       const block = document.createElement("div");
       block.className = "forge-ex-block";
-      const meta = sets[0] || {};
+      // The plan snapshot posted on the first logged value is read back off
+      // these, so a skipped block simply never reaches the server.
+      block.dataset.exercise = exerciseUuid;
+      if (meta.prescription) block.dataset.prescription = meta.prescription;
       const rest = meta.rest_seconds ? fmtRest(meta.rest_seconds) : "";
       const video = meta.video_url
         ? `<a class="forge-video-link" href="${meta.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
@@ -1363,7 +1371,9 @@
       block.innerHTML =
         `<div class="forge-ex-head">` +
         iconHTML +
-        `<span class="forge-ex-name">${name}</span>${video}` +
+        `<span class="forge-ex-name">${esc(name)}</span>${video}` +
+        `<button type="button" class="forge-swap-ex-btn" ` +
+        `title="Swap this for a movement you've trained less">⇄ Change</button>` +
         `<button type="button" class="forge-skip-ex-btn" title="Remove this exercise from the session">✕ Skip exercise</button>` +
         `</div>`;
       sets.forEach((s) => {
@@ -1391,9 +1401,12 @@
             `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
             `aria-label="weight used for set ${s.set_index + 1} of ${esc(name)}">` +
             `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
+        // Reps already logged are rendered back in: a resumed session has to
+        // come back with the user's work on screen, not an empty form.
         const input =
           `<input type="number" min="0" class="forge-trial-input forge-actual" ` +
-          `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" placeholder="${s.expected_reps}">`;
+          `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" ` +
+          `value="${s.actual_reps ?? ""}" placeholder="${s.expected_reps}">`;
         const inputCell = meta.is_timed
           ? `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button></div>`
           : input;
@@ -1419,7 +1432,357 @@
       list.appendChild(block);
     });
     updateTodayMuscleMap();
+    refreshSwapButtons();
   }
+
+  // ── Persisting the plan ────────────────────────────────────────────────────
+  // Nothing is written until the user logs a real value. The first one posts the
+  // on-screen plan, gets back a session with real uuids, and re-keys the inputs
+  // onto them; every later edit is an incremental patch.
+
+  // The on-screen plan, read back off the DOM so a skipped block is genuinely
+  // gone. Targets are recomputed server-side — this only says which movements
+  // are on the day.
+  function planSnapshot() {
+    const entries = [];
+    $$("#forge-today-list .forge-ex-block").forEach((block) => {
+      $$(".forge-actual", block).forEach((input, index) => {
+        entries.push({
+          exercise: block.dataset.exercise,
+          prescription: block.dataset.prescription || null,
+          set_index: index,
+        });
+      });
+    });
+    return entries;
+  }
+
+  // Point the rendered inputs at the session's real set uuids. Planned rows are
+  // keyed `<prescription>:<index>`, which nothing server-side knows about, so
+  // they are matched back by (exercise, set_index).
+  function rekeyInputs(session) {
+    const realUuid = {};
+    (session.set_logs || []).forEach((s) => {
+      realUuid[`${s.exercise}:${s.set_index}`] = s.uuid;
+    });
+    muscleBySetUuid = {};
+    recipeBySetUuid = {};
+    (session.set_logs || []).forEach((s) => {
+      muscleBySetUuid[s.uuid] = s.muscles || [];
+      if (s.expected_load_recipe) {
+        recipeBySetUuid[s.uuid] = Object.assign({}, s.expected_load_recipe, {
+          unit: s.load_unit,
+          exerciseName: s.exercise_name,
+        });
+      }
+    });
+    // Old synthetic id → new real id, built from the rep inputs (one per set, in
+    // set order). Everything else on the row is remapped through this rather
+    // than by its own position, since only some sets carry a load recipe.
+    const remap = {};
+    $$("#forge-today-list .forge-ex-block").forEach((block) => {
+      const exercise = block.dataset.exercise;
+      $$(".forge-actual", block).forEach((input, index) => {
+        const uuid = realUuid[`${exercise}:${index}`];
+        if (!uuid) return;
+        remap[input.dataset.uuid] = uuid;
+        input.dataset.uuid = uuid;
+      });
+    });
+    $$("#forge-today-list .forge-actual-load").forEach((input) => {
+      const uuid = remap[input.dataset.uuid];
+      if (uuid) input.dataset.uuid = uuid;
+    });
+    $$("#forge-today-list [data-recipe-uuid]").forEach((btn) => {
+      const uuid = remap[btn.dataset.recipeUuid];
+      if (uuid) btn.dataset.recipeUuid = uuid;
+    });
+  }
+
+  // Guards against two quick keystrokes each creating a session.
+  let sessionCreation = null;
+
+  async function ensureSession() {
+    if (currentSession && currentSession.persisted) return currentSession;
+    if (sessionCreation) return sessionCreation;
+    sessionCreation = (async () => {
+      const session = await api("sessions/", {
+        method: "POST",
+        body: { sets: planSnapshot() },
+      });
+      currentSession = Object.assign({}, currentSession, session);
+      rekeyInputs(session);
+      return currentSession;
+    })();
+    try {
+      return await sessionCreation;
+    } finally {
+      sessionCreation = null;
+    }
+  }
+
+  // Values are patched a beat after typing stops, so holding a key down doesn't
+  // fire a request per digit.
+  let saveTimer = null;
+
+  function queueValueSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveValues, 600);
+  }
+
+  async function saveValues() {
+    const sets = collectActualInputs($$(".forge-actual"));
+    if (!Object.keys(sets).length) return;
+    try {
+      await ensureSession();
+      // ensureSession re-keys the inputs, so re-read them onto the real uuids.
+      const keyed = collectActualInputs($$(".forge-actual"));
+      await api(`sessions/${currentSession.uuid}/sets/`, {
+        method: "POST",
+        body: { sets: keyed },
+      });
+      refreshSwapButtons();
+    } catch (e) {
+      // Values stay on screen; Save session is still there as the backstop.
+      notify("Couldn't save that just yet — your reps are still on screen.");
+    }
+  }
+
+  // ── ⇄ Change ───────────────────────────────────────────────────────────────
+  let swapCandidates = [];
+  let chainByExercise = {};
+
+  async function loadSwapCandidates() {
+    try {
+      const data = await api("today/swap-candidates/");
+      swapCandidates = data.candidates || [];
+      chainByExercise = data.chains || {};
+    } catch (e) {
+      swapCandidates = [];
+      chainByExercise = {};
+    }
+    refreshSwapButtons();
+  }
+
+  // A block whose sets carry values is locked — swapping it would throw the work
+  // away. Chains already on screen (including ones an earlier swap put there)
+  // are never offered.
+  function blockHasValues(block) {
+    return $$(".forge-actual", block).some((i) => i.value.trim() !== "");
+  }
+
+  function onScreenChains() {
+    const chains = new Set();
+    $$("#forge-today-list .forge-ex-block").forEach((block) => {
+      const chain = chainByExercise[block.dataset.exercise];
+      if (chain) chains.add(chain);
+    });
+    return chains;
+  }
+
+  function eligibleCandidates() {
+    const taken = onScreenChains();
+    return swapCandidates.filter((c) => !taken.has(c.chain_key));
+  }
+
+  function refreshSwapButtons() {
+    const remaining = eligibleCandidates().length;
+    $$("#forge-today-list .forge-ex-block").forEach((block) => {
+      const btn = $(".forge-swap-ex-btn", block);
+      if (!btn) return;
+      let reason = "";
+      if (blockHasValues(block)) reason = "You've already logged sets for this one.";
+      else if (!remaining) reason = "No other movement left to swap in.";
+      btn.disabled = Boolean(reason);
+      btn.title = reason || "Swap this for a movement you've trained less";
+    });
+  }
+
+  const swapModal = $("#forge-swap-modal");
+  const swapBody = $("#forge-swap-body");
+  let swapTargetBlock = null;
+
+  function closeSwapModal() {
+    if (!swapModal) return;
+    swapModal.hidden = true;
+    swapBody.innerHTML = "";
+    swapTargetBlock = null;
+  }
+
+  function openSwapModal(block) {
+    if (!swapModal) return;
+    swapTargetBlock = block;
+    renderChainPicker();
+    swapModal.hidden = false;
+  }
+
+  // Step 1 — pick a chain. Grouped by pattern, least-trained first, each row
+  // showing how many sessions worked it; the very lowest is badged.
+  function renderChainPicker() {
+    const candidates = eligibleCandidates();
+    if (!candidates.length) {
+      swapBody.innerHTML = `<p class="forge-help">No other movement left to swap in.</p>`;
+      return;
+    }
+    const lowest = candidates[0].chain_key;
+    const byPattern = new Map();
+    candidates.forEach((c) => {
+      if (!byPattern.has(c.pattern_name)) byPattern.set(c.pattern_name, []);
+      byPattern.get(c.pattern_name).push(c);
+    });
+    // Patterns ordered by their own least-trained chain, so the recommendation
+    // sits at the top of the list rather than buried alphabetically.
+    const patterns = Array.from(byPattern.entries()).sort(
+      (a, b) => a[1][0].event_count - b[1][0].event_count
+    );
+    let html =
+      `<p class="forge-help">Pick a movement you've trained less. ` +
+      `Counts are sessions in the last two weeks.</p>`;
+    patterns.forEach(([patternName, rows]) => {
+      html += `<h4 class="forge-swap-group">${esc(patternName)}</h4><ul class="forge-swap-list">`;
+      rows.forEach((c) => {
+        const badge =
+          c.chain_key === lowest
+            ? `<span class="forge-swap-badge">Least trained</span>`
+            : "";
+        html +=
+          `<li><button type="button" class="forge-swap-option" data-chain="${esc(c.chain_key)}">` +
+          `<span class="forge-swap-option-name">${esc(c.exercise_name)}</span>${badge}` +
+          `<span class="forge-swap-option-count">${c.event_count} session${
+            c.event_count === 1 ? "" : "s"
+          }</span></button></li>`;
+      });
+      html += `</ul>`;
+    });
+    swapBody.innerHTML = html;
+  }
+
+  // Step 2 — confirm, showing exactly what will be prescribed. The replacement
+  // brings its own sets, rep targets, rest and load; nothing is inherited.
+  function renderSwapConfirm(candidate) {
+    const unit = candidate.is_timed ? "s" : "reps";
+    const reps =
+      candidate.target_reps_min === candidate.target_reps_max
+        ? `${candidate.target_reps_max}`
+        : `${candidate.target_reps_min}–${candidate.target_reps_max}`;
+    const load =
+      candidate.target_load == null
+        ? ""
+        : `<li>Load: ${esc(fmtLoad(candidate.target_load, candidate.load_unit))}</li>`;
+    swapBody.innerHTML =
+      `<h4 class="forge-swap-confirm-name">${esc(candidate.exercise_name)}</h4>` +
+      `<p class="forge-help">${esc(candidate.pattern_name)}</p>` +
+      `<ul class="forge-swap-targets">` +
+      `<li>${candidate.target_sets} sets × ${reps} ${unit}${
+        candidate.is_unilateral ? " per side" : ""
+      }</li>` +
+      load +
+      `<li>Rest: ${esc(fmtRest(candidate.target_rest_seconds))}</li>` +
+      `</ul>` +
+      `<div class="forge-reveal-actions">` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-swap-back">Back</button>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-swap-confirm" ` +
+      `data-chain="${esc(candidate.chain_key)}">Use this instead</button>` +
+      `</div>`;
+  }
+
+  async function applySwap(candidate) {
+    const block = swapTargetBlock;
+    if (!block) return;
+    const fromExercise = block.dataset.exercise;
+    closeSwapModal();
+    showLoader(true);
+    try {
+      if (currentSession && currentSession.persisted) {
+        // The session exists, so the swap has to be persisted too — a reload
+        // must come back with the movement the user chose.
+        const session = await api(`sessions/${currentSession.uuid}/swap/`, {
+          method: "POST",
+          body: { from_exercise: fromExercise, to_exercise: candidate.exercise },
+        });
+        currentSession = Object.assign({}, currentSession, session);
+      } else {
+        // Still ephemeral — swap in place; the plan is only ever posted whole.
+        currentSession.set_logs = swapPlannedSets(
+          currentSession.set_logs || [],
+          fromExercise,
+          candidate
+        );
+      }
+      renderToday(currentSession);
+    } catch (e) {
+      notify(apiErrorText(e) || "Couldn't change that exercise.");
+    } finally {
+      showLoader(false);
+    }
+  }
+
+  // Replace a movement on the *unsaved* plan. Synthetic ids again, so the rows
+  // are indistinguishable from the ones `today/` handed us.
+  function swapPlannedSets(setLogs, fromExercise, candidate) {
+    const replacement = [];
+    for (let i = 0; i < candidate.target_sets; i++) {
+      const isAmrap = i === candidate.target_sets - 1;
+      replacement.push({
+        uuid: `swap:${candidate.exercise}:${i}`,
+        exercise: candidate.exercise,
+        prescription: null,
+        exercise_name: candidate.exercise_name,
+        video_url: candidate.video_url,
+        cues: candidate.cues,
+        is_timed: candidate.is_timed,
+        is_unilateral: candidate.is_unilateral,
+        muscles: [],
+        rest_seconds: candidate.target_rest_seconds,
+        set_index: i,
+        expected_reps: isAmrap ? candidate.target_reps_max : candidate.target_reps_min,
+        expected_load: candidate.target_load,
+        expected_load_recipe: null,
+        load_unit: candidate.load_unit,
+        actual_reps: null,
+        actual_load: null,
+        left_reps: null,
+        right_reps: null,
+        is_amrap: isAmrap,
+        rir: null,
+      });
+    }
+    const out = [];
+    let inserted = false;
+    setLogs.forEach((s) => {
+      if (s.exercise !== fromExercise) {
+        out.push(s);
+        return;
+      }
+      // Drop in where the replaced movement sat, so the day doesn't reshuffle.
+      if (!inserted) {
+        out.push(...replacement);
+        inserted = true;
+      }
+    });
+    // Nothing matched — append rather than silently dropping the choice.
+    if (!inserted) out.push(...replacement);
+    return out;
+  }
+
+  if (swapModal) {
+    swapModal.addEventListener("click", (e) => {
+      if (e.target === swapModal) { closeSwapModal(); return; }
+      const option = e.target.closest(".forge-swap-option");
+      if (option) {
+        const candidate = swapCandidates.find((c) => c.chain_key === option.dataset.chain);
+        if (candidate) renderSwapConfirm(candidate);
+        return;
+      }
+      if (e.target.closest(".forge-swap-back")) { renderChainPicker(); return; }
+      const confirm = e.target.closest(".forge-swap-confirm");
+      if (confirm) {
+        const candidate = swapCandidates.find((c) => c.chain_key === confirm.dataset.chain);
+        if (candidate) applySwap(candidate);
+      }
+    });
+  }
+  $("#forge-swap-close")?.addEventListener("click", closeSwapModal);
 
   // Reveal the front/back muscle map once every set on the day is logged,
   // highlighting the union of muscles trained by the completed exercises.
@@ -1470,8 +1833,15 @@
   const todayListEl = $("#forge-today-list");
   if (todayListEl) {
     todayListEl.addEventListener("input", (e) => {
-      if (e.target.classList && e.target.classList.contains("forge-actual")) {
+      const cls = e.target.classList;
+      if (!cls) return;
+      if (cls.contains("forge-actual")) {
         updateTodayMuscleMap();
+        // The first value here is what turns the plan into a real session.
+        refreshSwapButtons();
+        queueValueSave();
+      } else if (cls.contains("forge-actual-load")) {
+        queueValueSave();
       }
     });
   }
@@ -1488,11 +1858,21 @@
     });
   }
 
+  // Save still finalizes: run progression, complete the session, show the reveal.
+  // Values are already being persisted as they're typed — this is the ceremony,
+  // not the first write.
   $("#forge-log-session").addEventListener("click", async () => {
     if (!currentSession) return;
-    const sets = collectActualInputs($$(".forge-actual"));
+    const logged = Object.keys(collectActualInputs($$(".forge-actual"))).length;
+    if (!logged && !currentSession.persisted) {
+      notify("Log at least one set before saving.");
+      return;
+    }
     showLoader(true);
     try {
+      clearTimeout(saveTimer);
+      await ensureSession();
+      const sets = collectActualInputs($$(".forge-actual"));
       const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
       $("#forge-log-session").hidden = true;
       showLoader(false);
@@ -2848,6 +3228,15 @@
   async function startVoice() {
     if (!voiceSupported()) { notify("Earphones mode needs Chrome or Edge."); return; }
     if (!currentSession) { notify("Open a day first."); return; }
+    // Starting a guided workout is a commitment to doing it, so persist the plan
+    // now rather than mid-set: the steps then key off real set uuids and never
+    // have to be re-keyed underneath a running session.
+    try {
+      await ensureSession();
+    } catch (e) {
+      notify("Couldn't start the session.");
+      return;
+    }
     const allSteps = buildSteps(currentSession);
     if (!allSteps.length) { notify("Nothing scheduled today."); return; }
     // Build a map of already-filled set UUIDs directly from DOM inputs, via the

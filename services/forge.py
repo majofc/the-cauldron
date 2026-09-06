@@ -6,6 +6,7 @@ session snapshotting, applying a logged session).
 """
 
 import random
+import uuid
 from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
@@ -17,6 +18,7 @@ from the_cauldron.models import (
     AssessmentSession,
     BlockedExercise,
     Exercise,
+    MovementPattern,
     PrescribedExercise,
     Program,
     ProgramDay,
@@ -26,28 +28,17 @@ from the_cauldron.models import (
 )
 from the_cauldron.services import loads, norms, progression
 
-# Which patterns go on which day for each split.
-SPLIT_LAYOUTS = {
-    Program.Split.FULL_BODY_3X: {
-        "days": 3,
-        "day_patterns": lambda i, all_keys: all_keys,  # every pattern every day
-        "names": ["Full Body A", "Full Body B", "Full Body C"],
-    },
-    Program.Split.UPPER_LOWER_4X: {
-        "days": 4,
-        "names": ["Upper A", "Lower A", "Upper B", "Lower B"],
-    },
-}
+# A program is one day. It carries every movement pattern the assessment placed,
+# and each time it is opened it serves the least-trained subset of them (see
+# ``select_day_prescriptions``), so the rotation emerges from training history
+# rather than from a fixed A/B/C rota the user has to pick between.
+THE_DAY_NAME = "Today's Forge"
 
-UPPER_PATTERNS = {"horizontal_push", "vertical_pull", "vertical_push", "core_anti_extension"}
-LOWER_PATTERNS = {"lower_unilateral", "hinge", "core_anti_extension"}
-
-# "Full Body A" (the first day of a Full Body ×3 split) biases toward the
-# movements the user has seen least often lately: it trains only this many
-# patterns — the ones whose progression chains have the fewest recent usage
-# events — instead of every pattern. Days B/C are unchanged.
-FULL_BODY_A_PATTERN_COUNT = 5
-# Trailing window for counting Full Body A usage events per progression chain.
+# The day trains only this many patterns — the ones whose progression chains have
+# the fewest recent usage events — out of the six it prescribes. The sixth
+# rotates in on its own as the counts shift.
+DAILY_PATTERN_COUNT = 5
+# Trailing window for counting usage events per progression chain.
 CHAIN_EVENT_WINDOW_DAYS = 14
 # Window used when comparing recent AMRAP work (grip selection).
 LEAST_TRAINED_WINDOW_DAYS = 30
@@ -465,7 +456,14 @@ def _resnap_load(presc, profile) -> bool:
 
 @transaction.atomic
 def generate_program(user, assessment: AssessmentSession, split=None) -> Program:
-    """Create a fresh active program from an assessment's placements."""
+    """Create a fresh active program from an assessment's placements.
+
+    Every program is a **single** day (``day_index=0``) prescribing all six
+    movement patterns, whatever ``split`` says. The split no longer shapes the
+    plan — which patterns are actually trained is decided per opening by
+    ``select_day_prescriptions`` from recent training history. ``split`` is still
+    stored so historical rows keep resolving.
+    """
     profile = get_or_create_equipment_profile(user)
     split = split or Program.Split.FULL_BODY_3X
 
@@ -482,31 +480,23 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
         for r in assessment.results.select_related("pattern", "placed_exercise", "tested_exercise")
     }
 
-    layout = SPLIT_LAYOUTS[split]
-    for day_index in range(layout["days"]):
-        day = ProgramDay.objects.create(
-            program=program, day_index=day_index, name=layout["names"][day_index]
+    day = ProgramDay.objects.create(program=program, day_index=0, name=THE_DAY_NAME)
+    for order, key in enumerate(placements):
+        ex = placements[key]
+        reps_min, reps_max = progression.rep_targets_for(
+            ex, ex.rep_range_min, ex.rep_range_max
         )
-        if split == Program.Split.FULL_BODY_3X:
-            keys = list(placements.keys())
-        else:  # upper/lower alternation
-            keys = [k for k in placements if k in (UPPER_PATTERNS if day_index % 2 == 0 else LOWER_PATTERNS)]
-        for order, key in enumerate(keys):
-            ex = placements[key]
-            reps_min, reps_max = progression.rep_targets_for(
-                ex, ex.rep_range_min, ex.rep_range_max
-            )
-            PrescribedExercise.objects.create(
-                day=day,
-                pattern=ex.pattern,
-                exercise=ex,
-                target_sets=3,
-                target_reps_min=reps_min,
-                target_reps_max=reps_max,
-                target_load=_initial_load(profile, ex),
-                target_rest_seconds=ex.rest_seconds,
-                order=order,
-            )
+        PrescribedExercise.objects.create(
+            day=day,
+            pattern=ex.pattern,
+            exercise=ex,
+            target_sets=3,
+            target_reps_min=reps_min,
+            target_reps_max=reps_max,
+            target_load=_initial_load(profile, ex),
+            target_rest_seconds=ex.rest_seconds,
+            order=order,
+        )
     return program
 
 
@@ -562,18 +552,19 @@ def chain_map_for(pattern_ids) -> dict:
 
 
 def chain_event_counts(user, chain_of, since_days=CHAIN_EVENT_WINDOW_DAYS) -> dict:
-    """``{chain_key: number of recent Full Body A usage events}``.
+    """``{chain_key: number of recent usage events}``.
 
-    One event is one distinct *completed* Full Body A session in which any
-    exercise of that chain was actually worked (a ``SetLog`` with at least one
-    rep — or, for holds, one second, since timed moves store seconds in
-    ``actual_reps``). Counting distinct sessions rather than sets keeps a
-    four-set movement from reading as four times as used as a one-set movement.
+    One event is one distinct *completed* session in which any exercise of that
+    chain was actually worked (a ``SetLog`` with at least one rep — or, for
+    holds, one second, since timed moves store seconds in ``actual_reps``).
+    Counting distinct sessions rather than sets keeps a four-set movement from
+    reading as four times as used as a one-set movement.
 
-    Only Full Body A sessions count. B and C train every pattern equally, so
-    including them would flatten every chain into a permanent tie and leave the
-    tie-break deciding each day. Sessions that are open but unlogged have a null
-    ``performed_at`` and are excluded by the window, matching today's behaviour.
+    **Every** completed session counts. There is only one day now, so there is no
+    longer a subset of sessions that would flatten the tally by training every
+    pattern equally — and a chain the user trained via a ⇄ swap must weigh the
+    same as one they trained from the prescription. Sessions that are open but
+    unlogged have a null ``performed_at`` and are excluded by the window.
     """
     if not chain_of:
         return {}
@@ -583,8 +574,6 @@ def chain_event_counts(user, chain_of, since_days=CHAIN_EVENT_WINDOW_DAYS) -> di
             session__user=user,
             session__status=WorkoutSession.Status.COMPLETED,
             session__performed_at__gte=cutoff,
-            session__program_day__day_index=0,
-            session__program_day__program__split=Program.Split.FULL_BODY_3X,
             actual_reps__gte=1,
         )
         .values_list("exercise_id", "session_id")
@@ -601,18 +590,21 @@ def chain_event_counts(user, chain_of, since_days=CHAIN_EVENT_WINDOW_DAYS) -> di
 def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     """The prescriptions to actually train on ``program_day``, in display order.
 
-    Every day trains its full prescription set, except **Full Body A** (the first
-    day of a Full Body ×3 program). There we bias toward the movements the user
-    has seen least often: keep only the ``FULL_BODY_A_PATTERN_COUNT`` whose
-    progression chains have the fewest usage events in the trailing
-    ``CHAIN_EVENT_WINDOW_DAYS``, and drop the rest. Counting per chain rather
-    than per exercise means climbing a ladder carries the tally forward — reps
-    logged on Archer Push-up still count once the prescription has advanced to
-    Typewriter Push-up. A chain never used in the window counts zero, so it is
-    always kept; ties break by the day's own display order for determinism.
+    The day prescribes every pattern but trains only the ``DAILY_PATTERN_COUNT``
+    whose progression chains have the fewest usage events in the trailing
+    ``CHAIN_EVENT_WINDOW_DAYS`` — the rest are dropped, and rotate back in on
+    their own as the counts shift. This applies to every program: there is one
+    day, so the bias toward least-trained movements is the only thing deciding
+    what today looks like.
 
-    A prescription the user cannot perform at all is never returned, whatever the
-    day — the day trains one fewer pattern instead.
+    Counting per chain rather than per exercise means climbing a ladder carries
+    the tally forward — reps logged on Archer Push-up still count once the
+    prescription has advanced to Typewriter Push-up. A chain never used in the
+    window counts zero, so it is always kept; ties break by the day's own display
+    order for determinism.
+
+    A prescription the user cannot perform at all is never returned — the day
+    trains one fewer pattern instead.
     """
     if program_day.program.user_id != user.pk:
         raise PermissionDenied("program_day belongs to another user")
@@ -624,11 +616,7 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
         .prefetch_related("exercise__required_equipment")
         if is_performable(p.exercise, owned, blocked)
     ]
-    is_full_body_a = (
-        program_day.program.split == Program.Split.FULL_BODY_3X
-        and program_day.day_index == 0
-    )
-    if not is_full_body_a or len(prescriptions) <= FULL_BODY_A_PATTERN_COUNT:
+    if len(prescriptions) <= DAILY_PATTERN_COUNT:
         return prescriptions
 
     # Chains are keyed off each prescription's *current* exercise, which
@@ -638,7 +626,7 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     least_used = sorted(
         prescriptions,
         key=lambda p: (counts.get(chain_of.get(p.exercise_id), 0), p.order),
-    )[:FULL_BODY_A_PATTERN_COUNT]
+    )[:DAILY_PATTERN_COUNT]
     keep = {p.pk for p in least_used}
     # Preserve the day's natural order — this filters the day, it doesn't reorder.
     return [p for p in prescriptions if p.pk in keep]
@@ -649,11 +637,16 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
     """Open a WorkoutSession and snapshot expected reps/load from the current
     prescriptions, so planned-vs-real survives later adaptation.
 
-    Full Body A trains only the least-trained subset of patterns (see
-    ``select_day_prescriptions``); all other days snapshot every prescription.
+    Only the least-trained subset of patterns is snapshotted (see
+    ``select_day_prescriptions``).
 
     Prescriptions are reconciled against the user's current equipment first, so
-    a day never snapshots a movement they can no longer perform."""
+    a day never snapshots a movement they can no longer perform.
+
+    Read paths do **not** call this: opening Today builds an ephemeral plan
+    (``build_today_plan``) and the session is only written once the user logs a
+    real value (``create_session_from_plan``). This remains the path for callers
+    that genuinely want a persisted session up front."""
     sync_program_equipment(user)
     session = WorkoutSession.objects.create(
         user=user,
@@ -680,39 +673,390 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
     return session
 
 
-@transaction.atomic
-def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
-    """Record actual reps/load and advance prescriptions via the engine.
+# ─────────────────────────────────────────────────────────────────────────────
+# The ephemeral plan
+#
+# Opening Today must not write. The plan is computed, handed to the client with
+# synthetic set ids, and only becomes a WorkoutSession once the user logs a real
+# value — otherwise every page load would leave an empty session behind.
+# ─────────────────────────────────────────────────────────────────────────────
 
-    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"}.
-    Unilateral AMRAP sets may instead send {"left_reps", "right_reps", ...}; both
-    sides are stored and ``actual_reps`` is set to the weaker side so progression
-    and peer scoring never over-credit the strong leg (mirrors the assessment).
-    Returns a list of human-readable progression deltas.
+# Sets prescribed for a movement that has no prescription behind it (a ⇄ swap).
+# Mirrors the ``target_sets`` every generated prescription starts at.
+DEFAULT_TARGET_SETS = 3
+
+
+def active_day(user):
+    """The single ProgramDay served to ``user``, or ``None`` with no program.
+
+    Always ``day_index=0``. Older multi-day programs keep their days 1..N in the
+    database — history references them — but they are never served again.
     """
+    program = Program.objects.filter(user=user, is_active=True).first()
+    if program is None:
+        return None
+    return ProgramDay.objects.filter(program=program, day_index=0).first()
+
+
+def resumable_session(user) -> "WorkoutSession | None":
+    """An unfinished session already scheduled for today, if there is one.
+
+    Reopening Today must return the work in progress — logged values and any
+    exercises swapped in — rather than a fresh plan that would orphan it.
+    """
+    return (
+        WorkoutSession.objects.filter(
+            user=user,
+            scheduled_for=timezone.now().date(),
+            status=WorkoutSession.Status.PLANNED,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def _block_targets(profile, exercise, presc=None) -> dict:
+    """Sets / rep targets / load / rest for one movement on the plan.
+
+    With a prescription behind it those come from the prescription. Without one
+    — a ⇄ swap — they come from the exercise itself: a swapped-in movement
+    inherits nothing from the movement it replaced.
+    """
+    if presc is not None:
+        return {
+            "sets": presc.target_sets,
+            "reps_min": presc.target_reps_min,
+            "reps_max": presc.target_reps_max,
+            "load": presc.target_load,
+            "rest": presc.target_rest_seconds,
+        }
+    reps_min, reps_max = progression.rep_targets_for(
+        exercise, exercise.rep_range_min, exercise.rep_range_max
+    )
+    return {
+        "sets": DEFAULT_TARGET_SETS,
+        "reps_min": reps_min,
+        "reps_max": reps_max,
+        "load": _initial_load(profile, exercise),
+        "rest": exercise.rest_seconds,
+    }
+
+
+def _planned_sets(profile, exercise, presc, session, synthetic_key):
+    """Unsaved SetLog rows for one movement, ids stamped ``<key>:<set_index>``."""
+    targets = _block_targets(profile, exercise, presc)
+    rows = []
+    for set_index in range(targets["sets"]):
+        is_amrap = set_index == targets["sets"] - 1
+        row = SetLog(
+            session=session,
+            prescribed_exercise=presc,
+            exercise=exercise,
+            set_index=set_index,
+            expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
+            expected_load=targets["load"],
+            is_amrap=is_amrap,
+        )
+        # Synthetic, non-persisted id. The client keys its inputs off this until
+        # the session is written, then re-keys onto the real uuids.
+        row.uuid = f"{synthetic_key}:{set_index}"
+        rows.append(row)
+    return rows
+
+
+def build_today_plan(user, program_day: ProgramDay) -> list:
+    """The plan for ``program_day`` as unsaved SetLog rows — **no DB write**.
+
+    Same content ``start_session`` would snapshot (least-trained patterns, the
+    weaker grip on split rungs), just never persisted. Unlike ``start_session``
+    this does not reconcile equipment: reconciliation writes, and a read path
+    must not. ``select_day_prescriptions`` already hides anything unperformable.
+    """
+    profile = get_or_create_equipment_profile(user)
+    session = WorkoutSession(
+        user=user,
+        program_day=program_day,
+        scheduled_for=timezone.now().date(),
+        status=WorkoutSession.Status.PLANNED,
+    )
+    rows = []
+    for presc in select_day_prescriptions(user, program_day):
+        exercise = select_grip_variant(user, presc.exercise)
+        rows.extend(_planned_sets(profile, exercise, presc, session, str(presc.uuid)))
+    return rows
+
+
+@transaction.atomic
+def create_session_from_plan(user, program_day: ProgramDay, plan_sets) -> WorkoutSession:
+    """Persist the on-screen plan as a real session, on the first logged value.
+
+    ``plan_sets`` is the client's snapshot: one entry per set, carrying
+    ``exercise`` (uuid), ``prescription`` (uuid or null for a ⇄ swap) and
+    ``set_index``. The *targets* are recomputed here from the prescription (or,
+    for a swap, from the exercise itself) rather than trusted from the request —
+    the client may only choose which movements are on the day, never what the
+    program prescribes for them.
+
+    Raises ``ValueError`` if the snapshot is empty or names a prescription that
+    is not on this day.
+    """
+    sync_program_equipment(user)
+
+    # Collapse the per-set snapshot to its movement blocks, preserving order.
+    # Ids are parsed here rather than fed straight to a uuid lookup, which would
+    # raise on anything malformed instead of reporting a bad request.
+    def _uuid_or_none(value):
+        try:
+            return str(uuid.UUID(str(value)))
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+    blocks = []
+    seen = set()
+    for entry in plan_sets or []:
+        if not isinstance(entry, dict):
+            continue
+        exercise_uuid = _uuid_or_none(entry.get("exercise"))
+        if exercise_uuid is None:
+            continue
+        presc_uuid = None
+        if entry.get("prescription"):
+            presc_uuid = _uuid_or_none(entry["prescription"])
+            if presc_uuid is None:
+                # Don't silently demote a garbled prescription to a free swap.
+                raise ValueError("prescription is not on this day")
+        key = (presc_uuid, exercise_uuid)
+        if key in seen:
+            continue
+        seen.add(key)
+        blocks.append(key)
+    if not blocks:
+        raise ValueError("plan is empty")
+
+    prescriptions = {
+        str(p.uuid): p
+        for p in PrescribedExercise.objects.filter(day=program_day).select_related("exercise")
+    }
+    exercises = {
+        str(e.uuid): e
+        for e in Exercise.objects.filter(uuid__in=[b[1] for b in blocks])
+    }
+
+    profile = get_or_create_equipment_profile(user)
+    owned = owned_equipment_keys(profile)
+    blocked = blocked_exercise_ids(user)
+    session = WorkoutSession.objects.create(
+        user=user,
+        program_day=program_day,
+        scheduled_for=timezone.now().date(),
+        status=WorkoutSession.Status.PLANNED,
+    )
+    for presc_uuid, exercise_uuid in blocks:
+        exercise = exercises.get(str(exercise_uuid))
+        if exercise is None:
+            continue
+        presc = None
+        if presc_uuid:
+            presc = prescriptions.get(str(presc_uuid))
+            if presc is None:
+                raise ValueError("prescription is not on this day")
+            # The only movement a prescription may be logged against is its own
+            # rung — or a grip variant of it, which is the same ladder position
+            # and what ``select_grip_variant`` puts on the plan. Anything else
+            # would let the client pair a hard movement's targets with an easy
+            # movement's name.
+            same_rung = (
+                exercise.pk == presc.exercise_id
+                or (
+                    exercise.pattern_id == presc.exercise.pattern_id
+                    and exercise.difficulty_rank == presc.exercise.difficulty_rank
+                )
+            )
+            if not same_rung:
+                raise ValueError("that movement is not what this prescription trains")
+        elif not is_performable(exercise, owned, blocked):
+            # A block with no prescription is a ⇄ swap, and gets the same gate
+            # the swap endpoint applies.
+            raise ValueError("you cannot perform that movement")
+        targets = _block_targets(profile, exercise, presc)
+        for set_index in range(targets["sets"]):
+            is_amrap = set_index == targets["sets"] - 1
+            SetLog.objects.create(
+                session=session,
+                prescribed_exercise=presc,
+                exercise=exercise,
+                set_index=set_index,
+                expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
+                expected_load=targets["load"],
+                is_amrap=is_amrap,
+            )
+    return session
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ⇄ Change — swap a movement for one from a less-trained chain
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class SetsAlreadyLogged(Exception):
+    """Raised when a swap would discard sets the user has already logged."""
+
+
+def _current_rung_on_chain(chain_exercises, placement):
+    """Where the user stands on a chain: their assessment placement if it is on
+    this chain and still eligible, otherwise the chain's lowest eligible rung."""
+    if placement is not None:
+        for ex in chain_exercises:
+            if ex.pk == placement.pk:
+                return ex
+    return min(chain_exercises, key=lambda e: (e.difficulty_rank, e.name))
+
+
+def swap_candidates(user) -> dict:
+    """Every progression chain the user could train instead, least-trained first.
+
+    ``{"candidates": [...], "chains": {exercise_uuid: chain_key}}``.
+
+    One candidate per chain — not per exercise — because a chain is the unit the
+    day rotates over. Each carries the chain's pattern, the rung the user is
+    currently at on it, that rung's own targets, and how many completed sessions
+    in the trailing window worked it. Chains with no equipment-eligible,
+    unblocked rung are omitted entirely.
+
+    Which of these are actually offered is the client's call: it drops the chains
+    already on screen, including ones put there by an earlier swap. ``chains``
+    is what lets it do that — an on-screen movement may sit at a different rung
+    of a chain than the one offered here, so matching on exercise alone would
+    offer a chain the user is already training.
+    """
+    profile = get_or_create_equipment_profile(user)
+    owned = owned_equipment_keys(profile)
+    blocked = blocked_exercise_ids(user)
+
+    pattern_ids = set(MovementPattern.objects.values_list("uuid", flat=True))
+    chain_of = chain_map_for(pattern_ids)
+    counts = chain_event_counts(user, chain_of)
+
+    # Where the last completed Trial placed the user, keyed by chain.
+    placement_by_chain = {}
+    last_trial = (
+        AssessmentSession.objects.filter(user=user, completed_at__isnull=False)
+        .order_by("-completed_at")
+        .first()
+    )
+    if last_trial is not None:
+        for result in last_trial.results.select_related("placed_exercise"):
+            placed = result.placed_exercise
+            if placed is not None:
+                placement_by_chain.setdefault(chain_of.get(placed.pk), placed)
+
+    eligible_by_chain = {}
+    for ex in Exercise.objects.select_related("pattern").prefetch_related(
+        "required_equipment"
+    ):
+        chain = chain_of.get(ex.pk)
+        if chain is None or not is_performable(ex, owned, blocked):
+            continue
+        eligible_by_chain.setdefault(chain, []).append(ex)
+
+    candidates = []
+    for chain, exercises in eligible_by_chain.items():
+        current = _current_rung_on_chain(exercises, placement_by_chain.get(chain))
+        # Bar pull-up chains present as the grip the Forge would schedule today.
+        current = select_grip_variant(user, current)
+        targets = _block_targets(profile, current, None)
+        candidates.append(
+            {
+                "chain_key": str(chain),
+                "pattern_key": current.pattern.key,
+                "pattern_name": current.pattern.name,
+                "exercise": str(current.uuid),
+                "exercise_name": current.name,
+                "is_timed": current.is_timed,
+                "is_unilateral": current.is_per_side,
+                "video_url": current.video_url,
+                "cues": current.cues,
+                "target_sets": targets["sets"],
+                "target_reps_min": targets["reps_min"],
+                "target_reps_max": targets["reps_max"],
+                "target_load": targets["load"],
+                "load_unit": profile.load_unit,
+                "target_rest_seconds": targets["rest"],
+                "event_count": counts.get(chain, 0),
+            }
+        )
+    # Least-trained first; name tie-breaks keep the list stable between calls.
+    candidates.sort(key=lambda c: (c["event_count"], c["pattern_name"], c["exercise_name"]))
+    return {
+        "candidates": candidates,
+        "chains": {str(ex): str(chain) for ex, chain in chain_of.items()},
+    }
+
+
+@transaction.atomic
+def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -> None:
+    """Replace ``from_exercise`` on a *persisted* session with ``to_exercise``.
+
+    The replacement uses the new exercise's own sets, rep targets, rest and load
+    — nothing is inherited — and carries no ``prescribed_exercise``, so the
+    progression engine skips it while the muscle map, volume analytics and chain
+    event counts still see the work.
+
+    Raises ``SetsAlreadyLogged`` if any set being replaced already has a value,
+    and ``ValueError`` if the swap does not apply to this session.
+    """
+    rows = list(session.set_logs.filter(exercise=from_exercise))
+    if not rows:
+        raise ValueError("that movement is not on this session")
+    if any(r.actual_reps is not None or r.actual_load is not None for r in rows):
+        raise SetsAlreadyLogged("that movement already has logged sets")
+    if session.set_logs.filter(exercise=to_exercise).exists():
+        raise ValueError("that movement is already on this session")
+
+    owned = owned_equipment_keys_for(session.user)
+    if not is_performable(to_exercise, owned, blocked_exercise_ids(session.user)):
+        raise ValueError("you cannot perform that movement")
+
     profile = get_or_create_equipment_profile(session.user)
+    targets = _block_targets(profile, to_exercise, None)
+    session.set_logs.filter(exercise=from_exercise).delete()
+    for set_index in range(targets["sets"]):
+        is_amrap = set_index == targets["sets"] - 1
+        SetLog.objects.create(
+            session=session,
+            prescribed_exercise=None,
+            exercise=to_exercise,
+            set_index=set_index,
+            expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
+            expected_load=targets["load"],
+            is_amrap=is_amrap,
+        )
 
-    def _int_or_none(v):
-        if v in (None, ""):
-            return None
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return None
 
-    def _load_or_none(v):
-        """The user may log a weight different from the prescribed one, so this
-        is free-form input and gets the same treatment as reps: junk and
-        negatives become None rather than being persisted verbatim."""
-        if v in (None, ""):
-            return None
-        try:
-            load = float(v)
-        except (TypeError, ValueError):
-            return None
-        return None if load < 0 else load
+def _int_or_none(v):
+    if v in (None, ""):
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
 
-    # Save actuals.
+
+def _load_or_none(v):
+    """The user may log a weight different from the prescribed one, so this is
+    free-form input and gets the same treatment as reps: junk and negatives
+    become None rather than being persisted verbatim."""
+    if v in (None, ""):
+        return None
+    try:
+        load = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if load < 0 else load
+
+
+def _write_set_values(session: WorkoutSession, set_results: dict) -> None:
+    """Persist actual reps/load/rir onto ``session``'s sets. No finalization."""
     for set_log in session.set_logs.all():
         res = set_results.get(str(set_log.uuid))
         if not res:
@@ -734,6 +1078,32 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         set_log.save(update_fields=[
             "actual_reps", "actual_load", "rir", "left_reps", "right_reps",
         ])
+
+
+@transaction.atomic
+def save_session_values(session: WorkoutSession, set_results: dict) -> None:
+    """Record values as the user types them, leaving the session ``planned``.
+
+    This is the incremental path behind ``POST sessions/{uuid}/log/``'s sibling
+    endpoint: it never runs progression and never completes the session, so a
+    half-filled day survives a reload without being treated as finished.
+    """
+    _write_set_values(session, set_results)
+
+
+@transaction.atomic
+def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
+    """Record actual reps/load and advance prescriptions via the engine.
+
+    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"}.
+    Unilateral AMRAP sets may instead send {"left_reps", "right_reps", ...}; both
+    sides are stored and ``actual_reps`` is set to the weaker side so progression
+    and peer scoring never over-credit the strong leg (mirrors the assessment).
+    Returns a list of human-readable progression deltas.
+    """
+    profile = get_or_create_equipment_profile(session.user)
+
+    _write_set_values(session, set_results)
 
     session.status = WorkoutSession.Status.COMPLETED
     session.performed_at = timezone.now()

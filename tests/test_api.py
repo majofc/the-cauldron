@@ -15,6 +15,7 @@ from the_cauldron.models import (
     MovementPattern,
     PrescribedExercise,
     Program,
+    ProgramDay,
     SetLog,
     WorkoutSession,
 )
@@ -42,6 +43,38 @@ def client(user):
 
 def _set_equipment(client, keys, **extra):
     return client.put("/cauldron/api/equipment/", {"equipment": keys, **extra}, format="json")
+
+
+def _plan(client):
+    """The computed plan for today. Reading it writes nothing."""
+    resp = client.get("/cauldron/api/today/")
+    assert resp.status_code == 200
+    return resp.json()
+
+
+def _open_today(client):
+    """The plan, persisted — what the client does on the first logged value.
+
+    Opening Today no longer creates a session, so any test that needs something
+    to log against has to post the plan snapshot the way the browser does.
+    """
+    plan = _plan(client)
+    created = client.post(
+        "/cauldron/api/sessions/",
+        {
+            "sets": [
+                {
+                    "exercise": s["exercise"],
+                    "prescription": s["prescription"],
+                    "set_index": s["set_index"],
+                }
+                for s in plan["set_logs"]
+            ]
+        },
+        format="json",
+    )
+    assert created.status_code == 201
+    return created.json()
 
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
@@ -90,8 +123,24 @@ def test_assessment_creates_active_program(seeded, client, user):
     assert resp.status_code == 201
     assert Program.objects.filter(user=user, is_active=True).count() == 1
     program = resp.json()["program"]
-    assert len(program["days"]) == 3
-    assert all(len(d["prescriptions"]) >= 1 for d in program["days"])
+    # One day, carrying every pattern the Trial placed — whatever the split.
+    assert len(program["days"]) == 1
+    day = program["days"][0]
+    assert day["day_index"] == 0
+    assert len(day["prescriptions"]) == MovementPattern.objects.count() == 6
+
+
+def test_program_is_one_day_whatever_split_is_requested(seeded, client, user):
+    """The split no longer shapes the plan. An older client still sending one
+    forges the same single all-patterns day."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    payload = dict(_assessment_payload(), split="upper_lower_4x")
+    resp = client.post("/cauldron/api/assessment/", payload, format="json")
+    assert resp.status_code == 201
+    assert len(resp.json()["program"]["days"]) == 1
+    # The field still resolves for historical rows; it just isn't taken from the
+    # request any more.
+    assert Program.objects.get(user=user, is_active=True).split == "full_body_3x"
 
 
 # ── Today snapshot + log → next prescription ─────────────────────────────────
@@ -101,9 +150,7 @@ def test_today_snapshots_then_log_advances(seeded, client, user):
     _set_equipment(client, ["bodyweight", "pullup_bar"], dumbbell_weights=[])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
-    today = client.get("/cauldron/api/today/?day=0")
-    assert today.status_code == 201
-    session = today.json()
+    session = _open_today(client)
     # Expected values were snapshotted.
     assert all(s["expected_reps"] is not None for s in session["set_logs"])
 
@@ -123,6 +170,525 @@ def test_today_snapshots_then_log_advances(seeded, client, user):
 
     # Session persisted as completed in history.
     assert WorkoutSession.objects.filter(user=user, status="completed").count() == 1
+
+
+# ── Ephemeral plan: nothing is written until a value is logged ───────────────
+
+
+def test_opening_today_writes_nothing(seeded, client, user):
+    """The whole point of the ephemeral plan: reading Today leaves no debris."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    before = WorkoutSession.objects.count()
+    logs_before = SetLog.objects.count()
+
+    for _ in range(3):
+        resp = client.get("/cauldron/api/today/")
+        assert resp.status_code == 200
+        assert resp.json()["persisted"] is False
+        assert resp.json()["uuid"] is None
+
+    assert WorkoutSession.objects.count() == before
+    assert SetLog.objects.count() == logs_before
+
+
+def test_plan_sets_carry_synthetic_ids(seeded, client):
+    """Planned sets are keyed ``<prescription-uuid>:<set-index>`` — there is no
+    row behind them yet."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    plan = _plan(client)
+    assert plan["set_logs"]
+    for s in plan["set_logs"]:
+        assert s["uuid"] == f"{s['prescription']}:{s['set_index']}"
+
+
+def test_first_value_creates_the_session_and_persists_it(seeded, client, user):
+    """Posting the plan snapshot writes the session; the value then patches it."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    assert session["persisted"] is True
+    assert WorkoutSession.objects.filter(user=user).count() == 1
+    assert session["status"] == "planned"
+
+    first = session["set_logs"][0]
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/sets/",
+        {"sets": {first["uuid"]: {"actual_reps": 7}}},
+        format="json",
+    )
+    assert resp.status_code == 200
+    stored = SetLog.objects.get(uuid=first["uuid"])
+    assert stored.actual_reps == 7
+    # An incremental save must not finish the session or run progression.
+    stored.session.refresh_from_db()
+    assert stored.session.status == "planned"
+    assert stored.session.performed_at is None
+
+
+def test_creating_a_session_twice_reuses_the_open_one(seeded, client, user):
+    """Two inputs racing the first keystroke must not leave two sessions."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    first = _open_today(client)
+    plan_again = client.post("/cauldron/api/sessions/", {"sets": []}, format="json")
+    assert plan_again.status_code == 200
+    assert plan_again.json()["uuid"] == first["uuid"]
+    assert WorkoutSession.objects.filter(user=user).count() == 1
+
+
+def test_targets_come_from_the_prescription_not_the_request(seeded, client, user):
+    """The client chooses which movements are on the day, never what they cost."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    plan = _plan(client)
+    row = plan["set_logs"][0]
+    resp = client.post(
+        "/cauldron/api/sessions/",
+        {
+            "sets": [
+                {
+                    "exercise": row["exercise"],
+                    "prescription": row["prescription"],
+                    "set_index": 0,
+                    "expected_reps": 9999,
+                    "expected_load": 9999,
+                }
+            ]
+        },
+        format="json",
+    )
+    assert resp.status_code == 201
+    presc = PrescribedExercise.objects.get(uuid=row["prescription"])
+    for s in resp.json()["set_logs"]:
+        assert s["expected_reps"] in (presc.target_reps_min, presc.target_reps_max)
+        assert s["expected_load"] == presc.target_load
+
+
+def test_plan_cannot_pair_a_prescription_with_an_unrelated_movement(seeded, client, user):
+    """A prescription may only be logged against its own rung (or a grip variant
+    of it) — otherwise the client could take a hard movement's targets and put an
+    easy movement's name on them."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    plan = _plan(client)
+    row = plan["set_logs"][0]
+    presc = PrescribedExercise.objects.get(uuid=row["prescription"])
+    unrelated = Exercise.objects.exclude(pattern_id=presc.exercise.pattern_id).first()
+
+    resp = client.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": str(unrelated.uuid),
+                   "prescription": row["prescription"], "set_index": 0}]},
+        format="json",
+    )
+    assert resp.status_code == 400
+    assert WorkoutSession.objects.filter(user=user).count() == 0
+
+
+def test_plan_cannot_swap_in_a_movement_the_user_cannot_perform(seeded, client, user):
+    """A prescription-less block is a swap, and gets the swap endpoint's gate."""
+    _set_equipment(client, ["bodyweight"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    barbell_move = Exercise.objects.filter(required_equipment__key="barbell").first()
+
+    resp = client.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": str(barbell_move.uuid), "prescription": None, "set_index": 0}]},
+        format="json",
+    )
+    assert resp.status_code == 400
+    assert WorkoutSession.objects.filter(user=user).count() == 0
+
+
+def test_a_grip_variant_of_the_prescribed_rung_is_accepted(seeded, client, user):
+    """The plan legitimately carries whichever grip the Forge scheduled today."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    plan = _plan(client)
+    swapped = None
+    for s in plan["set_logs"]:
+        presc = PrescribedExercise.objects.get(uuid=s["prescription"])
+        sibling = (
+            Exercise.objects.filter(
+                pattern_id=presc.exercise.pattern_id,
+                difficulty_rank=presc.exercise.difficulty_rank,
+            )
+            .exclude(pk=presc.exercise_id)
+            .first()
+        )
+        if sibling is not None:
+            swapped = (s, sibling)
+            break
+    if swapped is None:
+        pytest.skip("seed catalogue has no grip-split rung on this day")
+
+    row, sibling = swapped
+    resp = client.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": str(sibling.uuid),
+                   "prescription": row["prescription"], "set_index": 0}]},
+        format="json",
+    )
+    assert resp.status_code == 201
+    assert {s["exercise_name"] for s in resp.json()["set_logs"]} == {sibling.name}
+
+
+def test_plan_cannot_borrow_another_users_prescription(seeded, client, user):
+    """A prescription uuid from someone else's program is rejected outright."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    plan = _plan(client)
+
+    intruder = User.objects.create_user(
+        username="intruder", email="intruder@example.com", password="pw12345!"
+    )
+    other = APIClient()
+    other.force_authenticate(user=intruder)
+    _set_equipment(other, ["bodyweight", "pullup_bar"])
+    other.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    resp = other.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": plan["set_logs"][0]["exercise"],
+                   "prescription": plan["set_logs"][0]["prescription"],
+                   "set_index": 0}]},
+        format="json",
+    )
+    assert resp.status_code == 400
+    assert WorkoutSession.objects.filter(user=intruder).count() == 0
+
+
+def test_plan_with_junk_ids_is_a_bad_request_not_a_crash(seeded, client, user):
+    """Malformed ids must not reach a uuid lookup."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    plan = _plan(client)
+    row = plan["set_logs"][0]
+
+    # Nothing resolvable at all → empty plan.
+    resp = client.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": "not-a-uuid", "prescription": None, "set_index": 0}]},
+        format="json",
+    )
+    assert resp.status_code == 400
+
+    # A garbled prescription must not quietly become a free swap.
+    resp2 = client.post(
+        "/cauldron/api/sessions/",
+        {"sets": [{"exercise": row["exercise"], "prescription": "nope", "set_index": 0}]},
+        format="json",
+    )
+    assert resp2.status_code == 400
+    assert WorkoutSession.objects.filter(user=user).count() == 0
+
+
+def test_reopening_today_resumes_the_unfinished_session(seeded, client, user):
+    """A reload must come back with the work in progress, not a fresh plan."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    first = session["set_logs"][0]
+    client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/sets/",
+        {"sets": {first["uuid"]: {"actual_reps": 11}}},
+        format="json",
+    )
+
+    resumed = client.get("/cauldron/api/today/")
+    assert resumed.status_code == 200
+    body = resumed.json()
+    assert body["persisted"] is True
+    assert body["uuid"] == session["uuid"]
+    assert next(s for s in body["set_logs"] if s["uuid"] == first["uuid"])["actual_reps"] == 11
+    assert WorkoutSession.objects.filter(user=user).count() == 1
+
+
+def test_resume_returns_swapped_exercises_and_their_values(seeded, client, user):
+    """The resume payload has to carry both halves of the work in progress: the
+    exercises a ⇄ swap put there, and the reps already logged against them."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    body = _candidates(client)
+    on_screen = {s["exercise"] for s in session["set_logs"]}
+    taken = {body["chains"][e] for e in on_screen if e in body["chains"]}
+    candidate = next(c for c in body["candidates"] if c["chain_key"] not in taken)
+    victim = session["set_logs"][0]
+
+    swapped = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {"from_exercise": victim["exercise"], "to_exercise": candidate["exercise"]},
+        format="json",
+    ).json()
+    target = next(
+        s for s in swapped["set_logs"] if s["exercise"] == candidate["exercise"]
+    )
+    client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/sets/",
+        {"sets": {target["uuid"]: {"actual_reps": 13}}},
+        format="json",
+    )
+
+    resumed = client.get("/cauldron/api/today/").json()
+    names = {s["exercise"] for s in resumed["set_logs"]}
+    assert candidate["exercise"] in names
+    assert victim["exercise"] not in names
+    restored = next(s for s in resumed["set_logs"] if s["uuid"] == target["uuid"])
+    assert restored["actual_reps"] == 13
+
+
+def test_a_completed_session_does_not_block_a_new_plan(seeded, client, user):
+    """Only *unfinished* sessions resume — after Save, Today plans again."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/",
+        {"sets": {session["set_logs"][0]["uuid"]: {"actual_reps": 5}}},
+        format="json",
+    )
+    assert client.get("/cauldron/api/today/").json()["persisted"] is False
+
+
+def test_sets_endpoint_refuses_a_finalized_session(seeded, client):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+    client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/",
+        {"sets": {session["set_logs"][0]["uuid"]: {"actual_reps": 5}}},
+        format="json",
+    )
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/sets/",
+        {"sets": {session["set_logs"][0]["uuid"]: {"actual_reps": 9}}},
+        format="json",
+    )
+    assert resp.status_code == 409
+
+
+# ── ⇄ Change ────────────────────────────────────────────────────────────────
+
+
+def _candidates(client):
+    resp = client.get("/cauldron/api/today/swap-candidates/")
+    assert resp.status_code == 200
+    return resp.json()
+
+
+def test_swap_candidates_are_ranked_least_trained_first(seeded, client, user):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    day0 = _active_program(user).days.get(day_index=0)
+    hot = day0.prescriptions.select_related("exercise").first()
+    for n in range(2):
+        _log_session(user, day0, [hot.exercise], timezone.now() - timedelta(hours=n + 1))
+
+    body = _candidates(client)
+    counts = [c["event_count"] for c in body["candidates"]]
+    assert counts == sorted(counts)
+    # The chain that was trained twice is reported as such, not as never-used.
+    chain = body["chains"][str(hot.exercise.uuid)]
+    assert next(c for c in body["candidates"] if c["chain_key"] == chain)["event_count"] == 2
+
+
+def test_swap_candidates_exclude_unowned_and_blocked(seeded, client, user):
+    """Equipment the user lacks, and movements they blocked, are never offered."""
+    _set_equipment(client, ["bodyweight"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    pushup = Exercise.objects.get(name="Push-up")
+    client.post(f"/cauldron/api/exercises/{pushup.uuid}/block/", {}, format="json")
+
+    names = {c["exercise_name"] for c in _candidates(client)["candidates"]}
+    assert "Push-up" not in names
+    assert "Barbell Bench Press" not in names  # no barbell owned
+
+
+def test_swap_candidate_carries_its_own_targets(seeded, client):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    for c in _candidates(client)["candidates"]:
+        exercise = Exercise.objects.get(uuid=c["exercise"])
+        assert c["target_sets"] == forge.DEFAULT_TARGET_SETS
+        assert c["target_rest_seconds"] == exercise.rest_seconds
+        assert c["pattern_key"] == exercise.pattern.key
+
+
+def test_swap_replaces_the_movement_with_the_new_ones_targets(seeded, client, user):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    on_screen = {s["exercise"] for s in session["set_logs"]}
+    body = _candidates(client)
+    taken = {body["chains"][e] for e in on_screen if e in body["chains"]}
+    candidate = next(c for c in body["candidates"] if c["chain_key"] not in taken)
+    victim = session["set_logs"][0]
+
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {"from_exercise": victim["exercise"], "to_exercise": candidate["exercise"]},
+        format="json",
+    )
+    assert resp.status_code == 200
+    swapped = [s for s in resp.json()["set_logs"] if s["exercise"] == candidate["exercise"]]
+    assert len(swapped) == candidate["target_sets"]
+    # Nothing is inherited from the movement it replaced.
+    assert swapped[-1]["expected_reps"] == candidate["target_reps_max"]
+    assert all(s["rest_seconds"] == candidate["target_rest_seconds"] for s in swapped)
+    # No prescription behind it, so the progression engine will skip it.
+    assert all(s["prescription"] is None for s in swapped)
+    assert not SetLog.objects.filter(
+        session__uuid=session["uuid"], exercise__uuid=victim["exercise"]
+    ).exists()
+
+
+def test_swapped_in_sets_earn_no_progression_but_still_count(seeded, client, user):
+    """A swapped-in movement never advances a prescription, but its work shows up
+    in the muscle map, the volume analytics and the chain counts."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    body = _candidates(client)
+    on_screen = {s["exercise"] for s in session["set_logs"]}
+    taken = {body["chains"][e] for e in on_screen if e in body["chains"]}
+    candidate = next(c for c in body["candidates"] if c["chain_key"] not in taken)
+    victim = session["set_logs"][0]
+    swapped_session = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {"from_exercise": victim["exercise"], "to_exercise": candidate["exercise"]},
+        format="json",
+    ).json()
+
+    prescriptions_before = {
+        str(p.uuid): (p.exercise_id, p.sessions_at_top, p.pending_progression_id)
+        for p in PrescribedExercise.objects.filter(day__program__user=user)
+    }
+
+    # Smash the AMRAP on the swapped-in move — enough to progress, if it could.
+    sets = {}
+    for s in swapped_session["set_logs"]:
+        sets[s["uuid"]] = {"actual_reps": (s["expected_reps"] or 5) + 10}
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/", {"sets": sets}, format="json"
+    )
+    assert resp.status_code == 200
+
+    swapped_ids = [
+        s["uuid"] for s in swapped_session["set_logs"]
+        if s["exercise"] == candidate["exercise"]
+    ]
+    for uuid in swapped_ids:
+        assert SetLog.objects.get(uuid=uuid).prescribed_exercise_id is None
+    # No prescription moved *because of* the swapped-in movement: it has none.
+    for p in PrescribedExercise.objects.filter(day__program__user=user):
+        before = prescriptions_before[str(p.uuid)]
+        if str(p.uuid) not in {
+            s["prescription"] for s in swapped_session["set_logs"] if s["prescription"]
+        }:
+            assert (p.exercise_id, p.sessions_at_top, p.pending_progression_id) == before
+
+    # …but the work is real: it counts toward its chain.
+    swapped_exercise = Exercise.objects.get(uuid=candidate["exercise"])
+    assert _counts_for(user, [swapped_exercise])[swapped_exercise] == 1
+    # …and appears in the volume analytics.
+    progress = client.get("/cauldron/api/progress/").json()
+    assert swapped_exercise.rung_label in progress["exercises"]
+
+
+def test_swap_refuses_when_the_movement_already_has_values(seeded, client, user):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+
+    session = _open_today(client)
+    victim = session["set_logs"][0]
+    client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/sets/",
+        {"sets": {victim["uuid"]: {"actual_reps": 6}}},
+        format="json",
+    )
+
+    body = _candidates(client)
+    on_screen = {s["exercise"] for s in session["set_logs"]}
+    taken = {body["chains"][e] for e in on_screen if e in body["chains"]}
+    candidate = next(c for c in body["candidates"] if c["chain_key"] not in taken)
+
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {"from_exercise": victim["exercise"], "to_exercise": candidate["exercise"]},
+        format="json",
+    )
+    assert resp.status_code == 409
+    assert SetLog.objects.get(uuid=victim["uuid"]).actual_reps == 6
+
+
+def test_swap_rejects_a_movement_the_user_cannot_perform(seeded, client, user):
+    _set_equipment(client, ["bodyweight"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+
+    barbell_move = Exercise.objects.filter(
+        required_equipment__key="barbell"
+    ).first()
+    assert barbell_move is not None
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {
+            "from_exercise": session["set_logs"][0]["exercise"],
+            "to_exercise": str(barbell_move.uuid),
+        },
+        format="json",
+    )
+    assert resp.status_code == 400
+
+
+def test_swap_rejects_junk_uuids(seeded, client):
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+    resp = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {"from_exercise": "not-a-uuid", "to_exercise": "also-not"},
+        format="json",
+    )
+    assert resp.status_code == 400
+
+
+def test_swap_belongs_to_its_owner(seeded, client, user):
+    """Another user's session is invisible, so its sets cannot be swapped."""
+    _set_equipment(client, ["bodyweight", "pullup_bar"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+
+    intruder = User.objects.create_user(
+        username="thief", email="thief@example.com", password="pw12345!"
+    )
+    other = APIClient()
+    other.force_authenticate(user=intruder)
+    resp = other.post(
+        f"/cauldron/api/sessions/{session['uuid']}/swap/",
+        {
+            "from_exercise": session["set_logs"][0]["exercise"],
+            "to_exercise": session["set_logs"][0]["exercise"],
+        },
+        format="json",
+    )
+    assert resp.status_code == 404
 
 
 # ── Retake ───────────────────────────────────────────────────────────────────
@@ -349,20 +915,20 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
 
     from the_cauldron.models import PrescribedExercise, SetLog
 
-    # Find a day that prescribes a unilateral (lower_unilateral) exercise. Use a
-    # non-"Full Body A" day (day_index != 0): Full Body A trains only the
-    # least-trained subset of patterns, so its unilateral move may be dropped.
     presc = PrescribedExercise.objects.filter(
         day__program__user=user,
         day__program__is_active=True,
-        day__day_index=1,
         pattern__key="lower_unilateral",
     ).select_related("day").first()
     assert presc is not None, "seed should place a lower_unilateral exercise"
 
-    today = client.get(f"/cauldron/api/today/?day={presc.day.day_index}")
-    assert today.status_code == 201
-    session = today.json()
+    # The day trains only the least-used chains, so give every *other* pattern an
+    # event: the untouched unilateral chain is then guaranteed to be on the day.
+    day0 = presc.day
+    for other in day0.prescriptions.exclude(pk=presc.pk).select_related("exercise"):
+        _log_session(user, day0, [other.exercise], timezone.now())
+
+    session = _open_today(client)
 
     # The unilateral exercise's AMRAP set must be flagged for the per-leg UI.
     uni_amrap = next(
@@ -446,7 +1012,7 @@ def test_blocked_excluded_from_generated_program(seeded, client, user):
     assert "Push-up" not in used
 
 
-# ── Full Body A least-used selection ─────────────────────────────────────────
+# ── Least-used selection for the day ─────────────────────────────────────────
 
 
 def _log_amrap(user, day, exercise, reps, when):
@@ -501,8 +1067,8 @@ def _active_program(user):
     return program
 
 
-def test_full_body_a_keeps_least_used_and_drops_most_used(seeded, client, user):
-    """Full Body A trains the 5 chains with the fewest recent usage events.
+def test_day_keeps_least_used_and_drops_most_used(seeded, client, user):
+    """The day trains the 5 chains with the fewest recent usage events.
     A never-used chain is kept; the most-used one is dropped."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
@@ -521,7 +1087,7 @@ def test_full_body_a_keeps_least_used_and_drops_most_used(seeded, client, user):
     selected = forge.select_day_prescriptions(user, day0)
     keys = {p.pattern.key for p in selected}
 
-    assert len(selected) == forge.FULL_BODY_A_PATTERN_COUNT == 5
+    assert len(selected) == forge.DAILY_PATTERN_COUNT == 5
     # The most-used chain (5 events) is dropped …
     assert used[-1].pattern.key not in keys
     # … while the never-used chain survives (zero events).
@@ -607,8 +1173,8 @@ def test_bodyweight_and_loaded_chains_are_counted_separately(seeded, client, use
     assert counts[pushup] == 0
 
 
-def test_full_body_a_filters_the_opened_session(seeded, client, user):
-    """Opening Today for day 0 snapshots only the least-used subset."""
+def test_least_used_filter_applies_to_the_served_plan(seeded, client, user):
+    """Opening Today serves only the least-used subset."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
@@ -618,9 +1184,7 @@ def test_full_body_a_filters_the_opened_session(seeded, client, user):
     for n in range(3):
         _log_session(user, day0, [hot.exercise], now - timedelta(hours=n + 1))
 
-    resp = client.get("/cauldron/api/today/?day=0")
-    assert resp.status_code == 201
-    session = resp.json()
+    session = _plan(client)
     # One exercise per pattern on a day, so distinct exercises == distinct
     # patterns trained.
     exercises = {sl["exercise_name"] for sl in session["set_logs"]}
@@ -628,18 +1192,19 @@ def test_full_body_a_filters_the_opened_session(seeded, client, user):
     assert hot.exercise.name not in exercises
 
 
-def test_other_days_train_every_pattern(seeded, client, user):
-    """Days other than Full Body A are unaffected — all patterns are trained
-    even when history would rank some as most-used."""
+def test_least_used_filter_applies_regardless_of_split(seeded, client, user):
+    """The filter is split-agnostic — an upper/lower program written before the
+    single-day change is filtered the same way."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
-    day1 = _active_program(user).days.get(day_index=1)
-    any_presc = day1.prescriptions.first()
-    _log_session(user, day1, [any_presc.exercise], timezone.now())
+    program = _active_program(user)
+    program.split = Program.Split.UPPER_LOWER_4X
+    program.save(update_fields=["split"])
 
-    selected = forge.select_day_prescriptions(user, day1)
-    assert len(selected) == day1.prescriptions.count() == 6
+    day0 = program.days.get(day_index=0)
+    assert day0.prescriptions.count() == 6
+    assert len(forge.select_day_prescriptions(user, day0)) == forge.DAILY_PATTERN_COUNT
 
 
 def test_events_outside_the_window_do_not_count(seeded, client, user):
@@ -659,18 +1224,28 @@ def test_events_outside_the_window_do_not_count(seeded, client, user):
     assert _counts_for(user, [presc.exercise])[presc.exercise] == 1
 
 
-def test_events_on_other_days_do_not_count(seeded, client, user):
-    """Full Body B/C work never affects Full Body A selection."""
+def test_events_from_any_session_count(seeded, client, user):
+    """Every completed session counts, whatever day it hung off.
+
+    Counting used to be restricted to Full Body A. With one day there is no
+    subset left to restrict to — and work done on a chain the user swapped in
+    has to weigh the same as work done on a prescribed one.
+    """
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
     program = _active_program(user)
     day0 = program.days.get(day_index=0)
-    day1 = program.days.get(day_index=1)
     presc = day0.prescriptions.select_related("exercise").first()
 
-    _log_session(user, day1, [presc.exercise], timezone.now())
-    assert _counts_for(user, [presc.exercise])[presc.exercise] == 0
+    # A legacy extra day, and a session with no program day at all (what a
+    # swapped-in movement's history looks like once its day is gone).
+    legacy = ProgramDay.objects.create(program=program, day_index=1, name="Legacy")
+    _log_session(user, legacy, [presc.exercise], timezone.now())
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 1
+
+    _log_session(user, None, [presc.exercise], timezone.now() - timedelta(hours=2))
+    assert _counts_for(user, [presc.exercise])[presc.exercise] == 2
 
 
 def test_unlogged_and_zero_rep_sets_do_not_count(seeded, client, user):
@@ -788,7 +1363,7 @@ def test_switching_unit_keeps_an_inventory_supplied_in_the_same_request(seeded, 
 def test_prescribed_load_is_buildable_and_carries_its_recipe(seeded, client):
     _plate_equipment(client)
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
-    session = client.get("/cauldron/api/today/?day=0").json()
+    session = _plan(client)
 
     loaded = [s for s in session["set_logs"] if s["expected_load"] is not None]
     for s in loaded:
@@ -804,7 +1379,7 @@ def test_prescribed_load_is_buildable_and_carries_its_recipe(seeded, client):
 def test_user_logged_load_persists_without_moving_progression(seeded, client):
     _plate_equipment(client)
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
-    session = client.get("/cauldron/api/today/?day=0").json()
+    session = _open_today(client)
 
     target = next((s for s in session["set_logs"]
                    if s["expected_load"] is not None and s["is_amrap"]), None)
@@ -836,7 +1411,7 @@ def test_user_logged_load_persists_without_moving_progression(seeded, client):
 def test_negative_actual_load_is_not_persisted(seeded, client):
     _plate_equipment(client)
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
-    session = client.get("/cauldron/api/today/?day=0").json()
+    session = _open_today(client)
     first = session["set_logs"][0]
     client.post(f"/cauldron/api/sessions/{session['uuid']}/log/",
                 {"sets": {first["uuid"]: {"actual_reps": 5, "actual_load": -20}}},
@@ -849,7 +1424,7 @@ def test_existing_fixed_dumbbell_users_keep_their_loads(seeded, client):
     # weight list must behave exactly as before.
     _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights=[5, 10, 15])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
-    session = client.get("/cauldron/api/today/?day=0").json()
+    session = _plan(client)
     loaded = [s["expected_load"] for s in session["set_logs"] if s["expected_load"] is not None]
     assert loaded, "expected at least one load-mode set"
     assert all(l in (5.0, 10.0, 15.0) for l in loaded)
