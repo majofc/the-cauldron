@@ -311,11 +311,18 @@ class SetLogSerializer(_LoadRecipeMixin, serializers.ModelSerializer):
     is_unilateral = serializers.SerializerMethodField()
     expected_load_recipe = serializers.SerializerMethodField()
     load_unit = serializers.SerializerMethodField()
+    # The client sends these straight back when it persists the plan, and needs
+    # the exercise uuid to name what a ⇄ swap is replacing.
+    exercise = serializers.PrimaryKeyRelatedField(read_only=True)
+    prescription = serializers.PrimaryKeyRelatedField(
+        source="prescribed_exercise", read_only=True
+    )
 
     class Meta:
         model = SetLog
         fields = [
-            "uuid", "exercise_name", "video_url", "is_timed", "cues", "muscles",
+            "uuid", "exercise", "prescription",
+            "exercise_name", "video_url", "is_timed", "cues", "muscles",
             "rest_seconds", "is_unilateral",
             "set_index", "expected_reps", "expected_load",
             "expected_load_recipe", "load_unit",
@@ -342,12 +349,33 @@ class SetLogSerializer(_LoadRecipeMixin, serializers.ModelSerializer):
         return self._load_unit_for(obj.session.user)
 
 
+class PlannedSetLogSerializer(SetLogSerializer):
+    """A set on the *ephemeral* plan, before anything is written.
+
+    Identical to a persisted set except for the id: a planned row carries a
+    synthetic ``<prescription-uuid>:<set-index>`` string instead of a real uuid,
+    so it is rendered as text rather than coerced to a UUID.
+    """
+
+    uuid = serializers.CharField(read_only=True)
+
+
 class WorkoutSessionSerializer(serializers.ModelSerializer):
     set_logs = SetLogSerializer(many=True, read_only=True)
     day_name = serializers.CharField(source="program_day.name", read_only=True)
+    # The day this session belongs to — the client posts it back to persist a
+    # plan, and it is the only day ever served.
+    day = serializers.PrimaryKeyRelatedField(source="program_day", read_only=True)
+    # Distinguishes a real session from a computed plan (see TodayView), so the
+    # client knows whether the first logged value must create the session.
+    persisted = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkoutSession
         fields = [
-            "uuid", "day_name", "scheduled_for", "performed_at", "status", "set_logs",
+            "uuid", "day", "day_name", "scheduled_for", "performed_at", "status",
+            "persisted", "set_logs",
         ]
+
+    def get_persisted(self, obj):
+        return True

@@ -181,7 +181,7 @@ def _trial_payload(user, overrides=None):
         }
         row.update(overrides.get(pattern.key, {}))
         rows.append(row)
-    return {"split": "full_body_3x", "results": rows}
+    return {"results": rows}
 
 
 def test_trial_stores_signed_asymmetry_and_places_from_weaker_side(seeded, client, user):
@@ -310,12 +310,12 @@ def test_today_payload_carries_the_nudge(seeded, client, user):
     profile.retest_prompt_dismissed_at = None
     profile.save(update_fields=["retest_prompt_dismissed_at"])
 
-    resp = client.get("/cauldron/api/today/?day=0")
-    assert resp.status_code == 201
+    resp = client.get("/cauldron/api/today/")
+    assert resp.status_code == 200
     body = resp.json()
     assert body["retest_due"] is True
     assert body["days_since_last_trial"] == 31
-    assert "set_logs" in body  # the session payload is still intact
+    assert "set_logs" in body  # the plan payload is still intact
 
 
 def test_retake_rebuilds_from_scratch(seeded, client, user):

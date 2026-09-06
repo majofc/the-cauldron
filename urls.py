@@ -33,6 +33,11 @@ api_urlpatterns = [
         name="forge-progression",
     ),
     path("today/", api.TodayView.as_view(), name="forge-today"),
+    path(
+        "today/swap-candidates/",
+        api.SwapCandidatesView.as_view(),
+        name="forge-swap-candidates",
+    ),
     path("norms/", api.NormsView.as_view(), name="forge-norms"),
     path("progress/", api.ProgressView.as_view(), name="forge-progress"),
     path("", include(router.urls)),

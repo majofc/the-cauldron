@@ -1313,3 +1313,68 @@ body.forge-overlay-open { overflow: hidden; }
 }
 .forge-recipe-row:last-child { border-bottom: none; }
 .forge-recipe-count { color: var(--cauldron-paprika-light); }
+
+/* ── ⇄ Change exercise ─────────────────────────────────────────────────────
+   Swap a prescribed movement for one from a progression chain the user has
+   trained less. Sits beside ✕ Skip in the exercise head, and opens a two-step
+   picker (choose a chain → confirm its targets). */
+.forge-swap-ex-btn {
+  margin-left: auto; font-family: "Inter", sans-serif; font-size: .75rem;
+  background: none; border: 1px solid var(--cauldron-paprika-border); border-radius: 999px;
+  color: var(--cauldron-cream-dim); padding: .15rem .6rem; cursor: pointer;
+  transition: color .15s, border-color .15s, opacity .15s;
+}
+.forge-swap-ex-btn:hover:not(:disabled) {
+  color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika-light);
+}
+.forge-swap-ex-btn:disabled { opacity: .4; cursor: not-allowed; }
+/* ⇄ takes the auto margin, so ✕ Skip sits next to it rather than pushing away. */
+.forge-swap-ex-btn + .forge-skip-ex-btn { margin-left: .4rem; }
+
+.forge-swap-card {
+  position: relative;
+  width: 100%; max-width: 520px;
+  max-height: 80vh; overflow-y: auto;
+  padding: 2.4rem 1.8rem 1.6rem;
+  text-align: left;
+  animation: forgeRise .3s cubic-bezier(.2,1,.3,1) both;
+}
+.forge-swap-card .forge-h3 {
+  font-family: "Playfair Display", serif; font-weight: 700;
+  color: var(--cauldron-cream); font-size: 1.35rem; margin: 0 0 .6rem;
+}
+.forge-swap-group {
+  font-family: "Cormorant Garamond", serif; font-style: italic;
+  color: var(--cauldron-paprika-light); font-size: 1rem;
+  margin: 1rem 0 .35rem;
+}
+.forge-swap-list { list-style: none; margin: 0; padding: 0; }
+.forge-swap-list li + li { margin-top: .3rem; }
+.forge-swap-option {
+  display: flex; align-items: center; gap: .6rem; width: 100%;
+  font-family: "Inter", sans-serif; font-size: .9rem; text-align: left;
+  background: var(--cauldron-bg-card); color: var(--cauldron-cream);
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 8px;
+  padding: .5rem .7rem; cursor: pointer;
+  transition: var(--arcano-transition, all .15s ease);
+}
+.forge-swap-option:hover { border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-dim); }
+.forge-swap-option-name { flex: 1 1 auto; }
+.forge-swap-option-count { color: var(--cauldron-cream-dim); font-size: .8rem; white-space: nowrap; }
+.forge-swap-badge {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--cauldron-paprika-light);
+  background: var(--cauldron-paprika-subtle);
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 999px;
+  padding: .1rem .45rem; white-space: nowrap;
+}
+.forge-swap-confirm-name {
+  font-family: "Playfair Display", serif; font-weight: 700;
+  color: var(--cauldron-cream); font-size: 1.35rem; margin: 0 0 .2rem;
+}
+.forge-swap-targets { list-style: none; margin: 0 0 1.2rem; padding: 0; }
+.forge-swap-targets li {
+  padding: .25rem 0; color: var(--cauldron-cream);
+  border-bottom: 1px solid var(--cauldron-paprika-subtle);
+}
+.forge-swap-targets li:last-child { border-bottom: none; }
