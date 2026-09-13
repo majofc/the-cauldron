@@ -202,6 +202,30 @@ def substitute_for(user, exercise):
     return progression.find_substitute(exercise, candidates)
 
 
+def first_performable_along(exercise, direction, owned, blocked=()):
+    """The first rung from ``exercise`` (inclusive) along its ``direction`` links
+    (``"progression"`` or ``"regression"``) that the user can perform, or ``None``.
+
+    A single-ladder pattern (lower) interleaves bodyweight and loaded rungs in
+    one chain, so the adjacent rung may need gear the user lacks. Walking the
+    links keeps an earned advance moving *up* past it — ``substitute_for`` would
+    fall back to the nearest easier rung, i.e. the one the user is already on.
+
+    Only rungs skipped for *equipment* are walked past. A blocked rung stops the
+    walk (``None``) so the caller falls back to ``substitute_for``, which prefers
+    an easier stand-in (or the other grip) over jumping to a harder movement.
+    """
+    seen = set()
+    while exercise is not None and exercise.pk not in seen:
+        if exercise.pk in blocked:
+            return None
+        if is_performable(exercise, owned, blocked):
+            return exercise
+        seen.add(exercise.pk)
+        exercise = getattr(exercise, direction)
+    return None
+
+
 def grip_siblings(exercise):
     """The grip variants sharing ``exercise``'s ladder position (both overhand and
     underhand rows at the same pattern + rank), or ``[]`` if ``exercise`` is not a
@@ -504,7 +528,8 @@ def chain_map_for(pattern_ids) -> dict:
     """``{exercise_id: chain_key}`` for every exercise of ``pattern_ids``.
 
     A chain is a connected component of the ``progression``/``regression`` links,
-    so a pattern's bodyweight ladder and its loaded ladder are separate chains.
+    so a pattern's bodyweight ladder and its loaded ladder are separate chains —
+    except on a single-ladder pattern (lower), whose rungs form one chain.
     Grip variants sharing a ladder position (Pull-up / Chin-up) are unioned into
     the same chain: only the overhand row is guaranteed to be what neighbouring
     rungs link to, and ``select_grip_variant`` alternates grips day to day, so
@@ -1134,7 +1159,11 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         if new.advanced:
             target = new.exercise
             if not is_performable(target, owned, blocked):
-                target = substitute_for(session.user, target) or target
+                target = (
+                    first_performable_along(target, "progression", owned, blocked)
+                    or substitute_for(session.user, target)
+                    or target
+                )
             if presc.pending_progression_id is None:
                 presc.pending_progression = target
                 presc.save(update_fields=["pending_progression"])
@@ -1160,6 +1189,7 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
             if sub is not None:
                 new.exercise = sub
                 new.message += f" (substituted {sub.name} — original {reason})"
+        moved = new.exercise.pk != presc.exercise_id
         presc.exercise = new.exercise
         presc.target_sets = new.target_sets
         # Parity is re-evaluated against the rung we actually landed on — a
@@ -1167,7 +1197,9 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         presc.target_reps_min, presc.target_reps_max = progression.rep_targets_for(
             new.exercise, new.target_reps_min, new.target_reps_max
         )
-        presc.target_load = new.target_load
+        # Moved rungs: on a single-ladder pattern a difficulty regression can land
+        # on a loaded rung, which needs a starting load of its own.
+        presc.target_load = _initial_load(profile, new.exercise) if moved else new.target_load
         presc.sessions_at_top = new.sessions_at_top
         presc.save()
         deltas.append({"exercise": new.exercise.name, "message": new.message})
@@ -1183,8 +1215,13 @@ def accept_progression(user, prescription) -> "Exercise | None":
         return None
     profile = get_or_create_equipment_profile(user)
     # Respect a block — or an equipment change — since the unlock was earned.
-    if not is_performable(prog, owned_equipment_keys(profile), blocked_exercise_ids(user)):
-        prog = substitute_for(user, prog) or prog
+    owned, blocked = owned_equipment_keys(profile), blocked_exercise_ids(user)
+    if not is_performable(prog, owned, blocked):
+        prog = (
+            first_performable_along(prog, "progression", owned, blocked)
+            or substitute_for(user, prog)
+            or prog
+        )
     prescription.pending_progression = None
     _repoint_prescription(prescription, prog, profile)
     return prog

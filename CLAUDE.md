@@ -46,7 +46,7 @@ Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
 |---|---|
 | `pattern` FK | which movement pattern |
 | `name` | e.g. "Pike Push-up" |
-| `difficulty_rank` | integer order within pattern's ladder |
+| `difficulty_rank` | integer order within pattern's ladder. `lower_unilateral` is ONE ladder (`seed_forge.SINGLE_LADDER_PATTERNS`): unique ranks across both modes, one link chain; other patterns keep a chain per mode |
 | `progression_mode` | `difficulty` (ladder) or `load` (weight progression) |
 | `rep_range_min/max` | working rep range |
 | `is_timed` | if True, reps = seconds (holds) |
@@ -54,7 +54,7 @@ Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
 | `required_equipment` | M2M Equipment |
 | `is_assessment_anchor` | used during trial |
 | `measures_asymmetry` | Trial captures L/R separately for this move and tracks signed asymmetry. True for exactly 3 anchors (see below). Independent of `is_per_side` |
-| `placement_threshold` | AMRAP reps that place here |
+| `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs (enforced by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
 | `regression` / `progression` | FK to self, adjacent rungs |
 | `video_url`, `cues`, `rest_seconds` | coaching metadata |
 

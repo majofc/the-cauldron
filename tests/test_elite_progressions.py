@@ -41,7 +41,7 @@ class TestLowerUnilateralTop:
         pistol = _get("Pistol Squat")
         shrimp = _get("Shrimp Squat")
         dragon = _get("Dragon Squat")
-        # Ladder order by rank: Pistol(5) → Shrimp(6) → Dragon(7).
+        # Ladder order by rank: Pistol(9) → Shrimp(10) → Dragon(11).
         assert pistol.progression == shrimp
         assert shrimp.regression == pistol
         assert shrimp.progression == dragon
