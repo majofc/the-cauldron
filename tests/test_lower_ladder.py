@@ -165,11 +165,11 @@ def test_bodyweight_users_eligible_lower_ladder_is_contiguous(seeded, user):
 
 
 def _place(client, score):
-    split = Exercise.objects.get(name="Split Squat")
+    squat = Exercise.objects.get(pattern__key="lower_unilateral", name="Squat")
     resp = client.post(
         "/cauldron/api/assessment/",
         {"results": [{"pattern_key": "lower_unilateral",
-                      "tested_exercise": str(split.uuid), "reps_or_seconds": score}]},
+                      "tested_exercise": str(squat.uuid), "reps_or_seconds": score}]},
         format="json",
     )
     assert resp.status_code == 201
@@ -182,13 +182,13 @@ def _place(client, score):
     "score,expected",
     [
         (0, "Squat"),
-        (3, "Assisted Split Squat"),
-        (6, "Assisted Split Squat"),  # Goblet needs weights
-        (8, "Split Squat"),
-        (12, "Split Squat"),  # Bulgarian needs a bench
-        (17, "Assisted Pistol Squat"),
-        (18, "Pistol Squat"),
-        (40, "Dragon Squat"),
+        (10, "Assisted Split Squat"),
+        (20, "Assisted Split Squat"),  # Goblet needs weights
+        (30, "Split Squat"),
+        (45, "Split Squat"),  # Bulgarian needs a bench
+        (80, "Assisted Pistol Squat"),
+        (95, "Pistol Squat"),
+        (200, "Dragon Squat"),
     ],
 )
 def test_bodyweight_placement(seeded, client, user, score, expected):
@@ -199,12 +199,12 @@ def test_bodyweight_placement(seeded, client, user, score, expected):
 @pytest.mark.parametrize(
     "score,expected",
     [
-        (5, "Assisted Split Squat"),
-        (6, "Goblet Squat"),
-        (10, "Bulgarian Split Squat"),
-        (12, "Barbell Back Squat"),
-        (14, "Dumbbell Bulgarian Split Squat"),
-        (16, "Assisted Pistol Squat"),
+        (19, "Assisted Split Squat"),
+        (20, "Goblet Squat"),
+        (40, "Bulgarian Split Squat"),
+        (50, "Barbell Back Squat"),
+        (60, "Dumbbell Bulgarian Split Squat"),
+        (75, "Assisted Pistol Squat"),
     ],
 )
 def test_fully_equipped_placement(seeded, client, user, score, expected):

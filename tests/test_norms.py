@@ -75,7 +75,7 @@ def test_female_pushup_carries_modified_position_note():
 
 
 def test_normed_movements_are_scoreable():
-    normed = ["Push-up", "Australian Row", "Pike Push-up", "Split Squat",
+    normed = ["Push-up", "Australian Row", "Pike Push-up", "Squat",
               "Plank", "Glute Bridge"]
     for name in normed:
         for sex in ("male", "female"):
@@ -84,17 +84,15 @@ def test_normed_movements_are_scoreable():
             assert 1 <= s.flames <= 10
 
 
-def test_asymmetry_anchors_are_deliberately_unscored():
-    """The three unilateral Trial anchors have no published normative data.
+def test_unilateral_variants_are_deliberately_unscored():
+    """Single-arm/leg rungs have no published normative data.
 
     Reps on an Incline Archer Push-up are NOT comparable to a standard push-up
     norm — this module only scores a movement at the difficulty its norm was
-    measured at. Mapping them onto the nearest table would invent a rating, so
-    they return has_data=False and the verdict simply omits their flames.
-    Delete this test the day real norms are sourced for them.
+    measured at, which is why the Trial anchors are the bilateral versions.
     """
     for name in ("Incline Archer Push-up", "Single-Arm Australian Row",
-                 "Single-Leg Glute Bridge"):
+                 "Single-Leg Glute Bridge", "Split Squat"):
         assert norms.score(name, 12, "male", 35).has_data is False
 
 
@@ -110,10 +108,10 @@ def test_crowdsourced_norms_real_in_prime_estimated_when_old():
         assert "estimated" in old.note.lower()
 
 
-def test_split_squat_is_fully_estimated():
-    # Derived from bodyweight-squat data; the whole table is flagged.
+def test_squat_is_fully_estimated():
+    # Crowd-sourced bodyweight-squat data; the whole table is flagged.
     for age in (25, 55):
-        s = norms.score("Split Squat", 12, "male", age)
+        s = norms.score("Squat", 40, "male", age)
         assert s.estimated is True
         assert s.confidence == "estimated"
         assert "estimated" in s.note.lower()

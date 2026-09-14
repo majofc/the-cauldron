@@ -247,52 +247,5 @@ def test_per_side_sets_log_a_single_reps_per_side_value(seeded, client, user):
 
     logged = SetLog.objects.get(uuid=amrap["uuid"])
     assert logged.actual_reps == 7
-    # Nothing writes the per-side columns any more.
-    assert (logged.left_reps, logged.right_reps) == (None, None)
-
-
-def test_legacy_per_side_payload_is_still_accepted(seeded, client, user):
-    """``left_reps``/``right_reps`` are read-only historical fields, but a client
-    cached from before the change must not start erroring — the server still
-    collapses them to the weaker side."""
-    _own(user, "bodyweight")
-    presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
-    session = _open_today(client)
-    sets = session["set_logs"]
-    amrap = sets[-1]
-
-    resp = client.post(
-        f"/cauldron/api/sessions/{session['uuid']}/log/",
-        {"sets": {
-            **{s["uuid"]: {"actual_reps": s["expected_reps"], "actual_load": None}
-               for s in sets[:-1]},
-            amrap["uuid"]: {"left_reps": 9, "right_reps": 5, "actual_load": None},
-        }},
-        format="json",
-    )
-    assert resp.status_code == 200
-
-    from the_cauldron.models import SetLog
-
-    logged = SetLog.objects.get(uuid=amrap["uuid"])
-    assert (logged.left_reps, logged.right_reps) == (9, 5)
-    assert logged.actual_reps == 5  # weaker side drives progression
-
-
-def test_historical_per_side_rows_still_render(seeded, client, user):
-    """Rows written before the change keep their values and must serialise
-    without error — there was no backfill."""
-    _own(user, "bodyweight")
-    presc = _program_on(user, Exercise.objects.get(name="Archer Push-up"))
-    session_uuid = _open_today(client)["uuid"]
-
-    from the_cauldron.models import SetLog
-
-    stale = SetLog.objects.filter(session__uuid=session_uuid, is_amrap=True).first()
-    stale.left_reps, stale.right_reps, stale.actual_reps = 11, 6, 6
-    stale.save(update_fields=["left_reps", "right_reps", "actual_reps"])
-
-    resp = client.get(f"/cauldron/api/sessions/{session_uuid}/")
-    assert resp.status_code == 200
-    row = next(s for s in resp.json()["set_logs"] if s["is_amrap"])
-    assert (row["left_reps"], row["right_reps"]) == (11, 6)
+    # Left/right was removed entirely — the set payload carries no per-side keys.
+    assert "left_reps" not in amrap and "right_reps" not in amrap
