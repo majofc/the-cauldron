@@ -46,15 +46,14 @@ Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
 |---|---|
 | `pattern` FK | which movement pattern |
 | `name` | e.g. "Pike Push-up" |
-| `difficulty_rank` | integer order within pattern's ladder |
+| `difficulty_rank` | integer order within pattern's ladder. `lower_unilateral` is ONE ladder (`seed_forge.SINGLE_LADDER_PATTERNS`): unique ranks across both modes, one link chain; other patterns keep a chain per mode |
 | `progression_mode` | `difficulty` (ladder) or `load` (weight progression) |
 | `rep_range_min/max` | working rep range |
 | `is_timed` | if True, reps = seconds (holds) |
 | `is_per_side` | if True, worked one side at a time — rep targets forced even (`progression.rep_targets_for`). Workout logging records ONE value per set meaning "reps per side"; it does **not** split L/R |
 | `required_equipment` | M2M Equipment |
-| `is_assessment_anchor` | used during trial |
-| `measures_asymmetry` | Trial captures L/R separately for this move and tracks signed asymmetry. True for exactly 3 anchors (see below). Independent of `is_per_side` |
-| `placement_threshold` | AMRAP reps that place here |
+| `is_assessment_anchor` | the one bilateral move tested per pattern in the Trial: Push-up, Australian Row, Pike Push-up, Squat, Plank, Glute Bridge — each has a peer norm |
+| `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs (enforced by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
 | `regression` / `progression` | FK to self, adjacent rungs |
 | `video_url`, `cues`, `rest_seconds` | coaching metadata |
 
@@ -72,31 +71,12 @@ When completed: spawns a `Program`. The Trial is a **recurring** measurement —
 nudged to retest every 30 days (`services.forge.retest_status`).
 
 **AssessmentResult** — one pattern's result in a session
-Fields: `session`, `pattern`, `tested_exercise`, `placed_exercise`, `reps_or_seconds`,
-`left_reps`, `right_reps`, `asymmetry_pct`.
+Fields: `session`, `pattern`, `tested_exercise`, `placed_exercise`, `reps_or_seconds`.
 Unique: `(session, pattern)`.
 
-`asymmetry_pct` is signed, **right-stronger positive**:
-`round((right - left) / max(left, right) * 100)`, null when a side is missing or both are 0.
-Stored, not computed on read. Use `AssessmentResult.compute_asymmetry_pct(left, right)` —
-`forge.js` mirrors it exactly in `asymmetryPct()`.
-
-### Limb measurement — where it lives
-
-Per-limb data is captured in the **Trial only**, on the three `measures_asymmetry` anchors:
-
-| Pattern | Anchor | Covers |
-|---|---|---|
-| `horizontal_push` | Incline Archer Push-up | arms |
-| `vertical_pull` | Single-Arm Australian Row | arms |
-| `hinge` | Single-Leg Glute Bridge | legs |
-
-Placement still uses the **weaker** side (`min(left, right)`) — the signed percentage is a
-tracked metric, never an input to placement.
-
-The `lower_unilateral` anchor (Split Squat) is `is_per_side` but **not** an asymmetry anchor:
-it takes a single "reps per side" box. That is why the Trial's L/R split is driven by
-`measures_asymmetry` and not by `is_unilateral` — don't conflate them.
+The Trial takes **one value per pattern** — every anchor is bilateral, and there is no
+left/right capture anywhere (removed in #50; migration 0014 summed old per-side results and
+re-placed them, capped at ±1 rung).
 
 **Program** — generated plan
 Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target` (default 8 sets/pattern/week).
@@ -119,16 +99,19 @@ Unique: `(program, day_index)`.
 Fields: `user`, `program_day`, `scheduled_for`, `performed_at`, `status` (planned/completed/skipped).
 
 **SetLog** — one actual set
-Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `left_reps`, `right_reps`, `is_amrap`, `rir`.
+Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `is_amrap`, `rir`.
 
 Workout logging records **one input per set**. For a per-side movement that value means
 *reps per side* — including per-side timed holds. Only the third (last) set is to-failure.
 
-`left_reps` / `right_reps` are **read-only historical fields**: nothing writes them any more
-(limb measurement moved to the Trial), but rows written before that change keep their values
-and must still render. There was no backfill. `apply_session_log` still *accepts* them so an
-older cached client doesn't break; `SetLogSerializer.is_unilateral` is now only a "per side"
-label hint, not a render-the-split instruction.
+`SetLogSerializer.is_unilateral` is only a "per side" label hint.
+
+Load-mode prescriptions never get a 0 load (a weightless handle/bar/shell makes 0 buildable,
+but `progression.available_loads` drops it; band level 0 is kept). A load assigned from scratch
+(program generation, ⇄ swap, new rung) comes from `forge._initial_load`: the user's last logged
+load on that exercise; else their latest Trial score for the pattern — one buildable step up per
+20% the score clears the rung's `placement_threshold`, capped at the middle of their range
+(`progression.trial_seeded_load`); else the lightest prescribable load.
 
 **BlockedExercise** — user-forbidden movements
 Fields: `user`, `exercise`, `reason`. Unique `(user, exercise)`.
@@ -158,15 +141,14 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
   - `GET /cauldron/api/assessment/` — the active session (404 if none)
   - `POST /cauldron/api/assessment/` — submit every row at once and forge the program.
     Body: `{"split": "full_body_3x", "results": [{"pattern_key", "tested_exercise" (uuid),
-    "reps_or_seconds", "left_reps"?, "right_reps"?}, …]}`.
-    Returns `{assessment, program, peer, asymmetry}`. There is no `start/` or `complete/`
+    "reps_or_seconds"}, …]}`.
+    Returns `{assessment, program, peer}`. There is no `start/` or `complete/`
     endpoint — one POST does both.
   - `POST /cauldron/api/assessment/retake/` — deactivate current session + program, open a
     fresh session (full reassessment; there is no lightweight check-in mode)
   - `GET /cauldron/api/assessment/history/` — per-pattern Trial series for the Evolution
-    charts: `{patterns: [{pattern_key, pattern_name, measures_asymmetry, points: [...]}]}`.
-    Each point: `date, exercise, reps_or_seconds, is_timed, left_reps, right_reps,
-    asymmetry_pct, ladder_score, delta_vs_prev, verdict`
+    charts: `{patterns: [{pattern_key, pattern_name, points: [...]}]}`.
+    Each point: `date, exercise, reps_or_seconds, is_timed, ladder_score, delta_vs_prev, verdict`
   - `POST /cauldron/api/assessment/reminder/dismiss/` — suppress the retest nudge 3 days
 - **Program:** GET `/cauldron/api/program/` (active). There is no `program/days/{id}/` route —
   days are nested inside the program payload.
@@ -203,9 +185,8 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
 - `pending_progression` not clearing → `apply-progression/` endpoint was not called; it requires an explicit POST (not automatic on session completion).
 - Equipment filter excludes an exercise the user expects → `required_equipment` M2M must contain only equipment the user has; any mismatch excludes the exercise.
 - `BlockedExercise` uniqueness error → user already has that exercise blocked; do a GET first.
-- Trial row shows one box when you expected Left/Right (or vice versa) → the split is driven by
-  `Exercise.measures_asymmetry`, **not** `is_unilateral`/`is_per_side`. Check the seed's
-  `ASYMMETRY_ANCHORS`.
+- A prescription shows 0 kg → the user's implement weighs 0 and something bypassed
+  `progression.available_loads`; migration 0017 repaired the rows written before #52.
 - Retest banner won't appear → `retest_status` keys off the last **completed** assessment and is
   suppressed for 3 days after a dismissal *or a retake*. An open, incomplete session does not
   reset the 30-day clock.

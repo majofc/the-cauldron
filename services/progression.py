@@ -127,8 +127,54 @@ def available_loads(equipment_profile, exercise) -> list:
     implement ``exercise`` calls for. This returns only the totals; the recipe
     for a chosen load is fetched separately via ``loads.recipe_for`` so the
     progression maths below stays plain float comparison.
+
+    A total of 0 — the bare implement when the user's handle, bar or shell weighs
+    nothing — stays a valid recipe but is never prescribable, so it is dropped
+    here. Band levels are indices, where 0 is the lightest real band, so they
+    keep it.
     """
-    return [l.total for l in loads.buildable_loads(equipment_profile, exercise)]
+    totals = [l.total for l in loads.buildable_loads(equipment_profile, exercise)]
+    if loads.implement_for(equipment_profile, exercise) == "bands":
+        return totals
+    return [t for t in totals if t > 0]
+
+
+def nearest_available_load(equipment_profile, exercise, target) -> Optional[float]:
+    """The prescribable load closest to ``target`` (ties go lighter), or the
+    lightest one when ``target`` is None. ``None`` when nothing is prescribable."""
+    options = available_loads(equipment_profile, exercise)
+    if not options:
+        return None
+    if target is None:
+        return options[0]
+    return min(options, key=lambda l: (abs(l - target), l))
+
+
+# Trial-seeded starting load: one buildable step up from the lightest load for
+# every this-much the Trial score clears the rung's placement threshold.
+TRIAL_STEP_FRACTION = 0.2
+
+
+def trial_seeded_load(equipment_profile, exercise, trial_score) -> Optional[float]:
+    """Starting load for a user with no load history on ``exercise``, from the
+    latest Trial score for its pattern.
+
+    The score and ``placement_threshold`` share a scale (the pattern's anchor),
+    so the margin by which the score clears the threshold says how comfortably
+    the user placed here. Each ``TRIAL_STEP_FRACTION`` of margin moves one
+    prescribable load up from the lightest, never past the middle of the user's
+    range — a first session should not open near their heaviest load. With no
+    usable score (none recorded, or a threshold of 0 to measure against) this is
+    the lightest prescribable load. ``None`` when nothing is prescribable.
+    """
+    options = available_loads(equipment_profile, exercise)
+    if not options:
+        return None
+    threshold = exercise.placement_threshold or 0
+    if trial_score is None or threshold <= 0 or trial_score <= threshold:
+        return options[0]
+    steps = int((trial_score - threshold) / threshold / TRIAL_STEP_FRACTION)
+    return options[min(steps, (len(options) - 1) // 2)]
 
 
 def next_load_up(equipment_profile, exercise, current_load: Optional[float]) -> Optional[float]:

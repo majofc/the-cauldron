@@ -98,7 +98,7 @@
             </label>
             <label class="forge-field">
               <span>Weight of one empty handle (<span class="forge-unit-tag">kg</span>)</span>
-              <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="2">
+              <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="weight — 0 if weightless">
             </label>
             <p class="forge-help">A pair needs 4 of a plate — one per side, per dumbbell. The weight shown
               is what <em>one</em> dumbbell weighs.</p>
@@ -113,7 +113,7 @@
           </label>
           <label class="forge-field">
             <span>Empty bar weight (<span class="forge-unit-tag">kg</span>)</span>
-            <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="20">
+            <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="weight — 0 if weightless">
           </label>
           <label class="forge-field">
             <span>Smallest increment (<span class="forge-unit-tag">kg</span>) — used only if you list no plates</span>
@@ -140,7 +140,7 @@
             </label>
             <label class="forge-field">
               <span>Empty shell weight (<span class="forge-unit-tag">kg</span>)</span>
-              <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="6">
+              <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="weight — 0 if weightless">
             </label>
           </div>
         </div>
@@ -336,14 +336,6 @@
       </div>
       <div id="forge-chart" class="forge-chart"></div>
       <p class="forge-chart-legend" id="forge-chart-legend" hidden></p>
-    </div>
-
-    <div class="cauldron-card forge-card" id="forge-asym-card" hidden>
-      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
-      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">Left / right balance</h2>
-      <p class="forge-help">Per-leg results from your Trials. Big gaps mean train the weaker side first.</p>
-      <div id="forge-asym" class="forge-asym"></div>
     </div>
 
     <div class="cauldron-card forge-card">

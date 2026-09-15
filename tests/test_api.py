@@ -311,6 +311,15 @@ def test_a_grip_variant_of_the_prescribed_rung_is_accepted(seeded, client, user)
     """The plan legitimately carries whichever grip the Forge scheduled today."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    # Put the grip-split Pull-up rung on the day: train it, and give every other
+    # pattern an event so the untouched pull chain is guaranteed a slot.
+    pull = PrescribedExercise.objects.get(
+        day__program__user=user, day__program__is_active=True, pattern__key="vertical_pull"
+    )
+    pull.exercise = Exercise.objects.get(name="Pull-up")
+    pull.save(update_fields=["exercise"])
+    for other in pull.day.prescriptions.exclude(pk=pull.pk).select_related("exercise"):
+        _log_session(user, pull.day, [other.exercise], timezone.now())
 
     plan = _plan(client)
     swapped = None
@@ -871,45 +880,37 @@ def test_norms_endpoint_no_data_for_unnormed(seeded, client):
     assert client.get("/cauldron/api/norms/?exercise=Nordic Curl").json()["has_data"] is False
 
 
-def test_unilateral_persists_left_right_and_places_from_weaker(seeded, client, user):
+def test_trial_ignores_legacy_left_right_keys(seeded, client, user):
+    """An older cached client may still send per-side keys: the single
+    ``reps_or_seconds`` value is what gets stored and placed from."""
     _set_equipment(client, ["bodyweight"])
     pattern = MovementPattern.objects.get(key="lower_unilateral")
-    anchor = pattern.exercises.order_by("difficulty_rank").first()
+    anchor = pattern.exercises.get(is_assessment_anchor=True)
     payload = {
-        "split": "full_body_3x",
         "results": [
             {"pattern_key": pattern.key, "tested_exercise": str(anchor.uuid),
-             "left_reps": 12, "right_reps": 7}
+             "reps_or_seconds": 7, "left_reps": 12, "right_reps": 7}
         ],
     }
     resp = client.post("/cauldron/api/assessment/", payload, format="json")
     assert resp.status_code == 201
+    assert "asymmetry" not in resp.json()
     from the_cauldron.models import AssessmentResult
     ar = AssessmentResult.objects.get(session__user=user, pattern=pattern)
-    assert ar.left_reps == 12 and ar.right_reps == 7
-    assert ar.reps_or_seconds == 7  # placed from the weaker side
+    assert ar.reps_or_seconds == 7
 
 
-def test_progress_filter_and_asymmetry(seeded, client, user):
+def test_progress_payload_carries_no_asymmetry(seeded, client, user):
     _set_equipment(client, ["bodyweight"])
-    pattern = MovementPattern.objects.get(key="lower_unilateral")
-    anchor = pattern.exercises.order_by("difficulty_rank").first()
-    client.post(
-        "/cauldron/api/assessment/",
-        {"split": "full_body_3x",
-         "results": [{"pattern_key": pattern.key, "tested_exercise": str(anchor.uuid),
-                      "left_reps": 12, "right_reps": 7}]},
-        format="json",
-    )
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
     body = client.get("/cauldron/api/progress/").json()
     assert "exercises" in body
-    assert any(a["left"] == 12 and a["right"] == 7 for a in body["asymmetry"])
+    assert "asymmetry" not in body
 
 
-def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user):
-    """The final (AMRAP) set of a single-leg move is logged per side: both legs
-    persist and actual_reps holds the weaker side. The serializer flags the set
-    as unilateral so the UI can render the split."""
+def test_unilateral_amrap_logs_one_reps_per_side_value(seeded, client, user):
+    """The final (AMRAP) set of a single-leg move logs one value — reps per
+    side. The serializer flags the set as unilateral for the "per side" label."""
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
@@ -921,6 +922,9 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
         pattern__key="lower_unilateral",
     ).select_related("day").first()
     assert presc is not None, "seed should place a lower_unilateral exercise"
+    # A low Trial score places on the bilateral Squat; train a per-side rung.
+    presc.exercise = Exercise.objects.get(name="Split Squat")
+    presc.save(update_fields=["exercise"])
 
     # The day trains only the least-used chains, so give every *other* pattern an
     # event: the untouched unilateral chain is then guaranteed to be on the day.
@@ -930,7 +934,7 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
 
     session = _open_today(client)
 
-    # The unilateral exercise's AMRAP set must be flagged for the per-leg UI.
+    # The unilateral exercise's AMRAP set is flagged for the "per side" label.
     uni_amrap = next(
         s for s in session["set_logs"]
         if s["is_unilateral"] and s["is_amrap"]
@@ -943,7 +947,7 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
     set_results = {}
     for s in session["set_logs"]:
         if s["uuid"] == uni_amrap["uuid"]:
-            set_results[s["uuid"]] = {"left_reps": 12, "right_reps": 7,
+            set_results[s["uuid"]] = {"actual_reps": 7,
                                       "actual_load": s["expected_load"]}
         else:
             set_results[s["uuid"]] = {"actual_reps": s["expected_reps"],
@@ -955,8 +959,7 @@ def test_unilateral_amrap_logs_left_right_and_counts_weaker(seeded, client, user
     assert resp.status_code == 200
 
     sl = SetLog.objects.get(uuid=uni_amrap["uuid"])
-    assert sl.left_reps == 12 and sl.right_reps == 7
-    assert sl.actual_reps == 7  # weaker side drives progression/peer scoring
+    assert sl.actual_reps == 7
 
 
 def test_accept_and_deny_progression(seeded, client, user):

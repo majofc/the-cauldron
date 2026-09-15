@@ -323,7 +323,7 @@
     });
   }
 
-  async function showResults({ peer = [], unlocks = [], asymmetry = [], title = "The verdict" }) {
+  async function showResults({ peer = [], unlocks = [], title = "The verdict" }) {
     openOverlay();
     await wait(1300); // let the forge roar before the reveal
     anvil.classList.remove("forging");
@@ -360,26 +360,6 @@
       const reason = (peer.find((p) => p.score && p.score.reason) || {}).score?.reason ||
         "Add your birth year & sex in Equipment to unlock your 🔥 peer rating.";
       html += `<p class="forge-score-note forge-score-note--center">${reason}</p>`;
-    }
-    // Signed left/right figure per measured anchor — the number itself, not just
-    // a threshold warning, so a small-but-real gap is still visible.
-    if (asymmetry.length) {
-      html +=
-        `<div class="forge-verdict-asym">` +
-        `<h4 class="forge-verdict-asym-title">Left / right balance</h4>` +
-        asymmetry
-          .map(
-            (a) =>
-              `<div class="forge-verdict-asym-row${
-                Math.abs(a.asymmetry_pct) >= 20 ? " is-warn" : ""
-              }">` +
-              `<span class="forge-verdict-asym-ex">${esc(a.exercise)}</span>` +
-              `<span class="forge-verdict-asym-val">${asymmetryLabel(a.asymmetry_pct)}</span>` +
-              `<span class="forge-verdict-asym-raw">L ${a.left} · R ${a.right}</span>` +
-              `</div>`
-          )
-          .join("") +
-        `</div>`;
     }
     await step(html, [{ act: "done", cls: "btn-cauldron--primary", label: "Continue" }]);
     closeOverlay();
@@ -546,10 +526,10 @@
     dumbbells: '<path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/>',
     barbell: '<path d="M2 10v4M5 8v8M19 8v8M22 10v4M5 12h14"/>',
     bands: '<path d="M4 5c6 4 10 4 16 0M4 12c6 4 10 4 16 0M4 19c6 4 10 4 16 0"/>',
-    rowing_machine: '<path d="M3 18h18M6 18l3-7M15 11l3 7M9 11l6 0M12 11V6"/><circle cx="12" cy="5" r="1.5"/>',
     bench: '<path d="M3 10h18M5 10v8M19 10v8M3 14h18"/>',
     kettlebell: '<path d="M9 6a3 3 0 0 1 6 0"/><path d="M7 9c-1 4-2 5-2 8h14c0-3-1-4-2-8a5 5 0 0 0-10 0Z"/>',
     rings: '<path d="M7 3v5M17 3v5"/><circle cx="7" cy="13" r="4"/><circle cx="17" cy="13" r="4"/>',
+    ab_wheel: '<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5"/><path d="M2 12h4M18 12h4"/>',
   };
 
   // Maps exercise display names (lowercase) to forge-icons.js glyph keys.
@@ -613,10 +593,10 @@
       { key: "dumbbells", name: "Dumbbells" },
       { key: "barbell", name: "Barbell + Plates" },
       { key: "bands", name: "Resistance Bands" },
-      { key: "rowing_machine", name: "Rowing Machine" },
       { key: "bench", name: "Bench" },
       { key: "kettlebell", name: "Kettlebell" },
       { key: "rings", name: "Gymnastic Rings" },
+      { key: "ab_wheel", name: "Ab Wheel" },
     ];
   }
 
@@ -924,30 +904,15 @@
       row.className = "forge-trial-row";
       row.dataset.pattern = p.key;
       row.dataset.exercise = anchor.uuid;
-      // Only the three asymmetry anchors capture Left/Right. Per-side moves
-      // that aren't anchors (the Split Squat) take one "reps per side" box.
-      row.dataset.asym = anchor.measures_asymmetry ? "1" : "";
       const video = anchor.video_url
         ? `<a class="forge-video-link" href="${anchor.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
         : "";
       const unit = anchor.is_timed ? "seconds" : "reps";
-      // Rest hint: between sides when both sides are tested, otherwise before
-      // the single test set.
       const rest = anchor.rest_seconds
-        ? `<div class="forge-trial-rest">⏱ Rest ${fmtRest(anchor.rest_seconds)} ${
-            anchor.measures_asymmetry ? "between sides" : "before testing"
-          }</div>`
+        ? `<div class="forge-trial-rest">⏱ Rest ${fmtRest(anchor.rest_seconds)} before testing</div>`
         : "";
-      // Input(s): two side fields for the asymmetry anchors, one otherwise.
-      const inputs = anchor.measures_asymmetry
-        ? `<div class="forge-trial-legs">` +
-          `<label class="forge-leg"><span>Left</span>` +
-          `<input class="forge-trial-input forge-leg-input" data-side="left" type="number" min="0" placeholder="0" aria-label="left-side result for ${anchor.name}"></label>` +
-          `<label class="forge-leg"><span>Right</span>` +
-          `<input class="forge-trial-input forge-leg-input" data-side="right" type="number" min="0" placeholder="0" aria-label="right-side result for ${anchor.name}"></label>` +
-          `</div>` +
-          `<div class="forge-trial-asym" hidden></div>`
-        : anchor.is_timed
+      // One input per pattern: every anchor is a bilateral movement.
+      const inputs = anchor.is_timed
         ? `<div class="forge-timed-cell">` +
           `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${anchor.name}">` +
           `<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button>` +
@@ -955,9 +920,7 @@
         : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${anchor.name}">`;
       // A per-side move tested with one box needs to say so — "8" means 8 each
       // side, not 8 total.
-      const perSideNote = anchor.measures_asymmetry
-        ? ` <span class="forge-trial-perleg">· each side</span>`
-        : anchor.is_unilateral
+      const perSideNote = anchor.is_unilateral
         ? ` <span class="forge-trial-perleg">· ${unit} per side</span>`
         : "";
       row.innerHTML =
@@ -972,58 +935,13 @@
         `<div class="forge-trial-inputwrap">${inputs}</div>`;
       list.appendChild(row);
     });
-    wireAsymmetryHints();
     wireEvolutionToggles();
-  }
-
-  // Signed asymmetry, right-stronger positive — mirrors
-  // AssessmentResult.compute_asymmetry_pct exactly. Null when either side is
-  // missing or both are 0 (an absence of data, not a balance).
-  function asymmetryPct(left, right) {
-    if (left == null || right == null || isNaN(left) || isNaN(right)) return null;
-    const strongest = Math.max(left, right);
-    if (strongest === 0) return null;
-    return Math.round(((right - left) / strongest) * 100);
-  }
-
-  // Format a signed asymmetry for display: "+18% (right stronger)".
-  function asymmetryLabel(pct) {
-    if (pct === null) return "—";
-    if (pct === 0) return "balanced";
-    const side = pct > 0 ? "right" : "left";
-    return `${pct > 0 ? "+" : ""}${pct}% (${side} stronger)`;
-  }
-
-  // Live readout under the Trial's Left/Right boxes: report the signed figure
-  // as soon as both sides are in, not just when it crosses a threshold. The
-  // ≥20% mark still flags as a warning, but the number is always shown.
-  function wireAsymmetryHints(rowSelector = ".forge-trial-row[data-asym='1']") {
-    $$(rowSelector).forEach((row) => {
-      const legs = $$(".forge-leg-input", row);
-      const note = $(".forge-trial-asym", row);
-      if (!note) return;
-      const check = () => {
-        const byside = {};
-        legs.forEach((i) => {
-          const v = parseInt(i.value, 10);
-          if (!isNaN(v)) byside[i.dataset.side] = v;
-        });
-        const pct = asymmetryPct(byside.left ?? null, byside.right ?? null);
-        if (pct === null) { note.hidden = true; return; }
-        note.hidden = false;
-        note.classList.toggle("is-warn", Math.abs(pct) >= 20);
-        const weaker = Math.min(byside.left, byside.right);
-        note.textContent =
-          `Asymmetry ${asymmetryLabel(pct)} — we'll place you from the weaker side (${weaker}).`;
-      };
-      legs.forEach((i) => i.addEventListener("input", check));
-    });
   }
 
   // ── Trial evolution (per-row history) ──────────────────────────────────────
   // A collapsible panel under each Trial row plotting that pattern across
-  // Trials: performance (ladder-normalised, so a rung promotion never reads as
-  // a setback) and — for the three asymmetry anchors — signed left/right gap.
+  // Trials: performance, ladder-normalised so a rung promotion never reads as
+  // a setback.
   // Hand-rolled inline SVG reusing the .forge-chart-* classes; no chart library.
 
   const VERDICT_LABELS = {
@@ -1075,29 +993,12 @@
         { zeroFloor: true }
       ) +
       `</div>`;
-    if (anchor.measures_asymmetry) {
-      const asym = points.filter((p) => p.asymmetry_pct !== null);
-      html +=
-        `<div class="forge-evolution-chart">` +
-        `<div class="forge-evolution-label">Left / right asymmetry (right positive)</div>` +
-        (asym.length
-          ? sparkline(
-              asym.map((p) => ({
-                x: p.date,
-                y: p.asymmetry_pct,
-                title: `${p.date.slice(0, 10)}: ${asymmetryLabel(p.asymmetry_pct)} (L ${p.left_reps} · R ${p.right_reps})`,
-              })),
-              { signed: true }
-            )
-          : `<p class="forge-help forge-evolution-empty">No per-side data recorded yet.</p>`) +
-        `</div>`;
-    }
     return html;
   }
 
   // Minimal inline-SVG line chart. ``signed`` centres the axis on zero and draws
-  // a baseline (asymmetry swings either way); ``zeroFloor`` anchors the scale at
-  // zero. A single point renders as a lone dot rather than a degenerate line.
+  // a baseline; ``zeroFloor`` anchors the scale at zero. A single point renders
+  // as a lone dot rather than a degenerate line.
   function sparkline(pts, { signed = false, zeroFloor = false } = {}) {
     // padR leaves room for the final x-axis label, which is centred on the last
     // point and would otherwise overflow the viewBox and clip.
@@ -1202,29 +1103,11 @@
   }
 
   $("#forge-submit-trial").addEventListener("click", async () => {
-    const results = $$(".forge-trial-row").map((row) => {
-      const legs = $$(".forge-leg-input", row);
-      const out = {
-        pattern_key: row.dataset.pattern,
-        tested_exercise: row.dataset.exercise,
-      };
-      if (legs.length) {
-        // Place from the weaker leg so we never over-prescribe the weak side;
-        // persist both sides so asymmetry can be tracked over time.
-        const byside = {};
-        legs.forEach((i) => {
-          const v = parseInt(i.value, 10);
-          if (!isNaN(v)) byside[i.dataset.side] = v;
-        });
-        out.left_reps = byside.left ?? null;
-        out.right_reps = byside.right ?? null;
-        const vals = Object.values(byside);
-        out.reps_or_seconds = vals.length ? Math.min(...vals) : 0;
-      } else {
-        out.reps_or_seconds = parseInt(row.querySelector("input").value, 10) || 0;
-      }
-      return out;
-    });
+    const results = $$(".forge-trial-row").map((row) => ({
+      pattern_key: row.dataset.pattern,
+      tested_exercise: row.dataset.exercise,
+      reps_or_seconds: parseInt(row.querySelector("input").value, 10) || 0,
+    }));
     if (!results.length) return notify("Set your equipment first.");
     showLoader(true);
     try {
@@ -1233,7 +1116,6 @@
       showLoader(false);
       await showResults({
         peer: res.peer || [],
-        asymmetry: res.asymmetry || [],
         title: "Your Trial verdict",
       });
       switchTab("today");
@@ -1302,7 +1184,7 @@
     host.innerHTML =
       `<div class="forge-retest-text">` +
       `<strong>Time to retest.</strong> Your last Trial was ${days} days ago — ` +
-      `retake it to re-place yourself and see how your strength and left/right balance have moved.` +
+      `retake it to re-place yourself and see how your strength has moved.` +
       `</div>` +
       `<div class="forge-retest-actions">` +
       `<button type="button" class="btn-cauldron btn-cauldron--primary forge-retest-go">Take the Trial</button>` +
@@ -1741,8 +1623,6 @@
         load_unit: candidate.load_unit,
         actual_reps: null,
         actual_load: null,
-        left_reps: null,
-        right_reps: null,
         is_amrap: isAmrap,
         rir: null,
       });
@@ -2093,7 +1973,7 @@
   // Structural equipment: non-loadable, fixed fixtures.
   // Exercises that only require these (plus bodyweight) are part of the
   // bodyweight spine. Exercises that also require loadable gear (dumbbells,
-  // barbell, bands, kettlebell) or machines (rowing_machine) go in the gear branch.
+  // barbell, bands, kettlebell, ab_wheel) go in the gear branch.
   const STRUCTURAL_EQUIP = new Set(["bodyweight", "pullup_bar", "bench", "rings"]);
 
   function isSpineExercise(ex) {
@@ -2564,7 +2444,6 @@
       progressPoints = data.points || [];
       populateExerciseFilter(data.exercises || []);
       populateChartMuscleFilter(data.muscles || []);
-      renderAsymmetry(data.asymmetry || []);
     } catch (e) {
       progressPoints = [];
     }
@@ -2609,31 +2488,6 @@
       loadProgress();
     });
     chartMuscleFilterReady = true;
-  }
-
-  function renderAsymmetry(rows) {
-    const card = $("#forge-asym-card");
-    const host = $("#forge-asym");
-    if (!card || !host) return;
-    if (!rows.length) { card.hidden = true; return; }
-    card.hidden = false;
-    // Latest entry per exercise.
-    const latest = {};
-    rows.forEach((r) => { latest[r.exercise] = r; });
-    host.innerHTML = Object.values(latest).map((r) => {
-      const max = Math.max(r.left, r.right, 1);
-      const gap = Math.round((Math.abs(r.left - r.right) / max) * 100);
-      const weak = r.left < r.right ? "left" : r.right < r.left ? "right" : "even";
-      const warn = gap >= 20 ? " is-warn" : "";
-      return `<div class="forge-asym-row${warn}">` +
-        `<span class="forge-asym-ex">${r.exercise}</span>` +
-        `<span class="forge-asym-bars">` +
-          `<span class="forge-asym-bar"><i style="width:${(r.left / max) * 100}%"></i>L ${r.left}</span>` +
-          `<span class="forge-asym-bar"><i style="width:${(r.right / max) * 100}%"></i>R ${r.right}</span>` +
-        `</span>` +
-        `<span class="forge-asym-gap">${gap === 0 ? "balanced" : gap + "% gap" + (weak !== "even" ? ` · ${weak} weaker` : "")}</span>` +
-        `</div>`;
-    }).join("");
   }
 
   // Bucket key for a date string at the chosen granularity.

@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from the_cauldron.models import (
@@ -202,6 +203,30 @@ def substitute_for(user, exercise):
     return progression.find_substitute(exercise, candidates)
 
 
+def first_performable_along(exercise, direction, owned, blocked=()):
+    """The first rung from ``exercise`` (inclusive) along its ``direction`` links
+    (``"progression"`` or ``"regression"``) that the user can perform, or ``None``.
+
+    A single-ladder pattern (lower) interleaves bodyweight and loaded rungs in
+    one chain, so the adjacent rung may need gear the user lacks. Walking the
+    links keeps an earned advance moving *up* past it — ``substitute_for`` would
+    fall back to the nearest easier rung, i.e. the one the user is already on.
+
+    Only rungs skipped for *equipment* are walked past. A blocked rung stops the
+    walk (``None``) so the caller falls back to ``substitute_for``, which prefers
+    an easier stand-in (or the other grip) over jumping to a harder movement.
+    """
+    seen = set()
+    while exercise is not None and exercise.pk not in seen:
+        if exercise.pk in blocked:
+            return None
+        if is_performable(exercise, owned, blocked):
+            return exercise
+        seen.add(exercise.pk)
+        exercise = getattr(exercise, direction)
+    return None
+
+
 def grip_siblings(exercise):
     """The grip variants sharing ``exercise``'s ladder position (both overhand and
     underhand rows at the same pattern + rank), or ``[]`` if ``exercise`` is not a
@@ -345,7 +370,7 @@ def sync_program_equipment(user) -> dict:
 
     Equipment can change *after* a program was generated — the user edits their
     profile, or staff edits it in the admin — which would otherwise leave the
-    program prescribing a movement whose gear is gone (e.g. a Rowing Machine row
+    program prescribing a movement whose gear is gone (e.g. a dumbbell row
     after the machine was removed). Each prescription that is no longer
     performable is swapped to the closest eligible stand-in, and a parked
     ``pending_progression`` that became ineligible is cleared. Where no rung of
@@ -429,26 +454,87 @@ def unblock_exercise(user, exercise) -> None:
     BlockedExercise.objects.filter(user=user, exercise=exercise).delete()
 
 
+def last_logged_load(user_id, exercise):
+    """The user's most recent non-zero load on ``exercise``, or ``None``.
+
+    Prefers what they actually lifted (``actual_load``); only when no set records
+    one does it fall back to what was last prescribed (``expected_load``).
+    """
+    recent = SetLog.objects.filter(session__user_id=user_id, exercise=exercise).order_by(
+        F("session__performed_at").desc(nulls_last=True), "-session__created_at", "-set_index"
+    )
+    for field in ("actual_load", "expected_load"):
+        value = (
+            recent.filter(**{f"{field}__gt": 0}).values_list(field, flat=True).first()
+        )
+        if value is not None:
+            return value
+    return None
+
+
+def latest_trial_score(user_id, pattern_id):
+    """``reps_or_seconds`` from the user's most recent completed Trial for a
+    pattern, or ``None``."""
+    return (
+        AssessmentResult.objects.filter(
+            session__user_id=user_id,
+            session__completed_at__isnull=False,
+            pattern_id=pattern_id,
+        )
+        .order_by("-session__completed_at")
+        .values_list("reps_or_seconds", flat=True)
+        .first()
+    )
+
+
 def _initial_load(profile, exercise):
+    """Starting load when a prescription gets its load from scratch — program
+    generation, a ⇄ swap, or landing on a new rung.
+
+    1. Where the user last lifted this exercise, snapped to a load they can build.
+    2. Without load history, from their latest Trial score for the pattern
+       (``progression.trial_seeded_load``).
+    3. Without a usable Trial result, the lightest prescribable load.
+
+    Never 0 for a weighted implement (see ``progression.available_loads``).
+    """
     if exercise.progression_mode != Exercise.ProgressionMode.LOAD:
         return None
-    return progression.next_load_up(profile, exercise, None)
+    user_id = getattr(profile, "user_id", None)
+    if not user_id:
+        return progression.nearest_available_load(profile, exercise, None)
+    history = last_logged_load(user_id, exercise)
+    if history is not None:
+        return progression.nearest_available_load(profile, exercise, history)
+    return progression.trial_seeded_load(
+        profile, exercise, latest_trial_score(user_id, exercise.pattern_id)
+    )
 
 
 def _resnap_load(presc, profile) -> bool:
-    """Pull ``presc.target_load`` onto the nearest buildable load.
+    """Pull ``presc.target_load`` onto the nearest prescribable load.
 
     Returns True when the value changed. A load-mode prescription whose load is
-    already assemblable is left exactly as it is, so this stays idempotent.
+    already assemblable (and not a weightless 0) is left exactly as it is, so
+    this stays idempotent.
     """
     if presc.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
         return False
     if presc.target_load is None:
         return False
-    if loads.recipe_for(profile, presc.exercise, presc.target_load) is not None:
+    buildable = loads.recipe_for(profile, presc.exercise, presc.target_load) is not None
+    zero = presc.target_load <= 0 and loads.implement_for(profile, presc.exercise) != "bands"
+    if buildable and not zero:
         return False
-    snapped = loads.nearest_buildable(profile, presc.exercise, presc.target_load)
-    if snapped is None or snapped == presc.target_load:
+    if zero:
+        # A 0 carries no information about where the user lifts — start over
+        # from their history, as a fresh prescription would.
+        snapped = _initial_load(profile, presc.exercise)
+    else:
+        snapped = progression.nearest_available_load(profile, presc.exercise, presc.target_load)
+    if snapped is None and not zero:
+        return False
+    if snapped == presc.target_load:
         return False
     presc.target_load = snapped
     return True
@@ -504,7 +590,8 @@ def chain_map_for(pattern_ids) -> dict:
     """``{exercise_id: chain_key}`` for every exercise of ``pattern_ids``.
 
     A chain is a connected component of the ``progression``/``regression`` links,
-    so a pattern's bodyweight ladder and its loaded ladder are separate chains.
+    so a pattern's bodyweight ladder and its loaded ladder are separate chains —
+    except on a single-ladder pattern (lower), whose rungs form one chain.
     Grip variants sharing a ladder position (Pull-up / Chin-up) are unioned into
     the same chain: only the overhand row is guaranteed to be what neighbouring
     rungs link to, and ``select_grip_variant`` alternates grips day to day, so
@@ -1061,23 +1148,12 @@ def _write_set_values(session: WorkoutSession, set_results: dict) -> None:
         res = set_results.get(str(set_log.uuid))
         if not res:
             continue
-        left = _int_or_none(res.get("left_reps"))
-        right = _int_or_none(res.get("right_reps"))
-        sides = [v for v in (left, right) if v is not None]
-        if sides:
-            # Per-leg log: persist both sides; the weaker side drives everything.
-            set_log.left_reps = left
-            set_log.right_reps = right
-            set_log.actual_reps = min(sides)
-        else:
-            set_log.actual_reps = _int_or_none(res.get("actual_reps"))
+        set_log.actual_reps = _int_or_none(res.get("actual_reps"))
         # Recorded for history only — next_prescription still advances from
         # target_load, so logging a heavier day never moves the programme.
         set_log.actual_load = _load_or_none(res.get("actual_load"))
         set_log.rir = res.get("rir")
-        set_log.save(update_fields=[
-            "actual_reps", "actual_load", "rir", "left_reps", "right_reps",
-        ])
+        set_log.save(update_fields=["actual_reps", "actual_load", "rir"])
 
 
 @transaction.atomic
@@ -1095,11 +1171,8 @@ def save_session_values(session: WorkoutSession, set_results: dict) -> None:
 def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     """Record actual reps/load and advance prescriptions via the engine.
 
-    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"}.
-    Unilateral AMRAP sets may instead send {"left_reps", "right_reps", ...}; both
-    sides are stored and ``actual_reps`` is set to the weaker side so progression
-    and peer scoring never over-credit the strong leg (mirrors the assessment).
-    Returns a list of human-readable progression deltas.
+    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"};
+    for a per-side movement ``actual_reps`` is reps per side. Returns a list of human-readable progression deltas.
     """
     profile = get_or_create_equipment_profile(session.user)
 
@@ -1134,7 +1207,11 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         if new.advanced:
             target = new.exercise
             if not is_performable(target, owned, blocked):
-                target = substitute_for(session.user, target) or target
+                target = (
+                    first_performable_along(target, "progression", owned, blocked)
+                    or substitute_for(session.user, target)
+                    or target
+                )
             if presc.pending_progression_id is None:
                 presc.pending_progression = target
                 presc.save(update_fields=["pending_progression"])
@@ -1160,6 +1237,7 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
             if sub is not None:
                 new.exercise = sub
                 new.message += f" (substituted {sub.name} — original {reason})"
+        moved = new.exercise.pk != presc.exercise_id
         presc.exercise = new.exercise
         presc.target_sets = new.target_sets
         # Parity is re-evaluated against the rung we actually landed on — a
@@ -1167,7 +1245,9 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         presc.target_reps_min, presc.target_reps_max = progression.rep_targets_for(
             new.exercise, new.target_reps_min, new.target_reps_max
         )
-        presc.target_load = new.target_load
+        # Moved rungs: on a single-ladder pattern a difficulty regression can land
+        # on a loaded rung, which needs a starting load of its own.
+        presc.target_load = _initial_load(profile, new.exercise) if moved else new.target_load
         presc.sessions_at_top = new.sessions_at_top
         presc.save()
         deltas.append({"exercise": new.exercise.name, "message": new.message})
@@ -1183,8 +1263,13 @@ def accept_progression(user, prescription) -> "Exercise | None":
         return None
     profile = get_or_create_equipment_profile(user)
     # Respect a block — or an equipment change — since the unlock was earned.
-    if not is_performable(prog, owned_equipment_keys(profile), blocked_exercise_ids(user)):
-        prog = substitute_for(user, prog) or prog
+    owned, blocked = owned_equipment_keys(profile), blocked_exercise_ids(user)
+    if not is_performable(prog, owned, blocked):
+        prog = (
+            first_performable_along(prog, "progression", owned, blocked)
+            or substitute_for(user, prog)
+            or prog
+        )
     prescription.pending_progression = None
     _repoint_prescription(prescription, prog, profile)
     return prog
@@ -1313,24 +1398,18 @@ def trial_history(user) -> dict:
             {
                 "pattern_key": r.pattern.key,
                 "pattern_name": r.pattern.name,
-                "measures_asymmetry": False,
                 "points": [],
             },
         )
         score = ladder_score(r)
         prev = entry["points"][-1] if entry["points"] else None
         delta = None if prev is None else round(score - prev["ladder_score"], 3)
-        if r.tested_exercise.measures_asymmetry:
-            entry["measures_asymmetry"] = True
         entry["points"].append(
             {
                 "date": r.session.completed_at.isoformat(),
                 "exercise": r.tested_exercise.name,
                 "reps_or_seconds": r.reps_or_seconds,
                 "is_timed": r.tested_exercise.is_timed,
-                "left_reps": r.left_reps,
-                "right_reps": r.right_reps,
-                "asymmetry_pct": r.asymmetry_pct,
                 "ladder_score": round(score, 3),
                 "delta_vs_prev": delta,
                 "verdict": _verdict(delta),

@@ -36,7 +36,7 @@ def seeded(db):
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(username="rower", password="pw12345!")
+    return User.objects.create_user(username="lifter", password="pw12345!")
 
 
 @pytest.fixture
@@ -47,8 +47,9 @@ def client(user):
 
 
 @pytest.fixture
-def rowing(seeded):
-    return Exercise.objects.get(name="Rowing Machine")
+def geared(seeded):
+    """A rung that needs equipment beyond the bar: the dumbbell row."""
+    return Exercise.objects.get(name="Dumbbell Row")
 
 
 def _own(user, *keys):
@@ -78,50 +79,50 @@ def _program_on(user, exercise) -> PrescribedExercise:
 # ── Reconciling on an equipment change ───────────────────────────────────────
 
 
-def test_changing_equipment_repoints_the_program(user, rowing):
-    """The reported production case: bar + weights added, rowing machine removed.
+def test_changing_equipment_repoints_the_program(user, geared):
+    """The reported production case: gear added and removed in one change.
     No read or session needed — the change itself repairs the program."""
-    _own(user, "bodyweight", "rowing_machine")
-    presc = _program_on(user, rowing)
+    _own(user, "bodyweight", "dumbbells")
+    presc = _program_on(user, geared)
 
-    _own(user, "bodyweight", "pullup_bar", "dumbbells", "kettlebell")
+    _own(user, "bodyweight", "pullup_bar", "kettlebell")
 
     presc.refresh_from_db()
-    assert presc.exercise != rowing
-    assert "rowing_machine" not in set(
+    assert presc.exercise != geared
+    assert "dumbbells" not in set(
         presc.exercise.required_equipment.values_list("key", flat=True)
     )
     # The stand-in stays in the same pattern and resets the rung counter.
-    assert presc.exercise.pattern == rowing.pattern
+    assert presc.exercise.pattern == geared.pattern
     assert presc.sessions_at_top == 0
     assert presc.target_reps_min == presc.exercise.rep_range_min
 
 
-def test_sync_reports_what_it_swapped(user, rowing):
-    _own(user, "bodyweight", "pullup_bar", "dumbbells", "kettlebell")
-    presc = _program_on(user, rowing)  # created already-unperformable
+def test_sync_reports_what_it_swapped(user, geared):
+    _own(user, "bodyweight", "pullup_bar", "kettlebell")
+    presc = _program_on(user, geared)  # created already-unperformable
 
     result = forge.sync_program_equipment(user)
 
     presc.refresh_from_db()
     assert result == {
-        "swapped": [{"from": "Rowing Machine", "to": presc.exercise.name}],
+        "swapped": [{"from": "Dumbbell Row", "to": presc.exercise.name}],
         "hidden": set(),
     }
 
 
-def test_sync_is_a_noop_when_the_user_still_owns_the_equipment(user, rowing):
-    _own(user, "bodyweight", "rowing_machine")
-    presc = _program_on(user, rowing)
+def test_sync_is_a_noop_when_the_user_still_owns_the_equipment(user, geared):
+    _own(user, "bodyweight", "dumbbells")
+    presc = _program_on(user, geared)
 
     assert forge.sync_program_equipment(user) == {"swapped": [], "hidden": set()}
     presc.refresh_from_db()
-    assert presc.exercise == rowing
+    assert presc.exercise == geared
 
 
-def test_sync_is_idempotent(user, rowing):
+def test_sync_is_idempotent(user, geared):
     _own(user, "bodyweight", "pullup_bar")
-    presc = _program_on(user, rowing)
+    presc = _program_on(user, geared)
 
     assert forge.sync_program_equipment(user)["swapped"]
     swapped_to = PrescribedExercise.objects.get(pk=presc.pk).exercise
@@ -134,7 +135,7 @@ def test_sync_clears_a_pending_unlock_that_needs_missing_equipment(user, seeded)
     bodyweight_rung = Exercise.objects.get(name="Australian Row")
     _own(user, "bodyweight", "pullup_bar")
     presc = _program_on(user, bodyweight_rung)
-    presc.pending_progression = Exercise.objects.get(name="Rowing Machine")
+    presc.pending_progression = Exercise.objects.get(name="Dumbbell Row")
     presc.save(update_fields=["pending_progression"])
 
     forge.sync_program_equipment(user)
@@ -148,17 +149,17 @@ def test_sync_clears_a_pending_unlock_that_needs_missing_equipment(user, seeded)
 # ── Nothing reachable in the pattern: hide, never delete ─────────────────────
 
 
-def test_unperformable_prescription_is_hidden_not_deleted(user, rowing):
+def test_unperformable_prescription_is_hidden_not_deleted(user, geared):
     """Nothing in vertical_pull is bodyweight-only, so a user with no bar, bands
-    or machine has no stand-in. The day loses the pattern rather than showing an
+    or dumbbells has no stand-in. The day loses the pattern rather than showing an
     impossible movement — but the row survives, so it returns if the gear does."""
     _own(user, "bodyweight")
-    presc = _program_on(user, rowing)
+    presc = _program_on(user, geared)
 
     result = forge.sync_program_equipment(user)
 
     assert result == {
-        "swapped": [{"from": "Rowing Machine", "to": None}],
+        "swapped": [{"from": "Dumbbell Row", "to": None}],
         "hidden": {presc.pk},
     }
     assert PrescribedExercise.objects.filter(pk=presc.pk).exists()  # not destroyed
@@ -166,20 +167,20 @@ def test_unperformable_prescription_is_hidden_not_deleted(user, rowing):
     assert forge.select_day_prescriptions(user, presc.day) == []
 
 
-def test_a_hidden_prescription_returns_when_the_equipment_comes_back(user, rowing):
+def test_a_hidden_prescription_returns_when_the_equipment_comes_back(user, geared):
     _own(user, "bodyweight")
-    presc = _program_on(user, rowing)
+    presc = _program_on(user, geared)
     assert forge.select_day_prescriptions(user, presc.day) == []
 
-    _own(user, "bodyweight", "rowing_machine")  # machine plugged back in
+    _own(user, "bodyweight", "dumbbells")  # dumbbells bought back
 
     assert forge.unperformable_prescription_ids(user) == set()
     assert [p.pk for p in forge.select_day_prescriptions(user, presc.day)] == [presc.pk]
 
 
-def test_unperformable_prescription_is_hidden_from_both_read_paths(user, client, rowing):
+def test_unperformable_prescription_is_hidden_from_both_read_paths(user, client, geared):
     _own(user, "bodyweight")
-    _program_on(user, rowing)
+    _program_on(user, geared)
 
     today = client.get("/cauldron/api/today/")
     assert today.status_code == 200
@@ -190,9 +191,9 @@ def test_unperformable_prescription_is_hidden_from_both_read_paths(user, client,
     assert [p for d in program.json()["days"] for p in d["prescriptions"]] == []
 
 
-def test_reading_the_program_writes_nothing(user, client, rowing):
+def test_reading_the_program_writes_nothing(user, client, geared):
     """GET /program/ is a plain read — it must not even create a profile row."""
-    _program_on(user, rowing)
+    _program_on(user, geared)
     assert not UserEquipmentProfile.objects.filter(user=user).exists()
 
     assert client.get("/cauldron/api/program/").status_code == 200
@@ -207,15 +208,15 @@ def test_accepting_an_unlock_never_climbs_onto_unusable_equipment(user, seeded):
     """A stale client can accept an unlock earned before the gear went away."""
     _own(user, "bodyweight", "pullup_bar")
     presc = _program_on(user, Exercise.objects.get(name="Australian Row"))
-    rowing = Exercise.objects.get(name="Rowing Machine")
-    PrescribedExercise.objects.filter(pk=presc.pk).update(pending_progression=rowing)
+    geared = Exercise.objects.get(name="Dumbbell Row")
+    PrescribedExercise.objects.filter(pk=presc.pk).update(pending_progression=geared)
     presc.refresh_from_db()
 
     new = forge.accept_progression(user, presc)
 
-    assert new != rowing
+    assert new != geared
     presc.refresh_from_db()
-    assert presc.exercise != rowing
+    assert presc.exercise != geared
     assert presc.pending_progression is None
 
 
@@ -251,10 +252,10 @@ def test_logging_a_session_never_writes_back_unusable_equipment(user, seeded):
 # ── Guard ────────────────────────────────────────────────────────────────────
 
 
-def test_a_day_belonging_to_another_user_is_refused(user, rowing):
+def test_a_day_belonging_to_another_user_is_refused(user, geared):
     """Defence in depth: both current callers already scope the day to the
     requesting user, so no future one can quietly read across accounts."""
-    presc = _program_on(user, rowing)
+    presc = _program_on(user, geared)
     intruder = User.objects.create_user(
         username="intruder", password="pw12345!", email="intruder@example.test"
     )

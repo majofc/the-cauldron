@@ -32,8 +32,8 @@ Per movement:
                                  20-39 as published, 40+ estimated.
 - ``glute_bridge``   THIN/EST  — Strength Level community standards (163k sets);
                                  20-39 as published, 40+ estimated.
-- ``split_squat``    EST       — DERIVED from Strength Level bodyweight-squat
-                                 standards at ~0.5× per leg; whole table estimated.
+- ``squat``          THIN/EST  — Strength Level bodyweight-squat standards
+                                 (546k sets); 20-39 as published, 40+ estimated.
 
 Strength Level publishes population rep standards with documented level cutoffs
 (Beginner/Novice/Intermediate/Advanced/Elite = P5/P20/P50/P80/P95). The logging
@@ -59,7 +59,7 @@ EXERCISE_NORMS = {
     "Chin-up": "pullup",          # underhand grip of the pull-up rung — same norm
     "Australian Row": "australian_row",  # vertical pull anchor (estimated)
     "Pike Push-up": "pike_pushup",       # vertical push        (estimated)
-    "Split Squat": "split_squat",        # lower unilateral     (estimated)
+    "Squat": "squat",                    # lower anchor         (estimated)
     "Glute Bridge": "glute_bridge",      # hinge                (estimated)
 }
 
@@ -236,30 +236,30 @@ NORMS = {
     # bodyweight (bilateral) squat standards (546,341 logged sets) at ~0.5× —
     # the rough per-leg-to-bilateral rep ratio. The 0.5 ratio is our assumption,
     # so the WHOLE table is flagged ``estimated`` (not just ages 40+).
-    "split_squat": {
-        "label": "Split squat (per leg)",
+    "squat": {
+        "label": "Bodyweight squat",
         "metric": "reps",
         "confidence": "estimated",
         "estimated": True,
-        "source": "DERIVED — Strength Level bodyweight-squat rep standards "
-                  "(546,341 sets) scaled ~0.5× for per-leg work. Ratio is an "
-                  "assumption; replace with a real per-leg split-squat norm.",
+        "source": "Strength Level bodyweight-squat rep standards (546,341 sets). "
+                  "Undoes the former ~0.5× per-leg split-squat scaling; 40+ "
+                  "brackets are estimated.",
         "url": "https://strengthlevel.com/strength-standards/bodyweight-squat",
         "type": "percentiles",
         "tables": {
             "male": {
-                (20, 29): {5: 1, 20: 8, 50: 29, 80: 57, 95: 89},
-                (30, 39): {5: 1, 20: 8, 50: 29, 80: 57, 95: 89},
-                (40, 49): {5: 1, 20: 7, 50: 25, 80: 48, 95: 76},
-                (50, 59): {5: 1, 20: 6, 50: 20, 80: 40, 95: 62},
-                (60, 69): {5: 1, 20: 5, 50: 17, 80: 33, 95: 52},
+                (20, 29): {5: 2, 20: 16, 50: 58, 80: 114, 95: 178},
+                (30, 39): {5: 2, 20: 16, 50: 58, 80: 114, 95: 178},
+                (40, 49): {5: 2, 20: 14, 50: 50, 80: 96, 95: 152},
+                (50, 59): {5: 2, 20: 12, 50: 40, 80: 80, 95: 124},
+                (60, 69): {5: 2, 20: 10, 50: 34, 80: 66, 95: 104},
             },
             "female": {
-                (20, 29): {5: 1, 20: 4, 50: 20, 80: 41, 95: 66},
-                (30, 39): {5: 1, 20: 4, 50: 20, 80: 41, 95: 66},
-                (40, 49): {5: 1, 20: 3, 50: 17, 80: 35, 95: 56},
-                (50, 59): {5: 1, 20: 3, 50: 14, 80: 29, 95: 46},
-                (60, 69): {5: 1, 20: 2, 50: 12, 80: 24, 95: 38},
+                (20, 29): {5: 2, 20: 8, 50: 40, 80: 82, 95: 132},
+                (30, 39): {5: 2, 20: 8, 50: 40, 80: 82, 95: 132},
+                (40, 49): {5: 2, 20: 6, 50: 34, 80: 70, 95: 112},
+                (50, 59): {5: 2, 20: 6, 50: 28, 80: 58, 95: 92},
+                (60, 69): {5: 2, 20: 4, 50: 24, 80: 48, 95: 76},
             },
         },
     },
