@@ -78,7 +78,7 @@ class ExerciseSerializer(serializers.ModelSerializer):
             "uuid", "pattern_key", "name", "difficulty_rank", "progression_mode",
             "rep_range_min", "rep_range_max", "is_timed", "placement_threshold",
             "required_equipment", "muscles", "video_url", "cues", "rest_seconds",
-            "is_assessment_anchor", "is_unilateral", "measures_asymmetry",
+            "is_assessment_anchor", "is_unilateral",
         ]
 
     def get_is_unilateral(self, obj):
@@ -240,12 +240,9 @@ class AssessmentResultSerializer(serializers.ModelSerializer):
         model = AssessmentResult
         fields = [
             "uuid", "pattern_key", "tested_exercise", "reps_or_seconds",
-            "left_reps", "right_reps", "asymmetry_pct",
             "placed_exercise", "placed_exercise_name",
         ]
-        read_only_fields = [
-            "uuid", "placed_exercise", "placed_exercise_name", "asymmetry_pct",
-        ]
+        read_only_fields = ["uuid", "placed_exercise", "placed_exercise_name"]
 
 
 class AssessmentSessionSerializer(serializers.ModelSerializer):
@@ -326,7 +323,7 @@ class SetLogSerializer(_LoadRecipeMixin, serializers.ModelSerializer):
             "rest_seconds", "is_unilateral",
             "set_index", "expected_reps", "expected_load",
             "expected_load_recipe", "load_unit",
-            "actual_reps", "actual_load", "left_reps", "right_reps",
+            "actual_reps", "actual_load",
             "is_amrap", "rir",
         ]
         read_only_fields = ["uuid", "exercise_name", "set_index", "expected_reps",

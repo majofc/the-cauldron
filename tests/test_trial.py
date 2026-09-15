@@ -1,7 +1,7 @@
-"""Trial asymmetry measurement, the 30-day retest nudge, and per-row history.
+"""The Trial: bilateral anchors, the 30-day retest nudge, and per-row history.
 
-Covers the three moving parts of the reworked Trial:
-- exactly three anchors capture Left/Right and store a signed asymmetry;
+- every pattern is tested on one bilateral anchor that has a peer norm, with a
+  single value per pattern (no left/right capture);
 - the retest nudge is driven by *completed* assessments and is dismissible;
 - Trial history is ladder-normalised, so climbing a rung never reads as a setback.
 """
@@ -21,7 +21,7 @@ from the_cauldron.models import (
     Exercise,
     MovementPattern,
 )
-from the_cauldron.services import forge
+from the_cauldron.services import forge, norms, progression
 
 User = get_user_model()
 
@@ -49,97 +49,54 @@ def _own(user, *keys):
     return profile
 
 
-# ── The signed metric ────────────────────────────────────────────────────────
+# ── The anchors ──────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize(
-    "left,right,expected",
-    [
-        (10, 10, 0),        # balanced
-        (8, 10, 20),        # right stronger → positive
-        (10, 8, -20),       # left stronger → negative
-        (0, 5, 100),        # one side absent entirely
-        (5, 0, -100),
-        (0, 0, None),       # both zero is no data, not balance
-        (None, 5, None),    # a missing side is not measurable
-        (5, None, None),
-    ],
-)
-def test_compute_asymmetry_pct(left, right, expected):
-    assert AssessmentResult.compute_asymmetry_pct(left, right) == expected
-
-
-def test_asymmetry_is_normalised_by_the_stronger_side():
-    """Bounded to ±100% — the weak side is reported as a share of the strong one."""
-    assert AssessmentResult.compute_asymmetry_pct(1, 100) == 99
-    assert abs(AssessmentResult.compute_asymmetry_pct(3, 7)) <= 100
-
-
-# ── The three anchors ────────────────────────────────────────────────────────
-
-
-EXPECTED_ASYMMETRY_ANCHORS = {
-    "horizontal_push": "Incline Archer Push-up",
-    "vertical_pull": "Single-Arm Australian Row",
-    "hinge": "Single-Leg Glute Bridge",
+EXPECTED_ANCHORS = {
+    "horizontal_push": "Push-up",
+    "vertical_pull": "Australian Row",
+    "vertical_push": "Pike Push-up",
+    "lower_unilateral": "Squat",
+    "core_anti_extension": "Plank",
+    "hinge": "Glute Bridge",
 }
 
 
-def test_exactly_three_anchors_measure_asymmetry(seeded):
-    measured = Exercise.objects.filter(measures_asymmetry=True)
-    assert measured.count() == 3
-    assert {e.pattern.key: e.name for e in measured} == EXPECTED_ASYMMETRY_ANCHORS
+def test_each_pattern_has_exactly_its_bilateral_anchor(seeded):
+    anchors = Exercise.objects.filter(is_assessment_anchor=True).select_related("pattern")
+    assert {e.pattern.key: e.name for e in anchors} == EXPECTED_ANCHORS
+    assert anchors.count() == len(EXPECTED_ANCHORS)
 
 
-def test_asymmetry_anchors_cover_both_arms_and_legs(seeded):
-    """Two upper-body patterns (push + pull) and one lower (hinge)."""
-    lower = {
-        e.pattern.is_lower_body
-        for e in Exercise.objects.filter(measures_asymmetry=True)
-    }
-    assert lower == {True, False}
+def test_no_anchor_is_a_per_side_movement(seeded):
+    for ex in Exercise.objects.filter(is_assessment_anchor=True):
+        assert ex.is_per_side is False, f"{ex.name} must be tested with both sides at once"
 
 
-def test_asymmetry_anchors_are_also_assessment_anchors_and_per_side(seeded):
-    for ex in Exercise.objects.filter(measures_asymmetry=True):
-        assert ex.is_assessment_anchor, f"{ex.name} must be the pattern's Trial anchor"
-        assert ex.is_per_side, f"{ex.name} must be a per-side movement"
+@pytest.mark.parametrize("name", sorted(EXPECTED_ANCHORS.values()))
+def test_every_anchor_has_a_peer_norm(name):
+    assert norms.score(name, 10, "female", 32).has_data is True
 
 
-def test_a_beginner_scoring_zero_still_places_on_every_asymmetry_pattern(seeded, user):
-    """A first-timer must complete the Trial even if they manage 0 reps on a
-    unilateral anchor — every affected ladder needs a threshold-0 floor to fall
-    back to, otherwise placement returns nothing and the program has a hole."""
-    from the_cauldron.services import progression
-
+def test_a_beginner_scoring_zero_still_places_on_every_pattern(seeded, user):
+    """A first-timer must complete the Trial even with a 0 — every ladder needs
+    a threshold-0 floor, otherwise placement returns nothing. (Every pull rung
+    needs a bar or bands, so the beginner owns a bar.)"""
     profile = _own(user, "bodyweight", "pullup_bar")
-    for anchor in Exercise.objects.filter(measures_asymmetry=True):
-        ladder = forge.eligible_exercises(anchor.pattern, profile)
-        placed = progression.place_from_assessment(ladder, 0)
-        assert placed is not None, f"{anchor.pattern.key} cannot place a 0 score"
+    for pattern in MovementPattern.objects.all():
+        ladder = forge.eligible_exercises(pattern, profile)
+        assert progression.place_from_assessment(ladder, 0) is not None, pattern.key
 
 
-def test_split_squat_is_per_side_but_not_an_asymmetry_anchor(seeded):
-    """It keeps even rep targets (still worked one side at a time) but is tested
-    with a single 'reps per side' box — this is the distinction the UI reads."""
-    split = Exercise.objects.get(name="Split Squat")
-    assert split.is_per_side is True
-    assert split.is_assessment_anchor is True
-    assert split.measures_asymmetry is False
-
-
-def test_serializer_exposes_measures_asymmetry(seeded, client):
-    resp = client.get("/cauldron/api/exercises/")
-    assert resp.status_code == 200
-    by_name = {e["name"]: e for e in resp.json()}
-    assert by_name["Incline Archer Push-up"]["measures_asymmetry"] is True
-    assert by_name["Split Squat"]["measures_asymmetry"] is False
-    # is_unilateral stays truthful for both — they are different questions.
+def test_serializer_no_longer_exposes_asymmetry(seeded, client):
+    by_name = {e["name"]: e for e in client.get("/cauldron/api/exercises/").json()}
+    assert "measures_asymmetry" not in by_name["Push-up"]
+    # is_unilateral still labels per-side rungs for workout logging.
     assert by_name["Split Squat"]["is_unilateral"] is True
 
 
-def test_new_rungs_are_linked_into_their_ladders(seeded):
-    """A rung with no regression/progression links is unreachable by the engine."""
+def test_single_arm_rungs_stay_linked_into_their_ladders(seeded):
+    """The old unilateral anchors remain ordinary rungs, reachable by the engine."""
     for name in ("Incline Archer Push-up", "Single-Arm Australian Row"):
         ex = Exercise.objects.get(name=name)
         assert ex.regression is not None, f"{name} has no easier rung"
@@ -153,11 +110,7 @@ def test_new_rungs_are_linked_into_their_ladders(seeded):
         ("Australian Row", "Single-Arm Australian Row", "Negative Pull-up"),
     ],
 )
-def test_new_rungs_sit_between_their_neighbours(seeded, easier, inserted, harder):
-    """The two inserted rungs re-ranked their ladders. Assert the resulting order
-    directly rather than global rank-uniqueness — parallel equipment variants
-    (Australian Row / Rowing Machine, RKC Plank / Hollow Body Hold) legitimately
-    share a rank, and always have."""
+def test_single_arm_rungs_sit_between_their_neighbours(seeded, easier, inserted, harder):
     lo = Exercise.objects.get(name=easier)
     mid = Exercise.objects.get(name=inserted)
     hi = Exercise.objects.get(name=harder)
@@ -184,45 +137,31 @@ def _trial_payload(user, overrides=None):
     return {"results": rows}
 
 
-def test_trial_stores_signed_asymmetry_and_places_from_weaker_side(seeded, client, user):
+def test_trial_takes_one_value_per_pattern_and_returns_no_asymmetry(seeded, client, user):
     _own(user, "bodyweight", "pullup_bar")
-    payload = _trial_payload(
-        user, {"hinge": {"left_reps": 8, "right_reps": 12, "reps_or_seconds": 0}}
-    )
+    payload = _trial_payload(user, {"hinge": {"reps_or_seconds": 22}})
     resp = client.post("/cauldron/api/assessment/", payload, format="json")
     assert resp.status_code == 201
+    body = resp.json()
+    assert "asymmetry" not in body
 
-    result = AssessmentResult.objects.get(
-        session__user=user, pattern__key="hinge"
-    )
-    assert (result.left_reps, result.right_reps) == (8, 12)
-    # round((12 - 8) / 12 * 100) = 33, positive because the right side is stronger
-    assert result.asymmetry_pct == 33
-    # Placement uses the WEAKER side, unchanged behaviour.
-    assert result.reps_or_seconds == 8
+    result = AssessmentResult.objects.get(session__user=user, pattern__key="hinge")
+    assert result.tested_exercise.name == "Glute Bridge"
+    assert result.reps_or_seconds == 22
+    assert result.placed_exercise.name == "Single-Leg Glute Bridge"  # 22 >= 15, < 35
 
 
-def test_trial_verdict_reports_the_signed_figure(seeded, client, user):
+def test_every_trial_row_gets_a_peer_score(seeded, client, user):
     _own(user, "bodyweight", "pullup_bar")
-    payload = _trial_payload(
-        user, {"hinge": {"left_reps": 10, "right_reps": 8, "reps_or_seconds": 0}}
-    )
-    resp = client.post("/cauldron/api/assessment/", payload, format="json")
-
-    asym = resp.json()["asymmetry"]
-    hinge = next(a for a in asym if a["pattern_key"] == "hinge")
-    assert hinge["asymmetry_pct"] == -20  # left stronger → negative
-    assert (hinge["left"], hinge["right"]) == (10, 8)
-
-
-def test_bilateral_rows_store_no_asymmetry(seeded, client, user):
-    _own(user, "bodyweight", "pullup_bar")
-    client.post("/cauldron/api/assessment/", _trial_payload(user), format="json")
-
-    core = AssessmentResult.objects.get(
-        session__user=user, pattern__key="core_anti_extension"
-    )
-    assert (core.left_reps, core.right_reps, core.asymmetry_pct) == (None, None, None)
+    profile = forge.get_or_create_equipment_profile(user)
+    profile.birth_year, profile.sex = timezone.now().year - 30, "female"
+    profile.save()
+    resp = client.post("/cauldron/api/assessment/", _trial_payload(user), format="json")
+    peer = resp.json()["peer"]
+    assert len(peer) == len(EXPECTED_ANCHORS)
+    assert all(p["score"]["has_data"] for p in peer), [
+        p["exercise"] for p in peer if not p["score"]["has_data"]
+    ]
 
 
 # ── The retest nudge ─────────────────────────────────────────────────────────
@@ -335,7 +274,7 @@ def test_retake_rebuilds_from_scratch(seeded, client, user):
 # ── Trial history ────────────────────────────────────────────────────────────
 
 
-def _history_point(user, pattern_key, tested, placed, reps, when, left=None, right=None):
+def _history_point(user, pattern_key, tested, placed, reps, when):
     session = AssessmentSession.objects.create(user=user, is_active=False)
     AssessmentSession.objects.filter(pk=session.pk).update(completed_at=when)
     return AssessmentResult.objects.create(
@@ -344,9 +283,6 @@ def _history_point(user, pattern_key, tested, placed, reps, when, left=None, rig
         tested_exercise=tested,
         placed_exercise=placed,
         reps_or_seconds=reps,
-        left_reps=left,
-        right_reps=right,
-        asymmetry_pct=AssessmentResult.compute_asymmetry_pct(left, right),
     )
 
 
@@ -359,14 +295,13 @@ def test_history_is_empty_with_no_trials(seeded, client):
 def test_history_of_one_trial_reports_no_verdict(seeded, client, user):
     bridge = Exercise.objects.get(name="Single-Leg Glute Bridge")
     _history_point(
-        user, "hinge", bridge, bridge, 8,
-        timezone.now() - timedelta(days=10), left=8, right=10,
+        user, "hinge", bridge, bridge, 8, timezone.now() - timedelta(days=10)
     )
     points = client.get("/cauldron/api/assessment/history/").json()["patterns"][0]["points"]
     assert len(points) == 1
     assert points[0]["delta_vs_prev"] is None
     assert points[0]["verdict"] == "none"
-    assert points[0]["asymmetry_pct"] == 20
+    assert "asymmetry_pct" not in points[0]
 
 
 def test_a_rung_promotion_is_progress_not_a_setback(seeded, client, user):
@@ -412,17 +347,6 @@ def test_timed_anchors_are_flagged_as_seconds(seeded, client, user):
     )
     series = client.get("/cauldron/api/assessment/history/").json()["patterns"][0]
     assert series["points"][0]["is_timed"] is True
-    assert series["measures_asymmetry"] is False
-
-
-def test_history_flags_patterns_that_measure_asymmetry(seeded, client, user):
-    bridge = Exercise.objects.get(name="Single-Leg Glute Bridge")
-    _history_point(
-        user, "hinge", bridge, bridge, 8,
-        timezone.now() - timedelta(days=5), left=8, right=8,
-    )
-    series = client.get("/cauldron/api/assessment/history/").json()["patterns"][0]
-    assert series["measures_asymmetry"] is True
 
 
 def test_incomplete_sessions_are_excluded_from_history(seeded, client, user):

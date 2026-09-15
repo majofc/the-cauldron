@@ -12,7 +12,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from the_cauldron.models import (
-    AssessmentResult,
     AssessmentSession,
     Equipment,
     Exercise,
@@ -221,30 +220,17 @@ class AssessmentView(APIView):
 
         blocked = forge.blocked_exercise_ids(request.user)
         peer = []
-        asymmetry = []
         for item in results:
             pattern = get_object_or_404(MovementPattern, key=item["pattern_key"])
             tested = get_object_or_404(Exercise, uuid=item["tested_exercise"])
-            # Per-leg results for unilateral moves: place from the weaker side.
-            left = item.get("left_reps")
-            right = item.get("right_reps")
-            left = int(left) if left not in (None, "") else None
-            right = int(right) if right not in (None, "") else None
-            if left is not None and right is not None:
-                score = min(left, right)
-            else:
-                score = int(item["reps_or_seconds"])
+            score = int(item["reps_or_seconds"])
             ladder = forge.eligible_exercises(pattern, profile, exclude_ids=blocked)
             placed = progression.place_from_assessment(ladder, score)
-            pct = AssessmentResult.compute_asymmetry_pct(left, right)
             session.results.update_or_create(
                 pattern=pattern,
                 defaults={
                     "tested_exercise": tested,
                     "reps_or_seconds": score,
-                    "left_reps": left,
-                    "right_reps": right,
-                    "asymmetry_pct": pct,
                     "placed_exercise": placed,
                 },
             )
@@ -256,16 +242,6 @@ class AssessmentView(APIView):
                     "score": forge.peer_score(request.user, tested.name, score),
                 }
             )
-            if pct is not None:
-                asymmetry.append(
-                    {
-                        "pattern_key": pattern.key,
-                        "exercise": tested.name,
-                        "left": left,
-                        "right": right,
-                        "asymmetry_pct": pct,
-                    }
-                )
 
         session.completed_at = timezone.now()
         session.save(update_fields=["completed_at"])
@@ -279,7 +255,6 @@ class AssessmentView(APIView):
                 "assessment": AssessmentSessionSerializer(session).data,
                 "program": ProgramSerializer(program).data,
                 "peer": peer,
-                "asymmetry": asymmetry,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -416,8 +391,8 @@ class AssessmentHistoryView(APIView):
     """GET → per-pattern Trial series for the Evolution charts.
 
     One entry per movement pattern, each with its points oldest-first: the raw
-    result, the signed asymmetry (asymmetry anchors only), the ladder-normalised
-    score, and the verdict against the previous Trial.
+    result, the ladder-normalised score, and the verdict against the previous
+    Trial.
     """
 
     permission_classes = [IsAuthenticated]
@@ -490,25 +465,6 @@ class ProgressView(APIView):
                 }
             )
 
-        # Left/right asymmetry captured at each Trial (unilateral moves).
-        asym = (
-            AssessmentResult.objects.filter(
-                session__user=request.user,
-                left_reps__isnull=False,
-                right_reps__isnull=False,
-            )
-            .select_related("session", "tested_exercise")
-            .order_by("session__created_at")
-        )
-        asymmetry = [
-            {
-                "date": r.session.created_at.isoformat(),
-                "exercise": r.tested_exercise.name,
-                "left": r.left_reps,
-                "right": r.right_reps,
-            }
-            for r in asym
-        ]
         muscles = [
             {"key": m.key, "name": m.name}
             for m in Muscle.objects.all().order_by("name")
@@ -518,7 +474,6 @@ class ProgressView(APIView):
                 "points": points,
                 "exercises": sorted(exercises),
                 "muscles": muscles,
-                "asymmetry": asymmetry,
             }
         )
 
