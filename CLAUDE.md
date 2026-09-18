@@ -157,6 +157,18 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
 - **Session logging:** `GET /cauldron/api/sessions/`, `POST /cauldron/api/sessions/{uuid}/log/`
   with `{"sets": {"<setlog-uuid>": {"actual_reps", "actual_load", "rir"}}}`
 - **Progression:** `POST /cauldron/api/progression/{presc_uuid}/{accept|deny}/`
+- **Set my rung (#59):**
+  - `GET /cauldron/api/prescription/{presc_uuid}/set-rung/` — picker options: every performable rung
+    of the prescription's chain (whole mixed ladder on lower), each flagged `is_current` / `unready`
+  - `POST` same URL, `{"exercise": "<uuid>", "confirm_unready": false}` → 200 `{exercise, applied_to}`;
+    409 `{unready, required, your_trial, pattern, anchor, is_timed}` for a climb whose
+    `placement_threshold` exceeds the latest Trial score (re-POST with `confirm_unready: true`);
+    409 `{detail}` if today's open session already has logged sets for it; 400 off-chain / blocked / no gear.
+    Moves **every** live prescription on the chain (`forge.set_rung`), re-derives targets/load/rest,
+    resets `sessions_at_top`, clears `pending_progression`, rewrites today's untouched sets.
+    Never writes `AssessmentResult` — the live prescription is the source of truth for "current rung"
+    (`forge._current_rung_on_chain` prefers it over the Trial placement).
+  - `GET /cauldron/api/rungs/` — `{chains: [...], by_exercise: {rung_uuid: presc_uuid}}` for the skill tree
 
 ---
 
@@ -190,5 +202,8 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
 - Retest banner won't appear → `retest_status` keys off the last **completed** assessment and is
   suppressed for 3 days after a dismissal *or a retake*. An open, incomplete session does not
   reset the 30-day clock.
+- A forge overlay looks wrong on a phone → the ≤768px "Mobile sheets" block in `forge.css`; dialogs need the
+  `.forge-sheet-head` / `.forge-sheet-body` wrappers. Visual baselines live in `tests/visual_baselines/`
+  (`FORGE_UPDATE_BASELINES=1` rewrites them; review the PNGs before committing).
 - Evolution chart reports a setback after a rung promotion → `ladder_score` (not raw reps) is the
   comparison basis; check `placed_exercise` is set on the result, since a null placement scores 0.

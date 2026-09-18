@@ -1328,3 +1328,125 @@ body.forge-overlay-open { overflow: hidden; }
   border-bottom: 1px solid var(--cauldron-paprika-subtle);
 }
 .forge-swap-targets li:last-child { border-bottom: none; }
+
+/* ── ⇅ Set my rung ────────────────────────────────────────────────────── */
+/* Sits before ⇄ on the Today card and takes the auto margin from it. */
+.forge-rung-ex-btn {
+  margin-left: auto; font-family: "Inter", sans-serif; font-size: .75rem;
+  background: none; border: 1px solid var(--cauldron-paprika-border); border-radius: 999px;
+  color: var(--cauldron-cream-dim); padding: .15rem .6rem; cursor: pointer;
+  transition: color .15s, border-color .15s, opacity .15s;
+}
+.forge-rung-ex-btn:hover:not(:disabled) {
+  color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika-light);
+}
+.forge-rung-ex-btn:disabled { opacity: .4; cursor: not-allowed; }
+.forge-rung-ex-btn + .forge-swap-ex-btn { margin-left: .4rem; }
+
+.forge-rung-option-rank {
+  flex: none; min-width: 1.6rem; text-align: center;
+  font-size: .72rem; color: var(--cauldron-cream-muted);
+}
+.forge-swap-option.is-current { cursor: default; border-color: var(--cauldron-paprika); background: var(--cauldron-paprika-subtle); }
+.forge-swap-option.is-current:hover { background: var(--cauldron-paprika-subtle); }
+.forge-rung-badge--unready { color: var(--cauldron-ember); border-color: var(--cauldron-paprika-border); }
+.forge-rung-warning {
+  margin: .4rem 0 1rem; padding: .8rem 1rem;
+  border: 1px solid var(--cauldron-paprika-border); border-radius: var(--arcano-radius-md);
+  background: var(--cauldron-paprika-subtle); color: var(--cauldron-cream);
+  font-family: "Inter", sans-serif; font-size: .9rem; line-height: 1.5;
+}
+.forge-rung-warning strong { color: var(--cauldron-ember); }
+
+/* ── Sheet dialogs: desktop defaults ──────────────────────────────────────
+   On desktop the sheet wrappers are layout-transparent, so a dialog renders
+   exactly as it did before they existed; the phone block below gives them boxes. */
+.forge-sheet-head,
+.forge-sheet-body { display: contents; }
+.forge-sheet-handle { display: none; }
+
+/* Close controls keep their 34px look on desktop but get a 44px hit area. */
+.forge-voice-exit::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; }
+
+/* ── Mobile sheets (≤768px) ───────────────────────────────────────────────
+   Global component: see ARCANO_STYLE_GUIDE.md § Mobile sheets.
+   - Dialogs (.forge-sheet-overlay) dock to the bottom as full-width sheets whose
+     head (drag handle · title · 44px ✕) never scrolls; .forge-sheet-body does.
+   - Earphones mode is a mode, not a dialog: it goes fullscreen with its exit
+     pinned to the viewport.
+   - The results reveal is a gate: it only gains room to scroll. */
+@media (max-width: 768px) {
+  /* Overlays live inside .page, whose stacking context sits under the sticky
+     nav — lift it while one is open so the nav can't cover a sheet's head. */
+  body.forge-overlay-open .page { z-index: calc(var(--arcano-z-nav) + 1); }
+
+  /* A sticky :hover on touch would transform the card and trap fixed children. */
+  .forge-overlay .cauldron-card:hover { transform: none; }
+
+  .forge-sheet-overlay { align-items: flex-end; padding: 0; }
+  .forge-sheet {
+    display: flex; flex-direction: column;
+    width: 100%; max-width: none;
+    max-height: 92vh; max-height: 92svh;
+    overflow: hidden; padding: 0;
+    border-bottom: none;
+    border-radius: var(--arcano-radius-md) var(--arcano-radius-md) 0 0;
+    will-change: transform;
+  }
+  .forge-sheet.is-dragging { transition: none; }
+  .forge-sheet.is-settling { transition: transform .2s ease; }
+
+  .forge-sheet-head {
+    display: flex; align-items: center; gap: .75rem; flex: none;
+    position: relative; min-height: 44px;
+    padding: 1.4rem 1rem .6rem 1.4rem;
+    background: var(--cauldron-bg-card);
+    border-bottom: 1px solid var(--cauldron-paprika-subtle);
+    touch-action: none; cursor: grab;
+  }
+  .forge-sheet-handle {
+    display: block; position: absolute; top: .55rem; left: 50%;
+    width: 44px; height: 5px; margin-left: -22px; border-radius: 999px;
+    background: var(--cauldron-paprika-border);
+  }
+  .forge-sheet-head .forge-h3 { flex: 1 1 auto; margin: 0; font-size: 1.2rem; }
+  .forge-sheet-close { position: static; flex: none; margin-left: auto; width: 44px; height: 44px; font-size: 1.1rem; }
+  .forge-sheet-close::after { content: none; }
+
+  .forge-sheet-body {
+    display: block; flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: 1rem 1.4rem calc(1.6rem + env(safe-area-inset-bottom));
+  }
+  .forge-sheet-body .forge-reveal-actions .btn-cauldron { flex: 1 1 auto; }
+
+  /* Earphones mode — fullscreen. */
+  .forge-voice { padding: 0; align-items: stretch; overflow-y: auto; }
+  .forge-voice-card {
+    display: flex; flex-direction: column; justify-content: center;
+    max-width: none; min-height: 100%; border: none; border-radius: 0;
+    padding: calc(4.5rem + env(safe-area-inset-top)) 1.25rem calc(1.6rem + env(safe-area-inset-bottom));
+  }
+  .forge-voice .forge-voice-exit,
+  .forge-voice .forge-voice-mictoggle {
+    position: fixed; z-index: 2; top: calc(.9rem + env(safe-area-inset-top));
+    width: 44px; height: 44px; background: var(--cauldron-bg-card);
+  }
+  .forge-voice .forge-voice-exit { right: 1rem; font-size: 1.1rem; }
+  .forge-voice .forge-voice-exit::after { content: none; }
+  .forge-voice .forge-voice-mictoggle { left: 1rem; }
+  .forge-voice .forge-voice-mictoggle svg { width: 20px; height: 20px; }
+  .forge-voice-exercise { font-size: 1.7rem; }
+  .forge-voice-timer { font-size: 3rem; }
+
+  /* Results reveal — non-dismissable; scrolls instead of clipping. */
+  #forge-reveal {
+    align-items: flex-start; overflow-y: auto;
+    padding: 1rem .75rem calc(1rem + env(safe-area-inset-bottom));
+  }
+  .forge-reveal-card { margin: auto 0; padding: 1.8rem 1.1rem 1.3rem; }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .forge-sheet.is-settling { transition: none; }
+}

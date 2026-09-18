@@ -243,6 +243,13 @@
       refreshSwapButtons();
       return;
     }
+    const rung = e.target.closest(".forge-rung-ex-btn");
+    if (rung) {
+      e.preventDefault();
+      const block = rung.closest(".forge-ex-block");
+      if (!rung.disabled && block) openRungPicker(block.dataset.prescription);
+      return;
+    }
     const sw2 = e.target.closest(".forge-swap-ex-btn");
     if (sw2) {
       e.preventDefault();
@@ -1254,6 +1261,11 @@
         `<div class="forge-ex-head">` +
         iconHTML +
         `<span class="forge-ex-name">${esc(name)}</span>${video}` +
+        // Only a prescribed movement has a rung to move; a ⇄ swap-in does not.
+        (meta.prescription
+          ? `<button type="button" class="forge-rung-ex-btn" ` +
+            `title="Move to an easier or harder rung of this ladder">⇅ Rung</button>`
+          : "") +
         `<button type="button" class="forge-swap-ex-btn" ` +
         `title="Swap this for a movement you've trained less">⇄ Change</button>` +
         `<button type="button" class="forge-skip-ex-btn" title="Remove this exercise from the session">✕ Skip exercise</button>` +
@@ -1470,10 +1482,19 @@
   function refreshSwapButtons() {
     const remaining = eligibleCandidates().length;
     $$("#forge-today-list .forge-ex-block").forEach((block) => {
+      const logged = blockHasValues(block);
+      // A rung change rewrites today's sets, so it locks the same way ⇄ does.
+      const rungBtn = $(".forge-rung-ex-btn", block);
+      if (rungBtn) {
+        rungBtn.disabled = logged;
+        rungBtn.title = logged
+          ? "You've already logged sets for this one."
+          : "Move to an easier or harder rung of this ladder";
+      }
       const btn = $(".forge-swap-ex-btn", block);
       if (!btn) return;
       let reason = "";
-      if (blockHasValues(block)) reason = "You've already logged sets for this one.";
+      if (logged) reason = "You've already logged sets for this one.";
       else if (!remaining) reason = "No other movement left to swap in.";
       btn.disabled = Boolean(reason);
       btn.title = reason || "Swap this for a movement you've trained less";
@@ -1489,6 +1510,7 @@
     swapModal.hidden = true;
     swapBody.innerHTML = "";
     swapTargetBlock = null;
+    document.body.classList.remove("forge-overlay-open");
   }
 
   function openSwapModal(block) {
@@ -1496,6 +1518,7 @@
     swapTargetBlock = block;
     renderChainPicker();
     swapModal.hidden = false;
+    document.body.classList.add("forge-overlay-open");
   }
 
   // Step 1 — pick a chain. Grouped by pattern, least-trained first, each row
@@ -1937,6 +1960,8 @@
 
   // ── Skill tree ────────────────────────────────────────────────────────────
   let catalogView = "tree"; // "tree" | "cards"
+  let prescriptionByRung = {}; // exercise uuid → prescription that could move onto it
+  let currentRungs = new Set(); // exercise uuids the program is already on
   let treeData = null; // last-loaded {exercises, catalogMap, stateMap} for re-filtering
 
   const PATTERN_ORDER = [
@@ -2014,11 +2039,19 @@
   async function loadCatalogTree() {
     showLoader(true);
     try {
-      const [exercises, catalog, program] = await Promise.all([
+      const [exercises, catalog, program, rungs] = await Promise.all([
         api("exercises/"),
         api("catalog/"),
         api("program/").catch(() => null),
+        api("rungs/").catch(() => null),
       ]);
+      prescriptionByRung = (rungs && rungs.by_exercise) || {};
+      // Rungs the program already sits on — including the other grip of a split
+      // rung, which the tree itself doesn't mark as current.
+      currentRungs = new Set();
+      ((rungs && rungs.chains) || []).forEach((c) =>
+        c.options.forEach((o) => { if (o.is_current) currentRungs.add(o.exercise); })
+      );
       const catalogMap = {};
       (catalog.groups || []).forEach((g) => {
         g.exercises.forEach((ex) => { catalogMap[ex.uuid] = ex; });
@@ -2203,6 +2236,7 @@
   const exModalActions = $("#forge-ex-modal-actions");
 
   function openExerciseModal(ex, state, cat) {
+    rungPicker = null;
     exModalBody.innerHTML = "";
     exModalActions.innerHTML = "";
 
@@ -2266,6 +2300,24 @@
 
     if (state === "blocked" && cat.substitute) {
       addSection("Substitute", `<div class="forge-ex-modal-value">→ ${esc(cat.substitute.name)}</div>`);
+    }
+
+    // Any rung the program could move to: the current one opens the full picker,
+    // any other becomes a one-tap "make this my rung".
+    const rungPresc = prescriptionByRung[ex.uuid];
+    if (rungPresc && state !== "blocked") {
+      const rungBtn = document.createElement("button");
+      rungBtn.className = "btn-cauldron btn-cauldron--primary";
+      if (state === "current" || currentRungs.has(ex.uuid)) {
+        rungBtn.textContent = "⇅ Change my rung";
+        rungBtn.addEventListener("click", () => openRungPicker(rungPresc));
+      } else {
+        rungBtn.textContent = "Make this my rung";
+        rungBtn.addEventListener("click", () =>
+          setRung(rungPresc, { exercise: ex.uuid, name: ex.name }, false)
+        );
+      }
+      exModalActions.appendChild(rungBtn);
     }
 
     const isBlocked = state === "blocked";
@@ -2362,6 +2414,224 @@
   if (exModal) {
     exModal.addEventListener("click", (e) => { if (e.target === exModal) closeExerciseModal(); });
   }
+
+  // ── ⇅ Set my rung ─────────────────────────────────────────────────────────
+  // Drawn inside the exercise sheet. The move is program-wide and checked on the
+  // server: a climb past the latest Trial comes back 409 with the gap, which the
+  // user can confirm or back out of — it is a warning, never a block.
+  let rungPicker = null; // last-loaded options, so Back redraws without a fetch
+
+  // `api()` rejects with "<status>: <body>"; recover both for flows that branch
+  // on a structured error rather than just showing it.
+  function apiErrorPayload(err) {
+    const m = String((err && err.message) || "").match(/^(\d+):\s*([\s\S]*)$/);
+    if (!m) return { status: 0, data: null };
+    try {
+      return { status: Number(m[1]), data: JSON.parse(m[2]) };
+    } catch (e) {
+      return { status: Number(m[1]), data: null };
+    }
+  }
+
+  function showExerciseSheet() {
+    exModal.hidden = false;
+    document.body.classList.add("forge-overlay-open");
+  }
+
+  async function openRungPicker(prescUuid) {
+    if (!prescUuid) return;
+    showLoader(true);
+    try {
+      rungPicker = await api(`prescription/${prescUuid}/set-rung/`);
+    } catch (e) {
+      notify("Couldn't load your ladder.");
+      return;
+    } finally {
+      showLoader(false);
+    }
+    renderRungPicker();
+    showExerciseSheet();
+  }
+
+  function renderRungPicker() {
+    const p = rungPicker;
+    exModalActions.innerHTML = "";
+    const trialNote = p.trial_score == null
+      ? ""
+      : " Rungs marked <em>above your Trial</em> ask you to confirm first.";
+    let html =
+      `<p class="forge-ex-modal-name">Change your rung</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(p.pattern_name)}</p>` +
+      `<p class="forge-help">Jump to any rung you can do, up or down. Every day that trains ` +
+      `this ladder moves with it, and progress carries on from there.${trialNote}</p>` +
+      `<ul class="forge-swap-list">`;
+    p.options.forEach((o) => {
+      const badges =
+        (o.is_current ? `<span class="forge-swap-badge">Current</span>` : "") +
+        (o.unready ? `<span class="forge-swap-badge forge-rung-badge--unready">Above your Trial</span>` : "");
+      html +=
+        `<li><button type="button" class="forge-swap-option forge-rung-option${o.is_current ? " is-current" : ""}" ` +
+        `data-exercise="${esc(o.exercise)}"${o.is_current ? ' aria-current="true"' : ""}>` +
+        `<span class="forge-rung-option-rank" aria-hidden="true">${o.difficulty_rank}</span>` +
+        `<span class="forge-swap-option-name">${esc(o.name)}${o.is_per_side ? " · per side" : ""}</span>` +
+        `${badges}</button></li>`;
+    });
+    exModalBody.innerHTML = html + `</ul>`;
+  }
+
+  // The 409 gap, in the user's terms: the anchor they were tested on, and how far
+  // their last Trial falls short of what places at this rung.
+  function renderRungWarning(prescUuid, target, gap) {
+    const unit = gap.is_timed ? "seconds" : "reps";
+    const anchor = gap.anchor ? ` on the ${esc(gap.anchor)}` : "";
+    exModalBody.innerHTML =
+      `<p class="forge-ex-modal-name">${esc(gap.exercise || target.name)}</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(gap.pattern)}</p>` +
+      `<div class="forge-rung-warning" role="alert">This rung is placed at ` +
+      `<strong>${esc(gap.required)} ${unit}</strong>${anchor}; your last Trial was ` +
+      `<strong>${esc(gap.your_trial)}</strong>. You can still take it — if the sets don't ` +
+      `land, the Forge will ease you back down.</div>`;
+    exModalActions.innerHTML = "";
+    const back = document.createElement("button");
+    back.className = "btn-cauldron btn-cauldron--ghost";
+    const fromPicker = rungPicker && rungPicker.prescription === prescUuid;
+    back.textContent = fromPicker ? "Back" : "Cancel";
+    back.addEventListener("click", () => (fromPicker ? renderRungPicker() : closeExerciseModal()));
+    const go = document.createElement("button");
+    go.className = "btn-cauldron btn-cauldron--primary";
+    go.textContent = "Move anyway";
+    go.addEventListener("click", () => setRung(prescUuid, target, true));
+    exModalActions.append(back, go);
+  }
+
+  async function setRung(prescUuid, target, confirmUnready) {
+    showLoader(true);
+    try {
+      await api(`prescription/${prescUuid}/set-rung/`, {
+        method: "POST",
+        body: { exercise: target.exercise, confirm_unready: confirmUnready },
+      });
+    } catch (err) {
+      const { status, data } = apiErrorPayload(err);
+      if (status === 409 && data && data.unready) {
+        renderRungWarning(prescUuid, target, data);
+        showExerciseSheet();
+      } else {
+        notify(apiErrorText(err) || "Couldn't change your rung.");
+      }
+      return;
+    } finally {
+      showLoader(false);
+    }
+    rungPicker = null;
+    closeExerciseModal();
+    notify(`Now training ${target.name}.`);
+    const panel = $(".forge-panel.is-active");
+    if (panel && panel.dataset.panel === "today") refreshTodayAfterRungChange(prescUuid);
+    else if (panel && panel.dataset.panel === "exercises" && catalogView === "tree") loadCatalogTree();
+  }
+
+  // A saved session was rewritten server-side, so reloading it is exact. An
+  // unsaved plan lives only in the browser — ⇄ swaps and skips included — so
+  // only the moved movement is replaced, from a fresh plan, and the rest stays.
+  async function refreshTodayAfterRungChange(prescUuid) {
+    if (!currentSession || currentSession.persisted) {
+      loadToday();
+      return;
+    }
+    try {
+      const fresh = await api("today/");
+      const replacement = (fresh.set_logs || []).filter((s) => s.prescription === prescUuid);
+      if (!replacement.length) {
+        loadToday();
+        return;
+      }
+      const onScreen = new Set($$("#forge-today-list .forge-ex-block").map((b) => b.dataset.exercise));
+      const out = [];
+      let inserted = false;
+      (currentSession.set_logs || []).forEach((s) => {
+        if (s.prescription !== prescUuid) {
+          out.push(s);
+          return;
+        }
+        if (!inserted) {
+          out.push(...replacement);
+          inserted = true;
+        }
+      });
+      if (!inserted) out.push(...replacement);
+      // Skipped blocks are gone from the DOM but not from the snapshot — keep them gone.
+      const moved = new Set(replacement.map((s) => s.exercise));
+      currentSession.set_logs = out.filter((s) => moved.has(s.exercise) || onScreen.has(s.exercise));
+      renderToday(currentSession);
+    } catch (e) {
+      loadToday();
+    }
+  }
+
+  if (exModal) {
+    exModal.addEventListener("click", (e) => {
+      const option = e.target.closest(".forge-rung-option");
+      if (!option || !rungPicker || option.classList.contains("is-current")) return;
+      const o = rungPicker.options.find((x) => x.exercise === option.dataset.exercise);
+      if (o) setRung(rungPicker.prescription, { exercise: o.exercise, name: o.name }, false);
+    });
+  }
+
+  // ── Dismissing sheets ─────────────────────────────────────────────────────
+  // One Escape handler for every dismissable dialog. Earphones mode exits through
+  // its own ✕, and the results reveal is a gate — neither is listed.
+  const DISMISSABLE = [[exModal, closeExerciseModal], [swapModal, closeSwapModal]];
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !document.body.classList.contains("forge-overlay-open")) return;
+    const open = DISMISSABLE.find(([el]) => el && !el.hidden);
+    if (open) {
+      e.preventDefault();
+      open[1]();
+    }
+  });
+
+  // Drag a sheet's head down to dismiss it. Phones only — on desktop the head has
+  // no box of its own. Past SWIPE_CLOSE_PX it closes; short of that it settles back.
+  const SWIPE_CLOSE_PX = 80;
+  const phoneSheets = window.matchMedia("(max-width: 768px)");
+
+  function wireSheetSwipe(overlay, close) {
+    const sheet = overlay && $(".forge-sheet", overlay);
+    const head = sheet && $(".forge-sheet-head", sheet);
+    if (!head) return;
+    let startY = null;
+    let dy = 0;
+    head.addEventListener("pointerdown", (e) => {
+      if (!phoneSheets.matches || e.target.closest("button")) return;
+      startY = e.clientY;
+      dy = 0;
+      sheet.classList.remove("is-settling");
+      sheet.classList.add("is-dragging");
+      head.setPointerCapture(e.pointerId);
+    });
+    head.addEventListener("pointermove", (e) => {
+      if (startY === null) return;
+      dy = Math.max(0, e.clientY - startY);
+      sheet.style.transform = `translateY(${dy}px)`;
+    });
+    const end = () => {
+      if (startY === null) return;
+      startY = null;
+      sheet.classList.remove("is-dragging");
+      if (dy > SWIPE_CLOSE_PX) {
+        sheet.style.transform = "";
+        close();
+        return;
+      }
+      sheet.classList.add("is-settling");
+      sheet.style.transform = "";
+    };
+    head.addEventListener("pointerup", end);
+    head.addEventListener("pointercancel", end);
+  }
+  wireSheetSwipe(exModal, closeExerciseModal);
+  wireSheetSwipe(swapModal, closeSwapModal);
 
   // ── View toggle ───────────────────────────────────────────────────────────
   const treeContainer = $("#forge-tree");

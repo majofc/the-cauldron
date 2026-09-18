@@ -282,25 +282,37 @@
   </section>
 
   <!-- ── Exercise detail modal ─────────────────────────────── -->
-  <div class="forge-overlay" id="forge-ex-modal" hidden role="dialog" aria-modal="true" aria-label="Exercise details">
-    <div class="cauldron-card forge-ex-modal-card">
+  <!-- Dialogs become bottom sheets on phones: the head (drag handle, title, ✕)
+       stays put while only .forge-sheet-body scrolls. See forge.css "Mobile sheets". -->
+  <div class="forge-overlay forge-sheet-overlay" id="forge-ex-modal" hidden role="dialog" aria-modal="true" aria-label="Exercise details">
+    <div class="cauldron-card forge-ex-modal-card forge-sheet">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <button type="button" class="forge-voice-exit" id="forge-ex-modal-close" aria-label="Close">✕</button>
-      <div id="forge-ex-modal-body"></div>
-      <div id="forge-ex-modal-actions" class="forge-reveal-actions"></div>
+      <div class="forge-sheet-head">
+        <span class="forge-sheet-handle" aria-hidden="true"></span>
+        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-ex-modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="forge-sheet-body">
+        <div id="forge-ex-modal-body"></div>
+        <div id="forge-ex-modal-actions" class="forge-reveal-actions"></div>
+      </div>
     </div>
   </div>
 
   <!-- ── ⇄ Change exercise modal ───────────────────────────── -->
-  <div class="forge-overlay" id="forge-swap-modal" hidden role="dialog" aria-modal="true"
+  <div class="forge-overlay forge-sheet-overlay" id="forge-swap-modal" hidden role="dialog" aria-modal="true"
        aria-labelledby="forge-swap-title">
-    <div class="cauldron-card forge-swap-card">
+    <div class="cauldron-card forge-swap-card forge-sheet">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <button type="button" class="forge-voice-exit" id="forge-swap-close" aria-label="Close">✕</button>
-      <h3 class="forge-h3" id="forge-swap-title">Change exercise</h3>
-      <div id="forge-swap-body"></div>
+      <div class="forge-sheet-head">
+        <span class="forge-sheet-handle" aria-hidden="true"></span>
+        <h3 class="forge-h3" id="forge-swap-title">Change exercise</h3>
+        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-swap-close" aria-label="Close">✕</button>
+      </div>
+      <div class="forge-sheet-body">
+        <div id="forge-swap-body"></div>
+      </div>
     </div>
   </div>
 
