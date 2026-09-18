@@ -343,7 +343,9 @@ def _live_prescriptions(user):
     pass (equipment prefetched, so the scan costs a fixed number of queries)."""
     return PrescribedExercise.objects.filter(
         day__program__user=user, day__program__is_active=True
-    ).select_related("exercise__pattern", "pending_progression__pattern").prefetch_related(
+    ).select_related(
+        "day", "exercise__pattern", "pending_progression__pattern"
+    ).prefetch_related(
         "exercise__required_equipment", "pending_progression__required_equipment"
     )
 
@@ -989,12 +991,18 @@ class SetsAlreadyLogged(Exception):
     """Raised when a swap would discard sets the user has already logged."""
 
 
-def _current_rung_on_chain(chain_exercises, placement):
-    """Where the user stands on a chain: their assessment placement if it is on
-    this chain and still eligible, otherwise the chain's lowest eligible rung."""
-    if placement is not None:
+def _current_rung_on_chain(chain_exercises, placement, prescribed=None):
+    """Where the user stands on a chain.
+
+    The live prescription wins — it is the source of truth once the engine or the
+    user (``set_rung``) has moved it. Without one on this chain, the assessment
+    placement if it is on this chain and still eligible; otherwise the chain's
+    lowest eligible rung."""
+    for candidate in (prescribed, placement):
+        if candidate is None:
+            continue
         for ex in chain_exercises:
-            if ex.pk == placement.pk:
+            if ex.pk == candidate.pk:
                 return ex
     return min(chain_exercises, key=lambda e: (e.difficulty_rank, e.name))
 
@@ -1037,6 +1045,11 @@ def swap_candidates(user) -> dict:
             if placed is not None:
                 placement_by_chain.setdefault(chain_of.get(placed.pk), placed)
 
+    # Where the live program has the user, keyed by chain — outranks the Trial.
+    prescribed_by_chain = {}
+    for presc in _live_prescriptions(user):
+        prescribed_by_chain.setdefault(chain_of.get(presc.exercise_id), presc.exercise)
+
     eligible_by_chain = {}
     for ex in Exercise.objects.select_related("pattern").prefetch_related(
         "required_equipment"
@@ -1048,7 +1061,9 @@ def swap_candidates(user) -> dict:
 
     candidates = []
     for chain, exercises in eligible_by_chain.items():
-        current = _current_rung_on_chain(exercises, placement_by_chain.get(chain))
+        current = _current_rung_on_chain(
+            exercises, placement_by_chain.get(chain), prescribed_by_chain.get(chain)
+        )
         # Bar pull-up chains present as the grip the Forge would schedule today.
         current = select_grip_variant(user, current)
         targets = _block_targets(profile, current, None)
@@ -1118,6 +1133,232 @@ def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -
             expected_load=targets["load"],
             is_amrap=is_amrap,
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Set my rung — move a prescription to any rung of its chain, up or down
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class UnreadyForRung(Exception):
+    """Raised when a climb targets a rung the user's last Trial doesn't support
+    and they haven't confirmed. ``payload`` quantifies the gap for the client."""
+
+    def __init__(self, payload):
+        super().__init__("your last Trial doesn't support that rung yet")
+        self.payload = payload
+
+
+def _is_unready(current, target, trial_score) -> bool:
+    """A climb past what the Trial supports. Descending never warns, and a
+    lateral move between same-rank rungs never warns (they share a threshold).
+    With no Trial score for the pattern there is nothing to warn against."""
+    return (
+        trial_score is not None
+        and target.difficulty_rank > current.difficulty_rank
+        and target.placement_threshold > trial_score
+    )
+
+
+def _same_rung(a, b) -> bool:
+    """The same ladder position: the same exercise, or the other grip of a
+    grip-split rung (which ``select_grip_variant`` alternates day to day anyway)."""
+    return a.pk == b.pk or (
+        a.grip != Exercise.Grip.NA
+        and b.grip != Exercise.Grip.NA
+        and a.pattern_id == b.pattern_id
+        and a.difficulty_rank == b.difficulty_rank
+    )
+
+
+def _chain_rungs(chain_of, chain, owned, blocked) -> list:
+    """Every rung of ``chain`` the user can perform, easiest first.
+
+    ``chain_map_for`` already walked the progression/regression links (and unioned
+    grip variants), so a single-ladder pattern returns its whole mixed ladder
+    rather than one mode's slice."""
+    members = [ex_id for ex_id, key in chain_of.items() if key == chain]
+    rungs = Exercise.objects.filter(pk__in=members).prefetch_related("required_equipment")
+    return sorted(
+        (ex for ex in rungs if is_performable(ex, owned, blocked)),
+        key=lambda e: (e.difficulty_rank, e.grip != Exercise.Grip.OVERHAND, e.name),
+    )
+
+
+def _rung_entry(presc, chain_prescriptions, rungs, trial_score, anchor) -> dict:
+    current = presc.exercise
+    return {
+        "prescription": str(presc.uuid),
+        "prescriptions": [str(p.uuid) for p in chain_prescriptions],
+        "pattern_key": current.pattern.key,
+        "pattern_name": current.pattern.name,
+        "current": str(current.uuid),
+        "current_name": current.name,
+        "trial_score": trial_score,
+        "anchor_name": anchor.name if anchor else None,
+        "anchor_is_timed": anchor.is_timed if anchor else False,
+        "options": [
+            {
+                "exercise": str(ex.uuid),
+                "name": ex.name,
+                "difficulty_rank": ex.difficulty_rank,
+                "progression_mode": ex.progression_mode,
+                "placement_threshold": ex.placement_threshold,
+                "is_timed": ex.is_timed,
+                "is_per_side": ex.is_per_side,
+                "is_current": _same_rung(ex, current),
+                "unready": _is_unready(current, ex, trial_score),
+            }
+            for ex in rungs
+        ],
+    }
+
+
+def _anchor_for(pattern_id):
+    return Exercise.objects.filter(pattern_id=pattern_id, is_assessment_anchor=True).first()
+
+
+def rung_overview(user) -> dict:
+    """Every chain the live program trains, with the rungs the user may move to.
+
+    ``{"chains": [entry, ...], "by_exercise": {exercise_uuid: prescription_uuid}}``
+    — one entry per chain (a pattern prescribed on several days still shows once;
+    ``set_rung`` moves all of them). ``by_exercise`` maps every offered rung to
+    the prescription that would move, which is what lets the skill tree turn a tap
+    on any rung into a rung change.
+    """
+    owned = owned_equipment_keys_for(user)
+    blocked = blocked_exercise_ids(user)
+    live = [p for p in _live_prescriptions(user) if is_performable(p.exercise, owned, blocked)]
+    if not live:
+        return {"chains": [], "by_exercise": {}}
+    chain_of = chain_map_for({p.exercise.pattern_id for p in live})
+
+    by_chain = {}
+    for presc in live:
+        by_chain.setdefault(chain_of.get(presc.exercise_id), []).append(presc)
+
+    chains, by_exercise = [], {}
+    for chain, prescriptions in by_chain.items():
+        # The served day (index 0) is the reference — it is what Today's ⇅ posts
+        # from, so the flags here match the 409 the server would return.
+        presc = min(prescriptions, key=lambda p: (p.day.day_index, p.order))
+        pattern_id = presc.exercise.pattern_id
+        entry = _rung_entry(
+            presc,
+            prescriptions,
+            _chain_rungs(chain_of, chain, owned, blocked),
+            latest_trial_score(user.pk, pattern_id),
+            _anchor_for(pattern_id),
+        )
+        chains.append(entry)
+        for option in entry["options"]:
+            by_exercise[option["exercise"]] = entry["prescription"]
+    return {"chains": chains, "by_exercise": by_exercise}
+
+
+def rung_options(user, presc) -> dict:
+    """The rungs ``presc`` may move to, for the picker (see ``_rung_entry``)."""
+    owned = owned_equipment_keys_for(user)
+    blocked = blocked_exercise_ids(user)
+    pattern_id = presc.exercise.pattern_id
+    chain_of = chain_map_for({pattern_id})
+    chain = chain_of.get(presc.exercise_id)
+    siblings = [p for p in _live_prescriptions(user) if chain_of.get(p.exercise_id) == chain]
+    return _rung_entry(
+        presc,
+        siblings,
+        _chain_rungs(chain_of, chain, owned, blocked),
+        latest_trial_score(user.pk, pattern_id),
+        _anchor_for(pattern_id),
+    )
+
+
+@transaction.atomic
+def set_rung(user, presc, target, confirm_unready=False) -> dict:
+    """Move every live prescription on ``presc``'s chain to ``target``.
+
+    Program-wide on purpose: a pattern prescribed on several days would otherwise
+    leave the user on the old rung for the rest. Each prescription is re-derived
+    for the new rung (rep targets, load, rest) with ``sessions_at_top`` reset and
+    any parked unlock cleared — the engine then climbs from the new position one
+    rung at a time. The Trial result is left alone as the historical record.
+
+    An unfinished session for today is brought along too: its untouched sets for
+    those prescriptions are rewritten onto the new rung, so reopening Today shows
+    the change. If any of them already has a logged value the move is refused, as
+    the ⇄ swap does.
+
+    Raises ``ValueError`` when ``target`` is not a performable rung of this chain,
+    ``UnreadyForRung`` for an unconfirmed climb past the latest Trial, and
+    ``SetsAlreadyLogged``. Returns ``{"exercise": target, "applied_to": n}``.
+    """
+    profile = get_or_create_equipment_profile(user)
+    owned = owned_equipment_keys(profile)
+    blocked = blocked_exercise_ids(user)
+    pattern_id = presc.exercise.pattern_id
+    chain_of = chain_map_for({pattern_id})
+    chain = chain_of.get(presc.exercise_id)
+    if chain is None or chain_of.get(target.pk) != chain:
+        raise ValueError("that rung is not on this ladder")
+    if not is_performable(target, owned, blocked):
+        raise ValueError("you cannot perform that movement")
+
+    trial_score = latest_trial_score(user.pk, pattern_id)
+    if not confirm_unready and _is_unready(presc.exercise, target, trial_score):
+        anchor = _anchor_for(pattern_id)
+        raise UnreadyForRung(
+            {
+                "required": target.placement_threshold,
+                "your_trial": trial_score,
+                "pattern": target.pattern.name,
+                "exercise": target.name,
+                "anchor": anchor.name if anchor else None,
+                "is_timed": anchor.is_timed if anchor else False,
+            }
+        )
+
+    # Already on that rung (or its other grip) → leave it alone: re-pointing would
+    # wipe earned progress (sessions_at_top, a parked unlock) for no move at all.
+    prescriptions = [
+        p
+        for p in _live_prescriptions(user)
+        if chain_of.get(p.exercise_id) == chain and not _same_rung(p.exercise, target)
+    ]
+    if not prescriptions:
+        return {"exercise": target, "applied_to": 0}
+
+    session = resumable_session(user)
+    open_rows = (
+        list(session.set_logs.filter(prescribed_exercise__in=prescriptions))
+        if session is not None
+        else []
+    )
+    if any(r.actual_reps is not None or r.actual_load is not None for r in open_rows):
+        raise SetsAlreadyLogged("that movement already has logged sets")
+
+    for p in prescriptions:
+        p.pending_progression = None
+        _repoint_prescription(p, target, profile)
+
+    if open_rows:
+        by_presc = {p.pk: p for p in prescriptions}
+        for presc_id in {r.prescribed_exercise_id for r in open_rows}:
+            p = by_presc[presc_id]
+            session.set_logs.filter(prescribed_exercise=p).delete()
+            targets = _block_targets(profile, target, p)
+            for set_index in range(targets["sets"]):
+                is_amrap = set_index == targets["sets"] - 1
+                SetLog.objects.create(
+                    session=session,
+                    prescribed_exercise=p,
+                    exercise=target,
+                    set_index=set_index,
+                    expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
+                    expected_load=targets["load"],
+                    is_amrap=is_amrap,
+                )
+    return {"exercise": target, "applied_to": len(prescriptions)}
 
 
 def _int_or_none(v):
