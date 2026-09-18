@@ -32,6 +32,12 @@ api_urlpatterns = [
         api.ProgressionActionView.as_view(),
         name="forge-progression",
     ),
+    path(
+        "prescription/<uuid:presc_uuid>/set-rung/",
+        api.SetRungView.as_view(),
+        name="forge-set-rung",
+    ),
+    path("rungs/", api.RungOverviewView.as_view(), name="forge-rungs"),
     path("today/", api.TodayView.as_view(), name="forge-today"),
     path(
         "today/swap-candidates/",

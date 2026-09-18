@@ -294,6 +294,71 @@ class ProgressionActionView(APIView):
         return Response({"detail": "unknown action"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class RungOverviewView(APIView):
+    """GET → every chain on the live program with the rungs the user may move to,
+    plus ``by_exercise`` (rung uuid → prescription uuid) for the skill tree."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(forge.rung_overview(request.user))
+
+
+class SetRungView(APIView):
+    """Move a prescription to any performable rung of its chain, up or down.
+
+    ``GET /prescription/<presc_uuid>/set-rung/`` — the picker's options.
+    ``POST`` with ``{"exercise": "<uuid>", "confirm_unready": false}``:
+
+    - 200 ``{"exercise": {...}, "applied_to": n}`` — every live prescription on
+      the chain moved.
+    - 409 ``{"unready": true, "required", "your_trial", "pattern", ...}`` — the
+      rung is above what the latest Trial supports; re-POST with
+      ``confirm_unready: true`` to proceed. Enforced here, not in the client.
+    - 409 ``{"detail"}`` — the movement already has logged sets today.
+    - 400 — not a uuid, not on this chain, blocked or needs missing gear.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _prescription(self, request, presc_uuid):
+        return get_object_or_404(
+            PrescribedExercise.objects.select_related("exercise__pattern"),
+            uuid=presc_uuid,
+            day__program__user=request.user,
+            day__program__is_active=True,
+        )
+
+    def get(self, request, presc_uuid):
+        presc = self._prescription(request, presc_uuid)
+        return Response(forge.rung_options(request.user, presc))
+
+    def post(self, request, presc_uuid):
+        presc = self._prescription(request, presc_uuid)
+        target = _exercise_or_400(request.data.get("exercise"))
+        if target is None:
+            return Response(
+                {"detail": "exercise must be an exercise uuid."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        # Strictly a JSON true — a stray truthy string must not skip the warning.
+        confirm = request.data.get("confirm_unready") is True
+        try:
+            result = forge.set_rung(request.user, presc, target, confirm_unready=confirm)
+        except forge.UnreadyForRung as exc:
+            return Response({"unready": True, **exc.payload}, status=status.HTTP_409_CONFLICT)
+        except forge.SetsAlreadyLogged as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "exercise": ExerciseSerializer(result["exercise"]).data,
+                "applied_to": result["applied_to"],
+            }
+        )
+
+
 class ProgramView(APIView):
     """GET the user's active program."""
 
