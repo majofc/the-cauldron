@@ -127,7 +127,7 @@ def test_assessment_creates_active_program(seeded, client, user):
     assert len(program["days"]) == 1
     day = program["days"][0]
     assert day["day_index"] == 0
-    assert len(day["prescriptions"]) == MovementPattern.objects.count() == 6
+    assert len(day["prescriptions"]) == MovementPattern.objects.count() == 7
 
 
 def test_program_is_one_day_whatever_split_is_requested(seeded, client, user):
@@ -1078,7 +1078,7 @@ def test_day_keeps_least_used_and_drops_most_used(seeded, client, user):
 
     day0 = _active_program(user).days.get(day_index=0)
     prescs = list(day0.prescriptions.select_related("exercise", "pattern"))
-    assert len(prescs) == 6  # full body trains all six patterns
+    assert len(prescs) == 7  # full body prescribes every pattern
 
     # Give five chains an increasing number of events; leave the sixth untouched.
     used, never_used = prescs[:5], prescs[5]
@@ -1206,7 +1206,7 @@ def test_least_used_filter_applies_regardless_of_split(seeded, client, user):
     program.save(update_fields=["split"])
 
     day0 = program.days.get(day_index=0)
-    assert day0.prescriptions.count() == 6
+    assert day0.prescriptions.count() == 7
     assert len(forge.select_day_prescriptions(user, day0)) == forge.DAILY_PATTERN_COUNT
 
 

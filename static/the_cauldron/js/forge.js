@@ -866,6 +866,7 @@
     lower_unilateral: "Lower (Unilateral)",
     core_anti_extension: "Core (Anti-Extension)",
     hinge: "Hinge / Posterior Chain",
+    grip: "Grip / Forearms",
   };
 
   // Per-pattern Trial history, keyed by pattern_key — feeds the Evolution
@@ -902,17 +903,25 @@
         .filter((e) => e.pattern_key === p.key)
         .sort((a, b) => a.difficulty_rank - b.difficulty_rank);
       if (!candidates.length) return;
-      // Prefer the curated assessment anchor (a stable bodyweight test move);
-      // fall back to the 2nd-easiest eligible exercise.
+      // Prefer the curated assessment anchor (a stable bodyweight test move).
+      // ``candidates`` is already equipment-filtered and rank-ascending, so the
+      // LAST anchor in it is the hardest one the user can actually perform —
+      // grip carries two (Dead Hang, with Towel Wring Hold for users with
+      // nowhere to hang); every other pattern carries exactly one. No anchor at
+      // all falls back to the 2nd-easiest eligible exercise.
+      const anchors = candidates.filter((e) => e.is_assessment_anchor);
       const anchor =
-        candidates.find((e) => e.is_assessment_anchor) ||
+        anchors[anchors.length - 1] ||
         candidates[Math.min(1, candidates.length - 1)];
       const row = document.createElement("div");
       row.className = "forge-trial-row";
       row.dataset.pattern = p.key;
       row.dataset.exercise = anchor.uuid;
-      const video = anchor.video_url
-        ? `<a class="forge-video-link" href="${anchor.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
+      // Catalog strings are seeded, not user input, but they still go through
+      // esc() before innerHTML — and the video href is scheme-checked, as the
+      // exercise modal already does.
+      const video = anchor.video_url && /^https?:\/\//i.test(anchor.video_url)
+        ? `<a class="forge-video-link" href="${esc(anchor.video_url)}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
         : "";
       const unit = anchor.is_timed ? "seconds" : "reps";
       const rest = anchor.rest_seconds
@@ -921,10 +930,10 @@
       // One input per pattern: every anchor is a bilateral movement.
       const inputs = anchor.is_timed
         ? `<div class="forge-timed-cell">` +
-          `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${anchor.name}">` +
+          `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${esc(anchor.name)}">` +
           `<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button>` +
           `</div>`
-        : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${anchor.name}">`;
+        : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${esc(anchor.name)}">`;
       // A per-side move tested with one box needs to say so — "8" means 8 each
       // side, not 8 total.
       const perSideNote = anchor.is_unilateral
@@ -933,8 +942,8 @@
       row.innerHTML =
         `<div>` +
         `<div class="forge-trial-pattern">${PATTERN_LABELS[p.key] || p.key}</div>` +
-        `<div class="forge-trial-move">${anchor.name}${perSideNote}</div>` +
-        `<div class="forge-trial-cues">${anchor.cues || ""} (${unit})</div>` +
+        `<div class="forge-trial-move">${esc(anchor.name)}${perSideNote}</div>` +
+        `<div class="forge-trial-cues">${esc(anchor.cues || "")} (${unit})</div>` +
         rest +
         video +
         evolutionMarkup(p.key, anchor) +
@@ -1966,7 +1975,7 @@
 
   const PATTERN_ORDER = [
     "horizontal_push", "vertical_pull", "vertical_push",
-    "lower_unilateral", "core_anti_extension", "hinge",
+    "lower_unilateral", "core_anti_extension", "hinge", "grip",
   ];
 
   // Coarse per-pattern label shown on each skill-tree track header. The
@@ -1979,6 +1988,7 @@
     lower_unilateral: "Quads · Glutes",
     core_anti_extension: "Abs · Deep Core",
     hinge: "Hamstrings · Glutes · Low Back",
+    grip: "Forearms · Hands",
   };
 
   const PATTERN_ICON_PATHS = {
@@ -1988,6 +1998,8 @@
     lower_unilateral:'<path d="M12 5v9l-4 13"/><path d="M12 14l5 4-2 9"/><circle cx="12" cy="5" r="2"/>',
     core_anti_extension:'<path d="M4 20h24"/><path d="M7 20c4-9 14-9 18 0"/><circle cx="16" cy="9" r="2"/>',
     hinge:           '<path d="M5 11v6"/><path d="M27 11v6"/><path d="M5 14h22"/><path d="M9 14V9"/><path d="M23 14V9"/>',
+    // A bar with a hand hanging off it — the pattern is measured by how long you hold on.
+    grip:            '<path d="M5 8h22"/><path d="M11 8v5a5 5 0 0 0 10 0V8"/><path d="M13 18v6"/><path d="M19 18v6"/>',
   };
 
   const TREE_STATE_LABELS = {
@@ -2002,8 +2014,9 @@
   const STRUCTURAL_EQUIP = new Set(["bodyweight", "pullup_bar", "bench", "rings"]);
 
   function isSpineExercise(ex) {
-    return !ex.required_equipment.length ||
-      ex.required_equipment.every((k) => STRUCTURAL_EQUIP.has(k));
+    // Any-of equipment counts as well: a "bar OR rings" hang is structural.
+    const keys = ex.required_equipment.concat(ex.alternative_equipment || []);
+    return !keys.length || keys.every((k) => STRUCTURAL_EQUIP.has(k));
   }
 
   function computeExerciseStates(exercises, catalogMap, currentByPattern) {
@@ -2284,8 +2297,12 @@
     }
 
     const req = ex.required_equipment.filter((k) => k !== "bodyweight");
-    if (req.length) {
-      const tags = req.map((k) => `<span class="forge-ex-modal-equip-tag">${esc(k.replace(/_/g, " "))}</span>`).join("");
+    const alt = (ex.alternative_equipment || []).filter((k) => k !== "bodyweight");
+    if (req.length || alt.length) {
+      const tag = (k) => `<span class="forge-ex-modal-equip-tag">${esc(k.replace(/_/g, " "))}</span>`;
+      // Any-of options read as one "a or b" tag — owning either is enough.
+      const tags = req.map(tag).join("") +
+        (alt.length ? tag(alt.join(" or ")) : "");
       addSection("Equipment", `<div class="forge-ex-modal-equip">${tags}</div>`);
     }
 

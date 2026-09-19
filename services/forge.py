@@ -36,8 +36,9 @@ from the_cauldron.services import loads, norms, progression
 THE_DAY_NAME = "Today's Forge"
 
 # The day trains only this many patterns — the ones whose progression chains have
-# the fewest recent usage events — out of the six it prescribes. The sixth
-# rotates in on its own as the counts shift.
+# the fewest recent usage events — out of the seven it prescribes. The ones left
+# out rotate in on their own as the counts shift, grip included (#61): it takes
+# its turn in the normal rotation rather than being special-cased.
 DAILY_PATTERN_COUNT = 5
 # Trailing window for counting usage events per progression chain.
 CHAIN_EVENT_WINDOW_DAYS = 14
@@ -162,13 +163,23 @@ def owned_equipment_keys_for(user) -> set:
 
 
 def is_performable(exercise, owned, blocked=()) -> bool:
-    """True when every piece of ``exercise``'s required equipment is in ``owned``
-    and it is not among ``blocked``. Reads ``required_equipment`` through the
-    prefetch cache, so callers should prefetch it when checking in bulk."""
+    """True when the user owns the equipment ``exercise`` needs and it is not
+    among ``blocked``.
+
+    Two requirement sets, both of which must hold: EVERY piece of
+    ``required_equipment`` is owned, and — when ``alternative_equipment`` is not
+    empty — AT LEAST ONE of those is owned. The any-of set is what lets a rung
+    read "a bar OR rings" without splitting it into one row per implement.
+
+    Reads both M2Ms through the prefetch cache, so callers should prefetch them
+    when checking in bulk."""
     if exercise.pk in blocked:
         return False
     req = {e.key for e in exercise.required_equipment.all()} or {"bodyweight"}
-    return req <= owned
+    if not req <= owned:
+        return False
+    alt = {e.key for e in exercise.alternative_equipment.all()}
+    return not alt or bool(alt & owned)
 
 
 def eligible_exercises(pattern, profile, exclude_ids=None, owned=None):
@@ -182,7 +193,9 @@ def eligible_exercises(pattern, profile, exclude_ids=None, owned=None):
     exclude_ids = set(exclude_ids or ())
     return [
         ex
-        for ex in pattern.exercises.prefetch_related("required_equipment")
+        for ex in pattern.exercises.prefetch_related(
+            "required_equipment", "alternative_equipment"
+        )
         if is_performable(ex, owned, exclude_ids)
     ]
 
@@ -227,18 +240,22 @@ def first_performable_along(exercise, direction, owned, blocked=()):
     return None
 
 
-def grip_siblings(exercise):
-    """The grip variants sharing ``exercise``'s ladder position (both overhand and
-    underhand rows at the same pattern + rank), or ``[]`` if ``exercise`` is not a
-    grip-split rung."""
-    if exercise.grip == Exercise.Grip.NA:
+def variant_siblings(exercise):
+    """The rungs sharing ``exercise``'s ladder position — every row of the same
+    ``variant_group`` (the bar pull-up grips) — or ``[]`` when ``exercise`` does
+    not belong to a group. ``grip`` is only the label telling them apart."""
+    if not exercise.variant_group:
         return []
     return list(
         Exercise.objects.filter(
             pattern_id=exercise.pattern_id,
-            difficulty_rank=exercise.difficulty_rank,
-        ).exclude(grip=Exercise.Grip.NA)
+            variant_group=exercise.variant_group,
+        )
     )
+
+
+# Back-compat alias: the only variant groups today are the bar pull-up grips.
+grip_siblings = variant_siblings
 
 
 def _recent_amrap_by_exercise(user, exercises, cutoff) -> dict:
@@ -281,7 +298,7 @@ def select_grip_variant(user, exercise):
 
     Returns ``exercise`` unchanged if it is not a grip-split rung.
     """
-    variants = grip_siblings(exercise)
+    variants = variant_siblings(exercise)
     if len(variants) < 2:
         return exercise  # not a grip-split rung, or missing a sibling
 
@@ -318,7 +335,7 @@ def effective_progression_reps(user, trained_exercise, logged_reps):
     both grips in the window (``logged_reps`` is already persisted, so it is
     included). Non-split movements return ``logged_reps`` unchanged.
     """
-    variants = grip_siblings(trained_exercise)
+    variants = variant_siblings(trained_exercise)
     if len(variants) < 2:
         return logged_reps
     cutoff = timezone.now() - timedelta(days=GRIP_WINDOW_DAYS)
@@ -346,7 +363,9 @@ def _live_prescriptions(user):
     ).select_related(
         "day", "exercise__pattern", "pending_progression__pattern"
     ).prefetch_related(
-        "exercise__required_equipment", "pending_progression__required_equipment"
+        "exercise__required_equipment", "exercise__alternative_equipment",
+        "pending_progression__required_equipment",
+        "pending_progression__alternative_equipment",
     )
 
 
@@ -546,8 +565,8 @@ def _resnap_load(presc, profile) -> bool:
 def generate_program(user, assessment: AssessmentSession, split=None) -> Program:
     """Create a fresh active program from an assessment's placements.
 
-    Every program is a **single** day (``day_index=0``) prescribing all six
-    movement patterns, whatever ``split`` says. The split no longer shapes the
+    Every program is a **single** day (``day_index=0``) prescribing every
+    movement pattern, whatever ``split`` says. The split no longer shapes the
     plan — which patterns are actually trained is decided per opening by
     ``select_day_prescriptions`` from recent training history. ``split`` is still
     stored so historical rows keep resolving.
@@ -594,10 +613,10 @@ def chain_map_for(pattern_ids) -> dict:
     A chain is a connected component of the ``progression``/``regression`` links,
     so a pattern's bodyweight ladder and its loaded ladder are separate chains —
     except on a single-ladder pattern (lower), whose rungs form one chain.
-    Grip variants sharing a ladder position (Pull-up / Chin-up) are unioned into
-    the same chain: only the overhand row is guaranteed to be what neighbouring
-    rungs link to, and ``select_grip_variant`` alternates grips day to day, so
-    counting them apart would halve a chain's tally.
+    Rungs sharing a ladder position via ``variant_group`` (Pull-up / Chin-up) are
+    unioned into the same chain: only the overhand row is guaranteed to be what
+    neighbouring rungs link to, and ``select_grip_variant`` alternates grips day
+    to day, so counting them apart would halve a chain's tally.
 
     One query plus in-memory union-find — never a walk per prescription.
     """
@@ -605,7 +624,7 @@ def chain_map_for(pattern_ids) -> dict:
         return {}
     rows = list(
         Exercise.objects.filter(pattern_id__in=pattern_ids).values(
-            "uuid", "pattern_id", "progression_id", "regression_id", "difficulty_rank", "grip"
+            "uuid", "pattern_id", "progression_id", "regression_id", "variant_group"
         )
     )
     parent = {r["uuid"]: r["uuid"] for r in rows}
@@ -626,12 +645,12 @@ def chain_map_for(pattern_ids) -> dict:
     for r in rows:
         union(r["uuid"], r["progression_id"])
         union(r["uuid"], r["regression_id"])
-    # Grip siblings share a ladder position → same chain.
+    # Variants share a ladder position → same chain.
     by_position = {}
     for r in rows:
-        if r["grip"] == Exercise.Grip.NA:
+        if not r["variant_group"]:
             continue
-        key = (r["pattern_id"], r["difficulty_rank"])
+        key = (r["pattern_id"], r["variant_group"])
         if key in by_position:
             union(by_position[key], r["uuid"])
         else:
@@ -702,7 +721,9 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     prescriptions = [
         p
         for p in program_day.prescriptions.select_related("exercise", "pattern")
-        .prefetch_related("exercise__required_equipment")
+        .prefetch_related(
+            "exercise__required_equipment", "exercise__alternative_equipment"
+        )
         if is_performable(p.exercise, owned, blocked)
     ]
     if len(prescriptions) <= DAILY_PATTERN_COUNT:
@@ -1052,7 +1073,7 @@ def swap_candidates(user) -> dict:
 
     eligible_by_chain = {}
     for ex in Exercise.objects.select_related("pattern").prefetch_related(
-        "required_equipment"
+        "required_equipment", "alternative_equipment"
     ):
         chain = chain_of.get(ex.pk)
         if chain is None or not is_performable(ex, owned, blocked):
@@ -1161,13 +1182,13 @@ def _is_unready(current, target, trial_score) -> bool:
 
 
 def _same_rung(a, b) -> bool:
-    """The same ladder position: the same exercise, or the other grip of a
-    grip-split rung (which ``select_grip_variant`` alternates day to day anyway)."""
+    """The same ladder position: the same exercise, or another variant of the same
+    group (the other grip of a bar pull-up, which ``select_grip_variant``
+    alternates day to day anyway)."""
     return a.pk == b.pk or (
-        a.grip != Exercise.Grip.NA
-        and b.grip != Exercise.Grip.NA
+        bool(a.variant_group)
+        and a.variant_group == b.variant_group
         and a.pattern_id == b.pattern_id
-        and a.difficulty_rank == b.difficulty_rank
     )
 
 
@@ -1178,7 +1199,9 @@ def _chain_rungs(chain_of, chain, owned, blocked) -> list:
     grip variants), so a single-ladder pattern returns its whole mixed ladder
     rather than one mode's slice."""
     members = [ex_id for ex_id, key in chain_of.items() if key == chain]
-    rungs = Exercise.objects.filter(pk__in=members).prefetch_related("required_equipment")
+    rungs = Exercise.objects.filter(pk__in=members).prefetch_related(
+        "required_equipment", "alternative_equipment"
+    )
     return sorted(
         (ex for ex in rungs if is_performable(ex, owned, blocked)),
         key=lambda e: (e.difficulty_rank, e.grip != Exercise.Grip.OVERHAND, e.name),
@@ -1214,8 +1237,28 @@ def _rung_entry(presc, chain_prescriptions, rungs, trial_score, anchor) -> dict:
     }
 
 
-def _anchor_for(pattern_id):
-    return Exercise.objects.filter(pattern_id=pattern_id, is_assessment_anchor=True).first()
+def _anchor_for(pattern_id, owned=None, blocked=()):
+    """The pattern's Trial anchor — the HIGHEST-rank anchor the user can perform.
+
+    Six patterns carry exactly one anchor, so this is that row whatever ``owned``
+    says. Grip carries two (Dead Hang, plus Towel Wring Hold for users with
+    nowhere to hang): the hardest performable one wins, and the fallback is only
+    reached when the hang is out of equipment reach. With no ``owned`` set the
+    highest-rank anchor is returned without filtering.
+    """
+    anchors = list(
+        Exercise.objects.filter(
+            pattern_id=pattern_id, is_assessment_anchor=True
+        ).prefetch_related("required_equipment", "alternative_equipment")
+    )
+    if not anchors:
+        return None
+    anchors.sort(key=lambda e: e.difficulty_rank)
+    if owned is not None:
+        performable = [e for e in anchors if is_performable(e, owned, blocked)]
+        if performable:
+            return performable[-1]
+    return anchors[-1]
 
 
 def rung_overview(user) -> dict:
@@ -1249,7 +1292,7 @@ def rung_overview(user) -> dict:
             prescriptions,
             _chain_rungs(chain_of, chain, owned, blocked),
             latest_trial_score(user.pk, pattern_id),
-            _anchor_for(pattern_id),
+            _anchor_for(pattern_id, owned, blocked),
         )
         chains.append(entry)
         for option in entry["options"]:
@@ -1270,7 +1313,7 @@ def rung_options(user, presc) -> dict:
         siblings,
         _chain_rungs(chain_of, chain, owned, blocked),
         latest_trial_score(user.pk, pattern_id),
-        _anchor_for(pattern_id),
+        _anchor_for(pattern_id, owned, blocked),
     )
 
 
@@ -1306,7 +1349,7 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
 
     trial_score = latest_trial_score(user.pk, pattern_id)
     if not confirm_unready and _is_unready(presc.exercise, target, trial_score):
-        anchor = _anchor_for(pattern_id)
+        anchor = _anchor_for(pattern_id, owned, blocked)
         raise UnreadyForRung(
             {
                 "required": target.placement_threshold,

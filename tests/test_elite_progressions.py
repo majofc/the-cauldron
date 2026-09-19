@@ -20,16 +20,19 @@ class TestHorizontalPushTop:
     def test_chains_after_archer_pushup(self, seeded):
         archer = _get("Archer Push-up")
         typewriter = _get("Typewriter Push-up")
+        elevated = _get("Elevated One-Arm Push-up")
         one_arm = _get("One-Arm Push-up")
-        # Ladder order by rank: Archer(7) → Typewriter(8) → One-Arm(9).
+        # Ladder order by rank: Archer(7) → Typewriter(8) → Elevated(9) → One-Arm(10).
         assert archer.progression == typewriter
         assert typewriter.regression == archer
-        assert typewriter.progression == one_arm
-        assert one_arm.regression == typewriter
-        assert one_arm.progression is None  # new top of the bodyweight ladder
+        assert typewriter.progression == elevated
+        assert elevated.regression == typewriter
+        assert elevated.progression == one_arm
+        assert one_arm.regression == elevated
+        assert one_arm.progression is None  # still the top of the bodyweight ladder
 
     def test_are_bodyweight_difficulty_rungs(self, seeded):
-        for name in ("Typewriter Push-up", "One-Arm Push-up"):
+        for name in ("Typewriter Push-up", "Elevated One-Arm Push-up", "One-Arm Push-up"):
             ex = _get(name)
             assert ex.progression_mode == Exercise.ProgressionMode.DIFFICULTY
             assert [e.key for e in ex.required_equipment.all()] == ["bodyweight"]
