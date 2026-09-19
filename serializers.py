@@ -69,6 +69,10 @@ class ExerciseSerializer(serializers.ModelSerializer):
     required_equipment = serializers.SlugRelatedField(
         slug_field="key", many=True, read_only=True
     )
+    # Any-of equipment: owning ONE of these is enough (a bar or rings).
+    alternative_equipment = serializers.SlugRelatedField(
+        slug_field="key", many=True, read_only=True
+    )
     muscles = MuscleSerializer(many=True, read_only=True)
     is_unilateral = serializers.SerializerMethodField()
 
@@ -77,7 +81,8 @@ class ExerciseSerializer(serializers.ModelSerializer):
         fields = [
             "uuid", "pattern_key", "name", "difficulty_rank", "progression_mode",
             "rep_range_min", "rep_range_max", "is_timed", "placement_threshold",
-            "required_equipment", "muscles", "video_url", "cues", "rest_seconds",
+            "required_equipment", "alternative_equipment", "muscles", "video_url",
+            "cues", "rest_seconds",
             "is_assessment_anchor", "is_unilateral",
         ]
 

@@ -50,15 +50,13 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = Exercise.objects.select_related("pattern").prefetch_related(
-            "required_equipment", "muscles"
+            "required_equipment", "alternative_equipment", "muscles"
         )
         if self.request.query_params.get("equipment") == "mine":
             profile = forge.get_or_create_equipment_profile(self.request.user)
             owned = set(profile.equipment.values_list("key", flat=True)) | {"bodyweight"}
-            keep = [
-                e.pk for e in qs
-                if (set(e.required_equipment.values_list("key", flat=True)) or {"bodyweight"}) <= owned
-            ]
+            # One rule for "can I do this?" — required AND, alternatives OR.
+            keep = [e.pk for e in qs if forge.is_performable(e, owned)]
             qs = qs.filter(pk__in=keep)
         return qs
 
@@ -120,15 +118,23 @@ class CatalogView(APIView):
 
         exercises = (
             Exercise.objects.select_related("pattern")
-            .prefetch_related("required_equipment", "muscles")
+            .prefetch_related(
+                "required_equipment", "alternative_equipment", "muscles"
+            )
             .order_by("pattern__name", "difficulty_rank")
         )
         # Cache substitutes only for blocked exercises (small set).
         for ex in exercises:
             req = list(ex.required_equipment.all())
             req_keys = [e.key for e in req]
-            # Primary group: first non-bodyweight requirement, else bodyweight.
-            primary = next((k for k in req_keys if k != "bodyweight"), "bodyweight")
+            alt_keys = [e.key for e in ex.alternative_equipment.all()]
+            # Primary group: first non-bodyweight requirement, else the first
+            # any-of option (a bar-or-rings rung files under the bar), else
+            # bodyweight.
+            primary = next(
+                (k for k in req_keys if k != "bodyweight"),
+                next(iter(alt_keys), "bodyweight"),
+            )
             group = groups.get(primary) or groups["bodyweight"]
             is_blocked = ex.pk in blocked
             substitute = None
@@ -146,11 +152,12 @@ class CatalogView(APIView):
                     "pattern_name": ex.pattern.name,
                     "difficulty_rank": ex.difficulty_rank,
                     "required_equipment": req_keys,
+                    "alternative_equipment": alt_keys,
                     "is_timed": ex.is_timed,
                     "muscles": [
                         {"key": m.key, "name": m.name} for m in ex.muscles.all()
                     ],
-                    "eligible": (set(req_keys) or {"bodyweight"}) <= owned,
+                    "eligible": forge.is_performable(ex, owned),
                     "is_blocked": is_blocked,
                     "substitute": substitute,
                     # Highest peer "fires" (1-10) ever earned on this move, with

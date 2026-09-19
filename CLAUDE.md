@@ -30,16 +30,20 @@ Progress mechanic: when a user hits the top of an exercise's rep range consisten
 
 ### Catalog (staff-seeded, shared across all users)
 
-**MovementPattern** — the 6 training patterns
+**MovementPattern** — the 7 training patterns
 ```
 horizontal_push, vertical_pull, vertical_push,
-lower_unilateral, core_anti_extension, hinge
+lower_unilateral, core_anti_extension, hinge, grip
 ```
+`grip` (#61) joins the normal least-trained rotation — `DAILY_PATTERN_COUNT` stays 5, so it
+appears in roughly five of every seven openings. Its whole ladder is timed (seconds), on the
+same scale as its anchor.
 Fields: `key` (unique slug), `name`, `primary_muscles`, `is_lower_body`.
 
 **Equipment**
 Fields: `key` (unique), `name`, `is_loadable`, `load_unit` (none/kg/lb/band_level).
-Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
+Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`, `fat_grips`.
+There is no `towel` — a towel is assumed universal, so towel rungs only need the bar they hang from.
 
 **Exercise** — one rung on a difficulty ladder
 | Field | Notes |
@@ -51,11 +55,13 @@ Examples: `bodyweight`, `pullup_bar`, `dumbbells`, `barbell`, `bands`, `rings`.
 | `rep_range_min/max` | working rep range |
 | `is_timed` | if True, reps = seconds (holds) |
 | `is_per_side` | if True, worked one side at a time — rep targets forced even (`progression.rep_targets_for`). Workout logging records ONE value per set meaning "reps per side"; it does **not** split L/R |
-| `required_equipment` | M2M Equipment |
-| `is_assessment_anchor` | the one bilateral move tested per pattern in the Trial: Push-up, Australian Row, Pike Push-up, Squat, Plank, Glute Bridge — each has a peer norm |
-| `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs (enforced by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
+| `required_equipment` | M2M Equipment — **all of** these must be owned |
+| `alternative_equipment` | M2M Equipment — **at least one of** these must be owned (empty = no constraint). Lets one rung read "a bar OR rings" without duplicating it per implement; `forge.is_performable` applies both rules |
+| `variant_group` | slug shared by rungs occupying the SAME ladder position (`bar_pullup` = Pull-up + Chin-up). They collapse into one ladder node, count as one chain, and `grip` is only the label telling them apart |
+| `is_assessment_anchor` | the bilateral move tested per pattern in the Trial: Push-up, Australian Row, Pike Push-up, Squat, Plank, Glute Bridge — each has a peer norm. **Grip carries two**: Dead Hang, plus Towel Wring Hold as the no-equipment fallback. `forge._anchor_for` / `forge.js:renderTrial` take the highest-rank anchor the user can perform, so the fallback only shows when the hang is out of reach |
+| `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs — enforced for **every** pattern by `tests/test_grip_pattern.py::TestThresholdMonotonicity` (the lower ladder alone was covered by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
 | `regression` / `progression` | FK to self, adjacent rungs |
-| `video_url`, `cues`, `rest_seconds` | coaching metadata |
+| `video_url`, `cues`, `rest_seconds` | coaching metadata. `rest_seconds` comes from `seed_forge.rest_for`, which is pattern-aware: a grip hold rests 90s, every other timed hold 40s |
 
 ---
 
@@ -195,7 +201,7 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
 - Assessment produces wrong placement → check `placement_threshold` on the `is_assessment_anchor` exercise for that pattern. The algorithm picks the highest anchor where `reps >= threshold`.
 - "No program generated" after completing assessment → confirm `is_active=True` on the assessment session before `complete/`; the view gates on active session.
 - `pending_progression` not clearing → `apply-progression/` endpoint was not called; it requires an explicit POST (not automatic on session completion).
-- Equipment filter excludes an exercise the user expects → `required_equipment` M2M must contain only equipment the user has; any mismatch excludes the exercise.
+- Equipment filter excludes an exercise the user expects → `required_equipment` must be a subset of what the user owns, AND (when set) `alternative_equipment` must intersect it. Check both M2Ms, and prefetch them together or `is_performable` re-queries per row.
 - `BlockedExercise` uniqueness error → user already has that exercise blocked; do a GET first.
 - A prescription shows 0 kg → the user's implement weighs 0 and something bypassed
   `progression.available_loads`; migration 0017 repaired the rows written before #52.
