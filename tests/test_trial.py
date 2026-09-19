@@ -52,6 +52,10 @@ def _own(user, *keys):
 # ── The anchors ──────────────────────────────────────────────────────────────
 
 
+# The anchor each pattern is tested on for a user who owns a bar. Grip (#61) is
+# the one pattern with a second, easier anchor: users with nowhere to hang are
+# tested on the Towel Wring Hold instead, and ``forge._anchor_for`` picks the
+# highest-rank anchor the user can actually perform.
 EXPECTED_ANCHORS = {
     "horizontal_push": "Push-up",
     "vertical_pull": "Australian Row",
@@ -59,13 +63,33 @@ EXPECTED_ANCHORS = {
     "lower_unilateral": "Squat",
     "core_anti_extension": "Plank",
     "hinge": "Glute Bridge",
+    "grip": "Dead Hang",
 }
+
+# Anchors that exist only as an equipment fallback, so they never show for a
+# fully-equipped user. Towel Wring is deliberately un-normed (no peer table).
+FALLBACK_ANCHORS = {"grip": "Towel Wring Hold"}
+
+# Anchors that must return a peer score. Every anchor but the wring.
+SCORED_ANCHORS = sorted(EXPECTED_ANCHORS.values())
 
 
 def test_each_pattern_has_exactly_its_bilateral_anchor(seeded):
     anchors = Exercise.objects.filter(is_assessment_anchor=True).select_related("pattern")
-    assert {e.pattern.key: e.name for e in anchors} == EXPECTED_ANCHORS
-    assert anchors.count() == len(EXPECTED_ANCHORS)
+    by_pattern = {}
+    for e in anchors:
+        by_pattern.setdefault(e.pattern.key, set()).add(e.name)
+    expected = {k: {v} for k, v in EXPECTED_ANCHORS.items()}
+    for key, name in FALLBACK_ANCHORS.items():
+        expected[key].add(name)
+    assert by_pattern == expected
+    assert anchors.count() == len(EXPECTED_ANCHORS) + len(FALLBACK_ANCHORS)
+
+
+def test_a_user_with_no_bar_is_tested_on_the_grip_fallback(seeded, user):
+    grip = MovementPattern.objects.get(key="grip")
+    assert forge._anchor_for(grip.pk, {"bodyweight"}).name == "Towel Wring Hold"
+    assert forge._anchor_for(grip.pk, {"bodyweight", "pullup_bar"}).name == "Dead Hang"
 
 
 def test_no_anchor_is_a_per_side_movement(seeded):
@@ -73,7 +97,7 @@ def test_no_anchor_is_a_per_side_movement(seeded):
         assert ex.is_per_side is False, f"{ex.name} must be tested with both sides at once"
 
 
-@pytest.mark.parametrize("name", sorted(EXPECTED_ANCHORS.values()))
+@pytest.mark.parametrize("name", SCORED_ANCHORS)
 def test_every_anchor_has_a_peer_norm(name):
     assert norms.score(name, 10, "female", 32).has_data is True
 
@@ -121,11 +145,16 @@ def test_single_arm_rungs_sit_between_their_neighbours(seeded, easier, inserted,
 
 
 def _trial_payload(user, overrides=None):
-    """One result row per pattern, using each pattern's seeded anchor."""
+    """One result row per pattern, using the anchor the user would be shown.
+
+    Mirrors production: ``forge._anchor_for`` takes the highest-rank anchor the
+    user can perform, which is what the Trial UI renders.
+    """
     overrides = overrides or {}
+    owned = forge.owned_equipment_keys_for(user)
     rows = []
     for pattern in MovementPattern.objects.all():
-        anchor = pattern.exercises.filter(is_assessment_anchor=True).first()
+        anchor = forge._anchor_for(pattern.pk, owned)
         assert anchor is not None, f"{pattern.key} has no anchor"
         row = {
             "pattern_key": pattern.key,

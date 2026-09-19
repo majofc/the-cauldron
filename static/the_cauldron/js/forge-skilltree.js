@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════
    Arcano Design System — The Cauldron · The Forge
-   Skill tree — six movement-pattern ladders rendered
+   Skill tree — one ladder per movement pattern, rendered
    as an interactive videogame progression map.
    Depends on ForgeIcons (forge-icons.js).
 

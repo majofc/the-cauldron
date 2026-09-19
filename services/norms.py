@@ -61,6 +61,9 @@ EXERCISE_NORMS = {
     "Pike Push-up": "pike_pushup",       # vertical push        (estimated)
     "Squat": "squat",                    # lower anchor         (estimated)
     "Glute Bridge": "glute_bridge",      # hinge                (estimated)
+    "Dead Hang": "dead_hang",            # grip                 (estimated)
+    # "Towel Wring Hold" is intentionally unmapped: it is the no-equipment
+    # fallback anchor and nothing measures it, so it returns "no peer data".
 }
 
 AGE_BRACKETS = [(20, 29), (30, 39), (40, 49), (50, 59), (60, 69)]
@@ -228,6 +231,39 @@ NORMS = {
                 (40, 49): {5: 1, 20: 7, 50: 26, 80: 53, 95: 82},   # estimated
                 (50, 59): {5: 1, 20: 6, 50: 22, 80: 43, 95: 68},   # estimated
                 (60, 69): {5: 1, 20: 5, 50: 18, 80: 36, 95: 56},   # estimated
+            },
+        },
+    },
+    # ── Derived (estimated) norm ─────────────────────────────────────────────
+    # No published age × sex percentile table for the two-hand dead hang exists.
+    # These deciles are ours, shaped from divulgation-grade reference times
+    # (Marathon Handbook's "good hang time", Deadhangs' hang-time-by-age tables:
+    # ~30-60s typical for men, ~20-45s for women, declining ~15%/decade past 40).
+    # The WHOLE table is therefore flagged ``estimated``, not just ages 40+.
+    "dead_hang": {
+        "label": "Dead hang",
+        "metric": "seconds",
+        "confidence": "estimated",
+        "estimated": True,
+        "source": "Estimated from divulgation-grade dead-hang reference times "
+                  "(Marathon Handbook; Deadhangs hang-time-by-age). No peer-"
+                  "reviewed percentile table was found — replace when one is.",
+        "url": "https://deadhangs.com/dead-hang-time-by-age/",
+        "type": "percentiles",
+        "tables": {
+            "male": {
+                (20, 29): {5: 10, 20: 25, 50: 45, 80: 75, 95: 110},
+                (30, 39): {5: 10, 20: 23, 50: 42, 80: 70, 95: 100},
+                (40, 49): {5: 8, 20: 20, 50: 35, 80: 60, 95: 85},
+                (50, 59): {5: 6, 20: 15, 50: 28, 80: 48, 95: 70},
+                (60, 69): {5: 5, 20: 12, 50: 22, 80: 38, 95: 55},
+            },
+            "female": {
+                (20, 29): {5: 5, 20: 15, 50: 30, 80: 52, 95: 75},
+                (30, 39): {5: 5, 20: 14, 50: 28, 80: 48, 95: 70},
+                (40, 49): {5: 4, 20: 12, 50: 24, 80: 42, 95: 60},
+                (50, 59): {5: 3, 20: 10, 50: 20, 80: 34, 95: 50},
+                (60, 69): {5: 3, 20: 8, 50: 16, 80: 28, 95: 40},
             },
         },
     },

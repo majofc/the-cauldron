@@ -79,8 +79,10 @@ def forge_user(transactional_db):
     profile.configured_at = timezone.now()  # else the Forge bounces to Equipment
     profile.save()
     trial = AssessmentSession.objects.create(user=user, completed_at=timezone.now())
+    owned = forge.owned_equipment_keys(profile)
     for pattern in MovementPattern.objects.all():
-        anchor = Exercise.objects.get(pattern=pattern, is_assessment_anchor=True)
+        # Grip carries two anchors (#61) — take the one this user would be shown.
+        anchor = forge._anchor_for(pattern.pk, owned)
         AssessmentResult.objects.create(
             session=trial, pattern=pattern, tested_exercise=anchor,
             reps_or_seconds=anchor.placement_threshold, placed_exercise=anchor,

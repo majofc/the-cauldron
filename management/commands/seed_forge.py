@@ -25,6 +25,7 @@ PATTERNS = [
     ("lower_unilateral", "Lower (Unilateral)", "Quads, glutes", True),
     ("core_anti_extension", "Core (Anti-Extension)", "Abs, deep core", False),
     ("hinge", "Hinge / Posterior Chain", "Hamstrings, glutes, low back", True),
+    ("grip", "Grip / Forearms", "Forearms, hands", False),
 ]
 
 EQUIPMENT = [
@@ -37,6 +38,7 @@ EQUIPMENT = [
     ("kettlebell", "Kettlebell", True, "kg"),
     ("rings", "Gymnastic Rings", False, "none"),
     ("ab_wheel", "Ab Wheel", False, "none"),
+    ("fat_grips", "Fat Grips", False, "none"),
 ]
 
 # Each ladder: (pattern_key, [ (name, rank, mode, rmin, rmax, timed, threshold,
@@ -53,7 +55,14 @@ LADDERS = {
         ("Diamond Push-up", 6, "difficulty", 5, 10, False, 25, ["bodyweight"], "Hands together; tuck elbows."),
         ("Archer Push-up", 7, "difficulty", 4, 8, False, 30, ["bodyweight"], "Shift to one arm; control."),
         ("Typewriter Push-up", 8, "difficulty", 3, 6, False, 38, ["bodyweight"], "Stay low; glide side to side, elbows tight."),
-        ("One-Arm Push-up", 9, "difficulty", 1, 5, False, 45, ["bodyweight"], "Widen the base; brace hard, no torso twist."),
+        # Threshold 41, not the 21 the ticket quoted: thresholds must be
+        # non-decreasing by rank (rank 8 is 38, rank 10 is 45) or the rungs above
+        # the dip become unreachable — ``place_from_assessment`` stops at the
+        # first rung the score misses.
+        ("Elevated One-Arm Push-up", 9, "difficulty", 3, 6, False, 41, ["bodyweight"],
+         "One hand on a box or bench, other hand behind the back. Feet wide, hips "
+         "square. Lower the surface as it gets easy."),
+        ("One-Arm Push-up", 10, "difficulty", 1, 5, False, 45, ["bodyweight"], "Widen the base; brace hard, no torso twist."),
         ("Dumbbell Bench Press", 4, "load", 6, 12, False, 10, ["dumbbells", "bench"], "Drive through chest; full range."),
         ("Barbell Bench Press", 5, "load", 5, 10, False, 20, ["barbell", "bench"], "Bar to chest; tight back."),
     ],
@@ -67,10 +76,10 @@ LADDERS = {
         # Bar pull-up rungs split into two grips at the same rank; the Forge
         # prescribes the weaker grip daily. Overhand listed first = ladder-node
         # representative that adjacent rungs link to.
-        ("Pull-up", 5, "difficulty", 4, 10, False, 28, ["pullup_bar"], "Dead hang; chin over bar.", "overhand"),
-        ("Chin-up", 5, "difficulty", 4, 10, False, 28, ["pullup_bar"], "Underhand grip; pull chin over bar.", "underhand"),
-        ("Archer Pull-up", 6, "difficulty", 3, 6, False, 40, ["pullup_bar"], "Pull to one side; other arm straight.", "overhand"),
-        ("Archer Chin-up", 6, "difficulty", 3, 6, False, 40, ["pullup_bar"], "Underhand archer; pull to one side.", "underhand"),
+        ("Pull-up", 5, "difficulty", 4, 10, False, 28, ["pullup_bar"], "Dead hang; chin over bar.", "overhand", "bar_pullup"),
+        ("Chin-up", 5, "difficulty", 4, 10, False, 28, ["pullup_bar"], "Underhand grip; pull chin over bar.", "underhand", "bar_pullup"),
+        ("Archer Pull-up", 6, "difficulty", 3, 6, False, 40, ["pullup_bar"], "Pull to one side; other arm straight.", "overhand", "bar_archer_pullup"),
+        ("Archer Chin-up", 6, "difficulty", 3, 6, False, 40, ["pullup_bar"], "Underhand archer; pull to one side.", "underhand", "bar_archer_pullup"),
         ("Dumbbell Row", 3, "load", 6, 12, False, 12, ["dumbbells"], "Flat back; row to hip."),
     ],
     # Thresholds: Pike Push-up reps.
@@ -120,6 +129,52 @@ LADDERS = {
         ("Barbell Romanian Deadlift", 3, "load", 6, 10, False, 35, ["barbell"], "Bar close; flat back."),
         ("Kettlebell Swing", 2, "load", 12, 20, False, 15, ["kettlebell"], "Hip snap; not a squat."),
     ],
+
+    # Thresholds: Dead Hang seconds. Ranks 1-2 both sit at 0 (non-decreasing, so
+    # the monotonicity rule holds): which of them a user lands on falls out of
+    # equipment filtering, not a special case — someone with nowhere to hang gets
+    # the towel wring, a bar/rings owner the assisted hang.
+    # A rung reading "bar OR rings" carries them as ALTERNATIVE equipment (any-of)
+    # rather than two rows, so a rings-only user climbs one uninterrupted ladder.
+    "grip": [
+        ("Towel Wring Hold", 1, "difficulty", 15, 40, True, 0, ["bodyweight"],
+         "Twist a rolled towel as hard as you can, both directions. Squeeze, don't yank."),
+        ("Assisted Bar Hang", 2, "difficulty", 20, 45, True, 0, ["bodyweight", ("pullup_bar", "rings")],
+         "Feet on the floor or a box taking part of your weight; shoulders packed down."),
+        ("Dead Hang", 3, "difficulty", 20, 60, True, 15, ["bodyweight", ("pullup_bar", "rings")],
+         "Full hang, both hands, shoulders active. The Trial's grip test."),
+        ("Towel Bar Hang", 4, "difficulty", 15, 45, True, 45, ["bodyweight", "pullup_bar"],
+         "Hang from a towel over the bar, one end per hand. Thick and slippery on purpose."),
+        ("Fat-Grip Hang", 5, "difficulty", 15, 40, True, 60, ["bodyweight", "pullup_bar", "fat_grips"],
+         "Fat grips on the bar; crush them. Stop the set when the hands open, not the shoulders."),
+        ("Plate Pinch Hold", 6, "difficulty", 10, 24, True, 70, ["bodyweight", "barbell"],
+         "Pinch two plates smooth-side-out per hand, arms at your sides. Start at 5-10 kg per hand."),
+        ("Assisted One-Arm Hang", 7, "difficulty", 10, 30, True, 80, ["bodyweight", ("pullup_bar", "rings")],
+         "One hand hangs, the other holds the wrist or a band. Per side."),
+        ("One-Arm Dead Hang", 8, "difficulty", 8, 24, True, 100, ["bodyweight", ("pullup_bar", "rings")],
+         "Full hang on one hand, shoulder packed, no swinging. Per side."),
+        ("One-Arm Towel Hang", 9, "difficulty", 6, 20, True, 130, ["bodyweight", "pullup_bar"],
+         "One hand on a towel over the bar. Per side."),
+        # Farmer's-carry family. Every rung is time under load — there is no
+        # distance field — so the cues state the equivalence (~0.8-1.0 m/s
+        # loaded: 20 m is about 20-25 s, 40 m about 40-50 s). Prescribed load is
+        # what goes in ONE hand: 24 kg means 48 kg carried.
+        #
+        # Thresholds are the DIFFICULTY rung's value at the same rank (0/0/15/45),
+        # not the 15/30/45/60 the ticket sketched: placement walks both chains of
+        # a pattern together (``eligible_exercises`` returns every mode), so two
+        # rungs sharing a rank must share a threshold or the walk stops early and
+        # the rungs above become unreachable. Carries gate on LOAD anyway — the
+        # weight in the hand, not the Trial score.
+        ("Farmer Hold", 1, "load", 20, 45, True, 0, ["dumbbells"],
+         "A dumbbell in each hand, stand tall and hold. Load shown is per hand."),
+        ("Farmer Walk", 2, "load", 30, 60, True, 0, ["dumbbells"],
+         "Walk with a dumbbell in each hand (~20 m per 20-25 s). Load shown is per hand."),
+        ("Suitcase Carry", 3, "load", 20, 40, True, 15, ["kettlebell"],
+         "One kettlebell, one side, ribs down and no lean (~20 m per 20-25 s). Per side."),
+        ("Double-Overhand Barbell Hold", 4, "load", 15, 30, True, 45, ["barbell"],
+         "Hold a loaded bar at the hips, thumbs over, no straps or hook grip."),
+    ],
 }
 
 # Patterns whose rungs form ONE ranked ladder across both progression modes,
@@ -161,6 +216,7 @@ EXERCISE_MUSCLES = {
     "Diamond Push-up": ["triceps", "chest", "front_delts"],
     "Archer Push-up": ["chest", "front_delts", "triceps", "abs"],
     "Typewriter Push-up": ["chest", "front_delts", "triceps"],
+    "Elevated One-Arm Push-up": ["chest", "triceps", "front_delts", "obliques"],
     "One-Arm Push-up": ["chest", "triceps", "front_delts", "obliques"],
     "Dumbbell Bench Press": ["chest", "front_delts", "triceps"],
     "Barbell Bench Press": ["chest", "front_delts", "triceps"],
@@ -211,6 +267,20 @@ EXERCISE_MUSCLES = {
     "Dumbbell Romanian Deadlift": ["hamstrings", "glutes", "lower_back"],
     "Barbell Romanian Deadlift": ["hamstrings", "glutes", "lower_back"],
     "Kettlebell Swing": ["glutes", "hamstrings", "lower_back", "front_delts"],
+    # ── Grip / Forearms ──
+    "Towel Wring Hold": ["forearms"],
+    "Assisted Bar Hang": ["forearms", "lats", "traps"],
+    "Dead Hang": ["forearms", "lats", "traps"],
+    "Towel Bar Hang": ["forearms", "lats", "traps"],
+    "Fat-Grip Hang": ["forearms", "lats", "traps"],
+    "Plate Pinch Hold": ["forearms"],
+    "Assisted One-Arm Hang": ["forearms", "lats", "traps", "obliques"],
+    "One-Arm Dead Hang": ["forearms", "lats", "traps", "obliques"],
+    "One-Arm Towel Hang": ["forearms", "lats", "traps", "obliques"],
+    "Farmer Hold": ["forearms", "traps"],
+    "Farmer Walk": ["forearms", "traps", "abs"],
+    "Suitcase Carry": ["forearms", "traps", "obliques"],
+    "Double-Overhand Barbell Hold": ["forearms", "traps"],
 }
 
 # Curated YouTube tutorial per exercise (real, search-sourced watch URLs).
@@ -274,8 +344,14 @@ VIDEOS = {
 # Trial takes one value per pattern regardless of owned equipment. Each one
 # matches a key in ``services.norms.EXERCISE_NORMS`` so every Trial row gets a
 # peer score. Keep in sync with migration 0014's NEW_ANCHORS.
+# Grip carries TWO anchors: Dead Hang is the calibrated test, Towel Wring Hold
+# the no-equipment fallback so a user with nowhere to hang still gets a grip row.
+# Anchor lookup takes the HIGHEST-rank anchor the user can perform (see
+# ``forge._anchor_for`` / ``forge.js:renderTrial``), so the fallback only shows
+# when the hang is out of reach. The other six patterns keep exactly one anchor.
 ASSESSMENT_ANCHORS = {
     "Push-up", "Australian Row", "Pike Push-up", "Squat", "Plank", "Glute Bridge",
+    "Dead Hang", "Towel Wring Hold",
 }
 
 # Movements performed one side at a time. Their rep targets are forced even (so
@@ -290,15 +366,18 @@ PER_SIDE = {
     "Shrimp Squat", "Dragon Squat",
     # Horizontal push
     "Incline Archer Push-up", "Archer Push-up", "Typewriter Push-up",
-    "One-Arm Push-up",
+    "Elevated One-Arm Push-up", "One-Arm Push-up",
     # Vertical pull
     "Single-Arm Australian Row", "Archer Pull-up", "Archer Chin-up",
     # Hinge
     "Single-Leg Glute Bridge",
+    # Grip (timed per-side holds keep their seconds; the value is per side)
+    "Assisted One-Arm Hang", "One-Arm Dead Hang", "One-Arm Towel Hang",
+    "Suitcase Carry",
 }
 
 
-def rest_for(mode, rmin, rmax, timed):
+def rest_for(mode, rmin, rmax, timed, pattern_key=None):
     """Evidence-based rest after a working set, in seconds.
 
     Longer rest (~2-3 min) favours strength and heavy compounds (Schoenfeld
@@ -312,7 +391,10 @@ def rest_for(mode, rmin, rmax, timed):
     catalog and prescription rows are migrated to match in 0004.
     """
     if timed:
-        return 40
+        # Grip holds are the exception: the forearms are the limiting tissue and
+        # recover slower than a braced trunk, so a grip hold rests ~90s while
+        # every other hold (plank, hollow) keeps 40s.
+        return 90 if pattern_key == "grip" else 40
     if rmax <= 8 or (mode == "load" and rmax <= 10):
         return 105
     if rmax <= 12:
@@ -355,8 +437,13 @@ class Command(BaseCommand):
             created = []
             for rung in rungs:
                 name, rank, mode, rmin, rmax, timed, threshold, equips, cues = rung[:9]
-                # Optional trailing grip element; defaults to n/a for normal rungs.
+                # Optional trailing elements: grip label, then variant group.
                 grip = rung[9] if len(rung) > 9 else Exercise.Grip.NA
+                variant_group = rung[10] if len(rung) > 10 else ""
+                # An equipment entry that is a tuple means "any one of these"
+                # (a bar OR rings); a plain string is required outright.
+                required = [e for e in equips if not isinstance(e, tuple)]
+                alternatives = [a for e in equips if isinstance(e, tuple) for a in e]
                 ex, _ = Exercise.objects.update_or_create(
                     pattern=pattern,
                     name=name,
@@ -370,12 +457,14 @@ class Command(BaseCommand):
                         "placement_threshold": threshold,
                         "cues": cues,
                         "grip": grip,
+                        "variant_group": variant_group,
                         "video_url": VIDEOS.get(name, ""),
-                        "rest_seconds": rest_for(mode, rmin, rmax, timed),
+                        "rest_seconds": rest_for(mode, rmin, rmax, timed, pkey),
                         "is_assessment_anchor": name in ASSESSMENT_ANCHORS,
                     },
                 )
-                ex.required_equipment.set([equipment[e] for e in equips])
+                ex.required_equipment.set([equipment[e] for e in required])
+                ex.alternative_equipment.set([equipment[a] for a in alternatives])
                 ex.muscles.set(
                     [muscles[m] for m in EXERCISE_MUSCLES.get(name, [])]
                 )
@@ -384,9 +473,10 @@ class Command(BaseCommand):
 
             # Link regression/progression within each ladder, ordered by rank —
             # one ladder per mode, or a single ladder for SINGLE_LADDER_PATTERNS.
-            # Grip variants sharing a rank (bar pull-ups) collapse into ONE ladder
-            # node so traversal stays linear: both variants get the same adjacent
-            # rungs, and adjacent rungs link to the node's first (overhand) variant.
+            # Rungs sharing a ``variant_group`` (the bar pull-up grips) collapse
+            # into ONE ladder node so traversal stays linear: every variant gets
+            # the same adjacent rungs, and adjacent rungs link to the node's first
+            # (overhand) variant.
             if pkey in SINGLE_LADDER_PATTERNS:
                 ladders = [[ex for _, ex in created]]
             else:
@@ -396,14 +486,14 @@ class Command(BaseCommand):
             for ladder in ladders:
                 chain = sorted(ladder, key=lambda e: e.difficulty_rank)
                 nodes = []
-                grip_node_by_rank = {}
+                node_by_group = {}
                 for ex in chain:
-                    if ex.grip != Exercise.Grip.NA:
-                        # All grip variants of a rank share one node, regardless of
-                        # their order in the sorted chain.
-                        node = grip_node_by_rank.get(ex.difficulty_rank)
+                    if ex.variant_group:
+                        # Every variant of a group shares one node, regardless of
+                        # its order in the sorted chain.
+                        node = node_by_group.get(ex.variant_group)
                         if node is None:
-                            node = grip_node_by_rank[ex.difficulty_rank] = []
+                            node = node_by_group[ex.variant_group] = []
                             nodes.append(node)
                         node.append(ex)
                     else:

@@ -49,6 +49,7 @@ the difficulty the norm was measured at.
 | Vertical push | Pike Push-up | `pike_pushup` | **thin** (+est. 40+) | Strength Level pike-push-up standards (79k sets). |
 | Hinge | Glute Bridge | `glute_bridge` | **thin** (+est. 40+) | Strength Level glute-bridge standards (163k sets). |
 | Lower (unilateral) | Squat | `squat` | **estimated** | Strength Level bodyweight-squat standards (546k sets); 40+ estimated. |
+| Grip / forearms | Dead Hang | `dead_hang` | **estimated** | Divulgation-grade hang-time references (Marathon Handbook, Deadhangs). Whole table estimated. |
 
 The three crowd-sourced norms use Strength Level's documented level→percentile
 mapping: **Beginner = P5, Novice = P20, Intermediate = P50, Advanced = P80,
@@ -64,6 +65,7 @@ extrapolated and would be **upgraded** by peer-reviewed age×sex AMRAP tables:
 | Priority | Entry | What's weak | How to upgrade |
 |---|---|---|---|
 | Med | `squat` | crowd-sourced (trained-skewed), 40+ extrapolated | swap for a scientific bodyweight-squat norm; remove `"estimated": True` |
+| Med | `dead_hang` | shaped from divulgation articles, no published percentile table | swap for a measured age×sex hang-time table; remove `"estimated": True` |
 | Med | `australian_row`, `pike_pushup`, `glute_bridge` — **40+ brackets** | estimated decline of crowd-sourced prime data | drop in measured 40+ data; remove those brackets from `estimated_brackets` |
 | Med | `australian_row`, `pike_pushup`, `glute_bridge` — **20–39** | crowd-sourced (trained-skewed), not peer-reviewed | swap for a scientific norm; raise `confidence` to `good` |
 | Med | `plank` — **30+ brackets** | estimated decline of the 18–29 study | drop in measured data; remove from `estimated_brackets` |

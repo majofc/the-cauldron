@@ -33,7 +33,7 @@ class ForgeBaseModel(models.Model):
 
 
 class MovementPattern(ForgeBaseModel):
-    """One of the six fundamental movement patterns the program is built around."""
+    """One of the seven fundamental movement patterns the program is built around."""
 
     class Key(models.TextChoices):
         HORIZONTAL_PUSH = "horizontal_push", "Horizontal Push"
@@ -42,6 +42,7 @@ class MovementPattern(ForgeBaseModel):
         LOWER_UNILATERAL = "lower_unilateral", "Lower (Unilateral)"
         CORE_ANTI_EXTENSION = "core_anti_extension", "Core (Anti-Extension)"
         HINGE = "hinge", "Hinge / Posterior Chain"
+        GRIP = "grip", "Grip / Forearms"
 
     key = models.CharField(max_length=32, choices=Key.choices, unique=True)
     name = models.CharField(max_length=80)
@@ -69,6 +70,7 @@ class Equipment(ForgeBaseModel):
         KETTLEBELL = "kettlebell", "Kettlebell"
         RINGS = "rings", "Gymnastic Rings"
         AB_WHEEL = "ab_wheel", "Ab Wheel"
+        FAT_GRIPS = "fat_grips", "Fat Grips"
 
     class LoadUnit(models.TextChoices):
         NONE = "none", "None"
@@ -172,6 +174,27 @@ class Exercise(ForgeBaseModel):
     )
     required_equipment = models.ManyToManyField(
         Equipment, related_name="exercises", blank=True
+    )
+    # Any-of equipment: the user needs AT LEAST ONE of these on top of owning
+    # everything in ``required_equipment``. Empty means no such constraint.
+    # Lets one rung read "a bar OR rings" without duplicating it per implement
+    # (see ``services.forge.is_performable``).
+    alternative_equipment = models.ManyToManyField(
+        Equipment,
+        related_name="alternative_exercises",
+        blank=True,
+        help_text="User needs at least one of these (in addition to all of "
+        "required_equipment). Empty = no alternatives constraint.",
+    )
+    # Rungs sharing a ladder position: same pattern, same difficulty_rank and the
+    # same non-empty variant_group collapse into ONE ladder node, so traversal
+    # stays linear and the variants count as one chain. ``grip`` is only the
+    # label that tells the variants apart (see services.forge.variant_siblings).
+    variant_group = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        help_text="Slug shared by rungs that occupy the same ladder position.",
     )
     muscles = models.ManyToManyField(
         Muscle,
