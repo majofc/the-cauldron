@@ -5,13 +5,14 @@ View/API code calls into here; the pure decision logic stays in
 session snapshotting, applying a logged session).
 """
 
+import math
 import random
 import uuid
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from the_cauldron.models import (
@@ -1413,6 +1414,10 @@ def _int_or_none(v):
         return None
 
 
+# Upper bound on a logged load (kg or lb). Anything above is a typo, not a lift.
+MAX_LOGGED_LOAD = 1000
+
+
 def _load_or_none(v):
     """The user may log a weight different from the prescribed one, so this is
     free-form input and gets the same treatment as reps: junk and negatives
@@ -1423,7 +1428,8 @@ def _load_or_none(v):
         load = float(v)
     except (TypeError, ValueError):
         return None
-    return None if load < 0 else load
+    # It drives progression now, so nan/inf must not slip through as "heaviest".
+    return load if math.isfinite(load) and 0 <= load <= MAX_LOGGED_LOAD else None
 
 
 def _write_set_values(session: WorkoutSession, set_results: dict) -> None:
@@ -1433,8 +1439,7 @@ def _write_set_values(session: WorkoutSession, set_results: dict) -> None:
         if not res:
             continue
         set_log.actual_reps = _int_or_none(res.get("actual_reps"))
-        # Recorded for history only — next_prescription still advances from
-        # target_load, so logging a heavier day never moves the programme.
+        # The heaviest logged load feeds progression (``_progression_base_load``).
         set_log.actual_load = _load_or_none(res.get("actual_load"))
         set_log.rir = res.get("rir")
         set_log.save(update_fields=["actual_reps", "actual_load", "rir"])
@@ -1451,6 +1456,73 @@ def save_session_values(session: WorkoutSession, set_results: dict) -> None:
     _write_set_values(session, set_results)
 
 
+def _performed_at(session: WorkoutSession):
+    """When a finalized session counts as performed: now for today's, but a past
+    session saved late (the unfinished-session sheet) keeps its own date. Noon,
+    so the date survives display in any nearby timezone."""
+    today = timezone.now().date()
+    if session.scheduled_for and session.scheduled_for < today:
+        return timezone.make_aware(datetime.combine(session.scheduled_for, time(12)))
+    return timezone.now()
+
+
+def _progression_base_load(session: WorkoutSession, presc, profile):
+    """The load ``next_prescription`` should progress from, or ``None`` to keep
+    the prescription's own.
+
+    A load-mode movement progresses from the heaviest load actually logged on it
+    this session when that beats the target (prescribed 5.5 kg, lifted 19.08 kg),
+    snapped to something buildable. Assisted movements invert it: the *lightest*
+    band logged is the hardest work done.
+    """
+    if presc.exercise.progression_mode != "load":
+        return None
+    logged = [
+        v
+        for v in session.set_logs.filter(prescribed_exercise=presc)
+        .exclude(actual_load=None)
+        .values_list("actual_load", flat=True)
+    ]
+    if not logged:
+        return None
+    pick = min if presc.exercise.is_assisted else max
+    candidates = logged if presc.target_load is None else [presc.target_load, *logged]
+    base = pick(candidates)
+    if base == presc.target_load:
+        return None
+    return progression.nearest_available_load(profile, presc.exercise, base)
+
+
+def _next_rung(user, exercise, owned, blocked):
+    """The harder rung ``exercise`` would advance to, or ``None`` at the top of
+    the user's ladder (nothing harder they can perform).
+
+    Walks the ``progression`` links past rungs needing missing gear. When the
+    walk is stopped by a block, ``substitute_for`` may still offer a harder
+    stand-in. An assisted rung that ends its chain (Band-Assisted Pull-up) falls
+    back to the easiest harder rung of the same pattern — the unassisted move.
+    """
+    prog = exercise.progression
+    if prog is not None:
+        target = first_performable_along(prog, "progression", owned, blocked)
+        if target is None:
+            sub = substitute_for(user, prog)
+            if sub is not None and sub.difficulty_rank > exercise.difficulty_rank:
+                target = sub
+        if target is not None:
+            return target
+    if exercise.is_assisted:
+        harder = (
+            Exercise.objects.filter(
+                pattern_id=exercise.pattern_id, difficulty_rank__gt=exercise.difficulty_rank
+            )
+            .prefetch_related("required_equipment", "alternative_equipment")
+            .order_by("difficulty_rank", "created_at")
+        )
+        return next((e for e in harder if is_performable(e, owned, blocked)), None)
+    return None
+
+
 @transaction.atomic
 def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     """Record actual reps/load and advance prescriptions via the engine.
@@ -1463,7 +1535,7 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     _write_set_values(session, set_results)
 
     session.status = WorkoutSession.Status.COMPLETED
-    session.performed_at = timezone.now()
+    session.performed_at = _performed_at(session)
     session.save(update_fields=["status", "performed_at"])
 
     # Advance each prescription from its AMRAP set. The engine moves along the
@@ -1484,7 +1556,12 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         # Forge scheduled today) while ``presc`` tracks the shared rung. Drive the
         # rung from the stronger grip so a weak-grip day never demotes/stalls it.
         reps = effective_progression_reps(session.user, amrap.exercise, amrap.actual_reps)
-        new = progression.next_prescription(presc, reps, profile)
+        base_load = _progression_base_load(session, presc, profile)
+        if base_load is not None:
+            presc.target_load = base_load
+        new = progression.next_prescription(
+            presc, reps, profile, next_rung=_next_rung(session.user, presc.exercise, owned, blocked)
+        )
 
         # Earned a harder rung → don't climb automatically. Park it as a pending
         # "unlock" the user must Accept/Deny, and hold at the current rung.
@@ -1566,6 +1643,89 @@ def deny_progression(user, prescription) -> None:
     prescription.pending_progression = None
     prescription.sessions_at_top = 0
     prescription.save(update_fields=["pending_progression", "sessions_at_top"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Unfinished past sessions
+#
+# A day logged but never saved would otherwise drop its results: Today only
+# resumes *today's* session, so yesterday's half-logged one was silently
+# abandoned and its progression never ran. The newest is offered back to the
+# user (save → progression, or delete); older ones are closed as skipped.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _close_stale_unfinished(user) -> None:
+    stale = list(_stale_unfinished(user).values_list("pk", flat=True))
+    if stale:
+        WorkoutSession.objects.filter(pk__in=stale).update(status=WorkoutSession.Status.SKIPPED)
+
+
+def _unfinished_sessions(user):
+    """Planned sessions from before today with at least one logged value,
+    newest first."""
+    return (
+        WorkoutSession.objects.filter(
+            user=user,
+            status=WorkoutSession.Status.PLANNED,
+            scheduled_for__lt=timezone.now().date(),
+        )
+        .filter(Q(set_logs__actual_reps__isnull=False) | Q(set_logs__actual_load__isnull=False))
+        .distinct()
+        .order_by("-scheduled_for", "-created_at")
+    )
+
+
+def has_unfinished_session(user) -> bool:
+    """The check behind the Today gate. Ignores stale sessions (see
+    ``_stale_unfinished``) — those are closed by ``unfinished_session``."""
+    return _unfinished_sessions(user).exclude(pk__in=_stale_unfinished(user)).exists()
+
+
+@transaction.atomic
+def unfinished_session(user) -> "WorkoutSession | None":
+    """The newest unfinished past session, after closing every older or stale
+    one as ``skipped`` (no progression; their values stay as history)."""
+    _close_stale_unfinished(user)
+    sessions = list(_unfinished_sessions(user))
+    if not sessions:
+        return None
+    newest, older = sessions[0], sessions[1:]
+    if older:
+        WorkoutSession.objects.filter(pk__in=[s.pk for s in older]).update(
+            status=WorkoutSession.Status.SKIPPED
+        )
+    return newest
+
+
+def _stale_unfinished(user):
+    """Unfinished sessions that can no longer be saved meaningfully: from a
+    program the user has since replaced, or older than a session they went on
+    to complete — their reps would be replayed onto prescriptions that already
+    moved past them."""
+    last_done = (
+        WorkoutSession.objects.filter(user=user, status=WorkoutSession.Status.COMPLETED)
+        .exclude(scheduled_for=None)
+        .order_by("-scheduled_for")
+        .values_list("scheduled_for", flat=True)
+        .first()
+    )
+    stale = Q(program_day__isnull=True) | ~Q(program_day__program__is_active=True)
+    if last_done is not None:
+        stale |= Q(scheduled_for__lte=last_done)
+    return _unfinished_sessions(user).filter(stale).order_by()
+
+
+class SessionAlreadyCompleted(Exception):
+    """A completed session is history and is never deleted."""
+
+
+@transaction.atomic
+def discard_session(session: WorkoutSession) -> None:
+    """Delete an unfinished session and its SetLogs. Prescriptions are untouched."""
+    if session.status == WorkoutSession.Status.COMPLETED:
+        raise SessionAlreadyCompleted("A completed session can't be deleted.")
+    session.delete()
 
 
 @transaction.atomic

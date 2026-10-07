@@ -172,6 +172,15 @@ class Exercise(ForgeBaseModel):
         help_text="True for movements performed one side at a time; rep targets "
         "are forced even.",
     )
+    # Band-assisted movements (Band-Assisted Row / Pull-up): the band *helps*, so
+    # a lighter band (lower index) is harder. Progression lowers the index and
+    # the lightest band at the top of the range unlocks the next rung. See
+    # services.progression.next_prescription.
+    is_assisted = models.BooleanField(
+        default=False,
+        help_text="True when the band assists the movement; progression moves to "
+        "lighter bands.",
+    )
     required_equipment = models.ManyToManyField(
         Equipment, related_name="exercises", blank=True
     )

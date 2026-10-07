@@ -39,6 +39,8 @@ LOWER_ORDER = [
     ("Pistol Squat", "difficulty"),
     ("Shrimp Squat", "difficulty"),
     ("Dragon Squat", "difficulty"),
+    ("Weighted Pistol Squat", "load"),
+    ("Weighted Dragon Squat", "load"),
 ]
 
 

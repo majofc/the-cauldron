@@ -5,7 +5,7 @@ import uuid as uuid_module
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -393,6 +393,15 @@ class ProgramView(APIView):
         return Response(ProgramSerializer(program).data)
 
 
+# Body of the 409 that gates Today (and session creation) while an unfinished
+# past session awaits a Save/Delete. The client fetches it from
+# ``GET sessions/unfinished/``.
+UNFINISHED_GATE = {
+    "detail": "Finish or delete your last unfinished session first.",
+    "code": "unfinished_session",
+}
+
+
 class TodayView(APIView):
     """GET → the plan for today. **Writes nothing.**
 
@@ -414,6 +423,10 @@ class TodayView(APIView):
         day = forge.active_day(request.user)
         if day is None:
             return Response({"detail": "No active program."}, status=404)
+        # A past session with logged values must be saved or deleted first, or
+        # today's plan would be built from prescriptions it never progressed.
+        if forge.has_unfinished_session(request.user):
+            return Response(UNFINISHED_GATE, status=status.HTTP_409_CONFLICT)
         existing = forge.resumable_session(request.user)
         if existing is not None:
             payload = WorkoutSessionSerializer(existing).data
@@ -562,13 +575,15 @@ def _exercise_or_400(value):
         return None
 
 
-class SessionViewSet(viewsets.ReadOnlyModelViewSet):
+class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     """Saved sessions.
 
     - ``POST /sessions/`` — persist the on-screen plan (first logged value)
     - ``POST /sessions/{uuid}/sets/`` — record values, session stays ``planned``
     - ``POST /sessions/{uuid}/swap/`` — replace an untouched movement
     - ``POST /sessions/{uuid}/log/`` — finalize: progression + ``completed``
+    - ``GET /sessions/unfinished/`` — the newest unfinished past session (or null)
+    - ``DELETE /sessions/{uuid}/`` — discard an unfinished session (409 if completed)
     """
 
     permission_classes = [IsAuthenticated]
@@ -591,6 +606,8 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
         day = forge.active_day(request.user)
         if day is None:
             return Response({"detail": "No active program."}, status=404)
+        if forge.has_unfinished_session(request.user):
+            return Response(UNFINISHED_GATE, status=status.HTTP_409_CONFLICT)
         # Two inputs racing the first keystroke must not create two sessions.
         existing = forge.resumable_session(request.user)
         if existing is not None:
@@ -604,6 +621,24 @@ class SessionViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(
             WorkoutSessionSerializer(session).data, status=status.HTTP_201_CREATED
         )
+
+    @action(detail=False, methods=["get"])
+    def unfinished(self, request):
+        """``{"session": <session>|null}`` — a past day with logged values that
+        was never saved. Older ones are closed as ``skipped`` on the way."""
+        session = forge.unfinished_session(request.user)
+        return Response(
+            {"session": WorkoutSessionSerializer(session).data if session else None}
+        )
+
+    def destroy(self, request, uuid=None):
+        """Discard a session that was never completed, with its SetLogs.
+        Prescriptions are not touched."""
+        try:
+            forge.discard_session(self.get_object())
+        except forge.SessionAlreadyCompleted as exc:
+            return Response({"detail": str(exc)}, status=409)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"])
     def sets(self, request, uuid=None):
