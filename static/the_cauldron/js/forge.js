@@ -1165,7 +1165,14 @@
   async function loadToday() {
     showLoader(true);
     try {
-      currentSession = await api("today/").catch(() => null);
+      await settleUnfinished();
+      currentSession = await api("today/").catch(async (err) => {
+        // Raced a session left unfinished in another tab: settle it, retry once.
+        const { status, data } = apiErrorPayload(err);
+        if (status !== 409 || !data || data.code !== "unfinished_session") return null;
+        await settleUnfinished();
+        return api("today/").catch(() => null);
+      });
       if (!currentSession) {
         $("#forge-today-list").innerHTML = `<p class="forge-help">No program yet — take the Trial.</p>`;
         $("#forge-log-session").hidden = true;
@@ -1182,6 +1189,140 @@
     } finally {
       showLoader(false);
     }
+  }
+
+  // ── Unfinished past session ────────────────────────────────────────────────
+  // A day whose sets were logged but never saved. Today stays shut until the
+  // user saves it (progression runs, dated to its own day) or deletes it, so
+  // today's plan is never built from prescriptions that missed its results.
+  const unfinishedModal = $("#forge-unfinished-modal");
+
+  async function settleUnfinished() {
+    let pending = null;
+    try {
+      pending = await api("sessions/unfinished/");
+    } catch (e) {
+      return; // Today's own 409 brings us back here if it really is pending.
+    }
+    if (!pending || !pending.session) return;
+    showLoader(false);
+    await resolveUnfinished(pending.session);
+    showLoader(true);
+  }
+
+  function renderUnfinished(session) {
+    const groups = new Map();
+    (session.set_logs || []).forEach((s) => {
+      if (!groups.has(s.exercise)) groups.set(s.exercise, []);
+      groups.get(s.exercise).push(s);
+    });
+    const day = session.scheduled_for
+      ? new Date(`${session.scheduled_for}T12:00:00`).toLocaleDateString(undefined, {
+          weekday: "long", month: "short", day: "numeric",
+        })
+      : "an earlier day";
+    let html =
+      `<p class="forge-help">You logged sets on <strong>${esc(day)}</strong> but never saved ` +
+      `the session. Check the numbers, then save it to count toward your progress — or delete it.</p>`;
+    groups.forEach((sets) => {
+      const meta = sets[0];
+      const unit = meta.is_timed ? "s" : "reps";
+      html +=
+        `<div class="forge-ex-block"><div class="forge-ex-head">` +
+        `<span class="forge-ex-name">${esc(meta.exercise_name)}</span></div>`;
+      sets.forEach((s) => {
+        const loadInput = s.expected_load == null
+          ? ""
+          : `<label class="forge-load-actual"><span class="forge-load-actual-label">Load</span>` +
+            `<input type="number" min="0" step="0.25" class="forge-trial-input forge-unfinished-load" ` +
+            `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
+            `aria-label="weight used for set ${s.set_index + 1} of ${esc(meta.exercise_name)}">` +
+            `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
+        html +=
+          `<div class="forge-set-row${s.is_amrap ? " is-amrap" : ""}">` +
+          `<span class="forge-set-label">Set ${s.set_index + 1}${
+            s.is_unilateral ? ` <span class="forge-trial-perleg">· per side</span>` : ""
+          }</span>` +
+          `<span class="forge-set-expected">target ${s.expected_reps} ${unit}${
+            s.expected_load == null ? "" : ` @ ${esc(fmtLoad(s.expected_load, s.load_unit))}`}</span>` +
+          `<input type="number" min="0" class="forge-trial-input forge-unfinished-reps" ` +
+          `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" value="${s.actual_reps ?? ""}" ` +
+          `placeholder="${s.expected_reps}" aria-label="${unit} for set ${s.set_index + 1} of ${esc(meta.exercise_name)}">` +
+          loadInput +
+          `</div>`;
+      });
+      html += `</div>`;
+    });
+    $("#forge-unfinished-body").innerHTML = html;
+  }
+
+  // Every set is sent, so a value cleared on the sheet is cleared server-side.
+  // An empty load beside logged reps means the prescribed load, as on Today.
+  function collectUnfinished() {
+    const sets = {};
+    $$("#forge-unfinished-body .forge-unfinished-reps").forEach((inp) => {
+      const reps = parseInt(inp.value, 10);
+      const field = $(`#forge-unfinished-body .forge-unfinished-load[data-uuid="${inp.dataset.uuid}"]`);
+      let load = field && field.value.trim() !== "" ? parseFloat(field.value) : NaN;
+      if (isNaN(load) || load < 0) {
+        load = !isNaN(reps) && inp.dataset.load !== "" ? parseFloat(inp.dataset.load) : null;
+      }
+      sets[inp.dataset.uuid] = { actual_reps: isNaN(reps) ? null : reps, actual_load: load };
+    });
+    return sets;
+  }
+
+  function resolveUnfinished(session) {
+    renderUnfinished(session);
+    const save = $("#forge-unfinished-save");
+    const del = $("#forge-unfinished-delete");
+    del.textContent = "Delete it";
+    delete del.dataset.armed;
+    unfinishedModal.hidden = false;
+    document.body.classList.add("forge-overlay-open");
+    return new Promise((resolve) => {
+      const done = () => {
+        unfinishedModal.hidden = true;
+        document.body.classList.remove("forge-overlay-open");
+        save.onclick = null;
+        del.onclick = null;
+        resolve();
+      };
+      save.onclick = async () => {
+        showLoader(true);
+        try {
+          const res = await api(`sessions/${session.uuid}/log/`, {
+            method: "POST",
+            body: { sets: collectUnfinished() },
+          });
+          done();
+          showLoader(false);
+          await showSessionReport(res);
+        } catch (e) {
+          notify("Couldn't save that session.");
+        } finally {
+          showLoader(false);
+        }
+      };
+      // Two taps, no confirm() dialog: the first arms the button.
+      del.onclick = async () => {
+        if (!del.dataset.armed) {
+          del.dataset.armed = "1";
+          del.textContent = "Tap again to delete";
+          return;
+        }
+        showLoader(true);
+        try {
+          await api(`sessions/${session.uuid}/`, { method: "DELETE" });
+          done();
+          notify("Session deleted.");
+        } catch (e) {
+          notify("Couldn't delete that session.");
+        } finally {
+          showLoader(false);
+        }
+      };
+    });
   }
 
   // Inline, dismissible nudge to retake the Trial once the last completed one is

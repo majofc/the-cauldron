@@ -49,7 +49,8 @@ class TestLowerUnilateralTop:
         assert shrimp.regression == pistol
         assert shrimp.progression == dragon
         assert dragon.regression == shrimp
-        assert dragon.progression is None  # new top of the bodyweight ladder
+        # Top of the bodyweight ladder; the weighted rungs (#63) follow it.
+        assert dragon.progression == _get("Weighted Pistol Squat")
 
     def test_are_bodyweight_difficulty_rungs(self, seeded):
         for name in ("Shrimp Squat", "Dragon Squat"):
