@@ -316,6 +316,28 @@
     </div>
   </div>
 
+  <!-- ── Unfinished past session (blocking) ─────────────────── -->
+  <!-- No ✕, no swipe, no Escape: Today stays closed until the user saves or
+       deletes the session, so it is never planned from stale prescriptions. -->
+  <div class="forge-overlay forge-sheet-overlay" id="forge-unfinished-modal" hidden role="dialog" aria-modal="true"
+       aria-labelledby="forge-unfinished-title">
+    <div class="cauldron-card forge-swap-card forge-unfinished-card forge-sheet">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="forge-sheet-head">
+        <span class="forge-sheet-handle" aria-hidden="true"></span>
+        <h3 class="forge-h3" id="forge-unfinished-title">Unfinished session</h3>
+      </div>
+      <div class="forge-sheet-body">
+        <div id="forge-unfinished-body"></div>
+        <div id="forge-unfinished-actions" class="forge-reveal-actions">
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-unfinished-delete">Delete it</button>
+          <button type="button" class="btn-cauldron btn-cauldron--primary" id="forge-unfinished-save">Save session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Progress ──────────────────────────────────────────── -->
   <section class="forge-panel{% if initial_tab == 'progress' %} is-active{% endif %}" data-panel="progress">
     <div class="cauldron-card forge-card">

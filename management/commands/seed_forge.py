@@ -107,6 +107,13 @@ LADDERS = {
         ("Pistol Squat", 9, "difficulty", 3, 8, False, 95, ["bodyweight"], "One leg; controlled descent."),
         ("Shrimp Squat", 10, "difficulty", 3, 8, False, 120, ["bodyweight"], "Grab rear foot; sit straight down, chest tall."),
         ("Dragon Squat", 11, "difficulty", 1, 5, False, 150, ["bodyweight"], "Thread rear leg through; control the descent."),
+        # Past the bodyweight top: the same skills with a weight held at the chest,
+        # dumbbell OR kettlebell. Without either, Dragon Squat stays the top of the
+        # user's ladder and keeps extending its rep target (#63).
+        ("Weighted Pistol Squat", 12, "load", 3, 8, False, 170, [("dumbbells", "kettlebell")],
+         "Dumbbell or kettlebell at the chest; one leg, controlled descent."),
+        ("Weighted Dragon Squat", 13, "load", 1, 5, False, 190, [("dumbbells", "kettlebell")],
+         "Light weight at the chest; thread the rear leg through, control the descent."),
     ],
     # Thresholds: Plank seconds.
     "core_anti_extension": [
@@ -247,6 +254,8 @@ EXERCISE_MUSCLES = {
     "Pistol Squat": ["quads", "glutes", "hamstrings"],
     "Shrimp Squat": ["quads", "glutes"],
     "Dragon Squat": ["quads", "glutes", "hamstrings"],
+    "Weighted Pistol Squat": ["quads", "glutes", "hamstrings"],
+    "Weighted Dragon Squat": ["quads", "glutes", "hamstrings"],
     "Goblet Squat": ["quads", "glutes"],
     "Dumbbell Bulgarian Split Squat": ["quads", "glutes", "hamstrings"],
     "Barbell Back Squat": ["quads", "glutes", "hamstrings", "lower_back"],
@@ -363,7 +372,7 @@ PER_SIDE = {
     # Lower (unilateral)
     "Assisted Split Squat", "Split Squat", "Bulgarian Split Squat",
     "Dumbbell Bulgarian Split Squat", "Assisted Pistol Squat", "Pistol Squat",
-    "Shrimp Squat", "Dragon Squat",
+    "Shrimp Squat", "Dragon Squat", "Weighted Pistol Squat", "Weighted Dragon Squat",
     # Horizontal push
     "Incline Archer Push-up", "Archer Push-up", "Typewriter Push-up",
     "Elevated One-Arm Push-up", "One-Arm Push-up",
@@ -375,6 +384,12 @@ PER_SIDE = {
     "Assisted One-Arm Hang", "One-Arm Dead Hang", "One-Arm Towel Hang",
     "Suitcase Carry",
 }
+
+
+# Movements the band ASSISTS: a lighter band (lower level index) is harder, so
+# their load progression runs backwards (``Exercise.is_assisted``). Band Rollout
+# is band-resisted and stays out — its progression still raises the index.
+ASSISTED = {"Band-Assisted Row", "Band-Assisted Pull-up"}
 
 
 def rest_for(mode, rmin, rmax, timed, pattern_key=None):
@@ -454,6 +469,7 @@ class Command(BaseCommand):
                         "rep_range_max": rmax,
                         "is_timed": timed,
                         "is_per_side": name in PER_SIDE,
+                        "is_assisted": name in ASSISTED,
                         "placement_threshold": threshold,
                         "cues": cues,
                         "grip": grip,

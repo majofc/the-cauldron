@@ -213,7 +213,8 @@ def test_an_open_trial_is_not_used(user, press):
 
 def test_a_zero_threshold_rung_cannot_measure_a_margin(seeded, user):
     """Band-Assisted Row places at 0 — there is no margin to scale, so it starts
-    on the lightest band whatever the score."""
+    on the easiest band whatever the score. The band assists, so the easiest is
+    the heaviest one (#63)."""
     profile = forge.get_or_create_equipment_profile(user)
     profile.equipment.set(Equipment.objects.filter(key__in=["bodyweight", "bands"]))
     profile.band_levels = ["light", "medium", "heavy"]
@@ -221,7 +222,7 @@ def test_a_zero_threshold_rung_cannot_measure_a_margin(seeded, user):
     row = Exercise.objects.get(name="Band-Assisted Row")
     assert row.placement_threshold == 0
     _retake_onto(user, row, score=30)
-    assert _load_prescriptions(user).get(exercise=row).target_load == 0.0
+    assert _load_prescriptions(user).get(exercise=row).target_load == 2.0
 
 
 def test_a_swap_uses_the_history_too(user, press):

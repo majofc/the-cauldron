@@ -1379,7 +1379,7 @@ def test_prescribed_load_is_buildable_and_carries_its_recipe(seeded, client):
         assert recipe["stacked"] is False
 
 
-def test_user_logged_load_persists_without_moving_progression(seeded, client):
+def test_user_logged_heavier_load_drives_progression(seeded, client):
     _plate_equipment(client)
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
     session = _open_today(client)
@@ -1391,9 +1391,9 @@ def test_user_logged_load_persists_without_moving_progression(seeded, client):
     presc_before = SetLog.objects.get(uuid=target["uuid"]).prescribed_exercise
     load_before = presc_before.target_load
 
-    # Log a weight that is NOT the prescribed one. The AMRAP set lands just
-    # inside the range (its expected_reps IS the top, which would legitimately
-    # progress) so any load movement could only have come from actual_load.
+    # Log a weight heavier than the prescribed one. The AMRAP set lands just
+    # inside the range (its expected_reps IS the top), so the engine holds — at
+    # the heaviest logged load, snapped to something buildable (#63).
     set_results = {
         s["uuid"]: {"actual_reps": s["expected_reps"], "actual_load": s["expected_load"]}
         for s in session["set_logs"]
@@ -1406,9 +1406,11 @@ def test_user_logged_load_persists_without_moving_progression(seeded, client):
     assert resp.status_code == 200
 
     stored = SetLog.objects.get(uuid=target["uuid"])
-    assert stored.actual_load == 99.5          # recorded as history
+    assert stored.actual_load == 99.5
     presc_before.refresh_from_db()
-    assert presc_before.target_load == load_before  # engine unmoved
+    # 99.5 isn't buildable; 14.5 is the heaviest bell these plates make.
+    assert load_before < 14.5
+    assert presc_before.target_load == 14.5
 
 
 def test_negative_actual_load_is_not_persisted(seeded, client):

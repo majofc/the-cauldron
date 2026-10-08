@@ -21,6 +21,28 @@ from the_cauldron.services import loads
 # advances to the next (harder) rung.
 SESSIONS_TO_ADVANCE = 2
 
+# Smallest load jump worth prescribing: 2.5% of the current load, never under a
+# floor in the profile's unit. Mixed plates otherwise make the "next" buildable
+# total a few grams heavier (5.44 → 5.50 kg) and the programme never moves.
+LOAD_STEP_FRACTION = 0.025
+MIN_LOAD_STEP = {"kg": 1.0, "lb": 2.5}
+
+# A top-of-ladder rung (nothing harder the user can perform) keeps extending its
+# rep target. Once the AMRAP reaches this, every top-of-range session re-checks
+# for a performable harder rung — e.g. the weighted rung after dumbbells are added.
+TOP_OF_LADDER_REPS = 25
+
+# Timed holds grow their target instead of advancing at the seeded max: the new
+# max is ``max(rmax + TIMED_STEP_SECONDS, round(TIMED_ACHIEVED_RATIO × achieved))``
+# up to TIMED_CAP_SECONDS, and only a hold at the cap counts as topped out.
+TIMED_STEP_SECONDS = 5
+TIMED_ACHIEVED_RATIO = 0.9
+TIMED_CAP_SECONDS = 120
+
+# Sentinel: ``next_prescription`` was not told the next rung, so it follows the
+# exercise's own ``progression`` link (the pure, no-equipment view).
+_LINKED = object()
+
 
 @dataclass
 class Prescription:
@@ -139,14 +161,21 @@ def available_loads(equipment_profile, exercise) -> list:
     return [t for t in totals if t > 0]
 
 
+def _easiest_first(exercise, options: list) -> list:
+    """Loads ordered from easiest to hardest. Ascending, except for an assisted
+    movement, where the heaviest band is the most help and so the easiest."""
+    return list(reversed(options)) if getattr(exercise, "is_assisted", False) else options
+
+
 def nearest_available_load(equipment_profile, exercise, target) -> Optional[float]:
     """The prescribable load closest to ``target`` (ties go lighter), or the
-    lightest one when ``target`` is None. ``None`` when nothing is prescribable."""
+    easiest one when ``target`` is None — the lightest weight, or the heaviest
+    band for an assisted movement. ``None`` when nothing is prescribable."""
     options = available_loads(equipment_profile, exercise)
     if not options:
         return None
     if target is None:
-        return options[0]
+        return _easiest_first(exercise, options)[0]
     return min(options, key=lambda l: (abs(l - target), l))
 
 
@@ -167,7 +196,7 @@ def trial_seeded_load(equipment_profile, exercise, trial_score) -> Optional[floa
     usable score (none recorded, or a threshold of 0 to measure against) this is
     the lightest prescribable load. ``None`` when nothing is prescribable.
     """
-    options = available_loads(equipment_profile, exercise)
+    options = _easiest_first(exercise, available_loads(equipment_profile, exercise))
     if not options:
         return None
     threshold = exercise.placement_threshold or 0
@@ -177,18 +206,61 @@ def trial_seeded_load(equipment_profile, exercise, trial_score) -> Optional[floa
     return options[min(steps, (len(options) - 1) // 2)]
 
 
+def load_step(equipment_profile, current_load: float) -> float:
+    """The minimum jump from ``current_load``: ``LOAD_STEP_FRACTION`` of it, never
+    under the unit floor (1 kg, or 2.5 lb on an ``lb`` profile)."""
+    unit = getattr(equipment_profile, "load_unit", "kg")
+    floor = MIN_LOAD_STEP.get(unit, MIN_LOAD_STEP["kg"])
+    return max(LOAD_STEP_FRACTION * current_load, floor)
+
+
+def _is_band(equipment_profile, exercise) -> bool:
+    """Band loads are level indices, not weights — the step rule doesn't apply."""
+    return loads.implement_for(equipment_profile, exercise) == "bands"
+
+
 def next_load_up(equipment_profile, exercise, current_load: Optional[float]) -> Optional[float]:
-    """Smallest available load strictly greater than ``current_load`` (or the
-    lowest available load if current is None)."""
-    loads = available_loads(equipment_profile, exercise)
-    if not loads:
+    """The next prescribable load above ``current_load``.
+
+    The first buildable total at least ``load_step`` heavier; when nothing clears
+    the step (fixed dumbbells 10 → 10.5), the next heavier load anyway, so a
+    sparse inventory never strands the user. Bands simply move one level. The
+    lowest available load when ``current_load`` is None, and ``current_load``
+    itself when it is already the heaviest.
+    """
+    options = available_loads(equipment_profile, exercise)
+    if not options:
         return None
     if current_load is None:
-        return loads[0]
-    for load in loads:
-        if load > current_load:
+        return options[0]
+    heavier = [l for l in options if l > current_load]
+    if not heavier:
+        return current_load  # already at the top available load
+    if _is_band(equipment_profile, exercise):
+        return heavier[0]
+    floor = round(current_load + load_step(equipment_profile, current_load), 2)
+    for load in heavier:
+        if round(load, 2) >= floor:
             return load
-    return current_load  # already at the top available load
+    return heavier[0]
+
+
+def next_load_down(equipment_profile, exercise, current_load: Optional[float]) -> Optional[float]:
+    """Mirror of ``next_load_up``: the heaviest buildable load at least
+    ``load_step`` lighter, else the next lighter one. ``None`` when nothing is
+    lighter (or ``current_load`` is None)."""
+    if current_load is None:
+        return None
+    lighter = [l for l in available_loads(equipment_profile, exercise) if l < current_load]
+    if not lighter:
+        return None
+    if _is_band(equipment_profile, exercise):
+        return lighter[-1]
+    ceiling = round(current_load - load_step(equipment_profile, current_load), 2)
+    for load in reversed(lighter):
+        if round(load, 2) <= ceiling:
+            return load
+    return lighter[-1]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -196,12 +268,27 @@ def next_load_up(equipment_profile, exercise, current_load: Optional[float]) -> 
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def next_prescription(prescribed, amrap_reps: int, equipment_profile) -> Prescription:
+def _seeded_rmax(exercise) -> int:
+    """The rung's own rep-range max as a prescription stores it (per-side parity
+    applied). A prescription above it has been extended at the top."""
+    return rep_targets_for(exercise, exercise.rep_range_min, exercise.rep_range_max)[1]
+
+
+def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=_LINKED) -> Prescription:
     """Compute the next prescription for one exercise from its AMRAP test set.
 
     ``prescribed`` carries the current targets (.exercise, .target_sets,
     .target_reps_min/max, .target_load, .sessions_at_top) and ``amrap_reps`` is
     the actual reps achieved on the last (AMRAP) working set.
+
+    ``next_rung`` is the harder rung the user can move to, or ``None`` when there
+    is nothing harder they can perform — the top of *their* ladder. The
+    orchestrator resolves it against equipment and blocks; left out, the
+    exercise's own ``progression`` link is used.
+
+    Assisted exercises (``is_assisted``: band-assisted rows/pull-ups) run the band
+    index backwards — a lighter band is less help, so progress lowers the index
+    and the lightest band at the top of the range earns the next rung.
     """
     ex = prescribed.exercise
     rmin = prescribed.target_reps_min
@@ -210,19 +297,36 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile) -> Prescri
     load = prescribed.target_load
     at_top = prescribed.sessions_at_top
     is_load_mode = ex.progression_mode == "load"
+    is_timed = getattr(ex, "is_timed", False)
+    assisted = getattr(ex, "is_assisted", False)
+    if next_rung is _LINKED:
+        next_rung = ex.progression
+
+    def advance_to(rung):
+        return Prescription(
+            rung, sets, rung.rep_range_min, rung.rep_range_max, None, 0,
+            f"Advanced to {rung.name}!", advanced=True,
+        )
 
     # ── Underperformed: below the bottom of the range → de-load. ──────────────
+    # ``load is not None`` rather than truthiness: band level 0 is a real load.
     if amrap_reps < rmin:
-        if is_load_mode and load:
-            loads = available_loads(equipment_profile, ex)
-            lower = [l for l in loads if l < load]
-            new_load = lower[-1] if lower else load
-            msg = (
-                f"De-load: reduced to {new_load}{_unit(equipment_profile)}"
-                if lower
-                else "Held load; dropped a set to recover."
+        if is_load_mode and load is not None:
+            # An assisted movement de-loads by adding help: a heavier band.
+            if assisted:
+                easier = next_load_up(equipment_profile, ex, load)
+                if easier is not None and easier <= load:
+                    easier = None
+            else:
+                easier = next_load_down(equipment_profile, ex, load)
+            if easier is not None:
+                return Prescription(
+                    ex, max(2, sets), rmin, rmax, easier, 0,
+                    f"De-load: reduced to {easier}{_unit(equipment_profile)}",
+                )
+            return Prescription(
+                ex, max(2, sets - 1), rmin, rmax, load, 0, "Held load; dropped a set to recover."
             )
-            return Prescription(ex, max(2, sets - (0 if lower else 1)), rmin, rmax, new_load, 0, msg)
         # difficulty mode: regress one rung if we can, else drop a set
         if ex.regression is not None:
             reg = ex.regression
@@ -234,6 +338,16 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile) -> Prescri
 
     # ── Hit/exceeded top of range → progress. ─────────────────────────────────
     if amrap_reps >= rmax:
+        if is_load_mode and assisted:
+            lighter = next_load_down(equipment_profile, ex, load)
+            if lighter is not None:
+                return Prescription(
+                    ex, sets, rmin, rmax, lighter, 0,
+                    f"Less assistance → band {lighter:g} (reps reset to {rmin}).",
+                )
+            if load is not None and next_rung is not None:
+                return advance_to(next_rung)
+            return Prescription(ex, sets, rmin, rmax + 1, load, 0, "Lightest band reached; +1 target rep.")
         if is_load_mode:
             new_load = next_load_up(equipment_profile, ex, load)
             if new_load is not None and (load is None or new_load > load):
@@ -243,14 +357,29 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile) -> Prescri
                 )
             # No heavier load available: progress reps within an extended range.
             return Prescription(ex, sets, rmin, rmax + 1, load, 0, "Max load reached; +1 target rep.")
-        # difficulty mode: advance only after sustained top performance
-        new_at_top = at_top + 1
-        if new_at_top >= SESSIONS_TO_ADVANCE and ex.progression is not None:
-            prog = ex.progression
-            return Prescription(
-                prog, sets, prog.rep_range_min, prog.rep_range_max, None, 0,
-                f"Advanced to {prog.name}!", advanced=True,
+
+        # Timed holds grow their target until the cap; only a capped hold is at
+        # the top of its range for advancing.
+        if is_timed and rmax < TIMED_CAP_SECONDS:
+            new_rmax = min(
+                TIMED_CAP_SECONDS,
+                max(rmax + TIMED_STEP_SECONDS, round(TIMED_ACHIEVED_RATIO * amrap_reps)),
             )
+            return Prescription(ex, sets, rmin, new_rmax, None, 0, f"Hold target → {new_rmax}s.")
+
+        # difficulty mode: advance only after sustained top performance — or, on
+        # a rung already extended past its range, as soon as the AMRAP shows the
+        # user has long outgrown it and something harder has become performable.
+        new_at_top = min(at_top + 1, SESSIONS_TO_ADVANCE)
+        # Reps only: a capped hold's seconds would always clear 25.
+        outgrown = not is_timed and rmax > _seeded_rmax(ex) and amrap_reps >= TOP_OF_LADDER_REPS
+        if next_rung is not None and (new_at_top >= SESSIONS_TO_ADVANCE or outgrown):
+            return advance_to(next_rung)
+        if next_rung is None and new_at_top >= SESSIONS_TO_ADVANCE and not is_timed:
+            # Top of the user's ladder: nowhere to climb, so the range grows. No cap.
+            return Prescription(ex, sets, rmin, rmax + 1, None, 0, "Top of the ladder; +1 target rep.")
+        # A capped hold with nowhere to go keeps its counter full, so the first
+        # session after a harder rung becomes performable unlocks it.
         return Prescription(
             ex, sets, rmin, rmax, None, new_at_top,
             f"Top of range ({new_at_top}/{SESSIONS_TO_ADVANCE}); hold to advance.",

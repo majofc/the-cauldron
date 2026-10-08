@@ -24,6 +24,51 @@ WorkoutSession (one completed day)
 
 Progress mechanic: when a user hits the top of an exercise's rep range consistently (`sessions_at_top` threshold), `pending_progression` is set to the next exercise in the ladder. The program applies the progression on next session start.
 
+### Progression rules (`services/progression.py::next_prescription`, #63)
+
+- **Load step** — `next_load_up` returns the first buildable total ≥ `current + max(2.5% of
+  current, 1 kg)` (2.5 lb floor when `profile.load_unit == "lb"`); if nothing clears the step,
+  the next heavier load anyway (sparse fixed dumbbells never strand the user). `next_load_down`
+  mirrors it for de-loads. Bands are level indices: always one level.
+- **Actual-load basis** — `forge.apply_session_log` progresses a load-mode prescription from
+  `max(target_load, heaviest actual_load logged on it this session)`, snapped with
+  `nearest_available_load` (`forge._progression_base_load`). Logging a heavier day moves the plan.
+- **Assisted bands** — `Exercise.is_assisted` (seeded via `seed_forge.ASSISTED`: Band-Assisted
+  Row / Pull-up). The band helps, so progress *lowers* the band index, a de-load raises it, and the
+  heaviest-logged rule takes the *lightest* band logged. Starting loads begin at the heaviest band
+  (most help) and a stronger Trial moves toward lighter ones (`progression._easiest_first`). At band 0 + top of range the next rung is
+  parked as `pending_progression`; Band-Assisted Pull-up ends its chain, so `forge._next_rung` falls
+  back to the easiest harder performable rung of the pattern (Pull-up). Band Rollout is resisted
+  and still raises the index.
+- **Next rung** — `forge._next_rung` resolves what "harder" means for this user (walks
+  `progression` past rungs needing missing gear) and passes it as `next_rung`; `None` = the top of
+  *their* ladder. Without the argument the engine follows `ex.progression`.
+- **Top of ladder** — difficulty rung with no performable next rung: after `SESSIONS_TO_ADVANCE`
+  sessions at the top, `rmax + 1` (no cap). Once the range is extended past the rung's seeded max
+  and the AMRAP is ≥ `TOP_OF_LADDER_REPS` (25), every top-of-range session re-checks: a harder rung
+  that became performable (dumbbells added → Weighted Pistol Squat) is parked as pending
+  immediately. Load mode at the heaviest buildable load keeps `rmax + 1` (no cap).
+- **Weighted lower rungs** — Weighted Pistol Squat (12) and Weighted Dragon Squat (13), load mode,
+  dumbbells OR kettlebell, linked after Dragon Squat.
+- **Timed holds** (difficulty mode, every rung) — AMRAP ≥ `rmax` grows the target:
+  `rmax = min(120, max(rmax + 5, round(0.9 × achieved)))`. Only at 120 s does the hold count as top
+  of range for advancing (normal `SESSIONS_TO_ADVANCE`); with nowhere to go it holds at 120 with
+  the counter full. Load-mode timed rungs (carries) progress load as usual.
+
+### Unfinished past sessions (#63)
+
+"Unfinished" = `WorkoutSession` with `status=planned`, `scheduled_for < today` and ≥ 1 SetLog with
+`actual_reps`/`actual_load`. `GET sessions/unfinished/` returns the newest (`forge.unfinished_session`)
+and closes older ones as `skipped` (no progression; values kept). Stale ones — on a no-longer-active
+program, or dated on/before the user's latest completed session — are skipped too and never gate Today
+(`forge._stale_unfinished`), so old reps are never replayed onto prescriptions that moved on. While one exists, `GET today/` and
+`POST sessions/` answer **409** `{"code": "unfinished_session"}` (`forge.has_unfinished_session`).
+The client shows a blocking sheet (`#forge-unfinished-modal`, no ✕/swipe/Escape) with the logged
+values editable: **Save** → `POST sessions/{uuid}/log/` (progression runs, `performed_at` = noon of
+its `scheduled_for` via `forge._performed_at`); **Delete** → `DELETE sessions/{uuid}/` (session +
+SetLogs, prescriptions untouched; 409 for a completed session). Today's own planned session and past
+sessions with no values never trigger it.
+
 ---
 
 ## Models
@@ -54,6 +99,7 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 | `progression_mode` | `difficulty` (ladder) or `load` (weight progression) |
 | `rep_range_min/max` | working rep range |
 | `is_timed` | if True, reps = seconds (holds) |
+| `is_assisted` | if True, the band *assists* (Band-Assisted Row / Pull-up): progression lowers the band index. See "Progression rules" |
 | `is_per_side` | if True, worked one side at a time — rep targets forced even (`progression.rep_targets_for`). Workout logging records ONE value per set meaning "reps per side"; it does **not** split L/R |
 | `required_equipment` | M2M Equipment — **all of** these must be owned |
 | `alternative_equipment` | M2M Equipment — **at least one of** these must be owned (empty = no constraint). Lets one rung read "a bar OR rings" without duplicating it per implement; `forge.is_performable` applies both rules |
@@ -162,6 +208,9 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
   that day and returns it, **plus** `retest_due`, `last_trial_at`, `days_since_last_trial`
 - **Session logging:** `GET /cauldron/api/sessions/`, `POST /cauldron/api/sessions/{uuid}/log/`
   with `{"sets": {"<setlog-uuid>": {"actual_reps", "actual_load", "rir"}}}`
+- **Unfinished sessions (#63):** `GET /cauldron/api/sessions/unfinished/` → `{"session": …|null}`;
+  `DELETE /cauldron/api/sessions/{uuid}/` → 204 (409 if completed). `today/` and `POST sessions/`
+  return 409 `{"code": "unfinished_session"}` while one is pending
 - **Progression:** `POST /cauldron/api/progression/{presc_uuid}/{accept|deny}/`
 - **Set my rung (#59):**
   - `GET /cauldron/api/prescription/{presc_uuid}/set-rung/` — picker options: every performable rung
