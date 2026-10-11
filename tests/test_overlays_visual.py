@@ -11,8 +11,7 @@ Baselines are written when missing (or with ``FORGE_UPDATE_BASELINES=1``) and th
 test then fails, so a fresh screenshot is always looked at before it is trusted.
 
 Run inside the web container, where Chromium is installed:
-    docker compose exec -e DJANGO_SETTINGS_MODULE=arcano.settings web \
-        python -m pytest the_cauldron/tests/test_overlays_visual.py
+    docker compose exec web python -m pytest the_cauldron/tests/test_overlays_visual.py
 """
 
 import os
