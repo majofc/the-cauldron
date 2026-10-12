@@ -1,0 +1,111 @@
+/* ═══════════════════════════════════════════════
+   Arcano Design System — The Cauldron · Grimoire
+   All values → CSS tokens in tokens.css
+   Component rules → STYLE_GUIDE.md (Grimoire section)
+   ═══════════════════════════════════════════════
+
+   Load order: arcano tokens.css → cauldron tokens.css → this file.
+   Every --grimoire-* token is derived from an --arcano-* or --cauldron-*
+   token (directly or via color-mix). Never put a literal color here.
+
+   Two themes:
+   - Dark (default, :root)  — ink pages, matches the rest of The Cauldron.
+   - Parchment (.grimoire-parchment scope) — cream pages for a printed or
+     "open book" spell view. Opt-in per element; not tied to the OS theme,
+     because the rest of The Cauldron is dark-only.
+   Contrast ratios for every text token are recorded in STYLE_GUIDE.md. */
+
+:root {
+  /* ── Pages (surfaces) ── */
+  --grimoire-ink:         var(--cauldron-bg-deep);     /* page root, loader backdrop */
+  --grimoire-page:        var(--cauldron-bg-card);     /* spell card, panels */
+  --grimoire-page-raised: var(--cauldron-bg-surface);  /* hover / nested surfaces */
+
+  /* ── Text ── */
+  --grimoire-text:       var(--cauldron-cream);        /* 15.8:1 on page */
+  --grimoire-text-dim:   var(--cauldron-cream-dim);    /*  7.1:1 on page */
+  --grimoire-text-muted: var(--cauldron-cream-muted);  /*  3.1:1 — decorative / large only */
+
+  /* ── Accents ── */
+  --grimoire-accent:      var(--cauldron-paprika-light); /* accent TEXT — 5.5:1 */
+  --grimoire-accent-fill: var(--cauldron-paprika);       /* fills, borders, icons only */
+  --grimoire-accent-dim:  var(--cauldron-paprika-dim);
+
+  /* Gilt — page edges, ornaments, score stars (the book's gold leaf) */
+  --grimoire-gilt:        var(--arcano-gold);
+  --grimoire-gilt-dim:    var(--arcano-gold-dim);
+  --grimoire-gilt-border: var(--arcano-border-gold);
+
+  /* Herb — reagents */
+  --grimoire-herb:        var(--arcano-sage);
+  --grimoire-herb-dim:    color-mix(in srgb, var(--arcano-sage) 14%, transparent);
+  --grimoire-herb-border: color-mix(in srgb, var(--arcano-sage) 38%, transparent);
+
+  /* Sigil — tags */
+  --grimoire-sigil:        var(--arcano-lavender);
+  --grimoire-sigil-dim:    color-mix(in srgb, var(--arcano-amethyst) 18%, transparent);
+  --grimoire-sigil-border: color-mix(in srgb, var(--arcano-amethyst) 45%, transparent);
+
+  /* ── Nutrient bars ── */
+  --grimoire-nutrient-protein: var(--cauldron-paprika-light);
+  --grimoire-nutrient-carbs:   var(--arcano-gold);
+  --grimoire-nutrient-fat:     var(--cauldron-ember);
+  --grimoire-nutrient-fiber:   var(--arcano-sage);
+
+  /* ── Shadows ── */
+  --grimoire-shadow-card:  0 20px 50px color-mix(in srgb, var(--arcano-gold) 8%, transparent),
+                           0 0 0 1px var(--grimoire-border);
+  --grimoire-shadow-glow:  0 0 40px color-mix(in srgb, var(--arcano-gold) 22%, transparent);
+}
+
+/* Parchment theme — cream pages, ink text. */
+.grimoire-parchment {
+  --grimoire-ink:         color-mix(in srgb, var(--cauldron-cream) 86%, var(--arcano-gold));
+  --grimoire-page:        var(--cauldron-cream);
+  --grimoire-page-raised: color-mix(in srgb, var(--cauldron-cream) 92%, var(--arcano-gold));
+
+  --grimoire-text:       var(--cauldron-bg-deep);                                       /* 16.3:1 */
+  --grimoire-text-dim:   color-mix(in srgb, var(--cauldron-bg-deep) 72%, var(--cauldron-cream)); /*  7.6:1 */
+  --grimoire-text-muted: color-mix(in srgb, var(--cauldron-bg-deep) 45%, var(--cauldron-cream)); /* decorative */
+
+  --grimoire-accent:      var(--cauldron-paprika);                                      /*  4.9:1 */
+  --grimoire-accent-fill: var(--cauldron-paprika);
+  --grimoire-accent-dim:  var(--cauldron-paprika-subtle);
+
+  --grimoire-gilt:        color-mix(in srgb, var(--arcano-gold) 45%, var(--cauldron-bg-deep)); /* 6.1:1 */
+  --grimoire-gilt-dim:    color-mix(in srgb, var(--arcano-gold) 20%, transparent);
+  --grimoire-gilt-border: color-mix(in srgb, var(--grimoire-gilt) 45%, transparent);
+
+  --grimoire-herb:        var(--arcano-forest);                                          /* 5.3:1 */
+  --grimoire-herb-dim:    color-mix(in srgb, var(--arcano-forest) 12%, transparent);
+  --grimoire-herb-border: color-mix(in srgb, var(--arcano-forest) 40%, transparent);
+
+  --grimoire-sigil:        color-mix(in srgb, var(--arcano-amethyst) 70%, var(--cauldron-bg-deep)); /* 6.2:1 */
+  --grimoire-sigil-dim:    color-mix(in srgb, var(--arcano-amethyst) 12%, transparent);
+  --grimoire-sigil-border: color-mix(in srgb, var(--arcano-amethyst) 40%, transparent);
+
+  --grimoire-nutrient-protein: var(--cauldron-paprika);
+  --grimoire-nutrient-carbs:   color-mix(in srgb, var(--arcano-gold) 70%, var(--cauldron-bg-deep));
+  --grimoire-nutrient-fat:     color-mix(in srgb, var(--cauldron-ember) 60%, var(--cauldron-bg-deep));
+  --grimoire-nutrient-fiber:   var(--arcano-forest);
+
+  --grimoire-shadow-card: 0 14px 34px color-mix(in srgb, var(--cauldron-bg-deep) 18%, transparent),
+                          0 0 0 1px var(--grimoire-border);
+  --grimoire-shadow-glow: 0 0 28px color-mix(in srgb, var(--arcano-gold) 30%, transparent);
+
+  background: var(--grimoire-page);
+  color: var(--grimoire-text);
+}
+
+/* Derived tokens — declared on BOTH scopes. A custom property that references
+   another is resolved where it is declared, so these must be re-declared on
+   .grimoire-parchment or they would keep the dark values. Keep this block
+   last; never set these in a theme block above. */
+:root,
+.grimoire-parchment {
+  --grimoire-star-on:        var(--grimoire-gilt);
+  --grimoire-star-off:       color-mix(in srgb, var(--grimoire-text) 22%, transparent);
+  --grimoire-nutrient-track: color-mix(in srgb, var(--grimoire-text) 9%, transparent);
+  --grimoire-corner-color:   var(--grimoire-gilt);  /* base.css .corner-* adds opacity .55 */
+  --grimoire-border:         color-mix(in srgb, var(--grimoire-gilt) 22%, transparent);
+}

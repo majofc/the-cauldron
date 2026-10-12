@@ -1,0 +1,13 @@
+{% comment %}
+Grimoire mark — open book with a rising sigil. Line style matches .cauldron-nav-mark (64 viewBox, 2px round strokes, currentColor).
+Usage: include 'the_cauldron/grimoire/_mark.html' with mark_class='grimoire-nav-mark'
+{% endcomment %}
+<svg class="{{ mark_class|default:'grimoire-nav-mark' }}" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M32 24 Q21 17 8 20 L8 50 Q21 47 32 54" />
+  <path d="M32 24 Q43 17 56 20 L56 50 Q43 47 32 54" />
+  <line x1="32" y1="24" x2="32" y2="54" />
+  <path d="M14 30 Q20 28 26 30" /><path d="M14 37 Q20 35 26 37" /><path d="M14 44 Q18 43 22 44" />
+  <path d="M38 30 Q44 28 50 30" /><path d="M38 37 Q44 35 50 37" /><path d="M42 44 Q46 43 50 44" />
+  <path d="M32 4 Q33 10 38 11 Q33 12 32 18 Q31 12 26 11 Q31 10 32 4 Z" />
+</svg>

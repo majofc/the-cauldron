@@ -240,6 +240,173 @@ citation — no uncited assertions.
 
 ---
 
+## The Grimoire (recipe book)
+
+The Grimoire is a sub-section of The Cauldron. It **extends** the Cauldron and arcano tokens and
+never redefines them. If you're building a Grimoire page, start here. Visual reference:
+[`grimoire_preview.html`](grimoire_preview.html). It is standalone and not served by Django. To view it, run
+`python -m http.server 8765` in the arcano root and open `/the_cauldron/grimoire_preview.html`.
+
+### Vocabulary
+
+| In-world (titles, nav, headings) | Plain (form labels, buttons, errors) |
+|---|---|
+| Spell | Recipe |
+| Reagent | Ingredient |
+| Casting | A time you made it |
+| Ritual | Meal plan |
+
+Titles say *"Your spells"*; a form field says *"Recipe name"*. Never make a user decode a label.
+
+### Files
+
+Grimoire pages load these on top of the Cauldron stack (`tokens.css` → `landing.css`):
+
+| File | Role |
+|---|---|
+| `static/the_cauldron/css/grimoire-tokens.css` | `--grimoire-*` tokens, dark + parchment themes |
+| `static/the_cauldron/css/grimoire.css` | Components below (no page layout) |
+| `static/the_cauldron/js/grimoire-loader.js` | `GrimoireLoader`. Load **after** `cauldron-loader.js` |
+| `templates/the_cauldron/grimoire/_mark.html` | Grimoire mark, inline SVG include |
+
+### Palette
+
+The Grimoire's character comes from **gilt** (the book's gold leaf: ornaments, stars, the mark).
+Paprika stays the action color, so buttons are still `.btn-cauldron--primary`. Two supporting hues
+carry meaning: **herb** (sage) is reagents and **sigil** (amethyst) is tags. Every token derives from an
+`--arcano-*` or `--cauldron-*` token, directly or via `color-mix()`. Literal colors are never allowed.
+
+| Token | Dark (`:root`) | Parchment (`.grimoire-parchment`) | Use |
+|---|---|---|---|
+| `--grimoire-ink` | `--cauldron-bg-deep` | cream + 14% gold | page root, loader backdrop |
+| `--grimoire-page` | `--cauldron-bg-card` | `--cauldron-cream` | cards, panels |
+| `--grimoire-page-raised` | `--cauldron-bg-surface` | cream + 8% gold | hover / nested |
+| `--grimoire-text` | cream | `--cauldron-bg-deep` | body text |
+| `--grimoire-text-dim` | `--cauldron-cream-dim` | deep 72% / cream | secondary text |
+| `--grimoire-text-muted` | `--cauldron-cream-muted` | deep 45% / cream | **decorative only**: fails AA for text |
+| `--grimoire-accent` | `--cauldron-paprika-light` | `--cauldron-paprika` | accent **text** |
+| `--grimoire-accent-fill` | `--cauldron-paprika` | `--cauldron-paprika` | fills, borders, icons, never text on dark |
+| `--grimoire-gilt` (+`-dim`, `-border`) | `--arcano-gold` | gold 45% / deep | mark, kicker, stars, ornaments |
+| `--grimoire-herb` (+`-dim`, `-border`) | `--arcano-sage` | `--arcano-forest` | reagent chips |
+| `--grimoire-sigil` (+`-dim`, `-border`) | `--arcano-lavender` | amethyst 70% / deep | tag pills |
+| `--grimoire-nutrient-{protein,carbs,fat,fiber}` | paprika-light, gold, ember, sage | paprika, gold 70%, ember 60%, forest | nutrient bars |
+| `--grimoire-star-on/off`, `--grimoire-nutrient-track`, `--grimoire-border`, `--grimoire-corner-color` | derived | derived | see note |
+
+**Derived tokens** (the last row) reference other Grimoire tokens. A custom property resolves
+where it is *declared*, so they live in a final `:root, .grimoire-parchment { … }` block. If a
+new token references a themed token, add it to that block and not to a theme block, or parchment
+silently inherits the dark value.
+
+**Parchment** is an opt-in class (a printed / "open book" spell view), not tied to
+`prefers-color-scheme`, because the rest of The Cauldron is dark-only.
+
+### Contrast (WCAG AA, text on `--grimoire-page`)
+
+Measured on the preview page and recomputed from the token values.
+
+| Text token | Dark | Parchment |
+|---|---|---|
+| `--grimoire-text` | 15.8 : 1 | 16.3 : 1 |
+| `--grimoire-text-dim` | 7.1 : 1 | 7.6 : 1 |
+| `--grimoire-accent` | 5.5 : 1 | 4.9 : 1 |
+| `--grimoire-gilt` | 9.1 : 1 | 6.1 : 1 |
+| `--grimoire-herb` | 9.1 : 1 | 5.3 : 1 |
+| `--grimoire-sigil` | 9.2 : 1 | 6.2 : 1 |
+| `--grimoire-text-muted` | 3.1 : 1 ✗ | n/a ✗ (decorative only) |
+| `--grimoire-accent-fill` (paprika) | 3.2 : 1 ✗ (fills/icons only, ≥ 3 : 1 non-text) | 4.9 : 1 |
+
+### Typography
+
+No new fonts. Spell titles and empty-state titles use **Playfair Display 700**. Descriptions and empty-state
+copy use **Cormorant Garamond italic**. Reagent quantities use Cormorant 600 so numbers read as hand-written.
+Kickers ("Spell · Supper") use Inter 600, 0.68rem, 0.22em tracking, uppercase, in gilt.
+
+### The Grimoire mark
+
+An open book with a rising four-point sigil. It uses the same line language as the Cauldron simple mark:
+64 viewBox, 2px round strokes, `currentColor`.
+
+```django
+{% include 'the_cauldron/grimoire/_mark.html' with mark_class='grimoire-nav-mark' %}
+```
+
+Its color is `--grimoire-gilt` (paprika stays the Cauldron mark's color, so the two stay distinct in
+the nav). Readable down to 16px. `.grimoire-nav-mark` is 28px, matching `.cauldron-nav-mark`.
+
+### Spell card (`.grimoire-spell-card`)
+
+```html
+<a class="grimoire-spell-card" href="…">
+  <div class="corner-tl" aria-hidden="true"></div>
+  <div class="corner-tr" aria-hidden="true"></div>
+  <div class="corner-bl" aria-hidden="true"></div>
+  <div class="corner-br" aria-hidden="true"></div>
+  <span class="grimoire-spell-kicker">Spell · Supper</span>
+  <h3 class="grimoire-spell-title">Smoked Paprika Lentil Stew</h3>
+  <p class="grimoire-spell-desc">…</p>
+  <div class="grimoire-spell-meta"><span><strong>45</strong> min</span>…</div>
+  <div class="grimoire-tags">…</div>
+  <div class="grimoire-spell-foot"><!-- stars + attribution --></div>
+</a>
+```
+
+The corner ornaments are **mandatory**; `.grimoire-spell-card` recolors them gilt. A link card lifts 3px
+and gains `--grimoire-shadow-glow` on hover and focus. `.grimoire-spell-foot` uses
+`margin-top: auto`, so cards in a grid keep equal height (global equal-height rule).
+
+### Reagent chip (`.grimoire-reagent`)
+
+`<span class="grimoire-reagent"><span class="grimoire-reagent-qty">250 g</span>red lentils</span>`.
+Herb-tinted with radius `--arcano-radius-md`. `.is-missing` (dashed, no fill) marks a reagent
+the user doesn't have, or one a scaling calculation flagged as the limiting reagent.
+
+### Tag pill (`.grimoire-tag`)
+
+A sigil-tinted pill with a `✦` prefix and lowercase text, wrapped in `.grimoire-tags`. As `<a>` or `<button>`
+it becomes a filter, and `.is-active` marks the selected filter.
+
+### Score stars (`.grimoire-stars`)
+
+Five `★` glyphs in `.grimoire-star` with `.is-on` and `.is-half`. Always put an `aria-label` on the
+group ("4.5 out of 5"). For input, use `.grimoire-stars--input` with `role="radiogroup"` and five
+`<button role="radio">` stars. Hover previews the rating: the hovered star and every star before it
+light, the rest dim (`:has()`), and the hovered star scales up. All Grimoire hover motion (card lift,
+star scale, mark tilt, bar fill) is disabled under `prefers-reduced-motion: reduce`.
+
+### Nutrient bar (`.grimoire-nutrient`)
+
+```html
+<div class="grimoire-nutrient grimoire-nutrient--protein">
+  <span>Protein</span>
+  <span class="grimoire-nutrient-track"><span class="grimoire-nutrient-fill" style="--pct:62%"></span></span>
+  <span class="grimoire-nutrient-value">24 g</span>
+</div>
+```
+
+`--pct` is the share of the user's target, capped visually at 100%. The color modifiers are `--protein`,
+`--carbs`, `--fat` and `--fiber`. Stack them in `.grimoire-nutrients`. The value is always shown as text,
+because the bar alone is never the only carrier of the number.
+
+### Empty state (`.grimoire-empty`)
+
+It has a dashed border, corner ornaments (mandatory), the mark at 56px (`.grimoire-empty-mark`), a Playfair title,
+a Cormorant italic line, and one `.btn-cauldron--primary` CTA. The copy speaks in-world: *"Your grimoire is blank"*,
+*"No castings yet. Make this spell and log it."*
+
+### Grimoire loader (`GrimoireLoader`)
+
+An open book whose three leaves turn in sequence (2.4s loop, 0.8s stagger). It sits inside a gilt ring
+pair (9s CW / 13s CCW), with a pulsing gilt halo, a blinking sigil above the spine, three dots and a
+Cormorant italic caption. The API matches `CauldronLoader` (`build(caption, size)`, `randomCaption()`,
+`showPage()`, `hidePage()`). Loaded after `cauldron-loader.js`, it takes over page transitions, so
+link clicks and form posts show the book. Captions: *"Turning the pages…"*, *"Reading the
+margins…"*, *"Copying out the spell…"*, *"The grimoire stirs…"*.
+
+Under **`prefers-reduced-motion: reduce`**, every animation stops and the turning leaves are hidden. The book renders
+open and still.
+
+---
+
 ## Non-negotiables (these extend global rules)
 
 | Rule | Detail |
