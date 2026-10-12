@@ -1,0 +1,185 @@
+{% extends 'the_cauldron/legal/_base.html' %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+
+{% block title %}{% if LANGUAGE_CODE == "es" %}Términos y Condiciones — The Cauldron{% else %}Terms &amp; Conditions — The Cauldron{% endif %}{% endblock %}
+
+{% block legal_body %}
+{% if LANGUAGE_CODE == "es" %}
+<h1 class="cauldron-legal-title">Términos y Condiciones de The Cauldron</h1>
+<p class="cauldron-legal-version">Versión 1.0 — Vigente a partir del 12 de octubre de 2026</p>
+
+<section>
+  <h2>1. El servicio</h2>
+  <p>The Cauldron (“el Servicio”) incluye The Forge (entrenamiento de calistenia adaptativo) y El Grimorio
+    (recetario: hechizos, reactivos y el Aquelarre). Lo opera Sistemas Ingeniería y Ecología S.A. de C.V.
+    (“SIESA”, “nosotros”), con domicilio en Ciudad de México, México. Al crear una cuenta o usar el Servicio
+    aceptas estos Términos. Si no estás de acuerdo, no uses el Servicio.</p>
+</section>
+
+<section>
+  <h2>2. Tus recetas (hechizos)</h2>
+  <ul>
+    <li><strong>Siguen siendo tuyas.</strong> Conservas los derechos sobre las recetas que escribes. Una receta
+      es <strong>privada</strong> hasta que tú decides compartirla con el Aquelarre.</li>
+    <li><strong>Qué permites al compartir.</strong> Al compartir una receta con el Aquelarre otorgas a SIESA y a
+      las demás personas usuarias una licencia no exclusiva, gratuita y mundial, limitada al Servicio, para
+      leerla, mostrarla y copiarla a su propio grimorio con “Hacerlo mío”. Cada copia conserva el vínculo a la
+      receta original mientras esta siga compartida.</li>
+    <li><strong>Lo que no está permitido.</strong> Copiar recetas de otras personas para publicarlas fuera del
+      Servicio, venderlas, usarlas con fines comerciales o presentarlas como propias sin el permiso de quien
+      las escribió; recopilar recetas de forma masiva o automatizada; y compartir recetas, textos o imágenes
+      sobre los que no tengas derechos.</li>
+    <li><strong>Dejar de compartir.</strong> Puedes dejar de compartir o borrar tu receta cuando quieras. Las
+      copias que otras personas ya hicieron con “Hacerlo mío” son independientes y permanecen en sus grimorios.</li>
+    <li><strong>Avisos de infracción.</strong> Si crees que una receta compartida infringe tus derechos, escríbenos
+      a <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a>. Podemos retirar contenido que infrinja
+      derechos o estos Términos.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. Ingredientes (reactivos)</h2>
+  <ul>
+    <li><strong>Son datos de referencia, no contenido privado.</strong> El nombre, la categoría, las medidas y la
+      información nutricional de los ingredientes que agregas son datos sobre alimentos. No incluyas datos
+      personales en ellos.</li>
+    <li><strong>Licencia sobre lo que aportas.</strong> Al agregar o editar un ingrediente otorgas a SIESA una
+      licencia perpetua, irrevocable, gratuita, mundial y transferible para leerlo, usarlo, corregirlo,
+      combinarlo con otras fuentes y publicarlo.</li>
+    <li><strong>Pueden pasar al catálogo público sin aviso.</strong> Aunque al principio solo tú ves los
+      ingredientes que agregas, nuestro equipo puede revisarlos y añadirlos al catálogo compartido en
+      cualquier momento, sin aviso previo y con o sin cambios. Una vez aprobados forman parte del catálogo y
+      ya no puedes editarlos; solo el equipo puede hacerlo.</li>
+    <li>Los ingredientes del catálogo base provienen de USDA FoodData Central (dominio público) y pueden
+      ajustarse con el tiempo.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Estadísticas de uso</h2>
+  <p>Analizamos cómo se usa el Servicio —por ejemplo, qué recetas, ingredientes, etiquetas y funciones se usan,
+    cuánto, y cómo se combinan— para operarlo, mejorarlo y desarrollar funciones nuevas. Podemos publicar o
+    compartir <strong>estadísticas agregadas</strong> (por ejemplo, “ingredientes más usados en recetas
+    veganas”) que no te identifican. El detalle sobre tus datos personales está en el
+    <a href="{% url 'the_cauldron:privacy' %}">Aviso de Privacidad</a>.</p>
+</section>
+
+<section>
+  <h2>5. Nutrición y ejercicio: solo información</h2>
+  <p>La información nutricional, las porciones, las conversiones de unidades y los programas de entrenamiento
+    son estimaciones con fines informativos. No son consejo médico, nutricional ni de salud. Consulta a un
+    profesional antes de cambiar tu alimentación o empezar un programa de ejercicio, sobre todo si tienes
+    alergias, una condición médica o estás embarazada. Revisa siempre las etiquetas de los productos que usas.</p>
+</section>
+
+<section>
+  <h2>6. Uso aceptable</h2>
+  <p>No uses el Servicio para fines ilícitos, para publicar contenido ofensivo, engañoso o que infrinja derechos,
+    para intentar acceder a datos de otras personas, ni para eludir medidas de seguridad. Podemos suspender o
+    cancelar cuentas que incumplan estos Términos.</p>
+</section>
+
+<section>
+  <h2>7. Sin garantía y limitación de responsabilidad</h2>
+  <p>El Servicio se ofrece “tal como está” y “según disponibilidad”. En la medida máxima que permita la ley, SIESA
+    no será responsable por daños indirectos, incidentales o consecuentes derivados del uso del Servicio o de su
+    contenido, incluidas las recetas y los datos nutricionales aportados por otras personas.</p>
+</section>
+
+<section>
+  <h2>8. Ley aplicable y cambios</h2>
+  <p>Estos Términos se rigen por las leyes de los Estados Unidos Mexicanos y por la jurisdicción de los tribunales de
+    la Ciudad de México, sin perjuicio de los derechos que como persona consumidora no puedas renunciar. Podemos
+    actualizar estos Términos; la versión y la fecha de arriba cambiarán, y avisaremos dentro del Servicio de los
+    cambios importantes. Seguir usando el Servicio después del cambio significa que aceptas la nueva versión.</p>
+  <p>Contacto: <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a></p>
+</section>
+
+{% else %}
+<h1 class="cauldron-legal-title">The Cauldron Terms &amp; Conditions</h1>
+<p class="cauldron-legal-version">Version 1.0 — Effective October 12, 2026</p>
+
+<section>
+  <h2>1. The service</h2>
+  <p>The Cauldron (“the Service”) includes The Forge (adaptive calisthenics training) and The Grimoire (a recipe
+    book: spells, reagents and the Coven). It is operated by Sistemas Ingeniería y Ecología S.A. de C.V. (“SIESA”,
+    “we”), based in Mexico City, Mexico. By creating an account or using the Service you accept these Terms. If you
+    don't agree, don't use the Service.</p>
+</section>
+
+<section>
+  <h2>2. Your recipes (spells)</h2>
+  <ul>
+    <li><strong>They stay yours.</strong> You keep the rights to the recipes you write. A recipe is
+      <strong>private</strong> until you choose to share it with the Coven.</li>
+    <li><strong>What sharing allows.</strong> When you share a recipe with the Coven you grant SIESA and other users a
+      non-exclusive, royalty-free, worldwide licence, limited to the Service, to read it, display it and copy it into
+      their own grimoire with “Make it mine”. Each copy keeps a link to the original while it stays shared.</li>
+    <li><strong>What isn't allowed.</strong> Copying other people's recipes to publish them outside the Service, sell
+      them, use them commercially or pass them off as your own without the author's permission; bulk or automated
+      collection of recipes; and sharing recipes, text or images you don't have the rights to.</li>
+    <li><strong>Stopping sharing.</strong> You can stop sharing or delete your recipe at any time. Copies others already
+      made with “Make it mine” are independent and remain in their grimoires.</li>
+    <li><strong>Infringement notices.</strong> If you believe a shared recipe infringes your rights, write to
+      <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a>. We may remove content that infringes rights or
+      these Terms.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>3. Ingredients (reagents)</h2>
+  <ul>
+    <li><strong>They are reference data, not private content.</strong> The name, category, measures and nutrition data
+      of the ingredients you add are facts about foods. Don't put personal data in them.</li>
+    <li><strong>Licence on what you contribute.</strong> By adding or editing an ingredient you grant SIESA a
+      perpetual, irrevocable, royalty-free, worldwide and transferable licence to read, use, correct, combine with
+      other sources and publish it.</li>
+    <li><strong>They may join the public catalog without notice.</strong> Although at first only you see the
+      ingredients you add, our team may review them and add them to the shared catalog at any time, without prior
+      notice, with or without changes. Once approved they belong to the catalog and you can no longer edit them;
+      only the team can.</li>
+    <li>The base catalog's ingredients come from USDA FoodData Central (public domain) and may be adjusted over time.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>4. Usage statistics</h2>
+  <p>We analyse how the Service is used — for example which recipes, ingredients, tags and features are used, how
+    much, and how they combine — to run it, improve it and build new features. We may publish or share
+    <strong>aggregated statistics</strong> (for example “most-used ingredients in vegan recipes”) that don't identify
+    you. Details about your personal data are in the <a href="{% url 'the_cauldron:privacy' %}">Privacy Notice</a>.</p>
+</section>
+
+<section>
+  <h2>5. Nutrition and exercise: information only</h2>
+  <p>Nutrition data, portions, unit conversions and training programs are estimates for information only. They are not
+    medical, nutritional or health advice. Talk to a professional before changing your diet or starting an exercise
+    program, especially if you have allergies, a medical condition or are pregnant. Always check the labels of the
+    products you use.</p>
+</section>
+
+<section>
+  <h2>6. Acceptable use</h2>
+  <p>Don't use the Service for unlawful purposes, to publish offensive, misleading or infringing content, to try to
+    access other people's data, or to get around security measures. We may suspend or close accounts that break these
+    Terms.</p>
+</section>
+
+<section>
+  <h2>7. No warranty and limitation of liability</h2>
+  <p>The Service is provided “as is” and “as available”. To the fullest extent the law allows, SIESA is not liable for
+    indirect, incidental or consequential damages arising from use of the Service or its content, including recipes
+    and nutrition data contributed by other users.</p>
+</section>
+
+<section>
+  <h2>8. Governing law and changes</h2>
+  <p>These Terms are governed by the laws of the United Mexican States and the jurisdiction of the courts of Mexico
+    City, without prejudice to consumer rights you cannot waive. We may update these Terms; the version and date above
+    will change, and we will announce important changes inside the Service. Continuing to use the Service after a
+    change means you accept the new version.</p>
+  <p>Contact: <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a></p>
+</section>
+{% endif %}
+{% endblock %}

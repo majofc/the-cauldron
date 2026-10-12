@@ -255,6 +255,7 @@ never redefines them. If you're building a Grimoire page, start here. Visual ref
 | Reagent | Ingredient |
 | Casting | A time you made it |
 | Ritual | Meal plan |
+| The Coven (*El Aquelarre*) | Community / other users' shared spells |
 
 Titles say *"Your spells"*; a form field says *"Recipe name"*. Never make a user decode a label.
 
@@ -268,6 +269,7 @@ Grimoire pages load these on top of the Cauldron stack (`tokens.css` → `landin
 | `static/the_cauldron/css/grimoire.css` | Components below (no page layout) |
 | `static/the_cauldron/js/grimoire-loader.js` | `GrimoireLoader`. Load **after** `cauldron-loader.js` |
 | `templates/the_cauldron/grimoire/_mark.html` | Grimoire mark, inline SVG include |
+| `static/the_cauldron/css/grimoire-page.css` | Layout of `/cauldron/grimoire/` (tabs, grid, dialogs, forms) — #67 |
 
 ### Palette
 

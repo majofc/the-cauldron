@@ -1,0 +1,179 @@
+"""Grimoire domain rules (#67): unit → grams, reagent visibility/search, fork.
+
+Kept out of the API layer so the seed command, admin and API share one
+definition of "who can see this reagent" and "how many grams is a cup".
+"""
+
+from django.db import transaction
+from django.db.models import Prefetch, Q
+from django.utils.translation import gettext as _
+
+from the_cauldron.models import Reagent, Spell, SpellReagent, normalize_search
+
+# Fixed mass units, in grams.
+MASS_UNITS = {"g": 1.0, "kg": 1000.0, "oz": 28.349523125, "lb": 453.59237}
+# Volume units, in millilitres (US customary for the spoon/cup measures).
+VOLUME_UNITS = {"ml": 1.0, "l": 1000.0, "tsp": 4.92892, "tbsp": 14.7868, "cup": 236.588}
+# Household units a reagent can define its own weight for (grams_per_unit keys).
+HOUSEHOLD_UNITS = ("cup", "tbsp", "tsp", "piece")
+
+
+class ConversionError(ValueError):
+    """The quantity can't be turned into grams with what we know of the reagent."""
+
+
+def to_grams(reagent, quantity, unit):
+    """Grams for ``quantity`` ``unit`` of ``reagent``.
+
+    Order of preference: a fixed mass unit; the reagent's own measured weight
+    for a household unit (``grams_per_unit``, e.g. a cup of flour); a volume
+    unit through the reagent's density. ``piece`` has no generic fallback.
+    """
+    quantity = float(quantity)
+    if quantity < 0:
+        raise ConversionError(_("Quantity can't be negative."))
+    if unit in MASS_UNITS:
+        return round(quantity * MASS_UNITS[unit], 2)
+    per_unit = (reagent.grams_per_unit or {}).get(unit)
+    if per_unit:
+        return round(quantity * float(per_unit), 2)
+    if unit in VOLUME_UNITS and reagent.density_g_per_ml:
+        return round(quantity * VOLUME_UNITS[unit] * reagent.density_g_per_ml, 2)
+    raise ConversionError(
+        _("Can't convert %(unit)s of %(name)s to grams — use g, or add its weight per %(unit)s.")
+        % {"unit": unit, "name": reagent.name}
+    )
+
+
+def visible_reagents(user):
+    """Approved reagents for everyone, plus the user's own unapproved ones."""
+    return Reagent.objects.filter(
+        Q(status=Reagent.Status.APPROVED) | Q(created_by=user)
+    )
+
+
+# Candidates ranked in Python per search; bounds the work for a 1-letter query.
+SEARCH_CANDIDATES = 500
+
+
+def _search_rank(reagent, needle):
+    """0 exact, 1 prefix, 2 infix — on the English OR Spanish name alone, not
+    the combined ``search_name`` (where a Spanish match always sits mid-string)."""
+    names = [normalize_search(reagent.name), normalize_search(reagent.name_es)]
+    if needle in names:
+        return 0
+    if any(n.startswith(needle) for n in names if n):
+        return 1
+    return 2
+
+
+def can_edit_reagent(user, reagent):
+    """Only the creator, and only until staff approve it — an approved reagent
+    belongs to the shared catalog (edited by staff in the admin)."""
+    return reagent.created_by_id == user.pk and reagent.status != Reagent.Status.APPROVED
+
+
+def regrams_lines(reagent):
+    """Recompute ``grams`` on every line using ``reagent`` after its weights or
+    density changed. A line whose unit no longer converts keeps its old grams."""
+    changed = []
+    for line in SpellReagent.objects.filter(reagent=reagent):
+        try:
+            grams = to_grams(reagent, line.quantity, line.unit)
+        except ConversionError:
+            continue
+        if grams != line.grams:
+            line.grams = grams
+            changed.append(line)
+    SpellReagent.objects.bulk_update(changed, ["grams"])
+    return len(changed)
+
+
+def search_reagents(user, query, limit=20, queryset=None):
+    """Case/accent-insensitive search; exact, then prefix, then infix matches.
+
+    Every word of the query must appear (``"pimenton dulce"`` finds "Pimentón
+    dulce"), so close matches surface before a user creates a duplicate.
+    """
+    qs = (queryset if queryset is not None else visible_reagents(user)).select_related("nutrients")
+    needle = normalize_search(query)
+    if not needle:
+        return list(qs[:limit])
+    for word in needle.split():
+        qs = qs.filter(search_name__contains=word)
+    hits = list(qs.order_by("name")[:SEARCH_CANDIDATES])
+    hits.sort(key=lambda r: (_search_rank(r, needle), r.name.lower()))
+    return hits[:limit]
+
+
+def exact_duplicates(user, name):
+    """Visible reagents whose normalized name matches ``name`` exactly."""
+    needle = normalize_search(name)
+    # search_name holds "<name> <name_es>", so a Spanish-name match sits mid-string.
+    return [
+        r for r in visible_reagents(user).filter(search_name__contains=needle)
+        if normalize_search(r.name) == needle or normalize_search(r.name_es) == needle
+    ]
+
+
+def readable_spells(user):
+    """Spells the user may read: their own (any visibility) + every public one."""
+    return Spell.objects.filter(Q(owner=user) | Q(visibility=Spell.Visibility.PUBLIC))
+
+
+def with_spell_relations(qs):
+    """Everything SpellSerializer touches, prefetched — one place, so the list,
+    detail and write responses never fall back to a query per line."""
+    return qs.select_related("owner", "forked_from").prefetch_related(
+        "tags", Prefetch("lines", queryset=SpellReagent.objects.select_related("reagent"))
+    )
+
+
+def localized_text(spell, lang):
+    """(title, description, steps) in ``lang`` — Spanish where the spell has it,
+    else the base text. Each field falls back on its own."""
+    if (lang or "").startswith("es"):
+        return (
+            spell.title_es or spell.title,
+            spell.description_es or spell.description,
+            list(spell.steps_es or spell.steps or []),
+        )
+    return spell.title, spell.description, list(spell.steps or [])
+
+
+@transaction.atomic
+def fork_spell(spell, user, lang="en"):
+    """"Make it mine": an independent private deep copy owned by ``user``.
+
+    The copy shares no rows with the original — later edits, unpublishing or
+    deletion of the original never reach it (``forked_from`` is SET_NULL).
+    It is written in ``lang`` (the forker's language) into the base fields:
+    the fork is now the user's own spell, and users write in one language.
+    """
+    title, description, steps = localized_text(spell, lang)
+    copy = Spell.objects.create(
+        owner=user,
+        title=title,
+        description=description,
+        servings=spell.servings,
+        prep_minutes=spell.prep_minutes,
+        cook_minutes=spell.cook_minutes,
+        steps=steps,
+        visibility=Spell.Visibility.PRIVATE,
+        forked_from=spell,
+    )
+    copy.tags.set(spell.tags.all())
+    spanish = (lang or "").startswith("es")
+    SpellReagent.objects.bulk_create(
+        SpellReagent(
+            spell=copy,
+            reagent_id=line.reagent_id,
+            quantity=line.quantity,
+            unit=line.unit,
+            grams=line.grams,
+            note=(line.note_es or line.note) if spanish else line.note,
+            order=line.order,
+        )
+        for line in spell.lines.all()
+    )
+    return copy

@@ -1,0 +1,393 @@
+/* ═══════════════════════════════════════════════
+   Arcano Design System — The Cauldron · Grimoire
+   All values → CSS tokens in grimoire-tokens.css
+   Component rules → STYLE_GUIDE.md (Grimoire section)
+   ═══════════════════════════════════════════════
+
+   Page layout for /cauldron/grimoire/ (#67). Reusable pieces live in
+   grimoire.css; this file only arranges them. */
+
+.grim {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 3rem 1rem 5rem;
+  color: var(--grimoire-text);
+}
+
+/* ── Header + tabs ── */
+.grim-header { text-align: center; margin-bottom: 2rem; }
+.grim-header-mark { width: 56px; height: 56px; color: var(--grimoire-gilt); }
+.grim-title {
+  font-family: var(--arcano-font-display);
+  font-weight: 900;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  margin: 0.5rem 0 0.25rem;
+  letter-spacing: 0.04em;
+}
+.grim-subtitle {
+  font-family: var(--arcano-font-italic);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--grimoire-text-dim);
+  margin: 0 0 1.5rem;
+}
+.grim-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+.grim-tabs { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; }
+
+/* Metric / US — a small segmented switch beside the tabs */
+.grim-units {
+  display: inline-flex;
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-pill);
+  overflow: hidden;
+}
+.grim-unit-btn {
+  background: transparent;
+  border: 0;
+  color: var(--grimoire-text-dim);
+  font-family: var(--arcano-font-body);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+.grim-unit-btn.is-on { background: var(--grimoire-gilt-dim); color: var(--grimoire-gilt); }
+.grim-unit-btn:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: -2px; }
+
+/* All / My spells / The Coven */
+.grim-scope { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+.grim-scope-btn {
+  background: transparent;
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  color: var(--grimoire-text-dim);
+  font-family: var(--arcano-font-body);
+  font-size: 0.8rem;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: color var(--arcano-transition), border-color var(--arcano-transition);
+}
+.grim-scope-btn:hover { color: var(--grimoire-text); }
+.grim-scope-btn.is-on { color: var(--grimoire-gilt); border-color: var(--grimoire-gilt-border); background: var(--grimoire-gilt-dim); }
+.grim-scope-btn:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: 2px; }
+
+/* The user's own spells read as theirs at a glance in the mixed list */
+.grimoire-spell-card.is-mine { border-left: 2px solid var(--grimoire-gilt-border); }
+.grim-tab {
+  background: transparent;
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-pill);
+  color: var(--grimoire-text-dim);
+  font-family: var(--arcano-font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.2rem;
+  cursor: pointer;
+  transition: color var(--arcano-transition), border-color var(--arcano-transition), background var(--arcano-transition);
+}
+.grim-tab:hover { color: var(--grimoire-text); }
+.grim-tab.is-active {
+  color: var(--grimoire-gilt);
+  border-color: var(--grimoire-gilt-border);
+  background: var(--grimoire-gilt-dim);
+}
+.grim-tab:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: 2px; }
+
+.grim-panel { display: none; }
+.grim-panel.is-active { display: block; }
+
+/* ── Full-page spell / editor (#67: no pop-ups for reading or writing) ── */
+.grim-page-bar {
+  max-width: 860px;
+  margin: 0 auto 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.grim-back {
+  color: var(--grimoire-text-dim);
+  font-family: var(--arcano-font-body);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+.grim-back:hover,
+.grim-back:focus-visible { color: var(--grimoire-gilt); }
+.grim-spell-page {
+  position: relative;
+  max-width: 860px;
+  margin: 0 auto;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+  box-shadow: var(--grimoire-shadow-card);
+}
+.grim-spell-page .corner-tl,
+.grim-spell-page .corner-tr,
+.grim-spell-page .corner-bl,
+.grim-spell-page .corner-br { border-color: var(--grimoire-corner-color); }
+.grim-spell-page-body { padding: 2.75rem 2.5rem 2.25rem; }
+.grim-spell-page-title { font-size: clamp(1.7rem, 4vw, 2.3rem); }
+.grim-spell-page-body > .grimoire-spell-meta,
+.grim-spell-page-body > .grimoire-tags { margin: 0.75rem 0; }
+
+/* ── Toolbar ── */
+.grim-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
+.grim-search { flex: 1 1 260px; }
+.grim-toolbar [hidden] { display: none; }
+.grim-search input,
+.grim-line-add input,
+.grim-field input,
+.grim-field textarea,
+.grim-field select,
+.grim-line input,
+.grim-line select {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  color: var(--grimoire-text);
+  font-family: var(--arcano-font-body);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.75rem;
+}
+.grim-search input:focus,
+.grim-line-add input:focus,
+.grim-field input:focus,
+.grim-field textarea:focus,
+.grim-field select:focus,
+.grim-line input:focus,
+.grim-line select:focus { outline: none; border-color: var(--grimoire-gilt); box-shadow: 0 0 0 1px var(--grimoire-gilt-dim); }
+.grim-tag-filter { margin-bottom: 1.5rem; }
+.grim-help { color: var(--grimoire-text-dim); font-size: 0.85rem; }
+
+/* ── Spell grid (global rule: auto-fill, stretch) ── */
+.grim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 1.25rem; }
+.grim-grid > .grimoire-empty,
+.grim-grid > .grim-loading { grid-column: 1 / -1; }
+.grim-loading { display: flex; justify-content: center; padding: 3rem 0; }
+
+.grim-badges { display: inline-flex; flex-wrap: wrap; gap: 0.3rem; }
+.grim-badge {
+  display: inline-block;
+  font-family: var(--arcano-font-body);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-pill);
+  color: var(--grimoire-text-dim);
+}
+.grim-badge.is-warn { border-color: var(--grimoire-accent-dim); color: var(--grimoire-accent); }
+.grim-unverified { display: block; margin: 0.75rem 0; text-transform: none; letter-spacing: 0.02em; font-size: 0.8rem; }
+
+/* ── Reagent list ── */
+.grim-reagent-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.grim-reagent-list > .grimoire-empty { margin-top: 1rem; }
+.grim-reagent-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+}
+.grim-reagent-name { min-width: 0; }
+a.grim-reagent-row { color: inherit; text-decoration: none; transition: border-color var(--arcano-transition); }
+a.grim-reagent-row:hover,
+a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); outline: none; }
+.grim-reagent-link { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--grimoire-herb-border); }
+.grim-reagent-link:hover,
+.grim-reagent-link:focus-visible { color: var(--grimoire-herb); }
+
+/* Reagent page: label → value rows, a compact two-to-four column table */
+.grim-nutrient-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.15rem 1.5rem;
+  margin: 0;
+}
+.grim-nutrient-table > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px dotted var(--grimoire-border);
+}
+.grim-nutrient-table dt { color: var(--grimoire-text-dim); font-size: 0.88rem; }
+.grim-nutrient-table dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.grim-macros { display: flex; gap: 1rem; margin: 0; }
+.grim-macros div { text-align: right; min-width: 3rem; }
+.grim-macros dt { font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--grimoire-text-dim); }
+.grim-macros dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.grim-h2 { font-family: var(--arcano-font-display); font-size: 1.6rem; margin: 0.25rem 0 0.75rem; }
+.grim-h3 { font-family: var(--arcano-font-display); font-size: 1.1rem; margin: 1.5rem 0 0.6rem; }
+
+.grim-detail-lines { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.grim-grams { font-size: 0.72rem; color: var(--grimoire-text-dim); }
+.grim-note { font-family: var(--arcano-font-italic); font-style: italic; color: var(--grimoire-text-dim); }
+.grimoire-reagent.is-unverified { border-style: dashed; }
+
+/* Hover / focus hint on household units: "≈ 27 g · 30 ml" */
+.grim-tip { position: relative; cursor: help; }
+.grim-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 3;
+  white-space: nowrap;
+  padding: 0.3rem 0.6rem;
+  background: var(--grimoire-page-raised);
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+  color: var(--grimoire-text);
+  font-family: var(--arcano-font-body);
+  font-size: 0.75rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--arcano-transition);
+}
+.grim-tip:hover::after,
+.grim-tip:focus-visible::after { opacity: 1; }
+.grim-tip:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: 2px; }
+.grim-steps { padding-left: 1.4rem; margin: 0; line-height: 1.6; }
+.grim-steps li { margin-bottom: 0.5rem; }
+.grim-steps li::marker { color: var(--grimoire-gilt); font-family: var(--arcano-font-italic); font-weight: 600; }
+
+.grim-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; margin-top: 1.75rem; }
+.grim-danger:hover { border-color: var(--grimoire-accent); color: var(--grimoire-accent); }
+
+/* ── Forms ── */
+.grim-form fieldset { border: 0; padding: 0; margin: 0 0 1rem; min-width: 0; }
+/* Sentence-case labels: easier to read than tracked capitals, and they keep
+   units like "µg" intact (uppercase would turn µ into a Greek "Μ"). */
+.grim-form legend,
+.grim-field > span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--grimoire-text-dim);
+  margin-bottom: 0.35rem;
+}
+.grim-form legend { font-family: var(--arcano-font-display); font-size: 1.1rem; color: var(--grimoire-text); }
+
+/* A section of a full-page form: heading, one-line help, then fields. */
+.grim-section {
+  padding: 1.5rem 0 0.5rem;
+  border-top: 1px solid var(--grimoire-border);
+  margin-top: 1rem;
+}
+.grim-section-title { font-family: var(--arcano-font-display); font-size: 1.15rem; margin: 0 0 0.25rem; }
+.grim-section-help { margin: 0 0 1rem; color: var(--grimoire-text-dim); font-size: 0.85rem; }
+
+/* Number input with its unit inside, at the right: "12 | g" */
+.grim-unit-input { position: relative; display: block; }
+.grim-field .grim-unit-input input { padding-right: 3.2rem; }
+.grim-unit-suffix {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--grimoire-text-muted);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+/* Nutrients: one compact sub-grid per group */
+.grim-nutrient-groups { display: grid; gap: 1.25rem; }
+.grim-nutrient-group h3 {
+  font-family: var(--arcano-font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--grimoire-gilt);
+  margin: 0 0 0.6rem;
+}
+.grim-field { display: block; margin-bottom: 1rem; min-width: 0; }
+.grim-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0 1rem; }
+.grim-check { display: flex; gap: 0.5rem; align-items: center; font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.grim-error { color: var(--grimoire-accent); font-size: 0.9rem; margin: 0.5rem 0 0; }
+.grim-error[hidden] { display: none; }
+
+.grim-lines { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
+.grim-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 5rem 5.5rem minmax(0, 1.2fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.grim-line-name { font-weight: 600; color: var(--grimoire-herb); overflow-wrap: anywhere; }
+.grim-line-remove { background: none; border: 0; color: var(--grimoire-text-dim); cursor: pointer; font-size: 1rem; }
+.grim-line-remove:hover { color: var(--grimoire-accent); }
+.grim-line-add { position: relative; }
+.grim-suggest {
+  position: absolute;
+  inset: calc(100% + 4px) 0 auto;
+  z-index: 2;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--grimoire-page-raised);
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+}
+.grim-suggest[hidden] { display: none; }
+.grim-suggest li { padding: 0.5rem 0.75rem; cursor: pointer; }
+.grim-suggest li[data-uuid]:hover,
+.grim-suggest li[data-uuid]:focus { background: var(--grimoire-gilt-dim); outline: none; }
+
+.grim-matches { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: -0.25rem 0 1rem; }
+.grim-matches[hidden] { display: none; }
+.grim-nutrient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0 0.9rem; }
+
+/* ── Toast ── */
+.grim-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: var(--arcano-z-toast);
+  padding: 0.75rem 1.25rem;
+  background: var(--grimoire-page-raised);
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+  box-shadow: var(--grimoire-shadow-glow);
+  font-size: 0.9rem;
+}
+.grim-toast[hidden] { display: none; }
+
+/* ── Phones ── */
+@media (max-width: 640px) {
+  .grim { padding-top: 2rem; }
+  .grim-spell-page-body { padding: 2.25rem 1.1rem 1.75rem; }
+  .grim-reagent-row { grid-template-columns: 1fr; }
+  .grim-macros { justify-content: space-between; }
+  .grim-macros div { text-align: left; min-width: 0; }
+  .grim-line { grid-template-columns: 1fr 4.5rem 5rem auto; }
+  .grim-line-note { grid-column: 1 / -1; grid-row: 2; }
+  .grim-actions { justify-content: stretch; }
+  .grim-actions > * { flex: 1 1 auto; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grim-tab,
+  .grim-scope-btn,
+  .grim-tip::after { transition: none; }
+}

@@ -1,0 +1,1026 @@
+{
+ "note": "Public starter spells owned by the Grimoire system user. Reagents are referenced by USDA fdc_id (see grimoire_reagents.json). Lines are [fdc_id, quantity, unit, note, note_es].",
+ "spells": [
+  {
+   "title": "Smoked Paprika Lentil Stew",
+   "description": "A slow, warming pot that tastes better on the second night.",
+   "servings": 4,
+   "prep_minutes": 15,
+   "cook_minutes": 40,
+   "tags": [
+    "main",
+    "soup",
+    "vegan"
+   ],
+   "lines": [
+    [
+     171413,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     170000,
+     1,
+     "piece",
+     "diced",
+     "en cubitos"
+    ],
+    [
+     170393,
+     2,
+     "piece",
+     "diced",
+     "en cubitos"
+    ],
+    [
+     169230,
+     3,
+     "piece",
+     "minced",
+     "picado"
+    ],
+    [
+     171329,
+     2,
+     "tsp",
+     "smoked",
+     "ahumado"
+    ],
+    [
+     170923,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     172420,
+     250,
+     "g",
+     "rinsed",
+     "enjuagadas"
+    ],
+    [
+     170051,
+     400,
+     "g",
+     "",
+     ""
+    ],
+    [
+     171583,
+     1,
+     "l",
+     "",
+     ""
+    ],
+    [
+     173468,
+     1,
+     "tsp",
+     "to taste",
+     "al gusto"
+    ]
+   ],
+   "steps": [
+    "Warm the oil in a heavy pot and soften the onion and carrot for 8 minutes.",
+    "Add the garlic, paprika and cumin; stir for one minute until fragrant.",
+    "Add the lentils, tomatoes and broth. Simmer, partly covered, for 30–35 minutes until the lentils are soft.",
+    "Season with salt and loosen with water if it gets too thick."
+   ],
+   "title_es": "Guiso de lentejas al pimentón ahumado",
+   "description_es": "Una olla lenta y reconfortante que sabe mejor la segunda noche.",
+   "steps_es": [
+    "Calienta el aceite en una olla gruesa y acitrona la cebolla y la zanahoria 8 minutos.",
+    "Agrega el ajo, el pimentón y el comino; mueve un minuto hasta que suelten aroma.",
+    "Añade las lentejas, el jitomate y el caldo. Cuece a fuego bajo, medio tapado, 30–35 minutos hasta que las lentejas estén suaves.",
+    "Sazona con sal y aligera con agua si espesa demasiado."
+   ]
+  },
+  {
+   "title": "Chickpea & Spinach Coconut Curry",
+   "description": "Golden, gently spiced and done in one pan once the chickpeas are cooked.",
+   "servings": 4,
+   "prep_minutes": 15,
+   "cook_minutes": 30,
+   "tags": [
+    "main",
+    "vegan"
+   ],
+   "lines": [
+    [
+     173756,
+     200,
+     "g",
+     "dry; soaked overnight and boiled until tender",
+     "secos; remojados toda la noche y cocidos hasta suavizar"
+    ],
+    [
+     171413,
+     1,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     170000,
+     1,
+     "piece",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     169230,
+     2,
+     "piece",
+     "minced",
+     "picado"
+    ],
+    [
+     169231,
+     1,
+     "tbsp",
+     "grated",
+     "rallado"
+    ],
+    [
+     172231,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     170923,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     170051,
+     200,
+     "g",
+     "",
+     ""
+    ],
+    [
+     170173,
+     400,
+     "ml",
+     "",
+     ""
+    ],
+    [
+     168462,
+     100,
+     "g",
+     "",
+     ""
+    ],
+    [
+     173468,
+     0.75,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Soften the onion in the oil for 6 minutes, then add garlic, ginger, turmeric and cumin for a minute.",
+    "Add the tomatoes and cook down for 5 minutes.",
+    "Stir in the cooked chickpeas and coconut milk; simmer 10 minutes.",
+    "Fold in the spinach until wilted. Season and serve with rice."
+   ],
+   "title_es": "Curry de garbanzo y espinaca con coco",
+   "description_es": "Dorado, suavemente especiado y listo en una sola sartén una vez cocidos los garbanzos.",
+   "steps_es": [
+    "Acitrona la cebolla en el aceite 6 minutos; agrega ajo, jengibre, cúrcuma y comino por un minuto.",
+    "Añade el jitomate y deja reducir 5 minutos.",
+    "Incorpora los garbanzos cocidos y la leche de coco; hierve a fuego bajo 10 minutos.",
+    "Agrega la espinaca hasta que se marchite. Sazona y sirve con arroz."
+   ]
+  },
+  {
+   "title": "Overnight Oats with Blueberries",
+   "description": "Stir it together at night; breakfast is waiting in the morning.",
+   "servings": 2,
+   "prep_minutes": 5,
+   "cook_minutes": 0,
+   "tags": [
+    "breakfast",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     173904,
+     80,
+     "g",
+     "",
+     ""
+    ],
+    [
+     171265,
+     1,
+     "cup",
+     "",
+     ""
+    ],
+    [
+     170894,
+     100,
+     "g",
+     "",
+     ""
+    ],
+    [
+     170554,
+     12,
+     "g",
+     "",
+     ""
+    ],
+    [
+     169640,
+     1,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     171320,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     171711,
+     75,
+     "g",
+     "to top",
+     "para decorar"
+    ]
+   ],
+   "steps": [
+    "Mix the oats, milk, yogurt, chia, honey and cinnamon in a jar.",
+    "Cover and refrigerate overnight (at least 6 hours).",
+    "Top with blueberries before serving."
+   ],
+   "title_es": "Avena remojada con moras azules",
+   "description_es": "Mézclala en la noche; el desayuno te espera por la mañana.",
+   "steps_es": [
+    "Mezcla la avena, la leche, el yogur, la chía, la miel y la canela en un frasco.",
+    "Tapa y refrigera toda la noche (al menos 6 horas).",
+    "Cubre con las moras azules antes de servir."
+   ]
+  },
+  {
+   "title": "Banana Oat Pancakes",
+   "description": "Three-ingredient batter, a little cinnamon, no flour.",
+   "servings": 2,
+   "prep_minutes": 5,
+   "cook_minutes": 10,
+   "tags": [
+    "breakfast",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     173944,
+     120,
+     "g",
+     "very ripe",
+     "muy maduro"
+    ],
+    [
+     171287,
+     2,
+     "piece",
+     "",
+     ""
+    ],
+    [
+     173904,
+     60,
+     "g",
+     "",
+     ""
+    ],
+    [
+     172804,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     171320,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     173410,
+     1,
+     "tsp",
+     "for the pan",
+     "para el sartén"
+    ]
+   ],
+   "steps": [
+    "Blend the banana, eggs, oats, baking powder and cinnamon until smooth. Rest 5 minutes.",
+    "Melt a little butter in a pan over medium heat.",
+    "Cook small pancakes for 2 minutes a side, until golden."
+   ],
+   "title_es": "Hot cakes de plátano y avena",
+   "description_es": "Masa de tres ingredientes, un toque de canela y nada de harina.",
+   "steps_es": [
+    "Licúa el plátano, los huevos, la avena, el polvo para hornear y la canela hasta que quede terso. Deja reposar 5 minutos.",
+    "Derrite un poco de mantequilla en un sartén a fuego medio.",
+    "Cocina hot cakes pequeños 2 minutos por lado, hasta que doren."
+   ]
+  },
+  {
+   "title": "Classic Guacamole",
+   "description": "Lime, onion, cilantro — mashed by hand, never blended.",
+   "servings": 4,
+   "prep_minutes": 10,
+   "cook_minutes": 0,
+   "tags": [
+    "snack",
+    "side",
+    "vegan"
+   ],
+   "lines": [
+    [
+     171705,
+     300,
+     "g",
+     "about 2 avocados",
+     "unos 2 aguacates"
+    ],
+    [
+     168156,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     170000,
+     0.25,
+     "piece",
+     "finely diced",
+     "finamente picada"
+    ],
+    [
+     170457,
+     1,
+     "piece",
+     "seeded and diced",
+     "sin semillas, en cubitos"
+    ],
+    [
+     169997,
+     0.25,
+     "cup",
+     "chopped",
+     "picado"
+    ],
+    [
+     173468,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Mash the avocado with the lime juice and salt, leaving some texture.",
+    "Fold in the onion, tomato and cilantro.",
+    "Taste, adjust salt and lime, and serve right away."
+   ],
+   "title_es": "Guacamole clásico",
+   "description_es": "Limón, cebolla y cilantro — machacado a mano, nunca licuado.",
+   "steps_es": [
+    "Machaca el aguacate con el jugo de limón y la sal, dejando algo de textura.",
+    "Incorpora la cebolla, el jitomate y el cilantro.",
+    "Prueba, ajusta sal y limón, y sirve de inmediato."
+   ]
+  },
+  {
+   "title": "Crisp Romaine Salad with Lemon Dressing",
+   "description": "Cold, crunchy and sharp with lemon and parmesan.",
+   "servings": 2,
+   "prep_minutes": 10,
+   "cook_minutes": 0,
+   "tags": [
+    "salad",
+    "side",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     169247,
+     200,
+     "g",
+     "torn",
+     "en trozos"
+    ],
+    [
+     168409,
+     150,
+     "g",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     170457,
+     2,
+     "piece",
+     "in wedges",
+     "en gajos"
+    ],
+    [
+     170848,
+     30,
+     "g",
+     "shaved",
+     "en láminas"
+    ],
+    [
+     171413,
+     3,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     167747,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     169230,
+     1,
+     "piece",
+     "grated",
+     "rallado"
+    ],
+    [
+     170931,
+     0.25,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     173468,
+     0.25,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Whisk the oil, lemon juice, garlic, pepper and salt.",
+    "Toss the lettuce, cucumber and tomato with the dressing.",
+    "Finish with the parmesan."
+   ],
+   "title_es": "Ensalada crujiente de lechuga romana con aderezo de limón",
+   "description_es": "Fría, crujiente y ácida, con limón y parmesano.",
+   "steps_es": [
+    "Bate el aceite, el jugo de limón, el ajo, la pimienta y la sal.",
+    "Revuelve la lechuga, el pepino y el jitomate con el aderezo.",
+    "Termina con el parmesano."
+   ]
+  },
+  {
+   "title": "Lemon Garlic Chicken with Broccoli",
+   "description": "A one-pan weeknight dinner with plenty of protein.",
+   "servings": 4,
+   "prep_minutes": 10,
+   "cook_minutes": 20,
+   "tags": [
+    "main"
+   ],
+   "lines": [
+    [
+     171077,
+     500,
+     "g",
+     "in strips",
+     "en tiras"
+    ],
+    [
+     170379,
+     300,
+     "g",
+     "florets",
+     "en ramitos"
+    ],
+    [
+     169230,
+     4,
+     "piece",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     167747,
+     3,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     171413,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     171329,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     170931,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     173468,
+     0.75,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Season the chicken with paprika, salt and pepper.",
+    "Sear it in the oil over high heat for 5–6 minutes until cooked through; set aside.",
+    "Add the broccoli and garlic with a splash of water; cover and steam 4 minutes.",
+    "Return the chicken, add the lemon juice and toss."
+   ],
+   "title_es": "Pollo al ajo y limón con brócoli",
+   "description_es": "Una cena entre semana en un solo sartén, con mucha proteína.",
+   "steps_es": [
+    "Sazona el pollo con pimentón, sal y pimienta.",
+    "Dóralo en el aceite a fuego alto 5–6 minutos hasta que esté cocido; resérvalo.",
+    "Agrega el brócoli y el ajo con un chorrito de agua; tapa y cuece al vapor 4 minutos.",
+    "Regresa el pollo, añade el jugo de limón y mezcla."
+   ]
+  },
+  {
+   "title": "Salmon & Sweet Potato Tray Bake",
+   "description": "Everything on one tray; the oven does the work.",
+   "servings": 2,
+   "prep_minutes": 10,
+   "cook_minutes": 30,
+   "tags": [
+    "main"
+   ],
+   "lines": [
+    [
+     175167,
+     300,
+     "g",
+     "2 fillets",
+     "2 filetes"
+    ],
+    [
+     168482,
+     400,
+     "g",
+     "in wedges",
+     "en gajos"
+    ],
+    [
+     171413,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     171329,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     167747,
+     1,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     173468,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Heat the oven to 220 °C. Toss the sweet potato with half the oil, paprika and salt; roast 15 minutes.",
+    "Add the salmon, brush with the rest of the oil, and roast 12–15 minutes more.",
+    "Squeeze over the lemon juice before serving."
+   ],
+   "title_es": "Salmón y camote al horno en charola",
+   "description_es": "Todo en una charola; el horno hace el trabajo.",
+   "steps_es": [
+    "Precalienta el horno a 220 °C. Revuelve el camote con la mitad del aceite, el pimentón y la sal; hornea 15 minutos.",
+    "Agrega el salmón, barnízalo con el resto del aceite y hornea 12–15 minutos más.",
+    "Exprime el jugo de limón encima antes de servir."
+   ]
+  },
+  {
+   "title": "Fresh Tomato Basil Sauce",
+   "description": "The base for pasta, pizza or shakshuka.",
+   "servings": 6,
+   "prep_minutes": 5,
+   "cook_minutes": 25,
+   "tags": [
+    "sauce",
+    "vegan"
+   ],
+   "lines": [
+    [
+     171413,
+     3,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     169230,
+     3,
+     "piece",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     170051,
+     800,
+     "g",
+     "",
+     ""
+    ],
+    [
+     169655,
+     1,
+     "tsp",
+     "only if the tomatoes are sharp",
+     "solo si el jitomate está ácido"
+    ],
+    [
+     172232,
+     0.5,
+     "cup",
+     "leaves",
+     "hojas"
+    ],
+    [
+     173468,
+     1,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Warm the garlic in the oil over low heat until just golden.",
+    "Add the tomatoes, crush them with a spoon, and simmer 20 minutes.",
+    "Season with salt (and sugar if needed); tear in the basil off the heat."
+   ],
+   "title_es": "Salsa de jitomate con albahaca",
+   "description_es": "La base para pasta, pizza o huevos al jitomate.",
+   "steps_es": [
+    "Calienta el ajo en el aceite a fuego bajo hasta que apenas dore.",
+    "Agrega el jitomate, aplástalo con una cuchara y cuece 20 minutos.",
+    "Sazona con sal (y azúcar si hace falta); fuera del fuego, agrega la albahaca en trozos."
+   ]
+  },
+  {
+   "title": "Strawberry Banana Smoothie",
+   "description": "Thick, cold, and ready in two minutes.",
+   "servings": 2,
+   "prep_minutes": 3,
+   "cook_minutes": 0,
+   "tags": [
+    "drink",
+    "breakfast",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     167762,
+     150,
+     "g",
+     "frozen is fine",
+     "pueden ser congeladas"
+    ],
+    [
+     173944,
+     120,
+     "g",
+     "",
+     ""
+    ],
+    [
+     170894,
+     150,
+     "g",
+     "",
+     ""
+    ],
+    [
+     171265,
+     1,
+     "cup",
+     "",
+     ""
+    ],
+    [
+     169640,
+     1,
+     "tsp",
+     "optional",
+     "opcional"
+    ]
+   ],
+   "steps": [
+    "Blend everything until smooth.",
+    "Add a splash more milk if it's too thick."
+   ],
+   "title_es": "Licuado de fresa y plátano",
+   "description_es": "Espeso, frío y listo en dos minutos.",
+   "steps_es": [
+    "Licúa todo hasta que quede terso.",
+    "Agrega un chorrito más de leche si queda muy espeso."
+   ]
+  },
+  {
+   "title": "Dark Cocoa Mug Cake",
+   "description": "A single serving of chocolate cake from the microwave.",
+   "servings": 1,
+   "prep_minutes": 3,
+   "cook_minutes": 2,
+   "tags": [
+    "dessert",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     168894,
+     4,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     169593,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     169655,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     172804,
+     0.25,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     171265,
+     3,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     171413,
+     1,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     173471,
+     0.25,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Whisk the flour, cocoa, sugar and baking powder in a large mug.",
+    "Stir in the milk, oil and vanilla until smooth.",
+    "Microwave for 70–90 seconds; it should still look slightly damp on top."
+   ],
+   "title_es": "Pastel de cacao en taza",
+   "description_es": "Una porción de pastel de chocolate en el microondas.",
+   "steps_es": [
+    "Bate la harina, el cacao, el azúcar y el polvo para hornear en una taza grande.",
+    "Incorpora la leche, el aceite y la vainilla hasta que quede terso.",
+    "Calienta en el microondas 70–90 segundos; la superficie debe verse ligeramente húmeda."
+   ]
+  },
+  {
+   "title": "Ginger Soy Tofu Stir-fry",
+   "description": "Crisp tofu, bright vegetables and a salty-sweet glaze over rice.",
+   "servings": 3,
+   "prep_minutes": 15,
+   "cook_minutes": 20,
+   "tags": [
+    "main",
+    "vegan"
+   ],
+   "lines": [
+    [
+     172475,
+     400,
+     "g",
+     "pressed and cubed",
+     "prensado y en cubos"
+    ],
+    [
+     171413,
+     1,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     170379,
+     200,
+     "g",
+     "florets",
+     "en ramitos"
+    ],
+    [
+     170108,
+     1,
+     "cup",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     169231,
+     1,
+     "tbsp",
+     "grated",
+     "rallado"
+    ],
+    [
+     169230,
+     2,
+     "piece",
+     "minced",
+     "picado"
+    ],
+    [
+     174277,
+     3,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     169655,
+     1,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     168877,
+     200,
+     "g",
+     "cooked separately",
+     "cocido aparte"
+    ]
+   ],
+   "steps": [
+    "Cook the rice.",
+    "Fry the tofu in the oil until golden on all sides; set aside.",
+    "Stir-fry the broccoli and pepper for 4 minutes; add garlic and ginger for 30 seconds.",
+    "Return the tofu, add the soy sauce and sugar, and toss until glossy. Serve over rice."
+   ],
+   "title_es": "Tofu salteado con jengibre y soya",
+   "description_es": "Tofu crujiente, verduras brillantes y un glaseado salado-dulce sobre arroz.",
+   "steps_es": [
+    "Cuece el arroz.",
+    "Fríe el tofu en el aceite hasta que dore por todos lados; resérvalo.",
+    "Saltea el brócoli y el pimiento 4 minutos; agrega el ajo y el jengibre por 30 segundos.",
+    "Regresa el tofu, añade la salsa de soya y el azúcar, y mezcla hasta que brille. Sirve sobre el arroz."
+   ]
+  },
+  {
+   "title": "Creamy Mushroom Soup",
+   "description": "Earthy, silky and finished with a little cream.",
+   "servings": 4,
+   "prep_minutes": 10,
+   "cook_minutes": 30,
+   "tags": [
+    "soup",
+    "vegetarian"
+   ],
+   "lines": [
+    [
+     173410,
+     2,
+     "tbsp",
+     "",
+     ""
+    ],
+    [
+     170000,
+     1,
+     "piece",
+     "chopped",
+     "picado"
+    ],
+    [
+     169230,
+     2,
+     "piece",
+     "minced",
+     "picado"
+    ],
+    [
+     169251,
+     400,
+     "g",
+     "sliced",
+     "en rebanadas"
+    ],
+    [
+     171583,
+     750,
+     "ml",
+     "",
+     ""
+    ],
+    [
+     170859,
+     120,
+     "ml",
+     "",
+     ""
+    ],
+    [
+     170931,
+     0.5,
+     "tsp",
+     "",
+     ""
+    ],
+    [
+     173468,
+     1,
+     "tsp",
+     "",
+     ""
+    ]
+   ],
+   "steps": [
+    "Melt the butter and soften the onion for 5 minutes; add the garlic.",
+    "Add the mushrooms and cook until their liquid evaporates, about 10 minutes.",
+    "Pour in the broth and simmer 15 minutes, then blend until smooth.",
+    "Stir in the cream and season with salt and pepper."
+   ],
+   "title_es": "Crema de champiñones",
+   "description_es": "Terrosa, sedosa y terminada con un poco de crema.",
+   "steps_es": [
+    "Derrite la mantequilla y acitrona la cebolla 5 minutos; agrega el ajo.",
+    "Añade los champiñones y cocina hasta que su líquido se evapore, unos 10 minutos.",
+    "Vierte el caldo y cuece 15 minutos; luego licúa hasta que quede terso.",
+    "Incorpora la crema y sazona con sal y pimienta."
+   ]
+  }
+ ]
+}
