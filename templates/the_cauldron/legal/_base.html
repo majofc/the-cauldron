@@ -1,0 +1,43 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+{% comment %}
+Shared shell for The Cauldron's legal pages (terms, privacy). Public — no login.
+The text lives in each page, in Spanish and English (legal copy is versioned as a
+whole, not through gettext — same approach as scholomancy_console's legal pages).
+{% endcomment %}
+
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="The Cauldron">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">{% trans "The Grimoire" %}</a></li>
+{% endblock %}
+
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}
+
+{% block content %}
+<article class="cauldron-legal cauldron-card">
+  <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+  <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+  {% block legal_body %}{% endblock %}
+</article>
+{% endblock %}

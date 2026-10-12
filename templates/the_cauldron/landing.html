@@ -31,6 +31,7 @@
 {% block nav_links %}
 <li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">The Grimoire</a></li>
 <li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">The Cauldron</a></li>
 {% endblock %}
 
@@ -589,6 +590,8 @@
 <li><a href="{% url 'welcome' %}">Arcano</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}">The Forge</a></li>
 <li><a href="{% url 'the_cauldron:landing' %}">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}">The Grimoire</a></li>
+{% include 'the_cauldron/_footer_links.html' %}
 {% endblock %}
 
 {% block app_scripts %}

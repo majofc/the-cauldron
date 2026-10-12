@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="The Cauldron home">
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="The Cauldron home">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -26,9 +26,9 @@
 {% endblock %}
 
 {% block nav_links %}
-<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link">The Cauldron</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active">The Forge</a></li>
-<li><a href="{% url 'the_cauldron:logout' %}" class="nav-link">Sign out</a></li>
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active cauldron-nav-tight">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">The Grimoire</a></li>
 {% endblock %}
 
 {% block nav_cta %}
@@ -538,3 +538,6 @@
 {# Replace Arcano's page-transition loader: the Cauldron loader (loaded above)
    installs its own nav handlers, so this block is intentionally empty. #}
 {% block nav_auto_loader %}{% endblock %}
+
+{# The Cauldron's own legal pages. #}
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

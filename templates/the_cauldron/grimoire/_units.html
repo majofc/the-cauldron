@@ -1,0 +1,6 @@
+{% load i18n %}
+{% comment %}Metric / US switch — the user's saved unit_system (GrimoirePreferences).{% endcomment %}
+<div class="grim-units" role="group" aria-label="{% trans 'Units' %}">
+  <button type="button" class="grim-unit-btn{% if unit_system == 'metric' %} is-on{% endif %}" data-units="metric" aria-pressed="{% if unit_system == 'metric' %}true{% else %}false{% endif %}">{% trans "Metric" %}</button>
+  <button type="button" class="grim-unit-btn{% if unit_system == 'us' %} is-on{% endif %}" data-units="us" aria-pressed="{% if unit_system == 'us' %}true{% else %}false{% endif %}">{% trans "US" %}</button>
+</div>
