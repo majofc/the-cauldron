@@ -433,3 +433,29 @@ class CastingSerializer(serializers.ModelSerializer):
                 "unit": unit,
             })
         return clean
+
+
+class OnHandSerializer(serializers.Serializer):
+    """One "I have…" amount for the scaler (#69)."""
+
+    reagent = serializers.UUIDField()
+    quantity = serializers.FloatField()
+    unit = serializers.ChoiceField(choices=SpellReagent.Unit.choices)
+
+    def validate_quantity(self, value):
+        if not math.isfinite(value) or value <= 0:
+            raise serializers.ValidationError(_("Enter an amount above 0."))
+        return value
+
+
+class SpellScaleSerializer(serializers.Serializer):
+    """``POST spells/{uuid}/scale/`` — one mode per request; the number it needs
+    is checked by services.grimoire_scaling (zero/negative → 400)."""
+
+    MODES = ("factor", "servings", "total_grams", "available")
+
+    mode = serializers.ChoiceField(choices=MODES)
+    factor = serializers.FloatField(required=False)
+    servings = serializers.FloatField(required=False)
+    grams = serializers.FloatField(required=False)
+    available = OnHandSerializer(many=True, required=False, max_length=MAX_LINES)
