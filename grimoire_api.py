@@ -22,11 +22,12 @@ from the_cauldron.grimoire_serializers import (
     CastingSerializer,
     GrimoirePreferencesSerializer,
     ReagentSerializer,
+    SpellScaleSerializer,
     SpellSerializer,
     TagSerializer,
 )
 from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag, normalize_search
-from the_cauldron.services import grimoire
+from the_cauldron.services import grimoire, grimoire_scaling
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -194,6 +195,64 @@ class SpellViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save(user=request.user, spell=spell, spell_title=spell.title)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"])
+    def scale(self, request, uuid=None):
+        """Scale a readable spell (#69) — nothing is written. One ``mode``:
+        ``factor``, ``servings``, ``total_grams`` (``grams``) or ``available``
+        (``[{reagent, quantity, unit}]``, the reagent that runs out first wins).
+        An "I have" amount whose unit can't be turned into grams is listed in
+        ``unconvertible`` and left out, never guessed."""
+        spell = self.get_object()
+        req = SpellScaleSerializer(data=request.data)
+        req.is_valid(raise_exception=True)
+        data = req.validated_data
+        lines = list(spell.lines.all())
+        plain = [
+            grimoire_scaling.Line(key=line.reagent.uuid, quantity=line.quantity, unit=line.unit, grams=line.grams)
+            for line in lines
+        ]
+        unconvertible = []
+        try:
+            mode = data["mode"]
+            if mode == "factor":
+                result = grimoire_scaling.scale_by_factor(plain, data.get("factor"))
+            elif mode == "servings":
+                result = grimoire_scaling.scale_to_servings(plain, spell.servings, data.get("servings"))
+            elif mode == "total_grams":
+                result = grimoire_scaling.scale_to_total_grams(plain, data.get("grams"))
+            else:
+                on_hand = {}
+                for item in data.get("available", []):
+                    try:
+                        grams = grimoire.grams_on_hand(lines, item["reagent"], item["quantity"], item["unit"])
+                    except grimoire.ConversionError:
+                        unconvertible.append(str(item["reagent"]))
+                        continue
+                    on_hand[item["reagent"]] = on_hand.get(item["reagent"], 0.0) + grams
+                if not on_hand and unconvertible:
+                    return Response(
+                        {"detail": _("Those amounts can't be converted to grams — use g."),
+                         "code": "unconvertible", "unconvertible": unconvertible},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                result = grimoire_scaling.scale_by_available(plain, on_hand)
+        except grimoire_scaling.ScalingError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            "factor": result.factor,
+            "servings": spell.servings * result.factor,
+            "total_grams": sum(line.grams for line in result.lines),
+            "limiting": str(result.limiting) if result.limiting is not None else None,
+            "unconvertible": unconvertible,
+            "lines": [
+                {
+                    "line": i, "reagent": str(line.key), "unit": line.unit, "quantity": line.quantity,
+                    "display_quantity": line.display_quantity, "grams": line.grams,
+                }
+                for i, line in enumerate(result.lines)
+            ],
+        })
 
 
 class CastingViewSet(

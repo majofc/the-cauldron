@@ -46,6 +46,23 @@ def to_grams(reagent, quantity, unit):
     )
 
 
+def grams_on_hand(lines, reagent_uuid, quantity, unit):
+    """Grams of ``quantity unit`` of a reagent on a spell, for the scaler (#69).
+
+    A unit one of its lines already uses converts through that line's own
+    weight (what the author measured); any other unit goes through
+    ``to_grams``, raising ``ConversionError`` rather than guessing. A reagent
+    that isn't on the spell gets ``0`` and the scaler rejects it.
+    """
+    same = [line for line in lines if line.reagent.uuid == reagent_uuid]
+    if not same:
+        return 0.0
+    for line in same:
+        if line.unit == unit and line.quantity > 0:
+            return quantity * line.grams / line.quantity
+    return to_grams(same[0].reagent, quantity, unit)
+
+
 def visible_reagents(user):
     """Approved reagents for everyone, plus the user's own unapproved ones."""
     return Reagent.objects.filter(

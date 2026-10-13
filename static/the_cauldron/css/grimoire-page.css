@@ -213,7 +213,9 @@ a.grim-casting-spell:hover { color: var(--grimoire-gilt); }
 .grim-line input,
 .grim-line select,
 .grim-adjustment input,
-.grim-adjustment select {
+.grim-adjustment select,
+.grim-have-row input,
+.grim-have-row select {
   width: 100%;
   box-sizing: border-box;
   background: var(--grimoire-page);
@@ -232,6 +234,8 @@ a.grim-casting-spell:hover { color: var(--grimoire-gilt); }
 .grim-line input:focus,
 .grim-line select:focus,
 .grim-adjustment input:focus,
+.grim-have-row input:focus,
+.grim-have-row select:focus,
 .grim-adjustment select:focus { outline: none; border-color: var(--grimoire-gilt); box-shadow: 0 0 0 1px var(--grimoire-gilt-dim); }
 .grim-tag-filter { margin-bottom: 1.5rem; }
 .grim-help { color: var(--grimoire-text-dim); font-size: 0.85rem; }
@@ -306,6 +310,65 @@ a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); ou
 .grim-grams { font-size: 0.72rem; color: var(--grimoire-text-dim); }
 .grim-note { font-family: var(--arcano-font-italic); font-style: italic; color: var(--grimoire-text-dim); }
 .grimoire-reagent.is-unverified { border-style: dashed; }
+
+/* ── Scaling (#69): servings stepper, size slider, total weight, "I have…" ── */
+.grim-scale {
+  margin: 1.25rem 0 0.9rem;
+  padding: 1rem 1.25rem;
+  background: var(--grimoire-page-raised);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+}
+.grim-scale > .grim-h3 { margin-top: 0; }
+.grim-scale-controls { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-end; }
+.grim-scale-controls .grim-field { margin: 0; }
+.grim-stepper { display: inline-flex; align-items: stretch; }
+.grim-stepper input { width: 4.5rem; text-align: center; border-radius: 0; }
+.grim-stepper-btn {
+  min-width: 2.6rem;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-border);
+  color: var(--grimoire-gilt);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.grim-stepper-btn:first-child { border-radius: var(--arcano-radius-sm) 0 0 var(--arcano-radius-sm); }
+.grim-stepper-btn:last-child { border-radius: 0 var(--arcano-radius-sm) var(--arcano-radius-sm) 0; }
+.grim-stepper-btn:hover,
+.grim-stepper-btn:focus-visible { border-color: var(--grimoire-gilt-border); }
+.grim-scale-slider { display: inline-flex; align-items: center; gap: 0.6rem; min-height: 2.6rem; }
+.grim-scale-slider input[type="range"] { width: 10rem; accent-color: var(--grimoire-gilt); }
+.grim-scale-slider output { min-width: 3rem; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--grimoire-gilt); }
+#grim-scale-weight { width: 7rem; }
+.grim-scale-have-toggle {
+  margin-top: 0.9rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--grimoire-gilt);
+  font-family: var(--arcano-font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.grim-scale-have { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+.grim-scale-have[hidden] { display: none; }
+.grim-have-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 5.5rem 6rem;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--arcano-radius-sm);
+}
+.grim-have-row.is-limiting { box-shadow: inset 3px 0 0 var(--grimoire-gilt); background: var(--grimoire-gilt-dim); }
+.grim-have-row.is-unconvertible { box-shadow: inset 3px 0 0 var(--grimoire-accent); }
+.grim-have-flag { grid-column: 1 / -1; font-size: 0.82rem; color: var(--grimoire-accent); }
+.grim-scale-status { margin: 0.75rem 0 0; min-height: 1.2em; font-weight: 600; color: var(--grimoire-gilt); }
+.grim-actions.grim-scale-actions { justify-content: flex-start; margin-top: 0.75rem; }
+.grim-scale-actions[hidden] { display: none; }
+.grimoire-reagent.is-scaled .grimoire-reagent-qty { color: var(--grimoire-gilt); }
+.grimoire-reagent.is-limiting { border-color: var(--grimoire-gilt-border); box-shadow: var(--grimoire-shadow-glow); }
 
 /* Hover / focus hint on household units: "≈ 27 g · 30 ml" */
 .grim-tip { position: relative; cursor: help; }
@@ -448,6 +511,10 @@ a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); ou
   .grim-line-note { grid-column: 1 / -1; grid-row: 2; }
   .grim-adjustment { grid-template-columns: 1fr 5rem 5.5rem; }
   .grim-adjustment > .grim-help { grid-column: 1 / -1; grid-row: 2; }
+  .grim-scale { padding: 0.9rem; }
+  .grim-have-row { grid-template-columns: 1fr 5rem 5.5rem; }
+  .grim-scale-slider input[type="range"] { width: 100%; }
+  .grim-scale-size { flex: 1 1 100%; }
   .grim-actions { justify-content: stretch; }
   .grim-actions > * { flex: 1 1 auto; justify-content: center; }
 }

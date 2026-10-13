@@ -325,17 +325,21 @@
     }
   }
 
-  function lineChip(l) {
+  // ``scaled`` (#69): this line's entry from the scale response — the rounded
+  // amount is shown, the exact grams drive the weight and the hover hint.
+  function lineChip(l, scaled, limiting) {
+    if (scaled) l = { ...l, quantity: scaled.display_quantity, grams: scaled.grams };
     const tip = approxText(l);
     const tipAttrs = tip ? ` tabindex="0" data-tip="${esc(tip)}" aria-label="${esc(`${fmtNum(l.quantity)} ${unitLabel(l.unit, l.quantity)} ${lineName(l)}, ${tip}`)}"` : "";
-    return `<li class="grimoire-reagent${l.reagent_status === "approved" ? "" : " is-unverified"}${tip ? " grim-tip" : ""}"${tipAttrs}>
+    const cls = `${l.reagent_status === "approved" ? "" : " is-unverified"}${tip ? " grim-tip" : ""}${scaled && scaled.factor !== 1 ? " is-scaled" : ""}${limiting && limiting === l.reagent ? " is-limiting" : ""}`;
+    return `<li class="grimoire-reagent${cls}"${tipAttrs}>
         <span class="grimoire-reagent-qty">${esc(fmtNum(l.quantity))} ${esc(unitLabel(l.unit, l.quantity))}</span><a class="grim-reagent-link" href="${esc(reagentUrl(l.reagent))}">${esc(lineName(l))}</a>
         <span class="grim-grams">${esc(fmtWeight(l.grams))}</span>${lineNote(l) ? `<span class="grim-note">${esc(lineNote(l))}</span>` : ""}</li>`;
   }
 
   function renderSpellDetail(s) {
     const body = spellBody();
-    const lines = s.lines.map(lineChip).join("");
+    const lines = s.lines.map((l) => lineChip(l)).join("");
     const steps = (spellSteps(s) || []).map((st) => `<li>${esc(st)}</li>`).join("");
     const desc = spellDesc(s);
     const kicker = s.is_mine
@@ -363,12 +367,197 @@
       ${s.has_unverified_reagents ? `<p class="grim-badge is-warn grim-unverified">${esc(t("unverified_note"))}</p>` : ""}
       ${forked}
       <h3 class="grim-h3">${esc(t("h_reagents"))}</h3>
-      ${lines ? `<ul class="grim-detail-lines">${lines}</ul>` : `<p class="grim-help">${esc(t("no_lines"))}</p>`}
+      ${lines ? scalerHtml(s) : ""}
+      ${lines ? `<ul class="grim-detail-lines" id="grim-detail-lines">${lines}</ul>` : `<p class="grim-help">${esc(t("no_lines"))}</p>`}
       <h3 class="grim-h3">${esc(t("h_method"))}</h3>
       ${steps ? `<ol class="grim-steps">${steps}</ol>` : `<p class="grim-help">${esc(t("no_steps"))}</p>`}
       <div class="grim-actions">${actions}</div>`;
     body._spell = s;
     document.title = `${spellTitle(s)} — ${document.title.split(" — ").slice(-1)[0]}`;
+  }
+
+  // ── Scaling (#69) ──────────────────────────────────────────────────────────
+  // Every change asks POST spells/{uuid}/scale/ (services/grimoire_scaling.py
+  // does the maths and the rounding); the newest answer re-renders the lines.
+  const scaler = { seq: 0 };
+  const weightUnit = () => (state.units === "us" ? "oz" : "g");
+
+  function scalerHtml(s) {
+    const seen = new Set();
+    const have = s.lines.filter((l) => !seen.has(l.reagent) && seen.add(l.reagent)).map((l) => `
+      <div class="grim-have-row" data-reagent="${esc(l.reagent)}" data-name="${esc(lineName(l))}">
+        <span class="grim-line-name">${esc(lineName(l))}</span>
+        <input type="number" class="grim-have-qty" min="0" step="any" inputmode="decimal" aria-label="${esc(t("scale_have_label", { name: lineName(l) }))}">
+        <select class="grim-have-unit" aria-label="${esc(t("line_unit", { name: lineName(l) }))}">${UNITS.map((u) =>
+          `<option value="${u}"${u === l.unit ? " selected" : ""}>${esc(unitLabel(u))}</option>`).join("")}</select>
+        <span class="grim-have-flag" role="status" hidden></span>
+      </div>`).join("");
+    return `
+      <section class="grim-scale" id="grim-scale" aria-labelledby="grim-scale-title">
+        <h3 class="grim-h3" id="grim-scale-title">${esc(t("scale_title"))}</h3>
+        <div class="grim-scale-controls">
+          <div class="grim-field">
+            <span id="grim-scale-servings-label">${esc(t("scale_servings"))}</span>
+            <div class="grim-stepper">
+              <button type="button" class="grim-stepper-btn" data-step="-1" aria-label="${esc(t("scale_less"))}">−</button>
+              <input type="number" id="grim-scale-servings" min="1" max="9999" step="1" inputmode="numeric" value="${esc(s.servings)}" aria-labelledby="grim-scale-servings-label">
+              <button type="button" class="grim-stepper-btn" data-step="1" aria-label="${esc(t("scale_more"))}">+</button>
+            </div>
+          </div>
+          <label class="grim-field grim-scale-size"><span>${esc(t("scale_size"))}</span>
+            <span class="grim-scale-slider"><input type="range" id="grim-scale-factor" min="0.25" max="4" step="0.25" value="1">
+            <output id="grim-scale-factor-out" for="grim-scale-factor">×1</output></span></label>
+          <label class="grim-field"><span>${esc(t("scale_weight", { unit: unitLabel(weightUnit()) }))}</span>
+            <input type="number" id="grim-scale-weight" min="0" step="any" inputmode="decimal" value="${esc(weightValue(totalGrams(s)))}"></label>
+        </div>
+        <button type="button" class="grim-scale-have-toggle" id="grim-scale-have-toggle" aria-expanded="false" aria-controls="grim-scale-have">${esc(t("scale_have"))}</button>
+        <div class="grim-scale-have" id="grim-scale-have" hidden>
+          <p class="grim-help">${esc(t("scale_have_help"))}</p>${have}
+        </div>
+        <p class="grim-scale-status" id="grim-scale-status" aria-live="polite"></p>
+        <div class="grim-actions grim-scale-actions" id="grim-scale-actions" hidden>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="grim-scale-reset">${esc(t("scale_reset"))}</button>
+          <a class="btn-cauldron btn-cauldron--primary" id="grim-scale-cast" href="#">${esc(t("scale_cast"))}</a>
+        </div>
+      </section>`;
+  }
+
+  const totalGrams = (s) => s.lines.reduce((a, l) => a + l.grams, 0);
+
+  function weightValue(grams) {
+    const v = weightUnit() === "oz" ? grams / MASS_G.oz : grams;
+    return Number(v.toFixed(v < 10 ? 1 : 0));
+  }
+
+  function setFactorOutput(factor) {
+    $("#grim-scale-factor-out").textContent = `×${fmtNum(factor)}`;
+  }
+
+  function clearHave() {
+    $$("#grim-scale-have .grim-have-row").forEach((row) => {
+      row.querySelector(".grim-have-qty").value = "";
+      row.classList.remove("is-limiting", "is-unconvertible");
+      row.querySelector(".grim-have-flag").hidden = true;
+    });
+  }
+
+  // ``source`` is the control the user moved; it's left alone, the rest follow.
+  function applyScale(s, r, source) {
+    const scaled = r.lines.map((l) => ({ ...l, factor: r.factor }));
+    $("#grim-detail-lines").innerHTML = s.lines.map((l, i) => lineChip(l, scaled[i], r.limiting)).join("");
+    if (source !== "servings") $("#grim-scale-servings").value = fmtNum(r.servings);
+    if (source !== "factor") $("#grim-scale-factor").value = String(Math.min(4, Math.max(0.25, r.factor)));
+    setFactorOutput(r.factor);
+    if (source !== "weight") $("#grim-scale-weight").value = weightValue(r.total_grams);
+    const servings = Number(fmtNum(r.servings));
+    const parts = [t("scale_factor", { factor: fmtNum(r.factor) }),
+      servings === 1 ? t("serving_one") : t("serving_many", { n: servings })];
+    $$("#grim-scale-have .grim-have-row").forEach((row) => {
+      const flag = row.querySelector(".grim-have-flag");
+      const bad = (r.unconvertible || []).includes(row.dataset.reagent);
+      row.classList.toggle("is-unconvertible", bad);
+      row.classList.toggle("is-limiting", r.limiting === row.dataset.reagent);
+      flag.hidden = !bad;
+      if (bad) {
+        flag.textContent = t("scale_unconvertible", {
+          unit: unitLabel(row.querySelector(".grim-have-unit").value), name: row.dataset.name });
+      }
+      if (r.limiting === row.dataset.reagent) parts.push(t("scale_limited", { name: row.dataset.name }));
+    });
+    $("#grim-scale-status").textContent = r.factor === 1 ? "" : parts.join(" · ");
+    $("#grim-scale-actions").hidden = r.factor === 1;
+    $("#grim-scale-cast").href = `${castUrl(s.uuid)}?factor=${encodeURIComponent(r.factor)}`;
+  }
+
+  function unscaled(s) {
+    return {
+      factor: 1, servings: s.servings, total_grams: totalGrams(s), limiting: null,
+      unconvertible: [], lines: s.lines.map((l) => ({ display_quantity: l.quantity, grams: l.grams })),
+    };
+  }
+
+  async function runScale(payload, source) {
+    const s = spellBody()._spell;
+    if (!s) return;
+    const my = ++scaler.seq;
+    try {
+      const r = await api(`spells/${encodeURIComponent(s.uuid)}/scale/`, { method: "POST", body: payload });
+      if (my === scaler.seq) applyScale(s, r, source);
+    } catch (err) {
+      if (my !== scaler.seq) return;
+      const bad = (err.data && err.data.unconvertible) || [];
+      applyScale(s, { ...unscaled(s), unconvertible: bad }, source);
+      // The flag on each row already names an unconvertible amount; say only the message.
+      $("#grim-scale-status").textContent = (err.data && err.data.detail) || errorText(err);
+    }
+  }
+  const scaleSoon = debounce(runScale, 180);
+
+  function haveAmounts() {
+    return $$("#grim-scale-have .grim-have-row")
+      .filter((row) => row.querySelector(".grim-have-qty").value !== "" && Number(row.querySelector(".grim-have-qty").value) > 0)
+      .map((row) => ({
+        reagent: row.dataset.reagent,
+        quantity: Number(row.querySelector(".grim-have-qty").value),
+        unit: row.querySelector(".grim-have-unit").value,
+      }));
+  }
+
+  function onScaleInput(e) {
+    const s = spellBody()._spell;
+    const el = e.target;
+    if (!s || !el.closest("#grim-scale")) return;
+    if (el.id === "grim-scale-servings") {
+      const n = Number(el.value);
+      if (el.value === "" || !(n > 0)) return;
+      clearHave();
+      scaleSoon({ mode: "servings", servings: n }, "servings");
+    } else if (el.id === "grim-scale-factor") {
+      setFactorOutput(Number(el.value));
+      clearHave();
+      scaleSoon({ mode: "factor", factor: Number(el.value) }, "factor");
+    } else if (el.id === "grim-scale-weight") {
+      const v = Number(el.value);
+      if (el.value === "" || !(v > 0)) return;
+      clearHave();
+      scaleSoon({ mode: "total_grams", grams: weightUnit() === "oz" ? v * MASS_G.oz : v }, "weight");
+    } else if (el.closest(".grim-have-row")) {
+      const available = haveAmounts();
+      if (available.length) {
+        scaleSoon({ mode: "available", available }, "have");
+      } else {
+        ++scaler.seq;
+        applyScale(s, unscaled(s), "have");
+      }
+    }
+  }
+
+  function onScaleClick(e) {
+    const s = spellBody()._spell;
+    if (!s) return;
+    const step = e.target.closest(".grim-stepper-btn");
+    if (step) {
+      const input = $("#grim-scale-servings");
+      const n = Math.max(1, Math.round(Number(input.value) || s.servings) + Number(step.dataset.step));
+      input.value = n;
+      clearHave();
+      scaleSoon({ mode: "servings", servings: n }, "servings");
+      return;
+    }
+    if (e.target.closest("#grim-scale-reset")) {
+      ++scaler.seq;
+      clearHave();
+      applyScale(s, unscaled(s), null);
+      return;
+    }
+    const toggle = e.target.closest("#grim-scale-have-toggle");
+    if (toggle) {
+      const open = toggle.getAttribute("aria-expanded") !== "true";
+      toggle.setAttribute("aria-expanded", String(open));
+      $("#grim-scale-have").hidden = !open;
+      const first = $("#grim-scale-have .grim-have-qty");
+      if (open && first) first.focus();
+    }
   }
 
   async function spellAction(action, btn) {
@@ -517,7 +706,9 @@
     return row;
   }
 
-  function fillCastForm(spell, casting) {
+  // ``scaled`` (#69): the scale response when the cast page was opened from
+  // "Cast with these amounts" — each line starts at its scaled amount.
+  function fillCastForm(spell, casting, scaled) {
     const F = castForm.elements;
     F.cast_on.value = casting ? casting.cast_on : new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
     F.notes.value = casting ? casting.notes : "";
@@ -541,7 +732,8 @@
       const a = matched[i];
       return {
         line: i, reagent: l.reagent, name: lineName(l), original_qty: l.quantity, original_unit: l.unit,
-        used_qty: a ? a.used_qty : l.quantity, unit: a ? a.unit : l.unit,
+        used_qty: a ? a.used_qty : (scaled ? scaled.lines[i].display_quantity : l.quantity),
+        unit: a ? a.unit : l.unit,
       };
     });
     // Adjustments whose line is gone (spell edited or removed) still show.
@@ -625,7 +817,14 @@
         spell = await api(`spells/${encodeURIComponent(CFG.spell)}/`);
       }
       castSpellUuid = spell ? spell.uuid : null;
-      fillCastForm(spell, casting);
+      let scaled = null;
+      const factor = Number(new URLSearchParams(location.search).get("factor"));
+      if (spell && !casting && factor > 0 && factor !== 1) {
+        // A bad ?factor= just means the spell's own amounts.
+        scaled = await api(`spells/${encodeURIComponent(spell.uuid)}/scale/`, {
+          method: "POST", body: { mode: "factor", factor } }).catch(() => null);
+      }
+      fillCastForm(spell, casting, scaled);
     } catch (err) {
       $("#grim-cast-error").textContent = errorText(err);
       $("#grim-cast-error").hidden = false;
@@ -943,6 +1142,11 @@
     spellBody().addEventListener("click", (e) => {
       const b = e.target.closest("[data-action]");
       if (b) spellAction(b.dataset.action, b);
+      else onScaleClick(e);
+    });
+    spellBody().addEventListener("input", onScaleInput);
+    spellBody().addEventListener("change", (e) => {
+      if (e.target.classList.contains("grim-have-unit")) onScaleInput(e);
     });
     $("#grim-castings-body").addEventListener("click", (e) => {
       const b = e.target.closest("[data-delete-casting]");

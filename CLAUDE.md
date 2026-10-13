@@ -344,6 +344,16 @@ with `_plural` keys for spelled-out units (pieza/piezas, taza/tazas).
 (`≈ weight · volume`) use the user's `unit_system` (g/ml/kg/l vs oz/lb/fl oz/cups). Volume is exact for
 volume units and `grams / reagent_density` for weighed/counted lines (`reagent_density` on each line).
 
+**Scaling (#69)**: pure maths in `services/grimoire_scaling.py` (no queries, no writes):
+`scale_by_factor`, `scale_to_servings`, `scale_to_total_grams`, `scale_by_available` (the smallest
+available/required ratio wins and is returned as `limiting`; a reagent on two lines counts both; a 0 g line
+can't limit). Zero/negative/NaN input raises `ScalingError` (→ 400); the factor is capped at `MAX_FACTOR`.
+Quantities and grams stay exact; only `display_quantity` is rounded (pieces to ½, spoons/cups to ¼, g/ml to
+5 above 100). `POST spells/{uuid}/scale/` (any readable spell) takes one `mode`; an "I have" amount in a unit
+the reagent can't convert is listed in `unconvertible` and left out, never guessed
+(`services.grimoire.grams_on_hand` prefers the line's own weight for the same unit). The spell page's scaler
+re-renders the lines from the response; "Cast with these amounts" opens the cast page with `?factor=`.
+
 **Seed**: `python manage.py seed_grimoire` (idempotent; also run at container start) loads
 `seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
