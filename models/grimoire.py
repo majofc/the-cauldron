@@ -174,6 +174,13 @@ class Spell(ForgeBaseModel):
         "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="forks"
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name="spells")
+    # Cooked yield (#70): what the whole batch weighs once cooked, or that as a %
+    # of the raw ingredients. Either may be blank; a weighed casting wins over both
+    # (services.grimoire_nutrition.resolve_yield).
+    cooked_yield_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.1)])
+    yield_pct = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(1000)]
+    )
 
     class Meta:
         ordering = ["-updated_at"]
@@ -264,6 +271,8 @@ class Casting(ForgeBaseModel):
     #   position, so a spell listing one reagent twice keeps each change apart.
     adjustments = models.JSONField(default=list, blank=True)
     substitutions = models.TextField(blank=True, default="")  # free text: "lime instead of lemon"
+    # The pot weighed after cooking (#70) — the best source of the spell's yield.
+    cooked_weight_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.1)])
 
     class Meta:
         ordering = ["-cast_on", "-created_at"]

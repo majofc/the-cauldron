@@ -18,6 +18,13 @@ from the_cauldron.models import (
 from the_cauldron.services import grimoire
 
 MAX_LINES = 60
+
+
+def _finite_or_none(value):
+    """Model validators let NaN/inf through (every comparison with NaN is false)."""
+    if value is not None and not math.isfinite(value):
+        raise serializers.ValidationError(_("Enter a number."))
+    return value
 MAX_STEPS = 40
 MAX_STEP_LENGTH = 2000
 MAX_DESCRIPTION_LENGTH = 5000
@@ -184,7 +191,7 @@ class SpellSerializer(serializers.ModelSerializer):
             "uuid", "title", "title_es", "description", "description_es", "servings",
             "prep_minutes", "cook_minutes", "steps", "steps_es", "visibility", "tags", "lines",
             "owner_name", "is_mine", "forked_from", "has_unverified_reagents",
-            "my_casting_count", "my_average_score", "my_last_cast_on",
+            "my_casting_count", "my_average_score", "my_last_cast_on", "cooked_yield_g", "yield_pct",
             "created_at", "updated_at",
         ]
         # *_es is curated starter text (seed/admin only); users write the base fields.
@@ -195,6 +202,12 @@ class SpellSerializer(serializers.ModelSerializer):
     def get_is_mine(self, obj):
         request = self.context.get("request")
         return bool(request and obj.owner_id == request.user.pk)
+
+    def validate_cooked_yield_g(self, value):
+        return _finite_or_none(value)
+
+    def validate_yield_pct(self, value):
+        return _finite_or_none(value)
 
     def get_forked_from(self, obj):
         src = obj.forked_from
@@ -343,7 +356,7 @@ class CastingSerializer(serializers.ModelSerializer):
         model = Casting
         fields = [
             "uuid", "spell", "spell_title", "spell_title_es", "spell_available", "cast_on",
-            "score", "notes", "adjustments", "substitutions", "created_at", "updated_at",
+            "score", "notes", "adjustments", "substitutions", "cooked_weight_g", "created_at", "updated_at",
         ]
         read_only_fields = ["uuid", "spell_title", "created_at", "updated_at"]
 
@@ -385,6 +398,9 @@ class CastingSerializer(serializers.ModelSerializer):
                 _("Keep the substitutions under %(n)s characters.") % {"n": MAX_SUBSTITUTIONS_LENGTH}
             )
         return value
+
+    def validate_cooked_weight_g(self, value):
+        return _finite_or_none(value)
 
     def validate_adjustments(self, value):
         """Only the documented shape is stored — nothing else from the client."""
@@ -459,3 +475,17 @@ class SpellScaleSerializer(serializers.Serializer):
     servings = serializers.FloatField(required=False)
     grams = serializers.FloatField(required=False)
     available = OnHandSerializer(many=True, required=False, max_length=MAX_LINES)
+
+
+class PortionGoalSerializer(serializers.Serializer):
+    """One portion goal (#70); bounds are checked by services.grimoire_nutrition."""
+
+    nutrient = serializers.CharField(max_length=32)
+    at_least = serializers.FloatField(required=False, allow_null=True)
+    at_most = serializers.FloatField(required=False, allow_null=True)
+
+
+class SpellPortionSerializer(serializers.Serializer):
+    """``POST spells/{uuid}/portion/``."""
+
+    goals = PortionGoalSerializer(many=True, max_length=20)

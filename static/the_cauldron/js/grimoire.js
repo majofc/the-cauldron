@@ -369,11 +369,13 @@
       <h3 class="grim-h3">${esc(t("h_reagents"))}</h3>
       ${lines ? scalerHtml(s) : ""}
       ${lines ? `<ul class="grim-detail-lines" id="grim-detail-lines">${lines}</ul>` : `<p class="grim-help">${esc(t("no_lines"))}</p>`}
+      ${lines ? nutritionShellHtml() : ""}
       <h3 class="grim-h3">${esc(t("h_method"))}</h3>
       ${steps ? `<ol class="grim-steps">${steps}</ol>` : `<p class="grim-help">${esc(t("no_steps"))}</p>`}
       <div class="grim-actions">${actions}</div>`;
     body._spell = s;
     document.title = `${spellTitle(s)} — ${document.title.split(" — ").slice(-1)[0]}`;
+    if (lines) loadNutrition(s, 1);
   }
 
   // ── Scaling (#69) ──────────────────────────────────────────────────────────
@@ -467,6 +469,7 @@
     $("#grim-scale-status").textContent = r.factor === 1 ? "" : parts.join(" · ");
     $("#grim-scale-actions").hidden = r.factor === 1;
     $("#grim-scale-cast").href = `${castUrl(s.uuid)}?factor=${encodeURIComponent(r.factor)}`;
+    nutritionSoon(s, r.factor);
   }
 
   function unscaled(s) {
@@ -558,6 +561,259 @@
       const first = $("#grim-scale-have .grim-have-qty");
       if (open && first) first.focus();
     }
+  }
+
+  // ── Nutrition (#70) ────────────────────────────────────────────────────────
+  // GET spells/{uuid}/nutrition/?scale= (services/grimoire_nutrition.py) and
+  // POST …/portion/ for the recommender. Values with missing reagent data are
+  // shown as "≥ x": the real amount can only be higher.
+  const nutri = { seq: 0, data: null, view: "serving", portionSeq: 0, portion: null };
+  const NUTRIENT_UNIT = Object.fromEntries(NUTRIENTS);
+  const MACRO_KCAL = [["protein_g", 4, "protein"], ["carbs_g", 4, "carbs"], ["fat_g", 9, "fat"]];
+
+  function nutritionShellHtml() {
+    const views = [["batch", t("nut_view_batch")], ["serving", t("nut_view_serving")], ["100g", t("nut_view_100g")]];
+    return `
+      <section class="grim-nutrition" id="grim-nutrition" aria-labelledby="grim-nutrition-title">
+        <div class="grim-nutrition-head">
+          <h3 class="grim-h3" id="grim-nutrition-title">${esc(t("nut_title"))}</h3>
+          <div class="grim-scope" role="group" aria-label="${esc(t("nut_view_label"))}">${views.map(([v, label]) =>
+            `<button type="button" class="grim-scope-btn${v === nutri.view ? " is-on" : ""}" data-nut-view="${v}" aria-pressed="${v === nutri.view}">${esc(label)}</button>`).join("")}</div>
+        </div>
+        <p class="grim-nutrition-yield" id="grim-nutrition-yield"></p>
+        <div id="grim-nutrition-body" aria-live="polite"></div>
+        <div class="grim-portion" id="grim-portion">
+          <h4 class="grim-section-title">${esc(t("portion_title"))}</h4>
+          <p class="grim-help">${esc(t("portion_help"))}</p>
+          <div class="grim-goals" id="grim-goals"></div>
+          <button type="button" class="grim-scale-have-toggle" id="grim-goal-add">${esc(t("portion_add"))}</button>
+          <p class="grim-portion-result" id="grim-portion-result" aria-live="polite"></p>
+          <div class="grim-portion-try" id="grim-portion-try" hidden>
+            <label class="grim-field"><span>${esc(t("portion_try"))}</span>
+              <span class="grim-scale-slider"><input type="range" id="grim-portion-slider" min="0" max="1000" step="5" value="0">
+              <output id="grim-portion-out" for="grim-portion-slider"></output></span></label>
+            <ul class="grim-goal-status" id="grim-goal-status"></ul>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  function fmtAmount(v) {
+    if (v == null) return "—";
+    const a = Math.abs(v);
+    return String(Number(v.toFixed(a >= 10 ? 0 : a >= 1 ? 1 : 2)));
+  }
+
+  function nutrientValue(n) {
+    if (!nutri.data) return null;
+    if (nutri.view === "batch") return n.batch;
+    if (nutri.view === "serving") return n.per_serving;
+    return n.per_100g;
+  }
+
+  function nutrientText(n, value) {
+    const shown = `${fmtAmount(value)} ${NUTRIENT_UNIT[n.key]}`;
+    return n.missing ? `≥ ${shown}` : shown;
+  }
+
+  function renderNutrition() {
+    const d = nutri.data;
+    const body = $("#grim-nutrition-body");
+    if (!d || !body) return;
+    const byKey = Object.fromEntries(d.nutrients.map((n) => [n.key, n]));
+    // Macro split: share of the macro energy (4/4/9 kcal per g), not a % of kcal.
+    const kcalOf = MACRO_KCAL.map(([k, per]) => (nutrientValue(byKey[k]) || 0) * per);
+    const kcalSum = kcalOf.reduce((a, b) => a + b, 0);
+    const bars = MACRO_KCAL.map(([k, , cls], i) => {
+      const n = byKey[k];
+      const pct = kcalSum > 0 ? Math.round((kcalOf[i] / kcalSum) * 100) : 0;
+      return `<div class="grimoire-nutrient grimoire-nutrient--${cls}">
+          <span>${esc(t(`n_${k}`))}</span>
+          <span class="grimoire-nutrient-track" role="img" aria-label="${esc(t("nut_energy_share", { pct: `${pct}%` }))}"><span class="grimoire-nutrient-fill" style="--pct:${pct}%"></span></span>
+          <span class="grimoire-nutrient-value">${esc(nutrientText(n, nutrientValue(n)))} · ${pct}%</span>
+        </div>`;
+    }).join("");
+    const groups = NUTRIENT_GROUPS.map(([group, fields]) => `<div class="grim-nutrient-group"><h3>${esc(t(group))}</h3>
+      <dl class="grim-nutrient-table">${fields.map((f) => {
+        const n = byKey[f];
+        const title = n.missing ? ` title="${esc(n.missing === 1 ? t("nut_missing_one") : t("nut_missing_many", { n: n.missing }))}"` : "";
+        return `<div${n.missing ? ' class="is-incomplete"' : ""}><dt>${esc(t(`n_${f}`))}</dt><dd${title}>${esc(nutrientText(n, nutrientValue(n)))}</dd></div>`;
+      }).join("")}</dl></div>`).join("");
+    const missing = d.reagents_missing_data || [];
+    const names = missing.map((r) => (IS_ES && r.name_es) || r.name);
+    const note = missing.length
+      ? `<p class="grim-help grim-nutrition-missing">${esc(t("nut_incomplete", { names: names.join(", ") }))}</p>` : "";
+    const kcal = byKey.kcal;
+    body.innerHTML = `
+      <p class="grim-nutrition-kcal"><strong>${esc(nutrientText(kcal, nutrientValue(kcal)))}</strong> ${esc(t(`nut_per_${nutri.view}`, { n: fmtNum(d.servings), weight: fmtWeight(d.cooked_g) }))}</p>
+      <div class="grimoire-nutrients grim-macro-split">${bars}</div>
+      <div class="grim-nutrient-groups">${groups}</div>${note}`;
+    const y = d.yield;
+    const yieldEl = $("#grim-nutrition-yield");
+    const cooked = fmtWeight(d.cooked_g);
+    yieldEl.classList.toggle("is-warn", y.source === "unknown");
+    yieldEl.textContent = y.source === "casting" ? t("yield_casting", { weight: cooked, date: fmtDate(y.cast_on) })
+      : y.source === "spell_weight" ? t("yield_spell_weight", { weight: cooked })
+        : y.source === "spell_pct" ? t("yield_spell_pct", { weight: cooked, pct: `${fmtNum(y.ratio * 100)}%` })
+          : t("yield_unknown", { weight: cooked });
+    renderGoalStatus();
+  }
+
+  async function loadNutrition(s, factor) {
+    const my = ++nutri.seq;
+    try {
+      const q = factor && factor !== 1 ? `?scale=${encodeURIComponent(factor)}` : "";
+      const d = await api(`spells/${encodeURIComponent(s.uuid)}/nutrition/${q}`);
+      if (my !== nutri.seq) return;
+      nutri.data = d;
+      renderNutrition();
+      if (!$("#grim-goals").children.length) addGoalRow({ nutrient: "protein_g", kind: "at_least" });
+    } catch (err) {
+      if (my !== nutri.seq) return;
+      const body = $("#grim-nutrition-body");
+      if (body) body.innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+    }
+  }
+  const nutritionSoon = debounce(loadNutrition, 250);
+
+  // ── Portion recommender ──
+  const GOAL_KINDS = ["at_least", "at_most", "between"];
+
+  function addGoalRow(goal = {}) {
+    const box = $("#grim-goals");
+    if (!box || box.children.length >= 10) return;
+    const row = document.createElement("div");
+    row.className = "grim-goal";
+    const kind = goal.kind || "at_least";
+    row.innerHTML = `
+      <select class="grim-goal-nutrient" aria-label="${esc(t("portion_nutrient"))}">${NUTRIENTS.map(([k]) =>
+        `<option value="${k}"${k === goal.nutrient ? " selected" : ""}>${esc(t(`n_${k}`))}</option>`).join("")}</select>
+      <select class="grim-goal-kind" aria-label="${esc(t("portion_kind"))}">${GOAL_KINDS.map((k) =>
+        `<option value="${k}"${k === kind ? " selected" : ""}>${esc(t(`goal_${k}`))}</option>`).join("")}</select>
+      <input type="number" class="grim-goal-a" min="0" step="any" inputmode="decimal" aria-label="${esc(t("portion_value"))}">
+      <input type="number" class="grim-goal-b" min="0" step="any" inputmode="decimal" aria-label="${esc(t("portion_value_max"))}"${kind === "between" ? "" : " hidden"}>
+      <span class="grim-goal-unit"></span>
+      <button type="button" class="grim-link-btn grim-danger" data-goal-remove aria-label="${esc(t("portion_remove"))}">✕</button>`;
+    box.appendChild(row);
+    syncGoalUnit(row);
+  }
+
+  function syncGoalUnit(row) {
+    row.querySelector(".grim-goal-unit").textContent = NUTRIENT_UNIT[row.querySelector(".grim-goal-nutrient").value];
+    row.querySelector(".grim-goal-b").hidden = row.querySelector(".grim-goal-kind").value !== "between";
+  }
+
+  // Rows with their numbers filled in; ``null`` while any row is half-done.
+  function readGoals() {
+    const goals = [];
+    for (const row of $$("#grim-goals .grim-goal")) {
+      const kind = row.querySelector(".grim-goal-kind").value;
+      const a = row.querySelector(".grim-goal-a").value;
+      const b = row.querySelector(".grim-goal-b").value;
+      if (a === "" || (kind === "between" && b === "")) return null;
+      const g = { nutrient: row.querySelector(".grim-goal-nutrient").value };
+      if (kind === "at_least") g.at_least = Number(a);
+      else if (kind === "at_most") g.at_most = Number(a);
+      else { g.at_least = Number(a); g.at_most = Number(b); }
+      goals.push(g);
+    }
+    return goals;
+  }
+
+  async function runPortion() {
+    const s = spellBody()._spell;
+    const result = $("#grim-portion-result");
+    const goals = readGoals();
+    const my = ++nutri.portionSeq;
+    if (!s || !goals || !goals.length) {
+      nutri.portion = null;
+      result.textContent = "";
+      result.className = "grim-portion-result";
+      $("#grim-portion-try").hidden = true;
+      return;
+    }
+    try {
+      const p = await api(`spells/${encodeURIComponent(s.uuid)}/portion/`, { method: "POST", body: { goals } });
+      if (my !== nutri.portionSeq) return;
+      nutri.portion = { ...p, goals };
+      result.className = `grim-portion-result ${p.feasible ? "is-ok" : "is-bad"}`;
+      const label = (k) => t(`n_${k}`);
+      let text;
+      if (!p.feasible) text = t("portion_conflict", { goals: p.conflicts.map(label).join(", ") });
+      else if (p.max_g == null) text = t("portion_at_least", { min: fmtWeight(p.min_g) });
+      else if (!p.min_g) text = t("portion_up_to", { max: fmtWeight(p.max_g) });
+      else text = t("portion_between", { min: fmtWeight(p.min_g), max: fmtWeight(p.max_g) });
+      if (p.incomplete.length) text += ` ${t("portion_incomplete", { goals: p.incomplete.map(label).join(", ") })}`;
+      result.textContent = text;
+      const slider = $("#grim-portion-slider");
+      const top = Math.max(p.cooked_g || 0, (p.max_g || p.min_g || 0) * 1.5, 100);
+      slider.max = String(Math.ceil(top / 5) * 5);
+      const start = p.feasible ? (p.max_g == null ? p.min_g : (p.min_g + p.max_g) / 2) : Math.min(p.cooked_g || 100, top);
+      slider.value = String(Math.round(start / 5) * 5);
+      $("#grim-portion-try").hidden = false;
+      renderGoalStatus();
+    } catch (err) {
+      if (my !== nutri.portionSeq) return;
+      nutri.portion = null;
+      result.className = "grim-portion-result is-bad";
+      result.textContent = errorText(err);
+      $("#grim-portion-try").hidden = true;
+    }
+  }
+  const portionSoon = debounce(runPortion, 300);
+
+  // Client-side preview only: the per-100 g values times the slider's grams.
+  function renderGoalStatus() {
+    const p = nutri.portion;
+    const list = $("#grim-goal-status");
+    if (!p || !list || !nutri.data) return;
+    const grams = Number($("#grim-portion-slider").value);
+    $("#grim-portion-out").textContent = fmtWeight(grams);
+    const byKey = Object.fromEntries(nutri.data.nutrients.map((n) => [n.key, n]));
+    list.innerHTML = p.goals.map((g) => {
+      const n = byKey[g.nutrient];
+      const value = (n.per_100g || 0) * grams / 100;
+      const ok = (g.at_least == null || value >= g.at_least) && (g.at_most == null || value <= g.at_most);
+      const want = g.at_least != null && g.at_most != null ? `${fmtAmount(g.at_least)}–${fmtAmount(g.at_most)}`
+        : g.at_least != null ? `≥ ${fmtAmount(g.at_least)}` : `≤ ${fmtAmount(g.at_most)}`;
+      return `<li class="${ok ? "is-ok" : "is-bad"}"><span>${esc(t(`n_${g.nutrient}`))}</span>
+        <strong>${esc(nutrientText(n, value))}</strong> <span class="grim-help">${esc(want)} ${esc(NUTRIENT_UNIT[g.nutrient])} · ${esc(ok ? t("goal_met") : t("goal_missed"))}</span></li>`;
+    }).join("");
+  }
+
+  function onNutritionInput(e) {
+    const el = e.target;
+    if (el.id === "grim-portion-slider") { renderGoalStatus(); return; }
+    const row = el.closest(".grim-goal");
+    if (!row) return;
+    if (el.classList.contains("grim-goal-nutrient") || el.classList.contains("grim-goal-kind")) syncGoalUnit(row);
+    portionSoon();
+  }
+
+  function onNutritionClick(e) {
+    const view = e.target.closest("[data-nut-view]");
+    if (view) {
+      nutri.view = view.dataset.nutView;
+      $$("#grim-nutrition [data-nut-view]").forEach((b) => {
+        b.classList.toggle("is-on", b === view);
+        b.setAttribute("aria-pressed", String(b === view));
+      });
+      renderNutrition();
+      return true;
+    }
+    if (e.target.closest("#grim-goal-add")) {
+      addGoalRow({ nutrient: "cholesterol_mg", kind: "at_most" });
+      const rows = $$("#grim-goals .grim-goal");
+      rows[rows.length - 1].querySelector(".grim-goal-a").focus();
+      return true;
+    }
+    const rm = e.target.closest("[data-goal-remove]");
+    if (rm) {
+      rm.closest(".grim-goal").remove();
+      portionSoon();
+      return true;
+    }
+    return false;
   }
 
   async function spellAction(action, btn) {
@@ -713,6 +969,7 @@
     F.cast_on.value = casting ? casting.cast_on : new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
     F.notes.value = casting ? casting.notes : "";
     F.substitutions.value = casting ? casting.substitutions : "";
+    F.cooked_weight_g.value = casting && casting.cooked_weight_g != null ? casting.cooked_weight_g : "";
     castScore = casting ? casting.score : null;
     renderScore();
     // Match each saved adjustment to one spell line: same position and reagent
@@ -779,6 +1036,7 @@
     const payload = {
       cast_on: F.cast_on.value, score: castScore, notes: F.notes.value,
       substitutions: F.substitutions.value, adjustments,
+      cooked_weight_g: F.cooked_weight_g.value === "" ? null : Number(F.cooked_weight_g.value),
     };
     try {
       const saved = CFG.casting
@@ -861,6 +1119,8 @@
     F.servings.value = spell ? spell.servings : 2;
     F.prep_minutes.value = spell && spell.prep_minutes != null ? spell.prep_minutes : "";
     F.cook_minutes.value = spell && spell.cook_minutes != null ? spell.cook_minutes : "";
+    F.cooked_yield_g.value = spell && spell.cooked_yield_g != null ? spell.cooked_yield_g : "";
+    F.yield_pct.value = spell && spell.yield_pct != null ? spell.yield_pct : "";
     F.steps.value = spell ? spell.steps.join("\n") : "";
     const chosen = new Set(spell ? spell.tags : []);
     $("#grim-editor-tags").innerHTML = state.tags.map((tg) =>
@@ -920,6 +1180,8 @@
       servings: Number(F.servings.value) || 1,
       prep_minutes: numberOrNull(F.prep_minutes.value),
       cook_minutes: numberOrNull(F.cook_minutes.value),
+      cooked_yield_g: numberOrNull(F.cooked_yield_g.value),
+      yield_pct: numberOrNull(F.yield_pct.value),
       steps: F.steps.value.split("\n").map((s) => s.trim()).filter(Boolean),
       tags: $$("#grim-editor-tags .grimoire-tag.is-active").map((b) => b.dataset.tag),
       lines: $$("#grim-editor-lines .grim-line").map((row) => ({
@@ -1142,11 +1404,15 @@
     spellBody().addEventListener("click", (e) => {
       const b = e.target.closest("[data-action]");
       if (b) spellAction(b.dataset.action, b);
-      else onScaleClick(e);
+      else if (!onNutritionClick(e)) onScaleClick(e);
     });
-    spellBody().addEventListener("input", onScaleInput);
+    spellBody().addEventListener("input", (e) => {
+      if (e.target.closest("#grim-nutrition")) onNutritionInput(e);
+      else onScaleInput(e);
+    });
     spellBody().addEventListener("change", (e) => {
-      if (e.target.classList.contains("grim-have-unit")) onScaleInput(e);
+      if (e.target.closest("#grim-nutrition")) onNutritionInput(e);
+      else if (e.target.classList.contains("grim-have-unit")) onScaleInput(e);
     });
     $("#grim-castings-body").addEventListener("click", (e) => {
       const b = e.target.closest("[data-delete-casting]");

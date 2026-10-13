@@ -370,6 +370,64 @@ a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); ou
 .grimoire-reagent.is-scaled .grimoire-reagent-qty { color: var(--grimoire-gilt); }
 .grimoire-reagent.is-limiting { border-color: var(--grimoire-gilt-border); box-shadow: var(--grimoire-shadow-glow); }
 
+/* ── Nutrition (#70): totals, yield, portion recommender ── */
+.grim-nutrition { margin-top: 1.75rem; }
+.grim-nutrition-head { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between; }
+.grim-nutrition-head .grim-h3 { margin: 0; }
+.grim-nutrition-head .grim-scope { margin: 0; }
+.grim-nutrition-yield { margin: 0.6rem 0 0.9rem; font-size: 0.88rem; color: var(--grimoire-text-dim); }
+.grim-nutrition-yield.is-warn { color: var(--grimoire-accent); }
+.grim-nutrition-kcal { margin: 0 0 0.75rem; color: var(--grimoire-text-dim); }
+.grim-nutrition-kcal strong { font-family: var(--arcano-font-display); font-size: 1.5rem; color: var(--grimoire-gilt); }
+.grim-macro-split { margin-bottom: 1.25rem; }
+.grim-macro-split .grimoire-nutrient { grid-template-columns: 6.5rem 1fr minmax(6.5rem, auto); }
+.grim-nutrient-table .is-incomplete dd { color: var(--grimoire-text-dim); cursor: help; }
+.grim-nutrition-missing { margin-top: 0.75rem; }
+.grim-portion {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--grimoire-page-raised);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+}
+.grim-portion .grim-section-title { margin-top: 0; }
+.grim-goals { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+.grim-goal {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 5.5rem 5.5rem 2.5rem auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+.grim-goal select,
+.grim-goal input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  color: var(--grimoire-text);
+  font-family: var(--arcano-font-body);
+  font-size: 0.9rem;
+  padding: 0.55rem 0.65rem;
+}
+.grim-goal select:focus,
+.grim-goal input:focus { outline: none; border-color: var(--grimoire-gilt); box-shadow: 0 0 0 1px var(--grimoire-gilt-dim); }
+.grim-goal input[hidden] { visibility: hidden; display: block; }
+.grim-goal-unit { font-size: 0.82rem; color: var(--grimoire-text-dim); }
+.grim-portion-result { margin: 0.9rem 0 0; min-height: 1.2em; font-weight: 600; }
+.grim-portion-result.is-ok { color: var(--grimoire-herb); }
+.grim-portion-result.is-bad { color: var(--grimoire-accent); }
+.grim-portion-try[hidden] { display: none; }
+.grim-portion-try .grim-field { margin-top: 0.75rem; }
+.grim-portion-try input[type="range"] { width: 14rem; }
+.grim-goal-status { list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.grim-goal-status li { padding-left: 0.6rem; border-left: 3px solid var(--grimoire-border); }
+.grim-goal-status li.is-ok { border-left-color: var(--grimoire-herb); }
+.grim-goal-status li.is-ok strong { color: var(--grimoire-herb); }
+.grim-goal-status li.is-bad { border-left-color: var(--grimoire-accent); }
+.grim-goal-status li.is-bad strong { color: var(--grimoire-accent); }
+.grim-field--narrow { max-width: 14rem; }
+
 /* Hover / focus hint on household units: "≈ 27 g · 30 ml" */
 .grim-tip { position: relative; cursor: help; }
 .grim-tip::after {
@@ -515,6 +573,16 @@ a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); ou
   .grim-have-row { grid-template-columns: 1fr 5rem 5.5rem; }
   .grim-scale-slider input[type="range"] { width: 100%; }
   .grim-scale-size { flex: 1 1 100%; }
+  .grim-portion { padding: 0.9rem; }
+  .grim-goal { grid-template-columns: 1fr 1fr 2.5rem; }
+  .grim-goal .grim-goal-nutrient,
+  .grim-goal .grim-goal-kind { grid-column: span 1; }
+  .grim-goal .grim-goal-a,
+  .grim-goal .grim-goal-b { grid-row: 2; }
+  .grim-goal .grim-goal-unit { grid-row: 2; }
+  .grim-goal input[hidden] { display: none; }
+  .grim-portion-try input[type="range"] { width: 100%; }
+  .grim-macro-split .grimoire-nutrient { grid-template-columns: 5rem 1fr auto; }
   .grim-actions { justify-content: stretch; }
   .grim-actions > * { flex: 1 1 auto; justify-content: center; }
 }

@@ -81,6 +81,13 @@
         <label class="grim-field"><span>{% trans "Cook (min)" %}</span>
           <input name="cook_minutes" type="number" min="0" max="1440"></label>
       </div>
+      <div class="grim-row">
+        <label class="grim-field"><span>{% trans "Cooked weight of the batch (g)" %}</span>
+          <input name="cooked_yield_g" type="number" min="0.1" step="any" inputmode="decimal"></label>
+        <label class="grim-field"><span>{% trans "or yield (% of raw weight)" %}</span>
+          <input name="yield_pct" type="number" min="1" max="1000" step="any" inputmode="decimal"></label>
+      </div>
+      <p class="grim-help">{% trans "Optional. Cooking loses or gains water; this makes nutrition per 100 g of the dish right. Weighing the pot when you cast it is better still." %}</p>
       <fieldset class="grim-field">
         <legend>{% trans "Tags" %}</legend>
         <div class="grimoire-tags" id="grim-editor-tags"></div>
@@ -140,6 +147,9 @@
         <div class="grim-adjustments" id="grim-cast-lines"></div>
         <label class="grim-field"><span>{% trans "Substitutions" %}</span>
           <textarea name="substitutions" rows="2" maxlength="2000" placeholder="{% trans 'e.g. lime instead of lemon' %}"></textarea></label>
+        <label class="grim-field grim-field--narrow"><span>{% trans "Cooked weight (g)" %}</span>
+          <input name="cooked_weight_g" type="number" min="0.1" step="any" inputmode="decimal"></label>
+        <p class="grim-help">{% trans "Weigh the finished dish without the pot. It sets nutrition per 100 g for this spell." %}</p>
       </section>
 
       <p class="grim-error" id="grim-cast-error" role="alert" hidden></p>
