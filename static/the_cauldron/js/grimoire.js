@@ -12,6 +12,8 @@
   const spellUrl = (uuid) => `${CFG.root}spell/${encodeURIComponent(uuid)}/`;
   const editUrl = (uuid) => `${spellUrl(uuid)}edit/`;
   const reagentUrl = (uuid) => `${CFG.root}reagent/${encodeURIComponent(uuid)}/`;
+  const castUrl = (uuid) => `${spellUrl(uuid)}cast/`;
+  const castingEditUrl = (uuid) => `${CFG.root}casting/${encodeURIComponent(uuid)}/edit/`;
   const IS_ES = String(CFG.lang || "").toLowerCase().startsWith("es");
   const I18N = JSON.parse(document.getElementById("grimoire-i18n").textContent);
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -209,10 +211,10 @@
       b.classList.toggle("is-active", on);
       b.setAttribute("aria-selected", on ? "true" : "false");
     });
-    $('[data-panel="spells"]').classList.toggle("is-active", tab === "spells");
-    $('[data-panel="reagents"]').classList.toggle("is-active", tab === "reagents");
-    if (push) history.replaceState(null, "", `#${tab === "spells" ? state.scope : "reagents"}`);
+    $$("[data-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.panel === tab));
+    if (push) history.replaceState(null, "", `#${tab === "spells" ? state.scope : tab}`);
     if (tab === "spells") loadSpells();
+    else if (tab === "castings") loadAllCastings();
     else loadReagents();
   }
 
@@ -311,8 +313,13 @@
     const body = spellBody();
     body._spell = null; // actions stay inert until the spell has loaded
     loading(body);
+    // Both requests at once; the castings section renders once the spell has.
+    const castings = api(`spells/${encodeURIComponent(uuid)}/castings/`);
+    castings.catch(() => {}); // handled in renderSpellCastings
     try {
-      renderSpellDetail(await api(`spells/${encodeURIComponent(uuid)}/`));
+      const spell = await api(`spells/${encodeURIComponent(uuid)}/`);
+      renderSpellDetail(spell);
+      renderSpellCastings(spell, castings);
     } catch (err) {
       body.innerHTML = `<p class="grim-error">${esc(err.status === 404 ? t("spell_missing") : errorText(err))}</p>`;
     }
@@ -385,6 +392,243 @@
       }
     } catch (err) {
       toast(errorText(err));
+    }
+  }
+
+  // ── Castings (#68) ─────────────────────────────────────────────────────────
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const d = new Date(`${iso}T00:00:00`);
+    return d.toLocaleDateString(IS_ES ? "es-MX" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function starsHtml(score) {
+    if (!score) return `<span class="grim-help">${esc(t("cast_no_score"))}</span>`;
+    return `<span class="grimoire-stars" aria-label="${esc(t("cast_star", { n: score }))}">${[1, 2, 3, 4, 5]
+      .map((n) => `<span class="grimoire-star${n <= score ? " is-on" : ""}" aria-hidden="true">★</span>`).join("")}</span>`;
+  }
+
+  function castingCard(c, { showSpell = false } = {}) {
+    const adj = (c.adjustments || []).map((a) =>
+      `<li>${esc(a.reagent_name)}: ${a.original_qty != null
+        ? `${esc(fmtNum(a.original_qty))}${a.original_unit && a.original_unit !== a.unit ? ` ${esc(unitLabel(a.original_unit, a.original_qty))}` : ""} → `
+        : ""}<strong>${esc(fmtNum(a.used_qty))} ${esc(unitLabel(a.unit, a.used_qty))}</strong></li>`).join("");
+    const title = (IS_ES && c.spell_title_es) || c.spell_title;
+    const spellLine = !showSpell ? "" : c.spell_available
+      ? `<a class="grim-casting-spell" href="${esc(spellUrl(c.spell))}">${esc(title)}</a>`
+      : `<span class="grim-casting-spell is-removed">${esc(title)} · ${esc(t("cast_spell_removed"))}</span>`;
+    return `<article class="grim-casting" data-casting="${esc(c.uuid)}">
+      <header class="grim-casting-head">
+        <time datetime="${esc(c.cast_on)}">${esc(fmtDate(c.cast_on))}</time>${starsHtml(c.score)}
+      </header>
+      ${spellLine}
+      ${c.notes ? `<p class="grim-casting-notes">${esc(c.notes)}</p>` : ""}
+      ${adj ? `<div class="grim-casting-adj"><span class="grim-help">${esc(t("cast_adjusted"))}</span><ul>${adj}</ul></div>` : ""}
+      ${c.substitutions ? `<p class="grim-help"><strong>${esc(t("cast_substitutions"))}:</strong> ${esc(c.substitutions)}</p>` : ""}
+      <div class="grim-casting-actions">
+        <a class="grim-back" href="${esc(castingEditUrl(c.uuid))}">${esc(t("cast_edit"))}</a>
+        <button type="button" class="grim-link-btn grim-danger" data-delete-casting="${esc(c.uuid)}">${esc(t("cast_delete"))}</button>
+      </div>
+    </article>`;
+  }
+
+  async function deleteCasting(btn, after) {
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("cast_delete_confirm");
+      return;
+    }
+    try {
+      await api(`castings/${encodeURIComponent(btn.dataset.deleteCasting)}/`, { method: "DELETE" });
+      toast(t("cast_deleted"));
+      after();
+    } catch (err) {
+      toast(errorText(err));
+    }
+  }
+
+  // ``pending`` is the in-flight castings request (or a fresh one after a delete).
+  async function renderSpellCastings(spell, pending) {
+    const section = $("#grim-castings");
+    if (!section) return;
+    const body = $("#grim-castings-body");
+    section.hidden = false;
+    let castings = [];
+    try {
+      castings = await (pending || api(`spells/${encodeURIComponent(spell.uuid)}/castings/`));
+    } catch (err) {
+      body.innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+      return;
+    }
+    const n = castings.length;
+    const stats = [n === 1 ? t("cast_count_one") : t("cast_count_many", { n })];
+    const scored = castings.filter((c) => c.score);
+    if (scored.length) stats.push(t("cast_avg", { score: fmtNum(scored.reduce((a, c) => a + c.score, 0) / scored.length) }));
+    if (n) stats.push(t("cast_last", { date: fmtDate(castings[0].cast_on) }));
+    body.innerHTML = `
+      <div class="grim-castings-head">
+        <h2 class="grim-section-title" id="grim-castings-title">${esc(t("castings_title"))}</h2>
+        <a class="btn-cauldron btn-cauldron--primary" href="${esc(castUrl(spell.uuid))}">${esc(t("cast_this"))}</a>
+      </div>
+      ${n ? `<p class="grim-help">${esc(stats.join(" · "))}</p>
+        <div class="grim-casting-list">${castings.map((c) => castingCard(c)).join("")}</div>`
+        : `<p class="grim-help">${esc(t("castings_none"))}</p>`}`;
+  }
+
+  async function loadAllCastings() {
+    const box = $("#grim-all-castings");
+    loading(box);
+    try {
+      const castings = await api("castings/");
+      box.innerHTML = castings.length
+        ? castings.map((c) => castingCard(c, { showSpell: true })).join("")
+        : emptyState(t("castings_title"), t("castings_none_all"));
+    } catch (err) {
+      box.innerHTML = emptyState(t("error_title"), errorText(err));
+    }
+  }
+
+  // Cast page: date, score, notes, amounts used (prefilled from the spell).
+  const castForm = $("#grim-cast-form");
+  let castScore = null;
+  let castSpellUuid = null;
+
+  function renderScore() {
+    const box = $("#grim-score");
+    box.innerHTML = [1, 2, 3, 4, 5].map((n) =>
+      `<button type="button" class="grimoire-star${castScore && n <= castScore ? " is-on" : ""}" role="radio" aria-checked="${castScore === n}" aria-label="${esc(t("cast_star", { n }))}" data-score="${n}">★</button>`).join("");
+  }
+
+  function castLineRow(line) {
+    const name = line.name;
+    const row = document.createElement("div");
+    row.className = "grim-adjustment";
+    row.dataset.reagent = line.reagent || "";
+    row.dataset.name = name;
+    row.dataset.line = line.line ?? "";
+    row.dataset.original = line.original_qty ?? "";
+    row.dataset.originalUnit = line.original_unit || "";
+    row.innerHTML = `
+      <span class="grim-line-name">${esc(name)}</span>
+      <span class="grim-help">${line.original_qty != null ? esc(t("cast_original", { qty: `${fmtNum(line.original_qty)} ${unitLabel(line.original_unit || line.unit, line.original_qty)}` })) : ""}</span>
+      <input type="number" class="grim-line-qty" min="0" step="any" value="${esc(line.used_qty ?? "")}" aria-label="${esc(t("cast_used_label", { name }))}">
+      <select class="grim-line-unit" aria-label="${esc(t("line_unit", { name }))}">${UNITS.map((u) =>
+        `<option value="${u}"${u === line.unit ? " selected" : ""}>${esc(unitLabel(u))}</option>`).join("")}</select>`;
+    return row;
+  }
+
+  function fillCastForm(spell, casting) {
+    const F = castForm.elements;
+    F.cast_on.value = casting ? casting.cast_on : new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
+    F.notes.value = casting ? casting.notes : "";
+    F.substitutions.value = casting ? casting.substitutions : "";
+    castScore = casting ? casting.score : null;
+    renderScore();
+    // Match each saved adjustment to one spell line: same position and reagent
+    // first, then the first unmatched line with that reagent. Each adjustment
+    // is used once, so a reagent listed twice keeps its two changes apart.
+    const pendingAdj = (casting ? casting.adjustments : []).slice();
+    const take = (pred) => {
+      const i = pendingAdj.findIndex(pred);
+      return i === -1 ? null : pendingAdj.splice(i, 1)[0];
+    };
+    const lines = spell ? spell.lines : [];
+    const matched = lines.map((l, i) => take((a) => a.line === i && (a.reagent || null) === (l.reagent || null)));
+    lines.forEach((l, i) => {
+      if (!matched[i]) matched[i] = take((a) => a.reagent && a.reagent === l.reagent);
+    });
+    const rows = lines.map((l, i) => {
+      const a = matched[i];
+      return {
+        line: i, reagent: l.reagent, name: lineName(l), original_qty: l.quantity, original_unit: l.unit,
+        used_qty: a ? a.used_qty : l.quantity, unit: a ? a.unit : l.unit,
+      };
+    });
+    // Adjustments whose line is gone (spell edited or removed) still show.
+    pendingAdj.forEach((a) => rows.push({
+      line: null, reagent: a.reagent, name: a.reagent_name, original_qty: a.original_qty,
+      original_unit: a.original_unit || "", used_qty: a.used_qty, unit: a.unit,
+    }));
+    const box = $("#grim-cast-lines");
+    box.innerHTML = "";
+    rows.forEach((r) => box.appendChild(castLineRow(r)));
+    if (spell) $("#grim-cast-spell").textContent = spellTitle(spell);
+    else if (casting) $("#grim-cast-spell").textContent = `${casting.spell_title} · ${t("cast_spell_removed")}`;
+  }
+
+  async function saveCasting(e) {
+    e.preventDefault();
+    const err = $("#grim-cast-error");
+    err.hidden = true;
+    const F = castForm.elements;
+    if (!F.cast_on.value) {
+      err.textContent = t("cast_need_date");
+      err.hidden = false;
+      return;
+    }
+    const adjustments = [];
+    for (const row of $$("#grim-cast-lines .grim-adjustment")) {
+      const used = row.querySelector(".grim-line-qty").value;
+      const unit = row.querySelector(".grim-line-unit").value;
+      if (used === "" || !(Number(used) >= 0)) {
+        err.textContent = t("cast_need_amount", { name: row.dataset.name });
+        err.hidden = false;
+        return;
+      }
+      const original = row.dataset.original === "" ? null : Number(row.dataset.original);
+      const originalUnit = row.dataset.originalUnit || null;
+      if (Number(used) === original && unit === originalUnit) continue; // unchanged
+      adjustments.push({
+        line: row.dataset.line === "" ? null : Number(row.dataset.line),
+        reagent: row.dataset.reagent || null, reagent_name: row.dataset.name,
+        original_qty: original, original_unit: originalUnit, used_qty: Number(used), unit,
+      });
+    }
+    const payload = {
+      cast_on: F.cast_on.value, score: castScore, notes: F.notes.value,
+      substitutions: F.substitutions.value, adjustments,
+    };
+    try {
+      const saved = CFG.casting
+        ? await api(`castings/${encodeURIComponent(CFG.casting)}/`, { method: "PUT", body: payload })
+        : await api(`spells/${encodeURIComponent(castSpellUuid)}/castings/`, { method: "POST", body: payload });
+      location.assign(saved.spell_available ? spellUrl(saved.spell) : `${CFG.root}#castings`);
+    } catch (ex) {
+      err.textContent = errorText(ex);
+      err.hidden = false;
+    }
+  }
+
+  async function initCastPage() {
+    $("#grim-score").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-score]");
+      if (!b) return;
+      castScore = Number(b.dataset.score);
+      renderScore();
+    });
+    $("#grim-score-clear").addEventListener("click", () => { castScore = null; renderScore(); });
+    castForm.addEventListener("submit", saveCasting);
+    try {
+      let casting = null;
+      let spell = null;
+      if (CFG.casting) {
+        casting = await api(`castings/${encodeURIComponent(CFG.casting)}/`);
+        if (casting.spell_available) {
+          spell = await api(`spells/${encodeURIComponent(casting.spell)}/`);
+          $("#grim-cast-back").href = spellUrl(casting.spell);
+          $("#grim-cast-cancel").href = spellUrl(casting.spell);
+        } else {
+          $("#grim-cast-error").textContent = t("cast_spell_gone");
+          $("#grim-cast-error").hidden = false;
+        }
+      } else {
+        spell = await api(`spells/${encodeURIComponent(CFG.spell)}/`);
+      }
+      castSpellUuid = spell ? spell.uuid : null;
+      fillCastForm(spell, casting);
+    } catch (err) {
+      $("#grim-cast-error").textContent = errorText(err);
+      $("#grim-cast-error").hidden = false;
     }
   }
 
@@ -680,6 +924,10 @@
     });
 
     $("#grim-reagent-q").addEventListener("input", debounce(() => { syncNewReagentLink(); loadReagents(); }, 250));
+    $("#grim-all-castings").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-delete-casting]");
+      if (b) deleteCasting(b, loadAllCastings);
+    });
   }
 
   function wireReagentForm() {
@@ -695,6 +943,10 @@
     spellBody().addEventListener("click", (e) => {
       const b = e.target.closest("[data-action]");
       if (b) spellAction(b.dataset.action, b);
+    });
+    $("#grim-castings-body").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-delete-casting]");
+      if (b) deleteCasting(b, () => renderSpellCastings(spellBody()._spell));
     });
   }
 
@@ -760,6 +1012,10 @@
       loadSpellPage(CFG.spell);
       return;
     }
+    if (PAGE === "cast") {
+      initCastPage();
+      return;
+    }
     if (PAGE === "reagent-view") {
       loadReagentPage(CFG.reagent);
       return;
@@ -802,8 +1058,8 @@
     if (presetQ) $("#grim-reagent-q").value = presetQ;
     syncNewReagentLink();
     const start = location.hash.replace("#", "");
-    if (start === "reagents") {
-      setTab("reagents", { push: false });
+    if (start === "reagents" || start === "castings") {
+      setTab(start, { push: false });
     } else {
       if (["all", "mine", "coven"].includes(start)) setScope(start, { load: false });
       setTab("spells", { push: false });

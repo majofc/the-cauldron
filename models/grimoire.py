@@ -12,7 +12,7 @@ shown as "—", never coerced to 0. A stored 0 is a measured zero.
 import unicodedata
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .forge import ForgeBaseModel
@@ -235,3 +235,39 @@ class GrimoirePreferences(ForgeBaseModel):
 
     def __str__(self):
         return f"Grimoire preferences for {self.user}"
+
+
+class Casting(ForgeBaseModel):
+    """One time a user made a spell (#68): when, how it went, what changed.
+
+    Adjustments live on the casting only — a casting never edits the spell.
+    ``spell`` is SET_NULL so another user's castings survive when the author
+    deletes a public spell ("spell removed", with ``spell_title`` kept); the
+    author's own castings are deleted with the spell (signals.py).
+    """
+
+    spell = models.ForeignKey(
+        Spell, null=True, blank=True, on_delete=models.SET_NULL, related_name="castings"
+    )
+    spell_title = models.CharField(max_length=150, blank=True, default="")  # snapshot at casting time
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="grimoire_castings"
+    )
+    cast_on = models.DateField()
+    score = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    notes = models.TextField(blank=True, default="")
+    # [{"line": int|None, "reagent": uuid|None, "reagent_name": str,
+    #   "original_qty": float|None, "original_unit": str|None, "used_qty": float,
+    #   "unit": str}] — only lines that changed. ``line`` is the spell line's
+    #   position, so a spell listing one reagent twice keeps each change apart.
+    adjustments = models.JSONField(default=list, blank=True)
+    substitutions = models.TextField(blank=True, default="")  # free text: "lime instead of lemon"
+
+    class Meta:
+        ordering = ["-cast_on", "-created_at"]
+        indexes = [models.Index(fields=["user", "spell"])]
+
+    def __str__(self):
+        return f"{self.spell_title or self.spell_id} on {self.cast_on}"

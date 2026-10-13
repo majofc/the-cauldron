@@ -19,12 +19,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from the_cauldron.grimoire_serializers import (
+    CastingSerializer,
     GrimoirePreferencesSerializer,
     ReagentSerializer,
     SpellSerializer,
     TagSerializer,
 )
-from the_cauldron.models import GrimoirePreferences, Spell, Tag, normalize_search
+from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag, normalize_search
 from the_cauldron.services import grimoire
 
 
@@ -116,7 +117,10 @@ class SpellViewSet(viewsets.ModelViewSet):
     LIST_LIMIT = 200  # newest first; search/tags narrow the rest
 
     def _base_queryset(self):
-        return grimoire.with_spell_relations(grimoire.readable_spells(self.request.user))
+        user = self.request.user
+        return grimoire.with_casting_stats(
+            grimoire.with_spell_relations(grimoire.readable_spells(user)), user
+        )
 
     def get_queryset(self):
         user = self.request.user
@@ -177,6 +181,44 @@ class SpellViewSet(viewsets.ModelViewSet):
         # Not get_queryset(): its ?scope/?tag/?q filters could hide the new copy.
         copy = self._base_queryset().get(pk=copy.pk)
         return Response(self.get_serializer(copy).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get", "post"])
+    def castings(self, request, uuid=None):
+        """``GET``: the user's own castings of this spell, newest first.
+        ``POST``: log one. Any readable spell (own or public) can be cast."""
+        spell = self.get_object()
+        if request.method == "GET":
+            qs = Casting.objects.filter(spell=spell, user=request.user).select_related("spell")
+            return Response(CastingSerializer(qs, many=True, context={"request": request}).data)
+        serializer = CastingSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user, spell=spell, spell_title=spell.title)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CastingViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """The user's castings across all spells (``castings/``), newest first —
+    including ones whose spell was removed. Only ever the user's own: anyone
+    else's casting is a 404. Created through ``spells/{uuid}/castings/``."""
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = CastingSerializer
+    lookup_field = "uuid"
+    pagination_class = None
+    LIST_LIMIT = 200
+
+    def get_queryset(self):
+        return Casting.objects.filter(user=self.request.user).select_related("spell")
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()[: self.LIST_LIMIT]
+        return Response(self.get_serializer(qs, many=True).data)
 
 
 class PreferencesView(APIView):

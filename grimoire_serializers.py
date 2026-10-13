@@ -7,6 +7,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from the_cauldron.models import (
+    Casting,
     GrimoirePreferences,
     Reagent,
     ReagentNutrients,
@@ -20,6 +21,8 @@ MAX_LINES = 60
 MAX_STEPS = 40
 MAX_STEP_LENGTH = 2000
 MAX_DESCRIPTION_LENGTH = 5000
+MAX_NOTES_LENGTH = 5000
+MAX_SUBSTITUTIONS_LENGTH = 2000
 
 
 def _finite(value, label):
@@ -169,6 +172,11 @@ class SpellSerializer(serializers.ModelSerializer):
     is_mine = serializers.SerializerMethodField()
     forked_from = serializers.SerializerMethodField()
     has_unverified_reagents = serializers.SerializerMethodField()
+    # The viewing user's own castings of this spell (#68); annotated by
+    # services.grimoire.with_casting_stats.
+    my_casting_count = serializers.SerializerMethodField()
+    my_average_score = serializers.SerializerMethodField()
+    my_last_cast_on = serializers.SerializerMethodField()
 
     class Meta:
         model = Spell
@@ -176,6 +184,7 @@ class SpellSerializer(serializers.ModelSerializer):
             "uuid", "title", "title_es", "description", "description_es", "servings",
             "prep_minutes", "cook_minutes", "steps", "steps_es", "visibility", "tags", "lines",
             "owner_name", "is_mine", "forked_from", "has_unverified_reagents",
+            "my_casting_count", "my_average_score", "my_last_cast_on",
             "created_at", "updated_at",
         ]
         # *_es is curated starter text (seed/admin only); users write the base fields.
@@ -199,6 +208,17 @@ class SpellSerializer(serializers.ModelSerializer):
         if not readable:
             return {"uuid": None, "title": None, "title_es": None}
         return {"uuid": str(src.uuid), "title": src.title, "title_es": src.title_es}
+
+    def get_my_casting_count(self, obj):
+        return getattr(obj, "my_casting_count", 0) or 0
+
+    def get_my_average_score(self, obj):
+        avg = getattr(obj, "my_average_score", None)
+        return round(float(avg), 2) if avg is not None else None
+
+    def get_my_last_cast_on(self, obj):
+        last = getattr(obj, "my_last_cast_on", None)
+        return last.isoformat() if last else None
 
     def get_has_unverified_reagents(self, obj):
         return any(line.reagent.status != Reagent.Status.APPROVED for line in obj.lines.all())
@@ -275,10 +295,11 @@ class SpellSerializer(serializers.ModelSerializer):
             for i, line in enumerate(lines)
         )
 
-    @staticmethod
-    def _reloaded(spell):
-        """The saved spell, prefetched like the list/detail responses."""
-        return grimoire.with_spell_relations(Spell.objects.all()).get(pk=spell.pk)
+    def _reloaded(self, spell):
+        """The saved spell, prefetched and annotated like the list/detail responses."""
+        qs = grimoire.with_spell_relations(Spell.objects.all())
+        qs = grimoire.with_casting_stats(qs, self.context["request"].user)
+        return qs.get(pk=spell.pk)
 
     @transaction.atomic
     def create(self, validated_data):
@@ -307,3 +328,108 @@ class GrimoirePreferencesSerializer(serializers.ModelSerializer):
     class Meta:
         model = GrimoirePreferences
         fields = ["unit_system"]
+
+
+class CastingSerializer(serializers.ModelSerializer):
+    """One time the user made a spell. ``spell`` is set by the view (from the
+    URL), never from the payload; ``spell_available`` is false once the spell
+    was deleted or stopped being readable ("spell removed")."""
+
+    spell = serializers.SerializerMethodField()
+    spell_title_es = serializers.SerializerMethodField()
+    spell_available = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Casting
+        fields = [
+            "uuid", "spell", "spell_title", "spell_title_es", "spell_available", "cast_on",
+            "score", "notes", "adjustments", "substitutions", "created_at", "updated_at",
+        ]
+        read_only_fields = ["uuid", "spell_title", "created_at", "updated_at"]
+
+    def _readable_spell(self, obj):
+        spell = obj.spell
+        if spell is None:
+            return None
+        request = self.context.get("request")
+        if spell.visibility == Spell.Visibility.PUBLIC or (request and spell.owner_id == request.user.pk):
+            return spell
+        return None  # the author made it private again: treat it as gone
+
+    def get_spell(self, obj):
+        spell = self._readable_spell(obj)
+        return str(spell.uuid) if spell else None
+
+    def get_spell_title_es(self, obj):
+        spell = self._readable_spell(obj)
+        return spell.title_es if spell else ""
+
+    def get_spell_available(self, obj):
+        return self._readable_spell(obj) is not None
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        spell = self._readable_spell(obj)
+        if spell is not None:
+            data["spell_title"] = spell.title  # live, like spell_title_es; the snapshot is for a removed spell
+        return data
+
+    def validate_notes(self, value):
+        if len(value) > MAX_NOTES_LENGTH:
+            raise serializers.ValidationError(_("Keep the notes under %(n)s characters.") % {"n": MAX_NOTES_LENGTH})
+        return value
+
+    def validate_substitutions(self, value):
+        if len(value) > MAX_SUBSTITUTIONS_LENGTH:
+            raise serializers.ValidationError(
+                _("Keep the substitutions under %(n)s characters.") % {"n": MAX_SUBSTITUTIONS_LENGTH}
+            )
+        return value
+
+    def validate_adjustments(self, value):
+        """Only the documented shape is stored — nothing else from the client."""
+        if not isinstance(value, list):
+            raise serializers.ValidationError(_("Adjustments must be a list."))
+        if len(value) > MAX_LINES:
+            raise serializers.ValidationError(_("At most %(n)s ingredients.") % {"n": MAX_LINES})
+        units = set(SpellReagent.Unit.values)
+        clean = []
+        for item in value:
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(_("Each adjustment must be an object."))
+            name = str(item.get("reagent_name") or "").strip()[:120]
+            unit = item.get("unit")
+            original_unit = item.get("original_unit") or None
+            if not name or unit not in units or (original_unit is not None and original_unit not in units):
+                raise serializers.ValidationError(_("Each adjustment needs an ingredient and a unit."))
+            line = item.get("line")
+            if line is not None and (isinstance(line, bool) or not isinstance(line, int) or not 0 <= line < MAX_LINES):
+                raise serializers.ValidationError(_("Each adjustment needs an ingredient and a unit."))
+            numbers = {}
+            for key in ("original_qty", "used_qty"):
+                raw = item.get(key)
+                if raw in (None, ""):
+                    numbers[key] = None
+                    continue
+                if isinstance(raw, bool):
+                    raise serializers.ValidationError(_("Amounts must be numbers."))
+                try:
+                    num = float(raw)
+                except (TypeError, ValueError):
+                    raise serializers.ValidationError(_("Amounts must be numbers."))
+                if not math.isfinite(num) or num < 0:
+                    raise serializers.ValidationError(_("Amounts must be 0 or more."))
+                numbers[key] = num
+            if numbers["used_qty"] is None:
+                raise serializers.ValidationError(_("Enter the amount you used."))
+            reagent = item.get("reagent")
+            clean.append({
+                "line": line,
+                "reagent": str(reagent)[:36] if reagent else None,
+                "reagent_name": name,
+                "original_qty": numbers["original_qty"],
+                "original_unit": original_unit,
+                "used_qty": numbers["used_qty"],
+                "unit": unit,
+            })
+        return clean

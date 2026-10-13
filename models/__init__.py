@@ -24,6 +24,7 @@ from .forge import (  # noqa: F401
     WorkoutSession,
 )
 from .grimoire import (  # noqa: F401
+    Casting,
     GrimoirePreferences,
     Reagent,
     ReagentNutrients,

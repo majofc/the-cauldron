@@ -53,6 +53,11 @@
     <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
     <div class="grim-spell-page-body" id="grim-spell-body"></div>
   </article>
+  <section class="grim-spell-page grim-castings" id="grim-castings" aria-labelledby="grim-castings-title" hidden>
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body" id="grim-castings-body"></div>
+  </section>
 
   {% elif page == "edit" %}
   <!-- ── Write / edit a spell, full page ── -->
@@ -96,6 +101,51 @@
       <div class="grim-actions">
         <a class="btn-cauldron btn-cauldron--ghost" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}{% endif %}">{% trans "Cancel" %}</a>
         <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save spell" %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% elif page == "cast" %}
+  <!-- ── Log / edit a casting, full page ── -->
+  <div class="grim-page-bar">
+    <a class="grim-back" id="grim-cast-back" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}#castings{% endif %}">← {% if spell_uuid %}{% trans "Back to the spell" %}{% else %}{% trans "Back to your castings" %}{% endif %}</a>
+  </div>
+  <article class="grim-spell-page">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="grim-cast-form" novalidate>
+      <span class="grimoire-spell-kicker" id="grim-cast-spell"></span>
+      <h1 class="grim-h2 grim-spell-page-title">{% if casting_uuid %}{% trans "Edit casting" %}{% else %}{% trans "Cast this spell" %}{% endif %}</h1>
+      <p class="grim-section-help">{% trans "Only you see your castings. Changes here are noted on the casting — the spell stays as it is." %}</p>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "How it went" %}</h2>
+        <div class="grim-row">
+          <label class="grim-field"><span>{% trans "Date you made it" %}</span><input name="cast_on" type="date" required></label>
+          <div class="grim-field">
+            <span id="grim-score-label">{% trans "Score" %}</span>
+            <div class="grim-score">
+              <span class="grimoire-stars grimoire-stars--input" role="radiogroup" aria-labelledby="grim-score-label" id="grim-score"></span>
+              <button type="button" class="grim-link-btn grim-score-clear" id="grim-score-clear">{% trans "No score" %}</button>
+            </div>
+          </div>
+        </div>
+        <label class="grim-field"><span>{% trans "Notes" %}</span>
+          <textarea name="notes" rows="4" maxlength="5000" placeholder="{% trans 'What worked, what you would change next time…' %}"></textarea></label>
+      </section>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "Amounts you used" %}</h2>
+        <p class="grim-section-help">{% trans "Change an amount if you used more or less than the spell says. Only changed lines are saved." %}</p>
+        <div class="grim-adjustments" id="grim-cast-lines"></div>
+        <label class="grim-field"><span>{% trans "Substitutions" %}</span>
+          <textarea name="substitutions" rows="2" maxlength="2000" placeholder="{% trans 'e.g. lime instead of lemon' %}"></textarea></label>
+      </section>
+
+      <p class="grim-error" id="grim-cast-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" id="grim-cast-cancel" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}#castings{% endif %}">{% trans "Cancel" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save casting" %}</button>
       </div>
     </form>
   </article>
@@ -174,6 +224,7 @@
       <nav class="grim-tabs" role="tablist" aria-label="{% trans 'Grimoire sections' %}">
         <button class="grim-tab is-active" role="tab" data-tab="spells" aria-selected="true">{% trans "Spells" %}</button>
         <button class="grim-tab" role="tab" data-tab="reagents" aria-selected="false">{% trans "Reagents" %}</button>
+        <button class="grim-tab" role="tab" data-tab="castings" aria-selected="false">{% trans "Castings" %}</button>
       </nav>
       {% include 'the_cauldron/grimoire/_units.html' %}
     </div>
@@ -210,6 +261,12 @@
     <div class="grim-reagent-list" id="grim-reagents" aria-live="polite"></div>
   </section>
 
+  <!-- ── Castings: every time you made a spell ── -->
+  <section class="grim-panel" data-panel="castings">
+    <p class="grim-help">{% trans "Every time you made a spell, newest first. Only you see these." %}</p>
+    <div class="grim-casting-list" id="grim-all-castings" aria-live="polite"></div>
+  </section>
+
   {% endif %}
 
   <div class="grim-toast" id="grim-toast" role="status" aria-live="polite" hidden></div>
@@ -227,6 +284,7 @@
     spell: "{{ spell_uuid|default:''|escapejs }}",
     prefillName: "{{ prefill_name|default:''|escapejs }}",
     reagent: "{{ reagent_uuid|default:''|escapejs }}",
+    casting: "{{ casting_uuid|default:''|escapejs }}",
     lang: "{{ LANGUAGE_CODE|escapejs }}",
     units: "{{ unit_system|escapejs }}",
   };

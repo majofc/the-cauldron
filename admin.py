@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from the_cauldron.models import (
     AssessmentResult,
+    Casting,
     AssessmentSession,
     BlockedExercise,
     Equipment,
@@ -126,3 +127,11 @@ class SpellAdmin(admin.ModelAdmin):
     search_fields = ("title", "owner__username")
     raw_id_fields = ("owner", "forked_from")
     inlines = [SpellReagentInline]
+
+
+@admin.register(Casting)
+class CastingAdmin(admin.ModelAdmin):
+    list_display = ("spell_title", "user", "cast_on", "score")
+    list_filter = ("score",)
+    search_fields = ("spell_title", "user__username")
+    raw_id_fields = ("spell", "user")
