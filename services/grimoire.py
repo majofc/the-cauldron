@@ -5,10 +5,11 @@ definition of "who can see this reagent" and "how many grams is a cup".
 """
 
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Avg, Count, IntegerField, Max, OuterRef, Prefetch, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext as _
 
-from the_cauldron.models import Reagent, Spell, SpellReagent, normalize_search
+from the_cauldron.models import Casting, Reagent, Spell, SpellReagent, normalize_search
 
 # Fixed mass units, in grams.
 MASS_UNITS = {"g": 1.0, "kg": 1000.0, "oz": 28.349523125, "lb": 453.59237}
@@ -119,6 +120,22 @@ def exact_duplicates(user, name):
 def readable_spells(user):
     """Spells the user may read: their own (any visibility) + every public one."""
     return Spell.objects.filter(Q(owner=user) | Q(visibility=Spell.Visibility.PUBLIC))
+
+
+def with_casting_stats(qs, user):
+    """Annotate the user's own casting count / average score / last date.
+
+    Subqueries, not joins: the list may already join tags (``?tag=``), and a
+    join here would multiply the counts.
+    """
+    mine = Casting.objects.filter(spell=OuterRef("pk"), user=user).order_by().values("spell")
+    return qs.annotate(
+        my_casting_count=Coalesce(
+            Subquery(mine.annotate(n=Count("pk")).values("n")[:1], output_field=IntegerField()), 0
+        ),
+        my_average_score=Subquery(mine.annotate(a=Avg("score")).values("a")[:1]),
+        my_last_cast_on=Subquery(mine.annotate(d=Max("cast_on")).values("d")[:1]),
+    )
 
 
 def with_spell_relations(qs):

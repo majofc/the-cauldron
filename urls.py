@@ -16,6 +16,7 @@ grimoire_router = SimpleRouter()
 grimoire_router.register(r"reagents", grimoire_api.ReagentViewSet, basename="grimoire-reagent")
 grimoire_router.register(r"spells", grimoire_api.SpellViewSet, basename="grimoire-spell")
 grimoire_router.register(r"tags", grimoire_api.TagViewSet, basename="grimoire-tag")
+grimoire_router.register(r"castings", grimoire_api.CastingViewSet, basename="grimoire-casting")
 
 api_urlpatterns = [
     path("catalog/", api.CatalogView.as_view(), name="forge-catalog"),
@@ -78,6 +79,12 @@ urlpatterns = [
     ),
     path('grimoire/spell/<uuid:spell_uuid>/', views.grimoire_spell_view, name='grimoire-spell'),
     path('grimoire/spell/<uuid:spell_uuid>/edit/', views.grimoire_edit_view, name='grimoire-spell-edit'),
+    path('grimoire/spell/<uuid:spell_uuid>/cast/', views.grimoire_cast_view, name='grimoire-cast'),
+    path(
+        'grimoire/casting/<uuid:casting_uuid>/edit/',
+        views.grimoire_casting_edit_view,
+        name='grimoire-casting-edit',
+    ),
     path(
         'login/',
         auth_views.LoginView.as_view(

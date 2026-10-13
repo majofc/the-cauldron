@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import get_language
 
 from .grimoire_i18n import grimoire_strings
-from .models import GrimoirePreferences, Program, Spell, UserEquipmentProfile
+from .models import Casting, GrimoirePreferences, Program, Spell, UserEquipmentProfile
 from .services import grimoire
 
 # URL slug → the ``data-tab`` key forge.js switches on. Mirrored client-side by
@@ -101,6 +101,30 @@ def grimoire_spell_view(request, spell_uuid):
     title, _description, _steps = grimoire.localized_text(spell, get_language())
     return render(request, 'the_cauldron/grimoire.html', _grimoire_context(
         request, page='spell', spell_uuid=str(spell.uuid), spell_title=title,
+    ))
+
+
+@login_required(login_url='the_cauldron:login')
+def grimoire_cast_view(request, spell_uuid):
+    """Log a casting of a spell (#68) on a full page. Any spell the user can
+    read — their own or a public one — can be cast; anything else is a 404."""
+    spell = get_object_or_404(grimoire.readable_spells(request.user), uuid=spell_uuid)
+    title, _description, _steps = grimoire.localized_text(spell, get_language())
+    return render(request, 'the_cauldron/grimoire.html', _grimoire_context(
+        request, page='cast', spell_uuid=str(spell.uuid), spell_title=title,
+    ))
+
+
+@login_required(login_url='the_cauldron:login')
+def grimoire_casting_edit_view(request, casting_uuid):
+    """Edit one of your own castings; anyone else's is a 404."""
+    casting = get_object_or_404(Casting.objects.select_related('spell'), uuid=casting_uuid, user=request.user)
+    title = casting.spell_title  # snapshot: the spell is gone or no longer readable
+    spell = casting.spell
+    if spell is not None and grimoire.readable_spells(request.user).filter(pk=spell.pk).exists():
+        title = grimoire.localized_text(spell, get_language())[0]
+    return render(request, 'the_cauldron/grimoire.html', _grimoire_context(
+        request, page='cast', casting_uuid=str(casting.uuid), spell_title=title,
     ))
 
 

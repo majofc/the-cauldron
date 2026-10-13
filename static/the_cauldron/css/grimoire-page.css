@@ -141,6 +141,66 @@
 .grim-spell-page-body > .grimoire-spell-meta,
 .grim-spell-page-body > .grimoire-tags { margin: 0.75rem 0; }
 
+/* ── Castings (#68): the spell page section, the tab, the cast form ── */
+.grim-castings { margin-top: 1.5rem; }
+.grim-castings-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+.grim-casting-list { display: flex; flex-direction: column; }
+.grim-casting {
+  padding: 1rem 0;
+  border-bottom: 1px dotted var(--grimoire-border);
+}
+.grim-casting:last-child { border-bottom: 0; }
+.grim-casting-list > .grimoire-empty { margin-top: 0.5rem; }
+#grim-all-castings .grim-casting {
+  padding: 1rem 1.25rem;
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  margin-bottom: 0.6rem;
+}
+.grim-casting-head { display: flex; gap: 1rem; align-items: baseline; }
+.grim-casting-head time {
+  font-family: var(--arcano-font-italic);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--grimoire-gilt);
+}
+.grim-casting-spell { display: inline-block; margin-top: 0.25rem; color: var(--grimoire-text); font-weight: 600; text-decoration: none; }
+a.grim-casting-spell:hover { color: var(--grimoire-gilt); }
+.grim-casting-spell.is-removed { color: var(--grimoire-text-dim); font-weight: 400; font-style: italic; }
+.grim-casting-notes { margin: 0.5rem 0 0; line-height: 1.55; white-space: pre-line; }
+.grim-casting-adj { margin-top: 0.5rem; font-size: 0.9rem; }
+.grim-casting-adj ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+.grim-casting-actions { display: flex; gap: 1rem; margin-top: 0.6rem; }
+.grim-link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--grimoire-text-dim);
+  font-family: var(--arcano-font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.grim-link-btn.grim-danger:hover,
+.grim-link-btn.grim-danger:focus-visible { color: var(--grimoire-accent); }
+
+.grim-score { display: flex; align-items: center; gap: 1rem; min-height: 2.6rem; }
+.grim-score .grimoire-stars { font-size: 1.6rem; }
+.grim-adjustments { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+.grim-adjustment {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 5.5rem 6rem;
+  gap: 0.6rem;
+  align-items: center;
+}
+
 /* ── Toolbar ── */
 .grim-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
 .grim-search { flex: 1 1 260px; }
@@ -151,7 +211,9 @@
 .grim-field textarea,
 .grim-field select,
 .grim-line input,
-.grim-line select {
+.grim-line select,
+.grim-adjustment input,
+.grim-adjustment select {
   width: 100%;
   box-sizing: border-box;
   background: var(--grimoire-page);
@@ -168,7 +230,9 @@
 .grim-field textarea:focus,
 .grim-field select:focus,
 .grim-line input:focus,
-.grim-line select:focus { outline: none; border-color: var(--grimoire-gilt); box-shadow: 0 0 0 1px var(--grimoire-gilt-dim); }
+.grim-line select:focus,
+.grim-adjustment input:focus,
+.grim-adjustment select:focus { outline: none; border-color: var(--grimoire-gilt); box-shadow: 0 0 0 1px var(--grimoire-gilt-dim); }
 .grim-tag-filter { margin-bottom: 1.5rem; }
 .grim-help { color: var(--grimoire-text-dim); font-size: 0.85rem; }
 
@@ -382,6 +446,8 @@ a.grim-reagent-row:focus-visible { border-color: var(--grimoire-gilt-border); ou
   .grim-macros div { text-align: left; min-width: 0; }
   .grim-line { grid-template-columns: 1fr 4.5rem 5rem auto; }
   .grim-line-note { grid-column: 1 / -1; grid-row: 2; }
+  .grim-adjustment { grid-template-columns: 1fr 5rem 5.5rem; }
+  .grim-adjustment > .grim-help { grid-column: 1 / -1; grid-row: 2; }
   .grim-actions { justify-content: stretch; }
   .grim-actions > * { flex: 1 1 auto; justify-content: center; }
 }
