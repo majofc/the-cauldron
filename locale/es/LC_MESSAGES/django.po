@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-13 06:09+0000\n"
+"POT-Creation-Date: 2026-10-13 06:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,31 +17,35 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: grimoire_api.py:92
+#: grimoire_api.py:93
 msgid "An ingredient with this name already exists."
 msgstr "Ya existe un ingrediente con ese nombre."
 
-#: grimoire_api.py:102
+#: grimoire_api.py:103
 msgid "Only your own ingredients can be edited, until they're approved."
 msgstr "Solo puedes editar tus propios ingredientes, mientras no estén aprobados."
 
-#: grimoire_api.py:154
+#: grimoire_api.py:155
 msgid "Only the recipe's owner can change it."
 msgstr "Solo quien escribió la receta puede cambiarla."
 
-#: grimoire_api.py:235
+#: grimoire_api.py:236
 msgid "Those amounts can't be converted to grams — use g."
 msgstr "Esas cantidades no se pueden convertir a gramos — usa g."
 
-#: grimoire_i18n.py:16 templates/the_cauldron/grimoire.html:243
+#: grimoire_api.py:357
+msgid "This spell has no weighed ingredients."
+msgstr "Este hechizo no tiene ingredientes con peso."
+
+#: grimoire_i18n.py:16 templates/the_cauldron/grimoire.html:253
 msgid "All"
 msgstr "Todos"
 
-#: grimoire_i18n.py:17 templates/the_cauldron/grimoire.html:244
+#: grimoire_i18n.py:17 templates/the_cauldron/grimoire.html:254
 msgid "My spells"
 msgstr "Mis hechizos"
 
-#: grimoire_i18n.py:18 templates/the_cauldron/grimoire.html:245
+#: grimoire_i18n.py:18 templates/the_cauldron/grimoire.html:255
 msgid "The Coven"
 msgstr "El Aquelarre"
 
@@ -131,7 +135,7 @@ msgstr "Adaptado de “%(title)s”."
 msgid "Forked from a spell that is no longer shared."
 msgstr "Adaptado de un hechizo que ya no se comparte."
 
-#: grimoire_i18n.py:40 templates/the_cauldron/grimoire.html:226
+#: grimoire_i18n.py:40 templates/the_cauldron/grimoire.html:236
 msgid "Reagents"
 msgstr "Reactivos"
 
@@ -197,7 +201,7 @@ msgstr "El aquelarre aún no ha compartido ningún hechizo."
 
 #: grimoire_i18n.py:57 grimoire_i18n.py:69
 #: templates/the_cauldron/grimoire.html:71
-#: templates/the_cauldron/grimoire.html:240
+#: templates/the_cauldron/grimoire.html:250
 msgid "Write a spell"
 msgstr "Escribir un hechizo"
 
@@ -290,12 +294,12 @@ msgstr "No hay ingredientes con ese nombre"
 msgid "Add it — it stays visible only to you until approved."
 msgstr "Agrégalo — solo tú lo verás hasta que se apruebe."
 
-#: grimoire_i18n.py:83 templates/the_cauldron/grimoire.html:178
-#: templates/the_cauldron/grimoire.html:258
+#: grimoire_i18n.py:83 templates/the_cauldron/grimoire.html:188
+#: templates/the_cauldron/grimoire.html:268
 msgid "Add a reagent"
 msgstr "Agregar un reactivo"
 
-#: grimoire_i18n.py:84 templates/the_cauldron/grimoire.html:213
+#: grimoire_i18n.py:84 templates/the_cauldron/grimoire.html:223
 msgid "Add ingredient"
 msgstr "Agregar ingrediente"
 
@@ -487,7 +491,7 @@ msgstr "Aún no has lanzado este hechizo."
 msgid "No castings yet — open a spell and cast it."
 msgstr "Aún no hay lanzamientos — abre un hechizo y lánzalo."
 
-#: grimoire_i18n.py:131 templates/the_cauldron/grimoire.html:118
+#: grimoire_i18n.py:131 templates/the_cauldron/grimoire.html:125
 msgid "Cast this spell"
 msgstr "Lanzar este hechizo"
 
@@ -518,7 +522,7 @@ msgstr "sin calificación"
 msgid "Spell removed"
 msgstr "Hechizo eliminado"
 
-#: grimoire_i18n.py:138 templates/the_cauldron/grimoire.html:141
+#: grimoire_i18n.py:138 templates/the_cauldron/grimoire.html:148
 msgid "Substitutions"
 msgstr "Sustituciones"
 
@@ -625,278 +629,435 @@ msgid "Cast with these amounts"
 msgstr "Lanzar con estas cantidades"
 
 #: grimoire_i18n.py:167
+msgid "Nutrition"
+msgstr "Nutrición"
+
+#: grimoire_i18n.py:168
+msgid "Show nutrition"
+msgstr "Mostrar nutrición"
+
+#: grimoire_i18n.py:169
+msgid "Batch"
+msgstr "Tanda"
+
+#: grimoire_i18n.py:170
+msgid "Per serving"
+msgstr "Por porción"
+
+#: grimoire_i18n.py:171
+msgid "Per 100 g cooked"
+msgstr "Por 100 g cocinado"
+
+#: grimoire_i18n.py:172
+#, python-format
+msgid "for the batch (%(n)s servings, %(weight)s cooked)"
+msgstr "de la tanda (%(n)s porciones, %(weight)s cocinado)"
+
+#: grimoire_i18n.py:173
+msgid "per serving"
+msgstr "por porción"
+
+#: grimoire_i18n.py:174
+msgid "per 100 g of the cooked dish"
+msgstr "por 100 g del platillo cocinado"
+
+#: grimoire_i18n.py:175
+#, python-format
+msgid "Share of the energy from macros: %(pct)s"
+msgstr "Parte de la energía de los macros: %(pct)s"
+
+#: grimoire_i18n.py:176
+msgid "1 ingredient has no data for this, so the real amount may be higher."
+msgstr "1 ingrediente no tiene datos de esto, así que la cantidad real puede ser mayor."
+
+#: grimoire_i18n.py:177
+#, python-format
+msgid "%(n)s ingredients have no data for this, so the real amount may be higher."
+msgstr "%(n)s ingredientes no tienen datos de esto, así que la cantidad real puede ser mayor."
+
+#: grimoire_i18n.py:178
+#, python-format
+msgid "No basic nutrition data for: %(names)s. Values marked ≥ are incomplete."
+msgstr "Sin datos nutricionales básicos para: %(names)s. Los valores marcados con ≥ están incompletos."
+
+#: grimoire_i18n.py:179
+#, python-format
+msgid "Cooked weight ≈ %(weight)s — from the dish you weighed on %(date)s."
+msgstr "Peso cocinado ≈ %(weight)s — del platillo que pesaste el %(date)s."
+
+#: grimoire_i18n.py:180
+#, python-format
+msgid "Cooked weight %(weight)s — set on the spell."
+msgstr "Peso cocinado %(weight)s — indicado en el hechizo."
+
+#: grimoire_i18n.py:181
+#, python-format
+msgid "Cooked weight ≈ %(weight)s — the spell yields %(pct)s of its raw weight."
+msgstr "Peso cocinado ≈ %(weight)s — el hechizo rinde %(pct)s de su peso crudo."
+
+#: grimoire_i18n.py:182
+#, python-format
+msgid "Cooked yield unknown — per 100 g uses the raw weight (%(weight)s). Weigh the dish when you cast it."
+msgstr "Rendimiento cocinado desconocido — por 100 g usa el peso crudo (%(weight)s). Pesa el platillo cuando lo lances."
+
+#: grimoire_i18n.py:183
+msgid "Portion for your goals"
+msgstr "Porción para tus metas"
+
+#: grimoire_i18n.py:184
+msgid "Set what one portion should give you. The answer is in grams of the cooked dish."
+msgstr "Indica qué debe darte una porción. La respuesta está en gramos del platillo cocinado."
+
+#: grimoire_i18n.py:185
+msgid "+ Add a goal"
+msgstr "+ Agregar una meta"
+
+#: grimoire_i18n.py:186
+msgid "Try a portion"
+msgstr "Prueba una porción"
+
+#: grimoire_i18n.py:187
+msgid "Nutrient"
+msgstr "Nutriente"
+
+#: grimoire_i18n.py:188
+msgid "Goal"
+msgstr "Meta"
+
+#: grimoire_i18n.py:189
+msgid "Amount"
+msgstr "Cantidad"
+
+#: grimoire_i18n.py:190
+msgid "Maximum"
+msgstr "Máximo"
+
+#: grimoire_i18n.py:191
+msgid "Remove goal"
+msgstr "Quitar meta"
+
+#: grimoire_i18n.py:192
+msgid "at least"
+msgstr "al menos"
+
+#: grimoire_i18n.py:193
+msgid "at most"
+msgstr "como máximo"
+
+#: grimoire_i18n.py:194
+msgid "between"
+msgstr "entre"
+
+#: grimoire_i18n.py:195
+msgid "met"
+msgstr "cumplida"
+
+#: grimoire_i18n.py:196
+msgid "missed"
+msgstr "no cumplida"
+
+#: grimoire_i18n.py:197
+#, python-format
+msgid "No portion meets every goal — these clash: %(goals)s."
+msgstr "Ninguna porción cumple todas las metas — estas chocan: %(goals)s."
+
+#: grimoire_i18n.py:198
+#, python-format
+msgid "Eat at least %(min)s of the cooked dish."
+msgstr "Come al menos %(min)s del platillo cocinado."
+
+#: grimoire_i18n.py:199
+#, python-format
+msgid "Eat up to %(max)s of the cooked dish."
+msgstr "Come hasta %(max)s del platillo cocinado."
+
+#: grimoire_i18n.py:200
+#, python-format
+msgid "Eat between %(min)s and %(max)s of the cooked dish."
+msgstr "Come entre %(min)s y %(max)s del platillo cocinado."
+
+#: grimoire_i18n.py:201
+#, python-format
+msgid "Data is missing for %(goals)s, so the real amount may be higher."
+msgstr "Faltan datos de %(goals)s, así que la cantidad real puede ser mayor."
+
+#: grimoire_i18n.py:203
 msgid "Ingredient · USDA FoodData Central"
 msgstr "Ingrediente · USDA FoodData Central"
 
-#: grimoire_i18n.py:168
+#: grimoire_i18n.py:204
 msgid "Ingredient · added by a cook"
 msgstr "Ingrediente · agregado por quien cocina"
 
-#: grimoire_i18n.py:169
+#: grimoire_i18n.py:205
 msgid "Ingredient · curated"
 msgstr "Ingrediente · curado por el equipo"
 
-#: grimoire_i18n.py:170
+#: grimoire_i18n.py:206
 #, python-format
 msgid "Also known as %(name)s"
 msgstr "También conocido como %(name)s"
 
-#: grimoire_i18n.py:171
+#: grimoire_i18n.py:207
 msgid "Source data on USDA FoodData Central ↗"
 msgstr "Datos de origen en USDA FoodData Central ↗"
 
-#: grimoire_i18n.py:172 templates/the_cauldron/grimoire.html:192
+#: grimoire_i18n.py:208 templates/the_cauldron/grimoire.html:202
 msgid "Household measures"
 msgstr "Medidas caseras"
 
-#: grimoire_i18n.py:173
+#: grimoire_i18n.py:209
 msgid "No household measures yet — recipes can use it by weight."
 msgstr "Aún sin medidas caseras — las recetas pueden usarlo por peso."
 
-#: grimoire_i18n.py:174 templates/the_cauldron/grimoire.html:203
+#: grimoire_i18n.py:210 templates/the_cauldron/grimoire.html:213
 msgid "Nutrients per 100 g"
 msgstr "Nutrientes por 100 g"
 
-#: grimoire_i18n.py:175 templates/the_cauldron/grimoire.html:178
+#: grimoire_i18n.py:211 templates/the_cauldron/grimoire.html:188
 msgid "Edit ingredient"
 msgstr "Editar ingrediente"
 
-#: grimoire_i18n.py:176
+#: grimoire_i18n.py:212
 msgid "Approved ingredients belong to the shared catalog and can't be edited here."
 msgstr "Los ingredientes aprobados forman parte del catálogo compartido y no se pueden editar aquí."
 
-#: grimoire_i18n.py:177
+#: grimoire_i18n.py:213
 msgid "This ingredient is private or no longer exists."
 msgstr "Este ingrediente es privado o ya no existe."
 
-#: grimoire_i18n.py:178
+#: grimoire_i18n.py:214
 msgid "Ingredient saved."
 msgstr "Ingrediente guardado."
 
-#: grimoire_i18n.py:179
+#: grimoire_i18n.py:215
 msgid "1 cup"
 msgstr "1 taza"
 
-#: grimoire_i18n.py:180
+#: grimoire_i18n.py:216
 msgid "1 tablespoon"
 msgstr "1 cucharada"
 
-#: grimoire_i18n.py:181
+#: grimoire_i18n.py:217
 msgid "1 teaspoon"
 msgstr "1 cucharadita"
 
-#: grimoire_i18n.py:182
+#: grimoire_i18n.py:218
 msgid "1 piece"
 msgstr "1 pieza"
 
-#: grimoire_i18n.py:183 grimoire_serializers.py:105
-#: templates/the_cauldron/grimoire.html:198
+#: grimoire_i18n.py:219 grimoire_serializers.py:112
+#: templates/the_cauldron/grimoire.html:208
 msgid "Density"
 msgstr "Densidad"
 
-#: grimoire_i18n.py:185
+#: grimoire_i18n.py:221
 msgid "Energy & macronutrients"
 msgstr "Energía y macronutrientes"
 
-#: grimoire_i18n.py:186
+#: grimoire_i18n.py:222
 msgid "Fats"
 msgstr "Grasas"
 
-#: grimoire_i18n.py:187
+#: grimoire_i18n.py:223
 msgid "Cholesterol & minerals"
 msgstr "Colesterol y minerales"
 
-#: grimoire_i18n.py:188
+#: grimoire_i18n.py:224
 msgid "Vitamins"
 msgstr "Vitaminas"
 
-#: grimoire_i18n.py:190
+#: grimoire_i18n.py:226
 msgid "Energy"
 msgstr "Energía"
 
-#: grimoire_i18n.py:191
+#: grimoire_i18n.py:227
 msgid "Protein"
 msgstr "Proteína"
 
-#: grimoire_i18n.py:192
+#: grimoire_i18n.py:228
 msgid "Carbohydrate"
 msgstr "Carbohidratos"
 
-#: grimoire_i18n.py:193
+#: grimoire_i18n.py:229
 msgid "Sugars"
 msgstr "Azúcares"
 
-#: grimoire_i18n.py:194
+#: grimoire_i18n.py:230
 msgid "Fiber"
 msgstr "Fibra"
 
-#: grimoire_i18n.py:195
+#: grimoire_i18n.py:231
 msgid "Fat"
 msgstr "Grasa"
 
-#: grimoire_i18n.py:196
+#: grimoire_i18n.py:232
 msgid "Saturated fat"
 msgstr "Grasa saturada"
 
-#: grimoire_i18n.py:197
+#: grimoire_i18n.py:233
 msgid "Monounsaturated fat"
 msgstr "Grasa monoinsaturada"
 
-#: grimoire_i18n.py:198
+#: grimoire_i18n.py:234
 msgid "Polyunsaturated fat"
 msgstr "Grasa poliinsaturada"
 
-#: grimoire_i18n.py:199
+#: grimoire_i18n.py:235
 msgid "Trans fat"
 msgstr "Grasa trans"
 
-#: grimoire_i18n.py:200
+#: grimoire_i18n.py:236
 msgid "Omega-3 ALA"
 msgstr "Omega-3 ALA"
 
-#: grimoire_i18n.py:201
+#: grimoire_i18n.py:237
 msgid "Omega-3 EPA"
 msgstr "Omega-3 EPA"
 
-#: grimoire_i18n.py:202
+#: grimoire_i18n.py:238
 msgid "Omega-3 DHA"
 msgstr "Omega-3 DHA"
 
-#: grimoire_i18n.py:203
+#: grimoire_i18n.py:239
 msgid "Omega-6 LA"
 msgstr "Omega-6 LA"
 
-#: grimoire_i18n.py:204
+#: grimoire_i18n.py:240
 msgid "Cholesterol"
 msgstr "Colesterol"
 
-#: grimoire_i18n.py:205
+#: grimoire_i18n.py:241
 msgid "Sodium"
 msgstr "Sodio"
 
-#: grimoire_i18n.py:206
+#: grimoire_i18n.py:242
 msgid "Potassium"
 msgstr "Potasio"
 
-#: grimoire_i18n.py:207
+#: grimoire_i18n.py:243
 msgid "Calcium"
 msgstr "Calcio"
 
-#: grimoire_i18n.py:208
+#: grimoire_i18n.py:244
 msgid "Iron"
 msgstr "Hierro"
 
-#: grimoire_i18n.py:209
+#: grimoire_i18n.py:245
 msgid "Vitamin A"
 msgstr "Vitamina A"
 
-#: grimoire_i18n.py:210
+#: grimoire_i18n.py:246
 msgid "Vitamin C"
 msgstr "Vitamina C"
 
-#: grimoire_i18n.py:211
+#: grimoire_i18n.py:247
 msgid "Vitamin D"
 msgstr "Vitamina D"
 
-#: grimoire_i18n.py:212
+#: grimoire_i18n.py:248
 msgid "Vitamin B12"
 msgstr "Vitamina B12"
 
-#: grimoire_serializers.py:32
+#: grimoire_serializers.py:26
+msgid "Enter a number."
+msgstr "Escribe un número."
+
+#: grimoire_serializers.py:39
 #, python-format
 msgid "%(label)s must be a real number."
 msgstr "%(label)s debe ser un número real."
 
-#: grimoire_serializers.py:83
+#: grimoire_serializers.py:90
 msgid "An ingredient needs a name."
 msgstr "El ingrediente necesita un nombre."
 
-#: grimoire_serializers.py:88
+#: grimoire_serializers.py:95
 msgid "Expected an object like {\"cup\": 240}."
 msgstr "Se esperaba un objeto como {\"cup\": 240}."
 
-#: grimoire_serializers.py:92
+#: grimoire_serializers.py:99
 #, python-format
 msgid "Unknown unit '%(unit)s'."
 msgstr "Unidad desconocida '%(unit)s'."
 
-#: grimoire_serializers.py:98
+#: grimoire_serializers.py:105
 #, python-format
 msgid "Weight per %(unit)s must be a number."
 msgstr "El peso por %(unit)s debe ser un número."
 
-#: grimoire_serializers.py:100
+#: grimoire_serializers.py:107
 #, python-format
 msgid "Weight per %(unit)s must be above 0."
 msgstr "El peso por %(unit)s debe ser mayor que 0."
 
-#: grimoire_serializers.py:229
+#: grimoire_serializers.py:242
 msgid "A recipe needs a name."
 msgstr "La receta necesita un nombre."
 
-#: grimoire_serializers.py:235
+#: grimoire_serializers.py:248
 #, python-format
 msgid "Keep the description under %(n)s characters."
 msgstr "La descripción debe tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:241
+#: grimoire_serializers.py:254
 msgid "Steps must be a list of text."
 msgstr "Los pasos deben ser una lista de textos."
 
-#: grimoire_serializers.py:244
+#: grimoire_serializers.py:257
 #, python-format
 msgid "At most %(n)s steps."
 msgstr "Como máximo %(n)s pasos."
 
-#: grimoire_serializers.py:246
+#: grimoire_serializers.py:259
 #, python-format
 msgid "A step can be at most %(n)s characters."
 msgstr "Un paso puede tener como máximo %(n)s caracteres."
 
-#: grimoire_serializers.py:251 grimoire_serializers.py:394
+#: grimoire_serializers.py:264 grimoire_serializers.py:410
 #, python-format
 msgid "At most %(n)s ingredients."
 msgstr "Como máximo %(n)s ingredientes."
 
-#: grimoire_serializers.py:263
+#: grimoire_serializers.py:276
 msgid "Unknown ingredient."
 msgstr "Ingrediente desconocido."
 
-#: grimoire_serializers.py:268 grimoire_serializers.py:447
+#: grimoire_serializers.py:281 grimoire_serializers.py:463
 msgid "Enter an amount above 0."
 msgstr "Escribe una cantidad mayor que 0."
 
-#: grimoire_serializers.py:379
+#: grimoire_serializers.py:392
 #, python-format
 msgid "Keep the notes under %(n)s characters."
 msgstr "Las notas deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:385
+#: grimoire_serializers.py:398
 #, python-format
 msgid "Keep the substitutions under %(n)s characters."
 msgstr "Las sustituciones deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:392
+#: grimoire_serializers.py:408
 msgid "Adjustments must be a list."
 msgstr "Los ajustes deben ser una lista."
 
-#: grimoire_serializers.py:399
+#: grimoire_serializers.py:415
 msgid "Each adjustment must be an object."
 msgstr "Cada ajuste debe ser un objeto."
 
-#: grimoire_serializers.py:404 grimoire_serializers.py:407
+#: grimoire_serializers.py:420 grimoire_serializers.py:423
 msgid "Each adjustment needs an ingredient and a unit."
 msgstr "Cada ajuste necesita un ingrediente y una unidad."
 
-#: grimoire_serializers.py:415 grimoire_serializers.py:419
+#: grimoire_serializers.py:431 grimoire_serializers.py:435
 msgid "Amounts must be numbers."
 msgstr "Las cantidades deben ser números."
 
-#: grimoire_serializers.py:421
+#: grimoire_serializers.py:437
 msgid "Amounts must be 0 or more."
 msgstr "Las cantidades deben ser 0 o más."
 
-#: grimoire_serializers.py:424
+#: grimoire_serializers.py:440
 msgid "Enter the amount you used."
 msgstr "Escribe la cantidad que usaste."
 
@@ -904,10 +1065,44 @@ msgstr "Escribe la cantidad que usaste."
 msgid "Quantity can't be negative."
 msgstr "La cantidad no puede ser negativa."
 
-#: services/grimoire_scaling.py:55
+#: services/grimoire_nutrition.py:163 services/grimoire_scaling.py:55
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s debe ser un número."
+
+#: services/grimoire_nutrition.py:165
+#, python-format
+msgid "%(label)s must be 0 or more."
+msgstr "%(label)s debe ser 0 o más."
+
+#: services/grimoire_nutrition.py:172
+msgid "Add at least one goal."
+msgstr "Agrega al menos una meta."
+
+#: services/grimoire_nutrition.py:174
+#, python-format
+msgid "At most %(n)s goals."
+msgstr "Como máximo %(n)s metas."
+
+#: services/grimoire_nutrition.py:179
+msgid "Unknown nutrient."
+msgstr "Nutriente desconocido."
+
+#: services/grimoire_nutrition.py:180
+msgid "The minimum"
+msgstr "El mínimo"
+
+#: services/grimoire_nutrition.py:181
+msgid "The maximum"
+msgstr "El máximo"
+
+#: services/grimoire_nutrition.py:183
+msgid "Each goal needs a minimum, a maximum or both."
+msgstr "Cada meta necesita un mínimo, un máximo o ambos."
+
+#: services/grimoire_nutrition.py:185
+msgid "A goal's minimum can't be above its maximum."
+msgstr "El mínimo de una meta no puede ser mayor que su máximo."
 
 #: services/grimoire_scaling.py:57
 #, python-format
@@ -965,7 +1160,7 @@ msgstr "Contacto"
 
 #: templates/the_cauldron/grimoire.html:4
 #: templates/the_cauldron/grimoire.html:33
-#: templates/the_cauldron/grimoire.html:221
+#: templates/the_cauldron/grimoire.html:231
 #: templates/the_cauldron/legal/_base.html:32
 msgid "The Grimoire"
 msgstr "El Grimorio"
@@ -992,7 +1187,7 @@ msgid "Back to the Grimoire"
 msgstr "Volver al Grimorio"
 
 #: templates/the_cauldron/grimoire.html:65
-#: templates/the_cauldron/grimoire.html:111
+#: templates/the_cauldron/grimoire.html:118
 msgid "Back to the spell"
 msgstr "Volver al hechizo"
 
@@ -1013,198 +1208,219 @@ msgid "Cook (min)"
 msgstr "Cocción (min)"
 
 #: templates/the_cauldron/grimoire.html:85
+msgid "Cooked weight of the batch (g)"
+msgstr "Peso cocinado de la tanda (g)"
+
+#: templates/the_cauldron/grimoire.html:87
+#, python-format
+msgid "or yield (%% of raw weight)"
+msgstr "o rendimiento (%% del peso crudo)"
+
+#: templates/the_cauldron/grimoire.html:90
+msgid "Optional. Cooking loses or gains water; this makes nutrition per 100 g of the dish right. Weighing the pot when you cast it is better still."
+msgstr "Opcional. Al cocinar se pierde o gana agua; esto corrige la nutrición por 100 g del platillo. Pesarlo cuando lo lances es aún mejor."
+
+#: templates/the_cauldron/grimoire.html:92
 msgid "Tags"
 msgstr "Etiquetas"
 
-#: templates/the_cauldron/grimoire.html:89
+#: templates/the_cauldron/grimoire.html:96
 msgid "Ingredients"
 msgstr "Ingredientes"
 
-#: templates/the_cauldron/grimoire.html:92
+#: templates/the_cauldron/grimoire.html:99
 msgid "Find an ingredient to add…"
 msgstr "Busca un ingrediente para agregar…"
 
-#: templates/the_cauldron/grimoire.html:93
+#: templates/the_cauldron/grimoire.html:100
 msgid "Find an ingredient to add"
 msgstr "Busca un ingrediente para agregar"
 
-#: templates/the_cauldron/grimoire.html:96
+#: templates/the_cauldron/grimoire.html:103
 msgid "Missing an ingredient? Add it (opens in a new tab)."
 msgstr "¿Falta un ingrediente? Agrégalo (se abre en otra pestaña)."
 
-#: templates/the_cauldron/grimoire.html:98
+#: templates/the_cauldron/grimoire.html:105
 msgid "Steps — one per line"
 msgstr "Pasos — uno por línea"
 
-#: templates/the_cauldron/grimoire.html:102
-#: templates/the_cauldron/grimoire.html:147
-#: templates/the_cauldron/grimoire.html:212
+#: templates/the_cauldron/grimoire.html:109
+#: templates/the_cauldron/grimoire.html:157
+#: templates/the_cauldron/grimoire.html:222
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: templates/the_cauldron/grimoire.html:103
+#: templates/the_cauldron/grimoire.html:110
 msgid "Save spell"
 msgstr "Guardar hechizo"
 
-#: templates/the_cauldron/grimoire.html:111
+#: templates/the_cauldron/grimoire.html:118
 msgid "Back to your castings"
 msgstr "Volver a tus lanzamientos"
 
-#: templates/the_cauldron/grimoire.html:118
+#: templates/the_cauldron/grimoire.html:125
 msgid "Edit casting"
 msgstr "Editar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:119
+#: templates/the_cauldron/grimoire.html:126
 msgid "Only you see your castings. Changes here are noted on the casting — the spell stays as it is."
 msgstr "Solo tú ves tus lanzamientos. Los cambios se anotan en el lanzamiento — el hechizo queda igual."
 
-#: templates/the_cauldron/grimoire.html:122
+#: templates/the_cauldron/grimoire.html:129
 msgid "How it went"
 msgstr "Cómo salió"
 
-#: templates/the_cauldron/grimoire.html:124
+#: templates/the_cauldron/grimoire.html:131
 msgid "Date you made it"
 msgstr "Fecha en que lo preparaste"
 
-#: templates/the_cauldron/grimoire.html:126
+#: templates/the_cauldron/grimoire.html:133
 msgid "Score"
 msgstr "Calificación"
 
-#: templates/the_cauldron/grimoire.html:129
+#: templates/the_cauldron/grimoire.html:136
 msgid "No score"
 msgstr "Sin calificación"
 
-#: templates/the_cauldron/grimoire.html:133
+#: templates/the_cauldron/grimoire.html:140
 msgid "Notes"
 msgstr "Notas"
 
-#: templates/the_cauldron/grimoire.html:134
+#: templates/the_cauldron/grimoire.html:141
 msgid "What worked, what you would change next time…"
 msgstr "Qué funcionó, qué cambiarías la próxima vez…"
 
-#: templates/the_cauldron/grimoire.html:138
+#: templates/the_cauldron/grimoire.html:145
 msgid "Amounts you used"
 msgstr "Cantidades que usaste"
 
-#: templates/the_cauldron/grimoire.html:139
+#: templates/the_cauldron/grimoire.html:146
 msgid "Change an amount if you used more or less than the spell says. Only changed lines are saved."
 msgstr "Cambia una cantidad si usaste más o menos de lo que dice el hechizo. Solo se guardan las líneas que cambies."
 
-#: templates/the_cauldron/grimoire.html:142
+#: templates/the_cauldron/grimoire.html:149
 msgid "e.g. lime instead of lemon"
 msgstr "p. ej., limón verde en lugar de amarillo"
 
-#: templates/the_cauldron/grimoire.html:148
+#: templates/the_cauldron/grimoire.html:150
+msgid "Cooked weight (g)"
+msgstr "Peso cocinado (g)"
+
+#: templates/the_cauldron/grimoire.html:152
+msgid "Weigh the finished dish without the pot. It sets nutrition per 100 g for this spell."
+msgstr "Pesa el platillo terminado sin la olla. Con eso se calcula la nutrición por 100 g de este hechizo."
+
+#: templates/the_cauldron/grimoire.html:158
 msgid "Save casting"
 msgstr "Guardar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:156
-#: templates/the_cauldron/grimoire.html:171
+#: templates/the_cauldron/grimoire.html:166
+#: templates/the_cauldron/grimoire.html:181
 msgid "Back to the reagents"
 msgstr "Volver a los reactivos"
 
-#: templates/the_cauldron/grimoire.html:169
+#: templates/the_cauldron/grimoire.html:179
 msgid "Back to the ingredient"
 msgstr "Volver al ingrediente"
 
-#: templates/the_cauldron/grimoire.html:179
+#: templates/the_cauldron/grimoire.html:189
 msgid "Ingredients you add stay visible only to you until they're approved."
 msgstr "Los ingredientes que agregues solo los verás tú hasta que se aprueben."
 
-#: templates/the_cauldron/grimoire.html:182
+#: templates/the_cauldron/grimoire.html:192
 msgid "The ingredient"
 msgstr "El ingrediente"
 
-#: templates/the_cauldron/grimoire.html:184
+#: templates/the_cauldron/grimoire.html:194
 msgid "Name in English"
 msgstr "Nombre en inglés"
 
-#: templates/the_cauldron/grimoire.html:185
+#: templates/the_cauldron/grimoire.html:195
 msgid "Name in Spanish"
 msgstr "Nombre en español"
 
-#: templates/the_cauldron/grimoire.html:186
+#: templates/the_cauldron/grimoire.html:196
 msgid "Category"
 msgstr "Categoría"
 
-#: templates/the_cauldron/grimoire.html:193
+#: templates/the_cauldron/grimoire.html:203
 msgid "Optional. They let recipes use cups, spoons or pieces of this ingredient."
 msgstr "Opcional. Permiten usar tazas, cucharadas o piezas de este ingrediente en las recetas."
 
-#: templates/the_cauldron/grimoire.html:195
+#: templates/the_cauldron/grimoire.html:205
 msgid "One cup weighs"
 msgstr "Una taza pesa"
 
-#: templates/the_cauldron/grimoire.html:196
+#: templates/the_cauldron/grimoire.html:206
 msgid "One tablespoon weighs"
 msgstr "Una cucharada pesa"
 
-#: templates/the_cauldron/grimoire.html:197
+#: templates/the_cauldron/grimoire.html:207
 msgid "One piece weighs"
 msgstr "Una pieza pesa"
 
-#: templates/the_cauldron/grimoire.html:204
+#: templates/the_cauldron/grimoire.html:214
 msgid "Leave a field blank if you don't know it — it shows as “—”, never as 0."
 msgstr "Deja en blanco lo que no sepas — se muestra como “—”, nunca como 0."
 
-#: templates/the_cauldron/grimoire.html:208
+#: templates/the_cauldron/grimoire.html:218
 msgid "Suggest it for the shared catalog (staff review)"
 msgstr "Sugerirlo para el catálogo compartido (revisión del equipo)"
 
-#: templates/the_cauldron/grimoire.html:209
+#: templates/the_cauldron/grimoire.html:219
 #, python-format
 msgid "Ingredients are reference data, not private content: our team may review them and add them to the shared catalog at any time, without notice. Don't include personal data. <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">See the Terms</a>."
 msgstr "Los ingredientes son datos de referencia, no contenido privado: nuestro equipo puede revisarlos y agregarlos al catálogo compartido en cualquier momento, sin aviso. No incluyas datos personales. <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Consulta los Términos</a>."
 
-#: templates/the_cauldron/grimoire.html:213
+#: templates/the_cauldron/grimoire.html:223
 msgid "Save ingredient"
 msgstr "Guardar ingrediente"
 
-#: templates/the_cauldron/grimoire.html:222
+#: templates/the_cauldron/grimoire.html:232
 msgid "Keep your spells, share the good ones with the coven, and make theirs your own."
 msgstr "Guarda tus hechizos, comparte los buenos con el aquelarre y haz tuyos los de ellos."
 
-#: templates/the_cauldron/grimoire.html:224
+#: templates/the_cauldron/grimoire.html:234
 msgid "Grimoire sections"
 msgstr "Secciones del grimorio"
 
-#: templates/the_cauldron/grimoire.html:225
+#: templates/the_cauldron/grimoire.html:235
 msgid "Spells"
 msgstr "Hechizos"
 
-#: templates/the_cauldron/grimoire.html:227
+#: templates/the_cauldron/grimoire.html:237
 msgid "Castings"
 msgstr "Lanzamientos"
 
-#: templates/the_cauldron/grimoire.html:237
+#: templates/the_cauldron/grimoire.html:247
 msgid "Search spells"
 msgstr "Buscar hechizos"
 
-#: templates/the_cauldron/grimoire.html:238
+#: templates/the_cauldron/grimoire.html:248
 msgid "Search your spells and the coven’s…"
 msgstr "Busca en tus hechizos y en los del aquelarre…"
 
-#: templates/the_cauldron/grimoire.html:242
+#: templates/the_cauldron/grimoire.html:252
 msgid "Whose spells"
 msgstr "De quién son los hechizos"
 
-#: templates/the_cauldron/grimoire.html:247
+#: templates/the_cauldron/grimoire.html:257
 msgid "Filter by tag"
 msgstr "Filtrar por etiqueta"
 
-#: templates/the_cauldron/grimoire.html:255
+#: templates/the_cauldron/grimoire.html:265
 msgid "Search ingredients"
 msgstr "Buscar ingredientes"
 
-#: templates/the_cauldron/grimoire.html:256
+#: templates/the_cauldron/grimoire.html:266
 msgid "Search ingredients…"
 msgstr "Buscar ingredientes…"
 
-#: templates/the_cauldron/grimoire.html:260
+#: templates/the_cauldron/grimoire.html:270
 msgid "Nutrients per 100 g. “—” means unknown. Ingredients you add stay visible only to you until they're approved."
 msgstr "Nutrientes por 100 g. “—” significa desconocido. Los ingredientes que agregues solo los verás tú hasta que se aprueben."
 
-#: templates/the_cauldron/grimoire.html:266
+#: templates/the_cauldron/grimoire.html:276
 msgid "Every time you made a spell, newest first. Only you see these."
 msgstr "Cada vez que preparaste un hechizo, del más reciente al más antiguo. Solo tú los ves."
 

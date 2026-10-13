@@ -354,6 +354,16 @@ the reagent can't convert is listed in `unconvertible` and left out, never guess
 (`services.grimoire.grams_on_hand` prefers the line's own weight for the same unit). The spell page's scaler
 re-renders the lines from the response; "Cast with these amounts" opens the cast page with `?factor=`.
 
+**Nutrition (#70)**: `services/grimoire_nutrition.py` (no writes). `batch_totals` sums line grams × per-100 g;
+an unknown value (null, or no `ReagentNutrients` row) is never 0 — it's left out and counted in `missing`
+(distinct reagents), shown as "≥ x". Cooked yield, in order: the **requesting user's** latest casting with
+`cooked_weight_g` (as a ratio over `casting_raw_grams` — the batch as actually cast, adjustments included) →
+`Spell.cooked_yield_g` → `Spell.yield_pct` → raw weight, `source: "unknown"` (flagged in the UI). Other users'
+castings never count. `GET spells/{uuid}/nutrition/?servings=|?scale=` (batch scales, per serving and per 100 g
+cooked don't); `POST spells/{uuid}/portion/` `{"goals": [{nutrient, at_least, at_most}]}` → gram range of the
+cooked dish, or `conflicts` (the goals setting the tightest lower and upper bound; a minimum of a nutrient the
+dish lacks conflicts alone). `reagents_missing_data` names only reagents missing the basics (`CORE`).
+
 **Seed**: `python manage.py seed_grimoire` (idempotent; also run at container start) loads
 `seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user

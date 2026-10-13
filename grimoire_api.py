@@ -22,12 +22,13 @@ from the_cauldron.grimoire_serializers import (
     CastingSerializer,
     GrimoirePreferencesSerializer,
     ReagentSerializer,
+    SpellPortionSerializer,
     SpellScaleSerializer,
     SpellSerializer,
     TagSerializer,
 )
-from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag, normalize_search
-from the_cauldron.services import grimoire, grimoire_scaling
+from the_cauldron.models import Casting, GrimoirePreferences, Spell, SpellReagent, Tag, normalize_search
+from the_cauldron.services import grimoire, grimoire_nutrition, grimoire_scaling
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -252,6 +253,121 @@ class SpellViewSet(viewsets.ModelViewSet):
                 }
                 for i, line in enumerate(result.lines)
             ],
+        })
+
+    # ── Nutrition (#70) ──────────────────────────────────────────────────────
+
+    def _nutrition_basis(self, spell):
+        """(lines, per-batch totals, raw grams, Yield) for the requesting user."""
+        lines = list(
+            SpellReagent.objects.filter(spell=spell).select_related("reagent", "reagent__nutrients")
+        )
+        ingredients = []
+        for line in lines:
+            profile = getattr(line.reagent, "nutrients", None)
+            per = {name: getattr(profile, name) for name in grimoire_nutrition.FIELDS} if profile else None
+            ingredients.append(grimoire_nutrition.Ingredient(key=line.reagent_id, grams=line.grams, per_100g=per))
+        raw_g = sum(line.grams for line in lines)
+        # The user's own latest weighed casting — castings are private, so
+        # nobody else's pot ever changes what this user sees.
+        weighed = (
+            Casting.objects.filter(spell=spell, user=self.request.user, cooked_weight_g__isnull=False)
+            .order_by("-cast_on", "-created_at")
+            .first()
+        )
+        ratio = None
+        if weighed:
+            cast_raw = grimoire_nutrition.casting_raw_grams(lines, weighed.adjustments)
+            ratio = weighed.cooked_weight_g / cast_raw if cast_raw > 0 else None
+        yld = grimoire_nutrition.resolve_yield(
+            raw_g, casting_ratio=ratio, cast_on=weighed.cast_on if weighed else None,
+            cooked_yield_g=spell.cooked_yield_g, yield_pct=spell.yield_pct,
+        )
+        return lines, ingredients, raw_g, yld
+
+    @action(detail=True, methods=["get"])
+    def nutrition(self, request, uuid=None):
+        """Batch / per-serving / per-100 g-cooked nutrients of a readable spell.
+        ``?servings=N`` or ``?scale=F`` scale the batch like the scaler (#69);
+        per serving and per 100 g don't change with the scale."""
+        spell = self.get_object()
+        lines, ingredients, raw_g, yld = self._nutrition_basis(spell)
+        plain = [
+            grimoire_scaling.Line(key=line.reagent_id, quantity=line.quantity, unit=line.unit, grams=line.grams)
+            for line in lines
+        ]
+        try:
+            if request.query_params.get("servings") not in (None, ""):
+                factor = grimoire_scaling.scale_to_servings(
+                    plain, spell.servings, request.query_params["servings"]).factor
+            elif request.query_params.get("scale") not in (None, ""):
+                factor = grimoire_scaling.scale_by_factor(plain, request.query_params["scale"]).factor
+            else:
+                factor = 1.0
+        except grimoire_scaling.ScalingError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        batch = grimoire_nutrition.batch_totals(ingredients)
+        cooked_g = raw_g * yld.ratio
+        missing_names = {}
+        for line in lines:
+            profile = getattr(line.reagent, "nutrients", None)
+            # Named only when the basics are unknown; any other gap shows as "≥" on its value.
+            if line.grams > 0 and (profile is None or any(getattr(profile, n) is None for n in grimoire_nutrition.CORE)):
+                missing_names[line.reagent_id] = line.reagent
+        nutrients = []
+        for name in grimoire_nutrition.FIELDS:
+            total = batch[name]
+            nutrients.append({
+                "key": name,
+                "batch": round(total.value * factor, 3),
+                "per_serving": round(total.value / spell.servings, 3),
+                "per_100g": round(total.value / cooked_g * 100, 3) if cooked_g > 0 else None,
+                "missing": total.missing,
+            })
+        return Response({
+            "factor": factor,
+            "servings": spell.servings * factor,
+            "raw_g": round(raw_g * factor, 1),
+            "cooked_g": round(cooked_g * factor, 1),
+            "yield": {
+                "source": yld.source,
+                "ratio": round(yld.ratio, 4),
+                "cast_on": yld.cast_on,
+            },
+            "nutrients": nutrients,
+            "reagents_missing_data": [
+                {"reagent": str(r.uuid), "name": r.name, "name_es": r.name_es} for r in missing_names.values()
+            ],
+        })
+
+    @action(detail=True, methods=["post"])
+    def portion(self, request, uuid=None):
+        """``{"goals": [{nutrient, at_least, at_most}]}`` → the range of grams of
+        the cooked dish that meets every goal, or the conflicting goals."""
+        spell = self.get_object()
+        req = SpellPortionSerializer(data=request.data)
+        req.is_valid(raise_exception=True)
+        try:
+            goals = grimoire_nutrition.clean_goals(req.validated_data["goals"])
+        except grimoire_nutrition.NutritionError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        _lines, ingredients, raw_g, yld = self._nutrition_basis(spell)
+        cooked_g = raw_g * yld.ratio
+        if cooked_g <= 0:
+            return Response({"detail": _("This spell has no weighed ingredients.")}, status=status.HTTP_400_BAD_REQUEST)
+        per_100g = {
+            name: grimoire_nutrition.Total(total.value / cooked_g * 100, total.missing)
+            for name, total in grimoire_nutrition.batch_totals(ingredients).items()
+        }
+        result = grimoire_nutrition.recommend_portion(per_100g, goals)
+        return Response({
+            "feasible": result.feasible,
+            "min_g": result.min_g,
+            "max_g": result.max_g,
+            "conflicts": result.conflicts,
+            "incomplete": result.incomplete,
+            "cooked_g": round(cooked_g, 1),
+            "yield_source": yld.source,
         })
 
 
