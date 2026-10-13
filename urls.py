@@ -1,8 +1,9 @@
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
 from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from . import api, views
+from . import api, grimoire_api, views
 
 app_name = "the_cauldron"
 
@@ -10,6 +11,12 @@ router = DefaultRouter()
 router.register(r"patterns", api.PatternViewSet, basename="forge-pattern")
 router.register(r"exercises", api.ExerciseViewSet, basename="forge-exercise")
 router.register(r"sessions", api.SessionViewSet, basename="forge-session")
+
+grimoire_router = SimpleRouter()
+grimoire_router.register(r"reagents", grimoire_api.ReagentViewSet, basename="grimoire-reagent")
+grimoire_router.register(r"spells", grimoire_api.SpellViewSet, basename="grimoire-spell")
+grimoire_router.register(r"tags", grimoire_api.TagViewSet, basename="grimoire-tag")
+grimoire_router.register(r"castings", grimoire_api.CastingViewSet, basename="grimoire-casting")
 
 api_urlpatterns = [
     path("catalog/", api.CatalogView.as_view(), name="forge-catalog"),
@@ -46,13 +53,38 @@ api_urlpatterns = [
     ),
     path("norms/", api.NormsView.as_view(), name="forge-norms"),
     path("progress/", api.ProgressView.as_view(), name="forge-progress"),
+    path(
+        "grimoire/preferences/",
+        grimoire_api.PreferencesView.as_view(),
+        name="grimoire-preferences",
+    ),
+    path("grimoire/", include(grimoire_router.urls)),
     path("", include(router.urls)),
 ]
 
 urlpatterns = [
     path('', views.landing_view, name='landing'),
+    path('terms/', TemplateView.as_view(template_name='the_cauldron/legal/terms.html'), name='terms'),
+    path('privacy/', TemplateView.as_view(template_name='the_cauldron/legal/privacy.html'), name='privacy'),
     path('forge/', views.forge_view, name='forge'),
     path('forge/<slug:section>/', views.forge_view, name='forge-section'),
+    path('grimoire/', views.grimoire_view, name='grimoire'),
+    path('grimoire/spell/new/', views.grimoire_edit_view, name='grimoire-spell-new'),
+    path('grimoire/reagent/new/', views.grimoire_reagent_new_view, name='grimoire-reagent-new'),
+    path('grimoire/reagent/<uuid:reagent_uuid>/', views.grimoire_reagent_view, name='grimoire-reagent'),
+    path(
+        'grimoire/reagent/<uuid:reagent_uuid>/edit/',
+        views.grimoire_reagent_new_view,
+        name='grimoire-reagent-edit',
+    ),
+    path('grimoire/spell/<uuid:spell_uuid>/', views.grimoire_spell_view, name='grimoire-spell'),
+    path('grimoire/spell/<uuid:spell_uuid>/edit/', views.grimoire_edit_view, name='grimoire-spell-edit'),
+    path('grimoire/spell/<uuid:spell_uuid>/cast/', views.grimoire_cast_view, name='grimoire-cast'),
+    path(
+        'grimoire/casting/<uuid:casting_uuid>/edit/',
+        views.grimoire_casting_edit_view,
+        name='grimoire-casting-edit',
+    ),
     path(
         'login/',
         auth_views.LoginView.as_view(

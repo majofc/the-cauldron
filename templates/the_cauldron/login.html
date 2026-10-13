@@ -59,3 +59,6 @@
 {% block nav_auto_loader %}
 <script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
 {% endblock %}
+
+{# The Cauldron's own legal pages. #}
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

@@ -1,0 +1,183 @@
+<!doctype html>
+<!-- Grimoire visual reference — standalone, not served by Django.
+     Open from the arcano checkout (paths are relative to the_cauldron/):
+       python -m http.server 8765   (run in the arcano repo root)
+       → http://localhost:8765/the_cauldron/grimoire_preview.html
+     Spec: STYLE_GUIDE.md → "Grimoire". Keep the inline mark in sync with
+     templates/the_cauldron/grimoire/_mark.html. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grimoire Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,300;1,400&family=Inter:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../arcano/static/arcano/css/tokens.css">
+  <link rel="stylesheet" href="../arcano/static/arcano/css/base.css">
+  <link rel="stylesheet" href="static/the_cauldron/css/tokens.css">
+  <link rel="stylesheet" href="static/the_cauldron/css/landing.css">
+  <link rel="stylesheet" href="static/the_cauldron/css/grimoire-tokens.css">
+  <link rel="stylesheet" href="static/the_cauldron/css/grimoire.css">
+  <style>
+    /* Preview-page layout only — not part of the Grimoire components. */
+    body { margin: 0; background: var(--grimoire-ink); color: var(--grimoire-text); font-family: var(--arcano-font-body); }
+    .pv-head { padding: 2.5rem 1rem 1rem; text-align: center; }
+    .pv-head h1 { font-family: var(--arcano-font-display); font-weight: 900; font-size: 2.2rem; margin: 0.5rem 0 0.25rem; letter-spacing: 0.04em; }
+    .pv-head p { font-family: var(--arcano-font-italic); font-style: italic; color: var(--grimoire-text-dim); margin: 0; font-size: 1.1rem; }
+    .pv-head .grimoire-nav-mark { width: 64px; height: 64px; }
+    .pv-themes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); }
+    .pv-theme { padding: 2rem 1rem 3rem; background: var(--grimoire-ink); color: var(--grimoire-text); min-width: 0; }
+    .pv-theme > h2 { font-family: var(--arcano-font-display); font-size: 1.3rem; margin: 0 0 1.5rem; text-align: center; }
+    .pv-sec { margin: 0 auto 2.25rem; max-width: 520px; }
+    .pv-sec > h3 { font-family: var(--arcano-font-body); font-size: 0.68rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--grimoire-text-dim); margin: 0 0 0.8rem; }
+    .pv-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .pv-marks { display: flex; gap: 1.5rem; align-items: flex-end; color: var(--grimoire-gilt); }
+    .pv-marks svg { flex: none; }
+    .pv-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.5rem; }
+    .pv-swatch { border-radius: var(--arcano-radius-md); overflow: hidden; border: 1px solid var(--grimoire-border); font-size: 0.7rem; }
+    .pv-swatch i { display: block; height: 38px; }
+    .pv-swatch span { display: block; padding: 0.35rem 0.5rem; color: var(--grimoire-text-dim); word-break: break-all; }
+    .pv-loader { display: flex; justify-content: center; padding: 1rem 0; }
+  </style>
+</head>
+<body>
+  <header class="pv-head">
+    <svg class="grimoire-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M32 24 Q21 17 8 20 L8 50 Q21 47 32 54" />
+      <path d="M32 24 Q43 17 56 20 L56 50 Q43 47 32 54" />
+      <line x1="32" y1="24" x2="32" y2="54" />
+      <path d="M14 30 Q20 28 26 30" /><path d="M14 37 Q20 35 26 37" /><path d="M14 44 Q18 43 22 44" />
+      <path d="M38 30 Q44 28 50 30" /><path d="M38 37 Q44 35 50 37" /><path d="M42 44 Q46 43 50 44" />
+      <path d="M32 4 Q33 10 38 11 Q33 12 32 18 Q31 12 26 11 Q31 10 32 4 Z" />
+    </svg>
+    <h1>The Grimoire</h1>
+    <p>Spells, reagents and castings — the recipe book of The Cauldron.</p>
+  </header>
+
+  <main class="pv-themes">
+    <section class="pv-theme" data-theme-name="dark"></section>
+    <section class="pv-theme grimoire-parchment" data-theme-name="parchment"></section>
+  </main>
+
+  <template id="pv-body">
+    <div class="pv-sec">
+      <h3>Palette</h3>
+      <div class="pv-swatches">
+        <div class="pv-swatch"><i style="background:var(--grimoire-page)"></i><span>--grimoire-page</span></div>
+        <div class="pv-swatch"><i style="background:var(--grimoire-text)"></i><span>--grimoire-text</span></div>
+        <div class="pv-swatch"><i style="background:var(--grimoire-accent)"></i><span>--grimoire-accent</span></div>
+        <div class="pv-swatch"><i style="background:var(--grimoire-gilt)"></i><span>--grimoire-gilt</span></div>
+        <div class="pv-swatch"><i style="background:var(--grimoire-herb)"></i><span>--grimoire-herb</span></div>
+        <div class="pv-swatch"><i style="background:var(--grimoire-sigil)"></i><span>--grimoire-sigil</span></div>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Mark — 64 / 28 / 16 px</h3>
+      <div class="pv-marks" data-marks></div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Spell card</h3>
+      <a class="grimoire-spell-card" href="#">
+        <div class="corner-tl" aria-hidden="true"></div>
+        <div class="corner-tr" aria-hidden="true"></div>
+        <div class="corner-bl" aria-hidden="true"></div>
+        <div class="corner-br" aria-hidden="true"></div>
+        <span class="grimoire-spell-kicker">Spell · Supper</span>
+        <h4 class="grimoire-spell-title">Smoked Paprika Lentil Stew</h4>
+        <p class="grimoire-spell-desc">A slow, warming pot that tastes better on the second night.</p>
+        <div class="grimoire-spell-meta"><span><strong>45</strong> min</span><span><strong>4</strong> servings</span><span>cast <strong>7</strong>×</span></div>
+        <div class="grimoire-tags"><span class="grimoire-tag">vegan</span><span class="grimoire-tag">one-pot</span><span class="grimoire-tag">batch</span></div>
+        <div class="grimoire-spell-foot">
+          <span class="grimoire-stars" aria-label="4.5 out of 5"><span class="grimoire-star is-on">★</span><span class="grimoire-star is-on">★</span><span class="grimoire-star is-on">★</span><span class="grimoire-star is-on">★</span><span class="grimoire-star is-half">★</span></span>
+          <span class="grimoire-spell-meta"><span>forked from <strong>the shelf</strong></span></span>
+        </div>
+      </a>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Reagent chips</h3>
+      <div class="pv-row">
+        <span class="grimoire-reagent"><span class="grimoire-reagent-qty">250 g</span>red lentils</span>
+        <span class="grimoire-reagent"><span class="grimoire-reagent-qty">2 tsp</span>smoked paprika</span>
+        <span class="grimoire-reagent"><span class="grimoire-reagent-qty">1</span>onion</span>
+        <span class="grimoire-reagent is-missing"><span class="grimoire-reagent-qty">400 ml</span>coconut milk</span>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Tag pills</h3>
+      <div class="grimoire-tags">
+        <span class="grimoire-tag">vegan</span>
+        <button type="button" class="grimoire-tag is-active">high-protein</button>
+        <a class="grimoire-tag" href="#">under 30 min</a>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Score stars — display / input</h3>
+      <div class="pv-row" style="gap:1.5rem">
+        <span class="grimoire-stars" aria-label="3 out of 5"><span class="grimoire-star is-on">★</span><span class="grimoire-star is-on">★</span><span class="grimoire-star is-on">★</span><span class="grimoire-star">★</span><span class="grimoire-star">★</span></span>
+        <span class="grimoire-stars grimoire-stars--input" role="radiogroup" aria-label="Rate this casting" style="font-size:1.4rem">
+          <button type="button" class="grimoire-star is-on" role="radio" aria-checked="false" aria-label="1 star">★</button><button type="button" class="grimoire-star is-on" role="radio" aria-checked="true" aria-label="2 stars">★</button><button type="button" class="grimoire-star" role="radio" aria-checked="false" aria-label="3 stars">★</button><button type="button" class="grimoire-star" role="radio" aria-checked="false" aria-label="4 stars">★</button><button type="button" class="grimoire-star" role="radio" aria-checked="false" aria-label="5 stars">★</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Nutrient bars — per portion vs. target</h3>
+      <div class="grimoire-nutrients">
+        <div class="grimoire-nutrient grimoire-nutrient--protein"><span>Protein</span><span class="grimoire-nutrient-track"><span class="grimoire-nutrient-fill" style="--pct:62%"></span></span><span class="grimoire-nutrient-value">24 g</span></div>
+        <div class="grimoire-nutrient grimoire-nutrient--carbs"><span>Carbs</span><span class="grimoire-nutrient-track"><span class="grimoire-nutrient-fill" style="--pct:48%"></span></span><span class="grimoire-nutrient-value">41 g</span></div>
+        <div class="grimoire-nutrient grimoire-nutrient--fat"><span>Fat</span><span class="grimoire-nutrient-track"><span class="grimoire-nutrient-fill" style="--pct:30%"></span></span><span class="grimoire-nutrient-value">12 g</span></div>
+        <div class="grimoire-nutrient grimoire-nutrient--fiber"><span>Fiber</span><span class="grimoire-nutrient-track"><span class="grimoire-nutrient-fill" style="--pct:80%"></span></span><span class="grimoire-nutrient-value">14 g</span></div>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Empty state</h3>
+      <div class="grimoire-empty">
+        <div class="corner-tl" aria-hidden="true"></div>
+        <div class="corner-tr" aria-hidden="true"></div>
+        <div class="corner-bl" aria-hidden="true"></div>
+        <div class="corner-br" aria-hidden="true"></div>
+        <span data-empty-mark></span>
+        <h4 class="grimoire-empty-title">Your grimoire is blank</h4>
+        <p class="grimoire-empty-body">Write your first spell, or fork one from the shared shelf.</p>
+        <a href="#" class="btn-cauldron btn-cauldron--primary">Write a spell</a>
+      </div>
+    </div>
+
+    <div class="pv-sec">
+      <h3>Loader</h3>
+      <div class="pv-loader" data-loader></div>
+    </div>
+  </template>
+
+  <script src="static/the_cauldron/js/grimoire-loader.js"></script>
+  <script>
+    (function () {
+      var mark = document.querySelector('.pv-head svg');
+      document.querySelectorAll('.pv-theme').forEach(function (theme) {
+        var h = document.createElement('h2');
+        h.textContent = theme.dataset.themeName === 'dark' ? 'Dark (default)' : 'Parchment (.grimoire-parchment)';
+        theme.appendChild(h);
+        theme.appendChild(document.getElementById('pv-body').content.cloneNode(true));
+        [64, 28, 16].forEach(function (px) {
+          var m = mark.cloneNode(true);
+          m.setAttribute('class', '');
+          m.style.width = m.style.height = px + 'px';
+          theme.querySelector('[data-marks]').appendChild(m);
+        });
+        var em = mark.cloneNode(true);
+        em.setAttribute('class', 'grimoire-empty-mark');
+        theme.querySelector('[data-empty-mark]').replaceWith(em);
+        theme.querySelector('[data-loader]').appendChild(
+          window.GrimoireLoader.build(window.GrimoireLoader.randomCaption(), 150));
+      });
+    }());
+  </script>
+</body>
+</html>

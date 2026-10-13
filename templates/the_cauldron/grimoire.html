@@ -1,0 +1,311 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+
+{% block title %}{% if spell_title %}{{ spell_title }} — {% trans "The Grimoire" %}{% else %}{% trans "The Grimoire — The Cauldron" %}{% endif %}{% endblock %}
+{% block meta_description %}{% trans "Keep, share and fork your spells — the recipe book of The Cauldron." %}{% endblock %}
+
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-page.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link active cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
+{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="grim" id="grim-app" data-page="{{ page }}">
+
+  {% if page == "spell" %}
+  <!-- ── One spell, full page ── -->
+  <div class="grim-page-bar">
+    <a class="grim-back" href="{% url 'the_cauldron:grimoire' %}">← {% trans "Back to the Grimoire" %}</a>
+    {% include 'the_cauldron/grimoire/_units.html' %}
+  </div>
+  <article class="grim-spell-page" id="grim-spell-detail" aria-labelledby="grim-spell-title">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body" id="grim-spell-body"></div>
+  </article>
+  <section class="grim-spell-page grim-castings" id="grim-castings" aria-labelledby="grim-castings-title" hidden>
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body" id="grim-castings-body"></div>
+  </section>
+
+  {% elif page == "edit" %}
+  <!-- ── Write / edit a spell, full page ── -->
+  <div class="grim-page-bar">
+    <a class="grim-back" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}{% endif %}">← {% if spell_uuid %}{% trans "Back to the spell" %}{% else %}{% trans "Back to the Grimoire" %}{% endif %}</a>
+  </div>
+  <article class="grim-spell-page">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="grim-editor-form" novalidate>
+      <h1 class="grim-h2" id="grim-editor-title">{% if spell_uuid %}{% trans "Edit spell" %}{% else %}{% trans "Write a spell" %}{% endif %}</h1>
+      <label class="grim-field"><span>{% trans "Recipe name" %}</span>
+        <input name="title" required maxlength="150"></label>
+      <label class="grim-field"><span>{% trans "Description" %}</span>
+        <textarea name="description" rows="2" maxlength="5000"></textarea></label>
+      <div class="grim-row">
+        <label class="grim-field"><span>{% trans "Servings" %}</span>
+          <input name="servings" type="number" min="1" max="100" value="2" required></label>
+        <label class="grim-field"><span>{% trans "Prep (min)" %}</span>
+          <input name="prep_minutes" type="number" min="0" max="1440"></label>
+        <label class="grim-field"><span>{% trans "Cook (min)" %}</span>
+          <input name="cook_minutes" type="number" min="0" max="1440"></label>
+      </div>
+      <div class="grim-row">
+        <label class="grim-field"><span>{% trans "Cooked weight of the batch (g)" %}</span>
+          <input name="cooked_yield_g" type="number" min="0.1" step="any" inputmode="decimal"></label>
+        <label class="grim-field"><span>{% trans "or yield (% of raw weight)" %}</span>
+          <input name="yield_pct" type="number" min="1" max="1000" step="any" inputmode="decimal"></label>
+      </div>
+      <p class="grim-help">{% trans "Optional. Cooking loses or gains water; this makes nutrition per 100 g of the dish right. Weighing the pot when you cast it is better still." %}</p>
+      <fieldset class="grim-field">
+        <legend>{% trans "Tags" %}</legend>
+        <div class="grimoire-tags" id="grim-editor-tags"></div>
+      </fieldset>
+      <fieldset class="grim-field">
+        <legend>{% trans "Ingredients" %}</legend>
+        <div class="grim-lines" id="grim-editor-lines"></div>
+        <div class="grim-line-add">
+          <input type="search" id="grim-line-search" placeholder="{% trans 'Find an ingredient to add…' %}" autocomplete="off"
+                 aria-label="{% trans 'Find an ingredient to add' %}" aria-controls="grim-line-results">
+          <ul class="grim-suggest" id="grim-line-results" role="listbox" hidden></ul>
+        </div>
+        <p class="grim-help"><a class="grim-back" href="{% url 'the_cauldron:grimoire-reagent-new' %}" target="_blank" rel="noopener">{% trans "Missing an ingredient? Add it (opens in a new tab)." %}</a></p>
+      </fieldset>
+      <label class="grim-field"><span>{% trans "Steps — one per line" %}</span>
+        <textarea name="steps" rows="8"></textarea></label>
+      <p class="grim-error" id="grim-editor-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}{% endif %}">{% trans "Cancel" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save spell" %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% elif page == "cast" %}
+  <!-- ── Log / edit a casting, full page ── -->
+  <div class="grim-page-bar">
+    <a class="grim-back" id="grim-cast-back" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}#castings{% endif %}">← {% if spell_uuid %}{% trans "Back to the spell" %}{% else %}{% trans "Back to your castings" %}{% endif %}</a>
+  </div>
+  <article class="grim-spell-page">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="grim-cast-form" novalidate>
+      <span class="grimoire-spell-kicker" id="grim-cast-spell"></span>
+      <h1 class="grim-h2 grim-spell-page-title">{% if casting_uuid %}{% trans "Edit casting" %}{% else %}{% trans "Cast this spell" %}{% endif %}</h1>
+      <p class="grim-section-help">{% trans "Only you see your castings. Changes here are noted on the casting — the spell stays as it is." %}</p>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "How it went" %}</h2>
+        <div class="grim-row">
+          <label class="grim-field"><span>{% trans "Date you made it" %}</span><input name="cast_on" type="date" required></label>
+          <div class="grim-field">
+            <span id="grim-score-label">{% trans "Score" %}</span>
+            <div class="grim-score">
+              <span class="grimoire-stars grimoire-stars--input" role="radiogroup" aria-labelledby="grim-score-label" id="grim-score"></span>
+              <button type="button" class="grim-link-btn grim-score-clear" id="grim-score-clear">{% trans "No score" %}</button>
+            </div>
+          </div>
+        </div>
+        <label class="grim-field"><span>{% trans "Notes" %}</span>
+          <textarea name="notes" rows="4" maxlength="5000" placeholder="{% trans 'What worked, what you would change next time…' %}"></textarea></label>
+      </section>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "Amounts you used" %}</h2>
+        <p class="grim-section-help">{% trans "Change an amount if you used more or less than the spell says. Only changed lines are saved." %}</p>
+        <div class="grim-adjustments" id="grim-cast-lines"></div>
+        <label class="grim-field"><span>{% trans "Substitutions" %}</span>
+          <textarea name="substitutions" rows="2" maxlength="2000" placeholder="{% trans 'e.g. lime instead of lemon' %}"></textarea></label>
+        <label class="grim-field grim-field--narrow"><span>{% trans "Cooked weight (g)" %}</span>
+          <input name="cooked_weight_g" type="number" min="0.1" step="any" inputmode="decimal"></label>
+        <p class="grim-help">{% trans "Weigh the finished dish without the pot. It sets nutrition per 100 g for this spell." %}</p>
+      </section>
+
+      <p class="grim-error" id="grim-cast-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" id="grim-cast-cancel" href="{% if spell_uuid %}{% url 'the_cauldron:grimoire-spell' spell_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}#castings{% endif %}">{% trans "Cancel" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save casting" %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% elif page == "reagent-view" %}
+  <!-- ── One reagent, full page ── -->
+  <div class="grim-page-bar">
+    <a class="grim-back" href="{% url 'the_cauldron:grimoire' %}#reagents">← {% trans "Back to the reagents" %}</a>
+    {% include 'the_cauldron/grimoire/_units.html' %}
+  </div>
+  <article class="grim-spell-page">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body" id="grim-reagent-body"></div>
+  </article>
+
+  {% elif page == "reagent" %}
+  <!-- ── Add / edit a reagent, full page ── -->
+  <div class="grim-page-bar">
+    {% if reagent_uuid %}
+    <a class="grim-back" href="{% url 'the_cauldron:grimoire-reagent' reagent_uuid %}">← {% trans "Back to the ingredient" %}</a>
+    {% else %}
+    <a class="grim-back" href="{% url 'the_cauldron:grimoire' %}#reagents">← {% trans "Back to the reagents" %}</a>
+    {% endif %}
+  </div>
+  <article class="grim-spell-page">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="grim-reagent-form" novalidate>
+      <h1 class="grim-h2 grim-spell-page-title">{% if reagent_uuid %}{% trans "Edit ingredient" %}{% else %}{% trans "Add a reagent" %}{% endif %}</h1>
+      <p class="grim-section-help">{% trans "Ingredients you add stay visible only to you until they're approved." %}</p>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "The ingredient" %}</h2>
+        <div class="grim-row">
+          <label class="grim-field"><span>{% trans "Name in English" %}</span><input name="name" maxlength="120" autocomplete="off"></label>
+          <label class="grim-field"><span>{% trans "Name in Spanish" %}</span><input name="name_es" maxlength="120" autocomplete="off"></label>
+          <label class="grim-field"><span>{% trans "Category" %}</span><select name="category" id="grim-reagent-category"></select></label>
+        </div>
+        <div class="grim-matches" id="grim-reagent-matches" hidden></div>
+      </section>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "Household measures" %}</h2>
+        <p class="grim-section-help">{% trans "Optional. They let recipes use cups, spoons or pieces of this ingredient." %}</p>
+        <div class="grim-row">
+          <label class="grim-field"><span>{% trans "One cup weighs" %}</span><span class="grim-unit-input"><input name="unit_cup" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
+          <label class="grim-field"><span>{% trans "One tablespoon weighs" %}</span><span class="grim-unit-input"><input name="unit_tbsp" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
+          <label class="grim-field"><span>{% trans "One piece weighs" %}</span><span class="grim-unit-input"><input name="unit_piece" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
+          <label class="grim-field"><span>{% trans "Density" %}</span><span class="grim-unit-input"><input name="density_g_per_ml" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g/ml</span></span></label>
+        </div>
+      </section>
+
+      <section class="grim-section">
+        <h2 class="grim-section-title">{% trans "Nutrients per 100 g" %}</h2>
+        <p class="grim-section-help">{% trans "Leave a field blank if you don't know it — it shows as “—”, never as 0." %}</p>
+        <div class="grim-nutrient-groups" id="grim-reagent-nutrients"></div>
+      </section>
+
+      <label class="grim-check"><input type="checkbox" name="share"> {% trans "Suggest it for the shared catalog (staff review)" %}</label>
+      <p class="grim-section-help">{% url 'the_cauldron:terms' as terms_url %}{% blocktrans %}Ingredients are reference data, not private content: our team may review them and add them to the shared catalog at any time, without notice. Don't include personal data. <a href="{{ terms_url }}" target="_blank" rel="noopener">See the Terms</a>.{% endblocktrans %}</p>
+      <p class="grim-error" id="grim-reagent-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" href="{% if reagent_uuid %}{% url 'the_cauldron:grimoire-reagent' reagent_uuid %}{% else %}{% url 'the_cauldron:grimoire' %}#reagents{% endif %}">{% trans "Cancel" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary" id="grim-reagent-submit">{% if reagent_uuid %}{% trans "Save ingredient" %}{% else %}{% trans "Add ingredient" %}{% endif %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% else %}
+  <header class="grim-header">
+    {% include 'the_cauldron/grimoire/_mark.html' with mark_class='grim-header-mark' %}
+    <h1 class="grim-title">{% trans "The Grimoire" %}</h1>
+    <p class="grim-subtitle">{% trans "Keep your spells, share the good ones with the coven, and make theirs your own." %}</p>
+    <div class="grim-header-row">
+      <nav class="grim-tabs" role="tablist" aria-label="{% trans 'Grimoire sections' %}">
+        <button class="grim-tab is-active" role="tab" data-tab="spells" aria-selected="true">{% trans "Spells" %}</button>
+        <button class="grim-tab" role="tab" data-tab="reagents" aria-selected="false">{% trans "Reagents" %}</button>
+        <button class="grim-tab" role="tab" data-tab="castings" aria-selected="false">{% trans "Castings" %}</button>
+      </nav>
+      {% include 'the_cauldron/grimoire/_units.html' %}
+    </div>
+  </header>
+
+  <!-- ── Spells: one list, filtered by scope; the user's own matches come first ── -->
+  <section class="grim-panel is-active" data-panel="spells">
+    <div class="grim-toolbar">
+      <label class="grim-search">
+        <span class="sr-only">{% trans "Search spells" %}</span>
+        <input type="search" id="grim-spell-q" placeholder="{% trans 'Search your spells and the coven’s…' %}" autocomplete="off">
+      </label>
+      <a class="btn-cauldron btn-cauldron--primary" href="{% url 'the_cauldron:grimoire-spell-new' %}">{% trans "Write a spell" %}</a>
+    </div>
+    <div class="grim-scope" role="radiogroup" aria-label="{% trans 'Whose spells' %}">
+      <button type="button" class="grim-scope-btn is-on" data-scope="all" role="radio" aria-checked="true">{% trans "All" %}</button>
+      <button type="button" class="grim-scope-btn" data-scope="mine" role="radio" aria-checked="false">{% trans "My spells" %}</button>
+      <button type="button" class="grim-scope-btn" data-scope="coven" role="radio" aria-checked="false">{% trans "The Coven" %}</button>
+    </div>
+    <div class="grimoire-tags grim-tag-filter" id="grim-tag-filter" aria-label="{% trans 'Filter by tag' %}"></div>
+    <div class="grim-grid" id="grim-spells" aria-live="polite"></div>
+  </section>
+
+  <!-- ── Reagents ── -->
+  <section class="grim-panel" data-panel="reagents">
+    <div class="grim-toolbar">
+      <label class="grim-search">
+        <span class="sr-only">{% trans "Search ingredients" %}</span>
+        <input type="search" id="grim-reagent-q" placeholder="{% trans 'Search ingredients…' %}" autocomplete="off">
+      </label>
+      <a class="btn-cauldron btn-cauldron--primary" id="grim-new-reagent" href="{% url 'the_cauldron:grimoire-reagent-new' %}">{% trans "Add a reagent" %}</a>
+    </div>
+    <p class="grim-help">{% trans "Nutrients per 100 g. “—” means unknown. Ingredients you add stay visible only to you until they're approved." %}</p>
+    <div class="grim-reagent-list" id="grim-reagents" aria-live="polite"></div>
+  </section>
+
+  <!-- ── Castings: every time you made a spell ── -->
+  <section class="grim-panel" data-panel="castings">
+    <p class="grim-help">{% trans "Every time you made a spell, newest first. Only you see these." %}</p>
+    <div class="grim-casting-list" id="grim-all-castings" aria-live="polite"></div>
+  </section>
+
+  {% endif %}
+
+  <div class="grim-toast" id="grim-toast" role="status" aria-live="polite" hidden></div>
+</main>
+{% endblock %}
+
+{% block app_scripts %}
+{% get_current_language as LANGUAGE_CODE %}
+{{ grimoire_strings|json_script:"grimoire-i18n" }}
+<script>
+  window.GRIMOIRE = {
+    api: "{% url 'the_cauldron:forge-api:grimoire-spell-list' %}".replace(/spells\/$/, ""),
+    root: "{% url 'the_cauldron:grimoire' %}",
+    page: "{{ page|escapejs }}",
+    spell: "{{ spell_uuid|default:''|escapejs }}",
+    prefillName: "{{ prefill_name|default:''|escapejs }}",
+    reagent: "{{ reagent_uuid|default:''|escapejs }}",
+    casting: "{{ casting_uuid|default:''|escapejs }}",
+    lang: "{{ LANGUAGE_CODE|escapejs }}",
+    units: "{{ unit_system|escapejs }}",
+  };
+</script>
+<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+<script src="{% static 'the_cauldron/js/grimoire-loader.js' %}"></script>
+<script src="{% static 'the_cauldron/js/grimoire.js' %}"></script>
+{% endblock %}
+
+{# The Cauldron/Grimoire loaders above install their own nav handlers. #}
+{% block nav_auto_loader %}{% endblock %}
+
+{# The Cauldron's own legal pages. #}
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

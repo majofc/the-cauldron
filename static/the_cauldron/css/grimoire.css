@@ -1,0 +1,276 @@
+/* ═══════════════════════════════════════════════
+   Arcano Design System — The Cauldron · Grimoire
+   All values → CSS tokens in grimoire-tokens.css
+   Component rules → STYLE_GUIDE.md (Grimoire section)
+   ═══════════════════════════════════════════════
+
+   Load after grimoire-tokens.css. Components only — no page layout. */
+
+/* ─────────────────────────────────────────────────
+   MARK
+───────────────────────────────────────────────── */
+.grimoire-nav-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: var(--grimoire-gilt);
+  transition: transform var(--arcano-transition);
+}
+.cauldron-nav-brand:hover .grimoire-nav-mark { transform: rotate(-8deg); }
+
+/* ─────────────────────────────────────────────────
+   SPELL CARD (recipe)
+───────────────────────────────────────────────── */
+.grimoire-spell-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  background: var(--grimoire-page);
+  color: var(--grimoire-text);
+  border-radius: var(--arcano-radius-md);
+  box-shadow: var(--grimoire-shadow-card);
+  transition: transform var(--arcano-transition), box-shadow var(--arcano-transition);
+}
+a.grimoire-spell-card { text-decoration: none; }
+a.grimoire-spell-card:hover,
+a.grimoire-spell-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--grimoire-shadow-card), var(--grimoire-shadow-glow);
+}
+a.grimoire-spell-card:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: 3px; }
+
+/* Corner ornaments — gilt instead of the global arcano gold. */
+.grimoire-spell-card .corner-tl,
+.grimoire-spell-card .corner-tr,
+.grimoire-spell-card .corner-bl,
+.grimoire-spell-card .corner-br,
+.grimoire-empty .corner-tl,
+.grimoire-empty .corner-tr,
+.grimoire-empty .corner-bl,
+.grimoire-empty .corner-br { border-color: var(--grimoire-corner-color); }
+
+.grimoire-spell-kicker {
+  font-family: var(--arcano-font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--grimoire-gilt);
+}
+.grimoire-spell-title {
+  font-family: var(--arcano-font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--grimoire-text);
+}
+.grimoire-spell-desc {
+  font-family: var(--arcano-font-italic);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--grimoire-text-dim);
+}
+.grimoire-spell-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-family: var(--arcano-font-body);
+  font-size: 0.8rem;
+  color: var(--grimoire-text-dim);
+}
+.grimoire-spell-meta strong { color: var(--grimoire-text); font-weight: 600; }
+.grimoire-spell-foot {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--grimoire-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* ─────────────────────────────────────────────────
+   REAGENT CHIP (ingredient)
+───────────────────────────────────────────────── */
+.grimoire-reagent {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--grimoire-herb-border);
+  background: var(--grimoire-herb-dim);
+  border-radius: var(--arcano-radius-md);
+  font-family: var(--arcano-font-body);
+  font-size: 0.82rem;
+  color: var(--grimoire-text);
+}
+.grimoire-reagent-qty {
+  font-family: var(--arcano-font-italic);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--grimoire-herb);
+}
+.grimoire-reagent.is-missing {
+  border-style: dashed;
+  background: transparent;
+  color: var(--grimoire-text-dim);
+}
+
+/* ─────────────────────────────────────────────────
+   TAG PILL
+───────────────────────────────────────────────── */
+.grimoire-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.65rem;
+  border: 1px solid var(--grimoire-sigil-border);
+  background: var(--grimoire-sigil-dim);
+  border-radius: var(--arcano-radius-pill);
+  font-family: var(--arcano-font-body);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--grimoire-sigil);
+  text-decoration: none;
+}
+.grimoire-tag::before { content: '✦'; font-size: 0.55rem; opacity: 0.8; }
+button.grimoire-tag,
+a.grimoire-tag { cursor: pointer; transition: background var(--arcano-transition); }
+button.grimoire-tag:hover,
+a.grimoire-tag:hover,
+.grimoire-tag.is-active { background: var(--grimoire-sigil-border); }
+.grimoire-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+/* ─────────────────────────────────────────────────
+   SCORE STARS (0–5, display or input)
+───────────────────────────────────────────────── */
+.grimoire-stars {
+  display: inline-flex;
+  gap: 0.15rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+.grimoire-star { color: var(--grimoire-star-off); }
+.grimoire-star.is-on {
+  color: var(--grimoire-star-on);
+  text-shadow: 0 0 6px var(--grimoire-gilt-dim);
+}
+.grimoire-star.is-half {
+  background: linear-gradient(90deg, var(--grimoire-star-on) 50%, var(--grimoire-star-off) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* Input variant: radio buttons styled as stars. Background is reset with
+   background-color only, so .is-half keeps its gradient. */
+.grimoire-stars--input .grimoire-star {
+  cursor: pointer;
+  background-color: transparent;
+  border: 0;
+  padding: 0.1rem;
+  font: inherit;
+  transition: transform var(--arcano-transition), color var(--arcano-transition);
+}
+/* Hover previews the rating: the hovered star and every star before it light,
+   the rest dim. */
+.grimoire-stars--input:has(.grimoire-star:hover) .grimoire-star {
+  color: var(--grimoire-star-off);
+  -webkit-text-fill-color: currentColor;
+  background-image: none;
+  text-shadow: none;
+}
+.grimoire-stars--input:has(.grimoire-star:hover) .grimoire-star:hover,
+.grimoire-stars--input:has(.grimoire-star:hover) .grimoire-star:has(~ .grimoire-star:hover) {
+  color: var(--grimoire-star-on);
+}
+.grimoire-stars--input .grimoire-star:hover { transform: scale(1.15); }
+.grimoire-stars--input .grimoire-star:focus-visible { outline: 1px solid var(--grimoire-gilt); outline-offset: 2px; }
+
+/* ─────────────────────────────────────────────────
+   NUTRIENT BAR
+───────────────────────────────────────────────── */
+.grimoire-nutrients { display: flex; flex-direction: column; gap: 0.65rem; }
+.grimoire-nutrient {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--arcano-font-body);
+  font-size: 0.8rem;
+  color: var(--grimoire-text-dim);
+}
+.grimoire-nutrient-value { color: var(--grimoire-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.grimoire-nutrient-track {
+  position: relative;
+  height: 6px;
+  border-radius: var(--arcano-radius-pill);
+  background: var(--grimoire-nutrient-track);
+  overflow: hidden;
+}
+.grimoire-nutrient-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--pct, 0%);
+  max-width: 100%;
+  border-radius: inherit;
+  background: var(--grimoire-nutrient-color, var(--grimoire-gilt));
+  transition: width var(--arcano-transition-slow);
+}
+.grimoire-nutrient--protein { --grimoire-nutrient-color: var(--grimoire-nutrient-protein); }
+.grimoire-nutrient--carbs   { --grimoire-nutrient-color: var(--grimoire-nutrient-carbs); }
+.grimoire-nutrient--fat     { --grimoire-nutrient-color: var(--grimoire-nutrient-fat); }
+.grimoire-nutrient--fiber   { --grimoire-nutrient-color: var(--grimoire-nutrient-fiber); }
+
+/* ─────────────────────────────────────────────────
+   EMPTY STATE
+───────────────────────────────────────────────── */
+.grimoire-empty {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: var(--grimoire-page);
+  border: 1px dashed var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  color: var(--grimoire-text-dim);
+}
+.grimoire-empty-mark { width: 56px; height: 56px; color: var(--grimoire-gilt); opacity: 0.75; }
+.grimoire-empty-title {
+  font-family: var(--arcano-font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--grimoire-text);
+}
+.grimoire-empty-body {
+  font-family: var(--arcano-font-italic);
+  font-style: italic;
+  font-size: 1.05rem;
+  margin: 0;
+  max-width: 32ch;
+}
+
+/* ─────────────────────────────────────────────────
+   REDUCED MOTION
+───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .grimoire-nav-mark,
+  .grimoire-spell-card,
+  .grimoire-tag,
+  .grimoire-star,
+  .grimoire-nutrient-fill { transition: none; }
+  .cauldron-nav-brand:hover .grimoire-nav-mark,
+  a.grimoire-spell-card:hover,
+  a.grimoire-spell-card:focus-visible,
+  .grimoire-stars--input .grimoire-star:hover { transform: none; }
+}

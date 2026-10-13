@@ -262,3 +262,116 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
   (`FORGE_UPDATE_BASELINES=1` rewrites them; review the PNGs before committing).
 - Evolution chart reports a setback after a rung promotion → `ladder_score` (not raw reps) is the
   comparison basis; check `placed_exercise` is set on the result, since a null placement scores 0.
+
+---
+
+## The Grimoire — recipe book (#67)
+
+Second section of The Cauldron, same login/session. Vocabulary: **spell** = recipe, **reagent** =
+ingredient (in-world words in titles/nav; plain words in form labels). Design spec: STYLE_GUIDE.md →
+"The Grimoire".
+
+`models/` is a package: `models/forge.py` (everything above) and `models/grimoire.py`; both are
+re-exported from `models/__init__.py`, so `from the_cauldron.models import X` works for either.
+
+| Model | Notes |
+|---|---|
+| `Tag` | `slug`, `name`, `name_es`. Seeded (soup, salad, drink, breakfast, dessert, main, side, snack, sauce, bread, vegetarian, vegan) |
+| `Reagent` | `name`, `name_es`, `search_name` (normalized, see below), `category`, `source` usda/user/staff, `fdc_id` (unique, nullable), `created_by`, `status` private/pending/approved, `grams_per_unit` JSON (`cup`/`tbsp`/`tsp`/`piece` → grams), `density_g_per_ml` |
+| `ReagentNutrients` | 1:1 `reagent.nutrients`; 23 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero |
+| `Spell` | `owner`, `title` (+ `search_title`, covers `title_es` too), `description`, `servings`, `prep/cook_minutes`, `steps` JSON list, `visibility` private/public, `forked_from` (SET_NULL), `tags` M2M. `title_es` / `description_es` / `steps_es`: Spanish text for **seeded starter spells only** (read-only in the API) |
+| `SpellReagent` | `spell.lines`: `reagent` (PROTECT), `quantity`, `unit`, `grams` (stored), `note` (+ `note_es`, starters only), `order` |
+| `GrimoirePreferences` | 1:1 `user.grimoire_preferences`, `unit_system` metric/us. Created lazily (view / `preferences/` GET) |
+
+**Rules** (`services/grimoire.py` — the single source):
+- `readable_spells(user)` = own + public. Anything else is **404** (existence never leaks). Edit/delete/
+  publish/unpublish on someone else's *public* spell is **403** (`SpellViewSet._owned`).
+- `visibility` is read-only in `SpellSerializer`; it changes only via `publish/` / `unpublish/`.
+- `fork_spell` deep-copies the spell + lines + tags into a private spell of the caller. Nothing is
+  shared, so later edits/unpublish/delete of the source never reach the fork. The copy is written in
+  the **forker's language** (`get_language()`) into the base fields — a user's spell is one-language.
+- `visible_reagents(user)` = approved + the user's own. A spell line may only use a visible reagent,
+  **except** reagents already on that spell (a fork may carry the source owner's private reagent).
+- User reagents are created `private`, or `pending` when the user ticks "share"; staff approve in the
+  admin (`ReagentAdmin` actions). `source`/`status` can't be set through the API.
+- `to_grams(reagent, qty, unit)`: mass units fixed; `grams_per_unit` for cup/tbsp/tsp/piece; volume
+  units through `density_g_per_ml`; otherwise `ConversionError` → 400 on the line.
+- Search is case- and accent-insensitive through the stored `search_name` / `search_title`
+  (`normalize_search`) — works on Postgres and the sqlite fallback, no `unaccent`. Every query word
+  must match; exact → prefix → infix order. Reagent POST answers **409** `{"code": "duplicate",
+  matches}` for an exact normalized-name match unless `confirm: true`.
+- `has_unverified_reagents` (serializer) is true when any line's reagent isn't approved → the UI's
+  "unverified nutrition" badge.
+
+**URLs** (all login → Cauldron login; one template, `grimoire.html`, switched by `page` = list/spell/edit):
+- `the_cauldron:grimoire` → `/cauldron/grimoire/` — list (spells + reagents tabs); linked from the landing and Forge navs
+- `the_cauldron:grimoire-spell` → `/cauldron/grimoire/spell/<uuid>/` — one spell, **full page** (no pop-ups);
+  same visibility as the API (`readable_spells`), else 404
+- `the_cauldron:grimoire-spell-new` → `…/spell/new/`, `the_cauldron:grimoire-spell-edit` → `…/spell/<uuid>/edit/` —
+  the editor, full page; edit is **owner-only** (404 otherwise — others fork). Save navigates to the spell page.
+- `the_cauldron:grimoire-reagent` → `…/reagent/<uuid>/` — one ingredient (measures + grouped nutrients), visible like the API
+- `the_cauldron:grimoire-reagent-new` → `…/reagent/new/?name=`, `the_cauldron:grimoire-reagent-edit` → `…/reagent/<uuid>/edit/` —
+  full-page form; edit only while `services.grimoire.can_edit_reagent` (creator + not approved), else 404.
+  A unit/density change re-derives `grams` on every line using it (`regrams_lines`). PUT replaces the whole
+  nutrient profile (missing → null); PATCH changes only what it sends.
+- `the_cauldron:terms` / `the_cauldron:privacy` → `/cauldron/terms/`, `/cauldron/privacy/` — The Cauldron's own legal
+  pages (public, ES/EN in-template like scholomancy_console's). Every Cauldron page overrides `footer_links` with
+  `_footer_links.html`. They state: shared recipes are licensed only for reading and "Make it mine" inside the
+  Service; ingredients are reference data that staff may publish to the catalog without notice; aggregated usage
+  statistics. **Changing what the Grimoire does with recipes/ingredients/analytics means updating these pages
+  (and their version/date).**
+
+No `<dialog>` is left in the Grimoire — every view and form is a full page.
+
+The API: API under `/cauldron/api/grimoire/` (`SimpleRouter` — a second
+`DefaultRouter` would add a duplicate `api-root` name): `reagents/` (list, `?q=`, `?mine=1`, create,
+retrieve), `spells/` (CRUD, `?scope=mine|public`, `?tag=`, `?q=`), `spells/{uuid}/publish|unpublish|fork/`,
+`tags/`, `preferences/` (GET/PATCH `unit_system`). Front end: `grimoire.html` +
+`static/the_cauldron/js/grimoire.js`, layout in `grimoire-page.css`.
+
+**Spells view**: one list with a scope filter — `?scope=all` (default) | `mine` | `coven` (other users'
+public spells; `public` is an alias). Ordering is always **the user's own first**, then newest.
+"The Coven" / "El Aquelarre" is the community name in the UI.
+
+**i18n** (follows loom): template strings use `{% trans %}`; JS strings come from
+`grimoire_i18n.grimoire_strings()` → `json_script` `#grimoire-i18n` → `t()` in `grimoire.js`. Catalog:
+`the_cauldron/locale/es/` (in `LOCALE_PATHS`). The JS shows `name_es` / tag `name_es` / starter `*_es`
+when the page language is Spanish, falling back to English per field. Run makemessages from the app dir
+(`-w /app/the_cauldron`), ignoring `tests/*` and `seed_data/*`. Unit labels are `pgettext("unit", …)`
+with `_plural` keys for spelled-out units (pieza/piezas, taza/tazas).
+
+**Units**: amounts stay as authored; the per-line weight and the hover hint on non-mass units
+(`≈ weight · volume`) use the user's `unit_system` (g/ml/kg/l vs oz/lb/fl oz/cups). Volume is exact for
+volume units and `grams / reagent_density` for weighed/counted lines (`reagent_density` on each line).
+
+**Scaling (#69)**: pure maths in `services/grimoire_scaling.py` (no queries, no writes):
+`scale_by_factor`, `scale_to_servings`, `scale_to_total_grams`, `scale_by_available` (the smallest
+available/required ratio wins and is returned as `limiting`; a reagent on two lines counts both; a 0 g line
+can't limit). Zero/negative/NaN input raises `ScalingError` (→ 400); the factor is capped at `MAX_FACTOR`.
+Quantities and grams stay exact; only `display_quantity` is rounded (pieces to ½, spoons/cups to ¼, g/ml to
+5 above 100). `POST spells/{uuid}/scale/` (any readable spell) takes one `mode`; an "I have" amount in a unit
+the reagent can't convert is listed in `unconvertible` and left out, never guessed
+(`services.grimoire.grams_on_hand` prefers the line's own weight for the same unit). The spell page's scaler
+re-renders the lines from the response; "Cast with these amounts" opens the cast page with `?factor=`.
+
+**Nutrition (#70)**: `services/grimoire_nutrition.py` (no writes). `batch_totals` sums line grams × per-100 g;
+an unknown value (null, or no `ReagentNutrients` row) is never 0 — it's left out and counted in `missing`
+(distinct reagents), shown as "≥ x". Cooked yield, in order: the **requesting user's** latest casting with
+`cooked_weight_g` (as a ratio over `casting_raw_grams` — the batch as actually cast, adjustments included) →
+`Spell.cooked_yield_g` → `Spell.yield_pct` → raw weight, `source: "unknown"` (flagged in the UI). Other users'
+castings never count. `GET spells/{uuid}/nutrition/?servings=|?scale=` (batch scales, per serving and per 100 g
+cooked don't); `POST spells/{uuid}/portion/` `{"goals": [{nutrient, at_least, at_most}]}` → gram range of the
+cooked dish, or `conflicts` (the goals setting the tightest lower and upper bound; a minimum of a nutrient the
+dish lacks conflicts alone). `reagents_missing_data` names only reagents missing the basics (`CORE`).
+
+**Seed**: `python manage.py seed_grimoire` (idempotent; also run at container start) loads
+`seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain) and
+`seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
+`the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
+reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
+
+**Debugging**
+- A line won't save with "Can't convert…" → the reagent has no weight for that unit and no density;
+  use g or add `grams_per_unit`.
+- Another user can't find a reagent → it's not `approved` yet.
+- `seed_grimoire` IntegrityError on `auth_user_email_unique` → the system user must keep its own email.
