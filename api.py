@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import posthog
 from the_cauldron.models import (
     AssessmentSession,
     Equipment,
@@ -191,6 +192,7 @@ class EquipmentProfileView(APIView):
         if profile.configured_at is None:
             profile.configured_at = timezone.now()
             profile.save(update_fields=["configured_at", "updated_at"])
+            posthog.capture("equipment_profile_configured")
         return Response(serializer.data)
 
 
@@ -257,6 +259,10 @@ class AssessmentView(APIView):
         # all-patterns day. ``Program.split`` keeps its default so historical rows
         # (and anything still reading the field) resolve.
         program = forge.generate_program(request.user, session)
+        posthog.capture(
+            "assessment_completed",
+            properties={"result_count": len(results)},
+        )
         return Response(
             {
                 "assessment": AssessmentSessionSerializer(session).data,
@@ -682,6 +688,10 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         session = self.get_object()
         set_results = request.data.get("sets", {})
         deltas = forge.apply_session_log(session, set_results)
+        posthog.capture(
+            "workout_session_completed",
+            properties={"logged_set_count": len(set_results)},
+        )
         # Peer "flames" score for each AMRAP test set performed this session.
         peer = [
             {
