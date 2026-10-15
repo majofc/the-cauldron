@@ -70,6 +70,10 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
             request.user, exercise, reason=request.data.get("reason", "")
         )
         sub = result["substitute"]
+        posthog.capture(
+            "exercise_blocked",
+            properties={"has_substitute": sub is not None, "swapped_count": result["swapped"]},
+        )
         return Response(
             {
                 "blocked": str(exercise.uuid),
@@ -83,6 +87,7 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
         """Lift the block on this exercise."""
         exercise = self.get_object()
         forge.unblock_exercise(request.user, exercise)
+        posthog.capture("exercise_unblocked")
         return Response({"unblocked": str(exercise.uuid)})
 
 
@@ -280,6 +285,7 @@ class RetakeAssessmentView(APIView):
 
     def post(self, request):
         session = forge.retake_assessment(request.user)
+        posthog.capture("assessment_retaken")
         return Response(AssessmentSessionSerializer(session).data, status=201)
 
 
@@ -298,11 +304,13 @@ class ProgressionActionView(APIView):
         )
         if action == "accept":
             new = forge.accept_progression(request.user, presc)
+            posthog.capture("progression_accepted")
             return Response(
                 {"accepted": True, "exercise": ExerciseSerializer(new).data if new else None}
             )
         if action == "deny":
             forge.deny_progression(request.user, presc)
+            posthog.capture("progression_denied")
             return Response({"denied": True})
         return Response({"detail": "unknown action"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -364,6 +372,10 @@ class SetRungView(APIView):
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture(
+            "rung_changed",
+            properties={"applied_to": result["applied_to"], "confirmed_unready": confirm},
+        )
         return Response(
             {
                 "exercise": ExerciseSerializer(result["exercise"]).data,
@@ -475,6 +487,7 @@ class RetestReminderDismissView(APIView):
 
     def post(self, request):
         forge.dismiss_retest_prompt(request.user)
+        posthog.capture("retest_reminder_dismissed")
         return Response(forge.retest_status(request.user))
 
 
@@ -624,6 +637,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture("workout_session_started")
         return Response(
             WorkoutSessionSerializer(session).data, status=status.HTTP_201_CREATED
         )
@@ -644,6 +658,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             forge.discard_session(self.get_object())
         except forge.SessionAlreadyCompleted as exc:
             return Response({"detail": str(exc)}, status=409)
+        posthog.capture("workout_session_discarded")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"])
@@ -680,6 +695,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"detail": str(exc)}, status=409)
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture("workout_exercise_swapped")
         session.refresh_from_db()
         return Response(WorkoutSessionSerializer(session).data)
 

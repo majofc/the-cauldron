@@ -11,6 +11,7 @@ Visibility rules live in ``services.grimoire``:
 from django.db.models import Case, IntegerField, Value, When
 from django.utils.translation import get_language
 from django.utils.translation import gettext as _
+import posthog
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -96,6 +97,7 @@ class ReagentViewSet(
                     status=status.HTTP_409_CONFLICT,
                 )
         serializer.save()
+        posthog.capture("reagent_created", properties={"confirmed_duplicate": confirm})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
@@ -155,18 +157,27 @@ class SpellViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(_("Only the recipe's owner can change it."))
         return spell
 
+    def perform_create(self, serializer):
+        spell = serializer.save()
+        posthog.capture("spell_created", properties={"visibility": spell.visibility})
+
     def update(self, request, *args, **kwargs):
         self._owned()
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         self._owned()
-        return super().destroy(request, *args, **kwargs)
+        response = super().destroy(request, *args, **kwargs)
+        posthog.capture("spell_deleted")
+        return response
 
     def _set_visibility(self, visibility):
         spell = self._owned()
         spell.visibility = visibility
         spell.save(update_fields=["visibility", "updated_at"])
+        posthog.capture(
+            "spell_published" if visibility == Spell.Visibility.PUBLIC else "spell_unpublished"
+        )
         return Response(self.get_serializer(spell).data)
 
     @action(detail=True, methods=["post"])
@@ -180,6 +191,7 @@ class SpellViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def fork(self, request, uuid=None):
         copy = grimoire.fork_spell(self.get_object(), request.user, lang=get_language())
+        posthog.capture("spell_forked")
         # Not get_queryset(): its ?scope/?tag/?q filters could hide the new copy.
         copy = self._base_queryset().get(pk=copy.pk)
         return Response(self.get_serializer(copy).data, status=status.HTTP_201_CREATED)
@@ -194,7 +206,14 @@ class SpellViewSet(viewsets.ModelViewSet):
             return Response(CastingSerializer(qs, many=True, context={"request": request}).data)
         serializer = CastingSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user, spell=spell, spell_title=spell.title)
+        casting = serializer.save(user=request.user, spell=spell, spell_title=spell.title)
+        posthog.capture(
+            "spell_cast",
+            properties={
+                "own_spell": spell.owner_id == request.user.pk,
+                "weighed": casting.cooked_weight_g is not None,
+            },
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
@@ -240,6 +259,7 @@ class SpellViewSet(viewsets.ModelViewSet):
                 result = grimoire_scaling.scale_by_available(plain, on_hand)
         except grimoire_scaling.ScalingError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture("spell_scaled", properties={"mode": mode})
         return Response({
             "factor": result.factor,
             "servings": spell.servings * result.factor,
@@ -360,6 +380,10 @@ class SpellViewSet(viewsets.ModelViewSet):
             for name, total in grimoire_nutrition.batch_totals(ingredients).items()
         }
         result = grimoire_nutrition.recommend_portion(per_100g, goals)
+        posthog.capture(
+            "portion_calculated",
+            properties={"goal_count": len(goals), "feasible": result.feasible},
+        )
         return Response({
             "feasible": result.feasible,
             "min_g": result.min_g,
@@ -411,5 +435,6 @@ class PreferencesView(APIView):
     def patch(self, request):
         serializer = GrimoirePreferencesSerializer(self._prefs(request), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        prefs = serializer.save()
+        posthog.capture("grimoire_preferences_updated", properties={"unit_system": prefs.unit_system})
         return Response(serializer.data)
