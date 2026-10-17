@@ -13,7 +13,7 @@ PostHog only ever gets counts and enums from here — never a value, a food or a
 goal (CLAUDE.md "PostHog never receives PII").
 """
 
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 
 import posthog
 from django.db import transaction
@@ -27,7 +27,8 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from the_cauldron.models import Casting, IntakeEntry, NutrientGoal, PlannedMeal
+from the_cauldron.models import Casting, IntakeEntry, PlannedMeal
+from the_cauldron import nutrition_payloads as payloads
 from the_cauldron.nutrition_serializers import (
     GoalSetSerializer,
     IntakeEntrySerializer,
@@ -158,15 +159,8 @@ class GoalsView(APIView):
 
     permission_classes = [IsAuthenticated, NutritionConsent]
 
-    def _payload(self, user):
-        goals = nutrition.current_goals(user)
-        return {
-            "today": nutrition.today_for(user),
-            "goals": [nutrition.goal_payload(goals[n]) for n in nutrition.FIELDS if n in goals],
-        }
-
     def get(self, request):
-        return Response(self._payload(request.user))
+        return Response(payloads.goals_payload(request.user))
 
     def put(self, request):
         req = GoalSetSerializer(data=request.data)
@@ -177,7 +171,7 @@ class GoalsView(APIView):
             return _bad(exc)
         changed = nutrition.save_goal_set(request.user, specs, nutrition.today_for(request.user))
         posthog.capture("nutrition_goals_saved", properties={"goal_count": len(specs), "changed_count": changed})
-        return Response(self._payload(request.user))
+        return Response(payloads.goals_payload(request.user))
 
 
 class GoalHistoryView(APIView):
@@ -187,11 +181,7 @@ class GoalHistoryView(APIView):
     permission_classes = [IsAuthenticated, NutritionConsent]
 
     def get(self, request):
-        rows = [
-            g for g in NutrientGoal.objects.filter(user=request.user)
-            if g.valid_to is None or g.valid_to > g.valid_from
-        ]
-        return Response({"history": [nutrition.goal_payload(g) for g in rows]})
+        return Response({"history": payloads.goal_history(request.user)})
 
 
 # ── Meal log (#81) ──────────────────────────────────────────────────────────
@@ -287,24 +277,6 @@ def apply_entry(user, data, instance=None):
     return entry
 
 
-def day_payload(user, day, tz, request):
-    """One day of the log: entries, totals and each goal's status."""
-    today = nutrition.today_for(user)
-    entries = list(
-        IntakeEntry.objects.filter(user=user, local_date=day).select_related("planned_meal")
-    )
-    totals = nutrition.entries_totals(entries)
-    goals = nutrition.goals_on(nutrition.goal_rows_between(user, day, day), day)
-    return {
-        "date": day,
-        "today": today,
-        "logged": bool(entries),
-        "entries": IntakeEntrySerializer(entries, many=True, context={"tz": tz, "request": request}).data,
-        "totals": nutrition.totals_payload(totals),
-        "goals": nutrition.goal_statuses(goals, totals, logged=bool(entries), final=day < today),
-    }
-
-
 class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
     """The user's meal log. ``?date=YYYY-MM-DD`` (their timezone) filters the
     list; ``day/?date=`` adds totals and goal status."""
@@ -360,7 +332,7 @@ class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
             day = _day(request)
         except NutritionInputError as exc:
             return _bad(exc)
-        return Response(day_payload(request.user, day, self.tz, request))
+        return Response(payloads.day_payload(request.user, day, self.tz, request))
 
 
 # ── Adherence (#82) ─────────────────────────────────────────────────────────
@@ -423,21 +395,12 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
             start = nutrition.parse_day(request.query_params.get("from"), request.user)
             end = (
                 nutrition.parse_day(request.query_params.get("to"), request.user)
-                if request.query_params.get("to") else start + timedelta(days=6)
+                if request.query_params.get("to") else payloads.default_week(start)
             )
+            meals = payloads.plan_range(request.user, start, end, request)
         except NutritionInputError as exc:
             return _bad(exc)
-        if end < start or (end - start).days >= nutrition.MAX_RANGE_DAYS:
-            return Response(
-                {"detail": _("Ask for at most %(n)s days.") % {"n": nutrition.MAX_RANGE_DAYS}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        order = {slot: i for i, slot in enumerate(PlannedMeal.Slot.values)}
-        meals = sorted(
-            self.get_queryset().filter(date__gte=start, date__lte=end),
-            key=lambda m: (m.date, order.get(m.slot, 9), m.order, m.created_at),
-        )
-        return Response(self.get_serializer(meals, many=True).data)
+        return Response(meals)
 
     def _apply(self, request, meal, data):
         if "spell" in data:
@@ -541,22 +504,4 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
             day = _day(request)
         except NutritionInputError as exc:
             return _bad(exc)
-        user = request.user
-        cache = nutrition.SpellTotalsCache(user)
-        meals = []
-        for meal in nutrition.planned_on(user, day):
-            live = None if meal.intake_entry_id else cache.meal_totals(meal)
-            row = self.get_serializer(meal).data
-            row["grams"] = round(live[2], 1) if live else None
-            row["nutrients"] = live[0] if live else None
-            row["missing"] = live[1] if live else None
-            row["available"] = bool(live) or bool(meal.intake_entry_id)
-            meals.append(row)
-        projected = nutrition.consumed_and_planned(user, day, cache)
-        goals = nutrition.goals_on(nutrition.goal_rows_between(user, day, day), day)
-        return Response({
-            "date": day,
-            "meals": meals,
-            "projected": nutrition.totals_payload(projected),
-            "goals": nutrition.goal_statuses(goals, projected, logged=True, final=True),
-        })
+        return Response(payloads.plan_day_payload(request.user, day, request))

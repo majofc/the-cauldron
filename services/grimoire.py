@@ -5,7 +5,7 @@ definition of "who can see this reagent" and "how many grams is a cup".
 """
 
 from django.db import transaction
-from django.db.models import Avg, Count, IntegerField, Max, OuterRef, Prefetch, Q, Subquery
+from django.db.models import Avg, Case, Count, IntegerField, Max, OuterRef, Prefetch, Q, Subquery, Value, When
 from django.db.models.functions import Coalesce
 from django.utils.translation import gettext as _
 
@@ -137,6 +137,54 @@ def exact_duplicates(user, name):
 def readable_spells(user):
     """Spells the user may read: their own (any visibility) + every public one."""
     return Spell.objects.filter(Q(owner=user) | Q(visibility=Spell.Visibility.PUBLIC))
+
+
+SPELL_SCOPES = ("all", "mine", "coven", "public")
+
+
+def filter_spells(qs, user, *, scope=None, tag=None, q=""):
+    """Narrow readable spells: ``scope`` all (default) | mine | coven (other
+    users' public spells; ``public`` is an alias), a tag slug, and a title
+    search (English or Spanish, case/accent-insensitive, every word must
+    match). The user's own spells first, then newest."""
+    if scope == "mine":
+        qs = qs.filter(owner=user)
+    elif scope in ("coven", "public"):
+        qs = qs.filter(visibility=Spell.Visibility.PUBLIC).exclude(owner=user)
+    if tag:
+        qs = qs.filter(tags__slug=tag)
+    for word in normalize_search(q or "").split():
+        qs = qs.filter(search_title__contains=word)
+    own_first = Case(When(owner=user, then=Value(0)), default=Value(1), output_field=IntegerField())
+    return qs.distinct().order_by(own_first, "-updated_at")
+
+
+# Spells weighed per "what can I cook" query before ranking in Python.
+HAVE_CANDIDATES = 200
+
+
+def spells_using(qs, reagent_ids, limit=10):
+    """Spells from ``qs`` ranked by how many of ``reagent_ids`` (what the user
+    has) they use: most matched first, then fewest missing. Each item is
+    ``(spell, matched_lines, missing_lines)``; a reagent on two lines of one
+    spell counts once. Pass ``qs`` through ``with_spell_relations`` to fetch
+    the lines in one query."""
+    have = set(reagent_ids)
+    if not have:
+        return []
+    candidates = (
+        qs.filter(lines__reagent__in=have)
+        .annotate(matched_n=Count("lines__reagent", filter=Q(lines__reagent__in=have), distinct=True))
+        .order_by("-matched_n", "-updated_at")[:HAVE_CANDIDATES]
+    )
+    ranked = []
+    for spell in candidates:
+        lines = list(spell.lines.all())
+        matched = [line for line in lines if line.reagent_id in have]
+        missing = [line for line in lines if line.reagent_id not in have]
+        ranked.append((spell, matched, missing))
+    ranked.sort(key=lambda r: (-len({line.reagent_id for line in r[1]}), len({line.reagent_id for line in r[2]})))
+    return ranked[:limit]
 
 
 def can_read(spell, user):

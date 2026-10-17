@@ -296,8 +296,45 @@
     } catch (err) { /* informational only */ }
   }
 
+  // ── Connected assistants (MCP, #89) ──
+  // A timestamp shown on the viewer's own calendar day (not the UTC one).
+  const fmtStamp = (iso) => new Date(iso).toLocaleDateString(IS_ES ? "es-MX" : "en-US", { day: "numeric", month: "short", year: "numeric" });
+
+  async function loadConnections() {
+    const list = $("#nut-mcp-list");
+    try {
+      const { connections } = await api("mcp/connections/");
+      list.innerHTML = connections.length
+        ? connections.map((c) => `<li class="nut-mcp-item" data-uuid="${esc(c.uuid)}">
+            <div class="nut-entry-body"><strong>${esc(c.name || t("mcp_unnamed"))}</strong>
+              <span class="nut-entry-amount">${esc(t("mcp_connected_on", { date: fmtStamp(c.created_at) }))}${c.last_used_at ? ` · ${esc(t("mcp_last_used", { date: fmtStamp(c.last_used_at) }))}` : ""}</span></div>
+            <button type="button" class="grim-link-btn grim-danger" data-mcp-disconnect>${esc(t("mcp_disconnect"))}</button>
+          </li>`).join("")
+        : `<li class="grim-help nut-empty">${esc(t("mcp_none"))}</li>`;
+    } catch (err) {
+      list.innerHTML = `<li class="grim-error">${esc(errorText(err))}</li>`;
+    }
+  }
+
+  async function onConnectionsClick(e) {
+    const btn = e.target.closest("[data-mcp-disconnect]");
+    if (!btn) return;
+    if (btn.dataset.armed !== "1") {
+      btn.dataset.armed = "1";
+      btn.textContent = t("mcp_disconnect_confirm");
+      return;
+    }
+    try {
+      await api(`mcp/connections/${encodeURIComponent(btn.closest(".nut-mcp-item").dataset.uuid)}/`, { method: "DELETE" });
+      toast(t("toast_mcp_disconnected"));
+      loadConnections();
+    } catch (err) { toast(errorText(err)); }
+  }
+
   function initProfile() {
     initConsent();
+    loadConnections();
+    $("#nut-mcp-list").addEventListener("click", onConnectionsClick);
     if (!hasConsent()) return;
     loadGoals();
     loadSettings();

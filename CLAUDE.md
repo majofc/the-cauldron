@@ -441,3 +441,56 @@ reads date/hour straight off the string. The Profile and the Journal show the co
 
 **PostHog**: only counts/enums (`intake_logged {source}`, `plan_meal_added {slot}`, `nutrition_goals_saved
 {goal_count, changed_count}`, `legal_accepted {document, version}`…) — never values, foods or goals.
+
+---
+
+## MCP server — drive The Cauldron from an AI assistant (#89)
+
+Phase 1 shipped: OAuth 2.1 + the nutrition/Grimoire **read** tools. Writes, two-step confirmation,
+Forge tools, the info page and the legal update are later phases (see the issue).
+
+**Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
+Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
+2025-06-18 / 2025-03-26, batches included). No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405.
+Present `Origin` must be ours or `CAULDRON_MCP_ALLOWED_ORIGINS` (default claude.ai/claude.com) → else 403.
+Unsupported `MCP-Protocol-Version` header → 400. Cookies are never read: bearer tokens only.
+
+**Auth**: django-oauth-toolkit 3.4 (settings `OAUTH2_PROVIDER` in arcano): authorization code + S256 PKCE only,
+public clients via DCR (`/cauldron/oauth/register/`) or CIMD, `localhost`/`127.0.0.1` loopback on any port
+(Claude Code), refresh tokens rotate (reuse → `invalid_grant`), access tokens 1 h, refresh 60 days. Scopes
+`cauldron:read` / `cauldron:write` (write implies read). Routes live in `oauth_urls.py` (namespace
+`oauth2_provider`, included at the **site root** by arcano, guarded with `find_spec`): `/.well-known/oauth-authorization-server`
+(issuer = site root), `/.well-known/oauth-protected-resource[/cauldron/mcp/]` (`resource` = the MCP URL exactly).
+No token / bad token / token bound (RFC 8707) to another resource → **401** + `WWW-Authenticate: Bearer resource_metadata=…`.
+Missing scope → **403** `error="insufficient_scope"`.
+
+**Consent screen**: `oauth_views.CauldronAuthorizationView` (`oauth_authorize.html`) behind `cauldron_page`
+(login + legal gate); shows the self-declared client name, the redirect host, and a warning for loopback.
+**The name "Claude" is reserved** (`client_identity.py`): a client name that says or imitates Claude/Anthropic
+(case, accents, full-width, Cyrillic and digit look-alikes folded) is allowed only for a CIMD client whose
+`client_id` URL is on claude.ai / claude.com / anthropic.com. DCR register/rename refuses it (400
+`invalid_client_metadata`, `GuardedRegistrationView`); the consent screen answers 403 for any other app using it
+(before DOT can auto-approve). `McpConnection.client` is `claude`/`claude_code` only for those Anthropic clients.
+Approving creates `McpConnection` (user, application, normalized `client` enum, `language`, `last_used_at`).
+Profile → "Your AI assistants": `GET api/mcp/connections/`, `DELETE api/mcp/connections/{uuid}/` deletes the
+client's tokens + grants for the user (next call 401).
+
+**Tools** (`mcp_server/tools/`): thin adapters over `services/` and `nutrition_payloads.py` (shared with the REST
+API — never duplicate rules in a tool). Register with `@registry.tool(...)`; every call goes through
+`registry.call_tool` (scope → JSON Schema → consent → `translation.override(conn.language)` +
+`timezone.override(user tz)` → result). Errors are tool results with `isError: true` and `{"code", "message", …}`:
+`invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
+`/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
+Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
+Phase 1: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
+`search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
+
+**PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client}`, `mcp_connected {client}`,
+`mcp_disconnected {client}` — distinct id = user pk (`posthog.identify_context`), arcano opt-out honoured.
+
+**Debugging**
+- Claude says "Couldn't reach the MCP server" → `/.well-known/oauth-protected-resource/cauldron/mcp/` must
+  answer and its `resource` must equal the URL pasted (trailing slash included); behind Render the scheme
+  comes from `SECURE_PROXY_SSL_HEADER`.
+- Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
+- `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
