@@ -83,6 +83,7 @@ def nutrition_strings():
         "kind_reagent": _("ingredient"),
         "type_it_in": _("Not here? Type “%(q)s” in by hand"),
         "mcp_unnamed": _("An assistant"),
+        "badge_estimated_short": _("estimated"),
         "mcp_connected_on": _("connected %(date)s"),
         "mcp_last_used": _("last used %(date)s"),
         "mcp_disconnect": _("Disconnect"),

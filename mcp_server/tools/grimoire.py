@@ -169,6 +169,7 @@ def get_spell(ctx, id):
         "tags": [t.slug for t in spell.tags.all()],
         "lines": lines,
         "unverified_nutrition": any(l.reagent.status != Reagent.Status.APPROVED for l in spell.lines.all()),
+        "estimated_nutrition": any(l.reagent.nutrients_estimated for l in spell.lines.all()),
         "times_you_cooked_it": spell.my_casting_count,
     }
     try:
@@ -193,6 +194,7 @@ def _reagent_row(r, ctx):
         "category": r.category,
         "status": r.status,
         "mine": r.created_by_id == ctx.user.pk,
+        "estimated": r.nutrients_estimated,
         "per_100g": {k: getattr(profile, k) if profile else None for k in fmt.KEY},
         "measures_g": r.grams_per_unit or {},
     }

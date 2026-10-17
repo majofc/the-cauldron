@@ -257,6 +257,7 @@
     if (s.is_mine) badges.push([s.visibility === "public" ? t("badge_published") : t("badge_private"), ""]);
     if (s.forked_from) badges.push([t("badge_forked"), ""]);
     if (s.has_unverified_reagents) badges.push([t("badge_unverified"), " is-warn"]);
+    if (s.has_estimated_nutrition) badges.push([t("badge_estimated"), " is-warn"]);
     const desc = spellDesc(s);
     const who = s.is_mine
       ? esc(t("yours"))
@@ -365,6 +366,7 @@
         <span>${servingsText(s.servings)}</span></div>
       <div class="grimoire-tags">${s.tags.map((slug) => `<span class="grimoire-tag">${esc(tagLabel(slug).toLowerCase())}</span>`).join("")}</div>
       ${s.has_unverified_reagents ? `<p class="grim-badge is-warn grim-unverified">${esc(t("unverified_note"))}</p>` : ""}
+      ${s.has_estimated_nutrition ? `<p class="grim-badge is-warn grim-unverified">${esc(t("estimated_note"))}</p>` : ""}
       ${forked}
       <h3 class="grim-h3">${esc(t("h_reagents"))}</h3>
       ${lines ? scalerHtml(s) : ""}
@@ -1169,8 +1171,9 @@
   // ── Reagents ───────────────────────────────────────────────────────────────
   function reagentRow(r) {
     const n = r.nutrients || {};
-    const status = r.status === "approved" ? "" :
-      `<span class="grim-badge">${esc(r.status === "pending" ? t("status_pending") : t("status_private"))}</span>`;
+    const status = (r.status === "approved" ? "" :
+      `<span class="grim-badge">${esc(r.status === "pending" ? t("status_pending") : t("status_private"))}</span>`)
+      + (r.nutrients_estimated ? ` <span class="grim-badge is-warn">${esc(t("badge_estimated"))}</span>` : "");
     const macro = (key, field) => `<div><dt>${esc(t(`macro_${key}`))}</dt><dd>${esc(fmtNum(n[field]))}</dd></div>`;
     return `<a class="grim-reagent-row" href="${esc(reagentUrl(r.uuid))}">
       <div class="grim-reagent-name"><strong>${esc(reagentName(r))}</strong>
@@ -1217,8 +1220,9 @@
     body._reagent = r;
     const other = IS_ES ? r.name : r.name_es;
     const n = r.nutrients || {};
-    const status = r.status === "approved" ? "" :
-      `<span class="grim-badge">${esc(r.status === "pending" ? t("status_pending") : t("status_private"))}</span>`;
+    const status = (r.status === "approved" ? "" :
+      `<span class="grim-badge">${esc(r.status === "pending" ? t("status_pending") : t("status_private"))}</span>`)
+      + (r.nutrients_estimated ? ` <span class="grim-badge is-warn">${esc(t("badge_estimated"))}</span>` : "");
     const g = r.grams_per_unit || {};
     const measures = ["glass", "cup", "tbsp", "tsp", "piece"].filter((u) => g[u]).map((u) =>
       `<div><dt>${esc(t(`measure_${u}`))}</dt><dd>${esc(fmtWeight(g[u]))}</dd></div>`);

@@ -27,6 +27,18 @@ class ForgeBaseModel(models.Model):
         abstract = True
 
 
+class Channel(models.TextChoices):
+    """Where a record was created (#89): the website or the user's AI
+    assistant through the MCP server. Analytics only — never shown or edited."""
+
+    WEB = "web", "Web"
+    MCP = "mcp", "AI assistant (MCP)"
+
+
+def channel_field():
+    return models.CharField(max_length=3, choices=Channel.choices, default=Channel.WEB, editable=False)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Catalog (seeded, shared across users)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -369,6 +381,7 @@ class UserEquipmentProfile(ForgeBaseModel):
 class AssessmentSession(ForgeBaseModel):
     """One run of the Trial. History is preserved; only the latest is active."""
 
+    channel = channel_field()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -504,6 +517,7 @@ class WorkoutSession(ForgeBaseModel):
         COMPLETED = "completed", "Completed"
         SKIPPED = "skipped", "Skipped"
 
+    channel = channel_field()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

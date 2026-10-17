@@ -13,12 +13,8 @@ PostHog only ever gets counts and enums from here — never a value, a food or a
 goal (CLAUDE.md "PostHog never receives PII").
 """
 
-from datetime import datetime, time
-
 import posthog
-from django.db import transaction
 from django.utils import timezone
-from django.utils.translation import get_language
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -27,8 +23,9 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from the_cauldron.models import Casting, IntakeEntry, PlannedMeal
+from the_cauldron.models import IntakeEntry, PlannedMeal
 from the_cauldron import nutrition_payloads as payloads
+from the_cauldron import nutrition_writes as writes
 from the_cauldron.nutrition_serializers import (
     GoalSetSerializer,
     IntakeEntrySerializer,
@@ -40,7 +37,7 @@ from the_cauldron.nutrition_serializers import (
     PlannedMealInputSerializer,
     PlannedMealSerializer,
 )
-from the_cauldron.services import adherence, grimoire, legal, nutrition, rolling
+from the_cauldron.services import adherence, legal, nutrition, rolling
 from the_cauldron.services.nutrition import NutritionInputError
 
 
@@ -187,96 +184,6 @@ class GoalHistoryView(APIView):
 # ── Meal log (#81) ──────────────────────────────────────────────────────────
 
 
-def apply_entry(user, data, instance=None):
-    """Build or update an ``IntakeEntry`` from validated input. A new source
-    (another spell or reagent) takes a fresh snapshot; a changed amount
-    rescales the stored one."""
-    tz = nutrition.user_tz(user)
-    entry = instance or IntakeEntry(user=user)
-    source = data.get("source") or entry.source
-    if not source:
-        raise NutritionInputError(_("Choose what you ate: a spell, an ingredient or a quick entry."))
-    same_source = instance is not None and instance.source == source
-    if instance is None or data.get("eaten_at"):
-        # local_date is fixed when the time is set: a later timezone change
-        # never moves an entry to another day.
-        entry.eaten_at = nutrition.localize(data.get("eaten_at") or timezone.now(), tz)
-        entry.local_date = timezone.localtime(entry.eaten_at, tz).date()
-    quantity = data.get("quantity", entry.quantity if same_source else None)
-    unit = data.get("unit", entry.unit if same_source else None)
-
-    if source == IntakeEntry.Source.SPELL:
-        if "spell" in data:
-            spell = grimoire.readable_spells(user).filter(uuid=data["spell"]).first()
-            if spell is None:
-                raise NutritionInputError(_("That spell is private or no longer exists."))
-        elif same_source:
-            spell = entry.spell
-        else:
-            raise NutritionInputError(_("Choose a spell."))
-        fresh = not same_source or (spell is not None and spell.pk != entry.spell_id)
-        unit = unit or "serving"
-        quantity = quantity or 1
-        if unit not in nutrition.SPELL_UNITS:
-            raise NutritionInputError(_("Use grams or servings for a spell."))
-        if fresh:
-            entry.basis = nutrition.spell_basis_snapshot(spell, user)
-            entry.spell = spell
-            entry.label = grimoire.localized_text(spell, get_language())[0]
-        if "casting" in data:
-            entry.casting = (
-                Casting.objects.filter(uuid=data["casting"], user=user, spell=entry.spell).first()
-                if data["casting"] else None
-            )
-        elif fresh:
-            entry.casting = None
-        entry.reagent = None
-        entry.grams = nutrition.spell_grams(entry.basis, quantity, unit)
-        entry.nutrients, entry.missing = nutrition.totals_from_basis(entry.basis, entry.grams)
-    elif source == IntakeEntry.Source.REAGENT:
-        if "reagent" in data:
-            reagent = (
-                grimoire.visible_reagents(user).select_related("nutrients").filter(uuid=data["reagent"]).first()
-            )
-            if reagent is None:
-                raise NutritionInputError(_("That ingredient isn't available."))
-        elif same_source:
-            reagent = entry.reagent
-        else:
-            raise NutritionInputError(_("Choose an ingredient."))
-        fresh = not same_source or (reagent is not None and reagent.pk != entry.reagent_id)
-        unit = unit or "g"
-        if quantity is None:
-            raise NutritionInputError(_("Enter how much you ate."))
-        if unit in nutrition.SPELL_UNITS[1:] or unit == "portion":
-            raise NutritionInputError(_("Use a weight, a volume or pieces for an ingredient."))
-        if fresh:
-            entry.basis = nutrition.reagent_basis_snapshot(reagent)
-            entry.reagent = reagent
-            entry.label = (get_language() or "").startswith("es") and reagent.name_es or reagent.name
-        entry.spell = entry.casting = None
-        entry.grams = nutrition.reagent_grams(entry.reagent, quantity, unit)
-        entry.nutrients, entry.missing = nutrition.totals_from_basis(entry.basis, entry.grams)
-    else:
-        label = (data.get("label") or (entry.label if same_source else "")).strip()
-        if not label:
-            raise NutritionInputError(_("Name what you ate."))
-        entry.label = label
-        if "values" in data:
-            entry.nutrients, entry.missing = nutrition.clean_quick_values(data["values"])
-        elif not same_source:
-            raise NutritionInputError(_("Enter at least one value, e.g. the calories."))
-        quantity, unit = quantity or 1, "portion"
-        entry.spell = entry.casting = entry.reagent = None
-        entry.grams = None
-        entry.basis = {}
-    entry.source = source
-    entry.quantity = quantity
-    entry.unit = unit
-    entry.save()
-    return entry
-
-
 class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
     """The user's meal log. ``?date=YYYY-MM-DD`` (their timezone) filters the
     list; ``day/?date=`` adds totals and goal status."""
@@ -303,7 +210,7 @@ class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
         req = IntakeInputSerializer(data=request.data, partial=partial)
         req.is_valid(raise_exception=True)
         try:
-            entry = apply_entry(request.user, req.validated_data, instance)
+            entry = writes.apply_entry(request.user, req.validated_data, instance)
         except NutritionInputError as exc:
             return None, _bad(exc)
         return entry, None
@@ -402,32 +309,11 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
             return _bad(exc)
         return Response(meals)
 
-    def _apply(self, request, meal, data):
-        if "spell" in data:
-            spell = grimoire.readable_spells(request.user).filter(uuid=data["spell"]).first()
-            if spell is None:
-                raise NutritionInputError(_("That spell is private or no longer exists."))
-            meal.spell = spell
-            meal.spell_title = spell.title
-        elif meal.spell_id is None and meal._state.adding:
-            raise NutritionInputError(_("Choose a spell."))
-        for field in ("date", "slot", "quantity", "unit", "order"):
-            if field in data:
-                setattr(meal, field, data[field])
-        if meal.date is None:
-            meal.date = nutrition.today_for(request.user)
-        if not meal.slot:
-            raise NutritionInputError(_("Choose a meal: breakfast, lunch, dinner or snack."))
-        if meal.quantity is None:
-            meal.quantity = 1
-        meal.save()
-        return meal
-
     def create(self, request, *args, **kwargs):
         req = PlannedMealInputSerializer(data=request.data)
         req.is_valid(raise_exception=True)
         try:
-            meal = self._apply(request, PlannedMeal(user=request.user, unit="serving"), req.validated_data)
+            meal = writes.apply_plan(request.user, PlannedMeal(user=request.user, unit="serving"), req.validated_data)
         except NutritionInputError as exc:
             return _bad(exc)
         posthog.capture("plan_meal_added", properties={"slot": meal.slot})
@@ -443,7 +329,7 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
         req = PlannedMealInputSerializer(data=request.data, partial=True)
         req.is_valid(raise_exception=True)
         try:
-            meal = self._apply(request, meal, req.validated_data)
+            meal = writes.apply_plan(request.user, meal, req.validated_data)
         except NutritionInputError as exc:
             return _bad(exc)
         return Response(self.get_serializer(meal).data)
@@ -463,33 +349,12 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
         target = self.get_object()
         req = PlanEatSerializer(data=request.data)
         req.is_valid(raise_exception=True)
-        data = req.validated_data
-        today = nutrition.today_for(request.user)
-        with transaction.atomic():
-            # Locked and re-checked, so a double tap can't log the meal twice.
-            meal = PlannedMeal.objects.select_for_update(of=("self",)).select_related("spell").get(pk=target.pk)
-            if meal.intake_entry_id:
-                return Response({"detail": _("Already marked as eaten.")}, status=status.HTTP_409_CONFLICT)
-            if meal.spell is None or not grimoire.can_read(meal.spell, request.user):
-                return Response(
-                    {"detail": _("That spell is private or no longer exists.")}, status=status.HTTP_409_CONFLICT
-                )
-            eaten_at = data.get("eaten_at") or (
-                timezone.now() if meal.date == today else datetime.combine(meal.date, time(12, 0))
-            )
-            try:
-                entry = apply_entry(request.user, {
-                    "source": IntakeEntry.Source.SPELL,
-                    "spell": meal.spell.uuid,
-                    "eaten_at": eaten_at,
-                    "quantity": data.get("quantity", meal.quantity),
-                    "unit": data.get("unit", meal.unit),
-                })
-            except NutritionInputError as exc:
-                transaction.set_rollback(True)
-                return _bad(exc)
-            meal.intake_entry = entry
-            meal.save(update_fields=["intake_entry", "updated_at"])
+        try:
+            meal, entry = writes.eat_plan(request.user, target.pk, req.validated_data)
+        except writes.PlanConflict as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except NutritionInputError as exc:
+            return _bad(exc)
         posthog.capture("plan_meal_eaten", properties={"slot": meal.slot})
         return Response({
             "meal": self.get_serializer(meal).data,

@@ -53,6 +53,7 @@ def entry(row):
         "quantity": row["quantity"],
         "unit": row["unit"],
         "grams": num(row["grams"]),
+        "estimated": row.get("estimated", False),
         **known(row["nutrients"], row["missing"]),
     }
 

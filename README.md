@@ -97,13 +97,23 @@ any vision; the server exposes tools over the existing services.
 **How it works**: OAuth 2.1 (django-oauth-toolkit; dynamic client registration, PKCE S256) → bearer token
 → stateless JSON-RPC at `/cauldron/mcp/`. Architecture and rules: `CLAUDE.md` → "MCP server".
 
-**Tools (phase 1, read-only)**: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_meal_plan`,
-`search_spells`, `get_spell`, `search_reagents`, `get_reagent`.
+**Tools**
+- Read: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_meal_plan`, `search_spells`, `get_spell`,
+  `search_reagents`, `get_reagent`.
+- Write: `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`, `update_planned_meal`✱, `delete_planned_meal`✱,
+  `mark_planned_meal_eaten`, `set_goal`, `create_reagent`, `update_reagent`✱, `create_spell`, `update_spell`✱,
+  `delete_spell`✱, `fork_spell`, `log_casting`.
+- ✱ Two-step: the first call changes nothing and returns a preview + `confirm_token`; the assistant shows it to
+  the user and applies only with the token (single use, 5 minutes). Write tools accept `client_request_id` so a
+  retry never writes twice. Everything created is private and tagged `channel="mcp"`.
 
 **Add a tool**: write a function `handler(ctx, **args) -> dict` in `mcp_server/tools/<area>.py`, decorate it
-with `@tool(name, title=…, description=…, schema=…, scope=READ|WRITE, consent=True if it touches goals/meals/plans)`,
-call services (never re-implement rules), and add tests in `tests/test_mcp_server.py` (happy path, other user →
-`not_found`, no consent, bad arguments).
+with `@tool(name, title=…, description=…, schema=…, scope=READ|WRITE, consent=True if it touches goals/meals/plans,
+confirm=True for any edit or delete)`, call services (never re-implement rules), pass `channel=Channel.MCP` on
+anything created, and add tests (`tests/test_mcp_server.py` for reads, `tests/test_mcp_writes.py` for writes:
+happy path, other user → `not_found`, no consent, bad arguments, and the two-step flow).
+A two-step handler takes `apply`: with `apply=False` it validates and returns `{"target", "preview"}` without
+changing anything; with `apply=True` it does the change.
 
-**Analytics** (PostHog, no PII): `mcp_tool_called {tool, ok, error_code, latency_ms, client}`,
-`mcp_connected` / `mcp_disconnected {client}`.
+**Analytics** (PostHog, no PII): `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}`,
+`mcp_duplicate_prevented {kind, overridden}`, `mcp_connected` / `mcp_disconnected {client}`.

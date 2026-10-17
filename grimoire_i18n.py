@@ -25,6 +25,8 @@ def grimoire_strings():
         "badge_private": _("private"),
         "badge_forked": _("forked"),
         "badge_unverified": _("unverified nutrition"),
+        "badge_estimated": _("estimated nutrition"),
+        "estimated_note": _("Estimated nutrition — some values were estimated by an AI assistant, not measured."),
         "yours": _("yours"),
         "by_name": _("by %(name)s"),
         "minutes": _("%(n)s min"),

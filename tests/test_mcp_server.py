@@ -446,7 +446,7 @@ class TestProtocol:
                 "search_spells", "get_spell", "search_reagents", "get_reagent"} <= set(tools)
         for t in tools.values():
             assert t["description"] and t["inputSchema"]["type"] == "object"
-            assert t["annotations"]["readOnlyHint"] is True
+            assert t["annotations"]["readOnlyHint"] is (registry.TOOLS[t["name"]].scope == registry.READ)
 
     def test_write_tools_need_the_write_scope(self, alice):
         @registry.tool("zz_test_write", title="t", description="d", scope=registry.WRITE)
@@ -491,7 +491,7 @@ class TestAnalytics:
         calls = [kw["properties"] for e, kw in events if e == "mcp_tool_called"]
         assert [c["tool"] for c in calls] == ["get_today", "get_spell"]
         for props in calls:
-            assert set(props) == {"tool", "ok", "error_code", "latency_ms", "client"}
+            assert set(props) == {"tool", "ok", "error_code", "latency_ms", "client", "confirm_step"}
             assert props["client"] == "claude"
         assert (calls[0]["ok"], calls[1]["ok"], calls[1]["error_code"]) == (True, False, "invalid_arguments")
         assert "Secret" not in json.dumps(events)

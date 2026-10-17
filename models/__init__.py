@@ -12,6 +12,7 @@ from .forge import (  # noqa: F401
     AssessmentResult,
     AssessmentSession,
     BlockedExercise,
+    Channel,
     Equipment,
     Exercise,
     ForgeBaseModel,
@@ -41,4 +42,4 @@ from .nutrition import (  # noqa: F401
     NutrientGoal,
     PlannedMeal,
 )
-from .mcp import McpConnection  # noqa: F401
+from .mcp import McpConfirmation, McpConnection, McpIdempotency  # noqa: F401

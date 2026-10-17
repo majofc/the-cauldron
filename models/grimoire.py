@@ -15,7 +15,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from .forge import ForgeBaseModel
+from .forge import ForgeBaseModel, channel_field
 
 
 def normalize_search(text):
@@ -70,6 +70,10 @@ class Reagent(ForgeBaseModel):
         PENDING = "pending", "Pending review"
         APPROVED = "approved", "Approved"
 
+    # The nutrients were estimated by the user's AI assistant (from a photo or a
+    # description), not read off a label or a database — the UI says so (#89).
+    nutrients_estimated = models.BooleanField(default=False)
+    channel = channel_field()
     name = models.CharField(max_length=120)
     name_es = models.CharField(max_length=120, blank=True, default="")
     search_name = models.CharField(max_length=250, editable=False, db_index=True, default="")
@@ -151,6 +155,7 @@ class Spell(ForgeBaseModel):
         PRIVATE = "private", "Private"
         PUBLIC = "public", "Public"
 
+    channel = channel_field()
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="grimoire_spells"
     )
@@ -254,6 +259,7 @@ class Casting(ForgeBaseModel):
     author's own castings are deleted with the spell (signals.py).
     """
 
+    channel = channel_field()
     spell = models.ForeignKey(
         Spell, null=True, blank=True, on_delete=models.SET_NULL, related_name="castings"
     )
