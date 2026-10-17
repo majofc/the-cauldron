@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 02:28+0000\n"
+"POT-Creation-Date: 2026-10-17 04:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1754,7 +1754,7 @@ msgstr "Pasos — uno por línea"
 #: templates/the_cauldron/grimoire.html:159
 #: templates/the_cauldron/grimoire.html:225
 #: templates/the_cauldron/nutrition.html:271
-#: templates/the_cauldron/oauth_authorize.html:78
+#: templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -2230,54 +2230,66 @@ msgstr "Conectar un asistente — The Cauldron"
 msgid "Let your AI assistant use your Cauldron account."
 msgstr "Deja que tu asistente de IA use tu cuenta de The Cauldron."
 
+#: templates/the_cauldron/oauth_authorize.html:51
+msgid "This app can't connect"
+msgstr "Esta aplicación no puede conectarse"
+
+#: templates/the_cauldron/oauth_authorize.html:52
+msgid "It presents itself as Claude, but it isn't one of Anthropic's own apps. To protect your account, The Cauldron blocks it."
+msgstr "Se presenta como Claude, pero no es una aplicación de Anthropic. Para proteger tu cuenta, The Cauldron la bloquea."
+
 #: templates/the_cauldron/oauth_authorize.html:53
+msgid "If you were trying to connect Claude, add the connector again from Claude itself, or ask us for help."
+msgstr "Si querías conectar Claude, vuelve a agregar el conector desde el propio Claude o pídenos ayuda."
+
+#: templates/the_cauldron/oauth_authorize.html:59
 msgid "Connect an assistant to your Cauldron?"
 msgstr "¿Conectar un asistente a tu Cauldron?"
 
-#: templates/the_cauldron/oauth_authorize.html:55
+#: templates/the_cauldron/oauth_authorize.html:61
 msgid "An app"
 msgstr "Una aplicación"
 
-#: templates/the_cauldron/oauth_authorize.html:55
+#: templates/the_cauldron/oauth_authorize.html:61
 #, python-format
 msgid "<strong>“%(name)s”</strong> wants to use your Cauldron account."
 msgstr "<strong>«%(name)s»</strong> quiere usar tu cuenta de The Cauldron."
 
-#: templates/the_cauldron/oauth_authorize.html:57
+#: templates/the_cauldron/oauth_authorize.html:63
 msgid "It will be able to:"
 msgstr "Podrá:"
 
-#: templates/the_cauldron/oauth_authorize.html:59
+#: templates/the_cauldron/oauth_authorize.html:65
 msgid "See your goals, meal journal and meal plan, your recipes and ingredients, and your training in The Forge."
 msgstr "Ver tus metas, tu diario y plan de comidas, tus recetas e ingredientes, y tu entrenamiento en The Forge."
 
-#: templates/the_cauldron/oauth_authorize.html:61
+#: templates/the_cauldron/oauth_authorize.html:67
 msgid "Log meals, plan, create recipes and ingredients, set goals and log workouts for you. Changes and deletions always show you a preview first."
 msgstr "Registrar comidas, planear, crear recetas e ingredientes, fijar metas y registrar entrenamientos por ti. Los cambios y borrados siempre te muestran una vista previa antes."
 
-#: templates/the_cauldron/oauth_authorize.html:65
+#: templates/the_cauldron/oauth_authorize.html:71
 #, python-format
 msgid "When you allow it, you'll be sent back to <strong>%(host)s</strong>."
 msgstr "Al permitirlo, volverás a <strong>%(host)s</strong>."
 
-#: templates/the_cauldron/oauth_authorize.html:69
+#: templates/the_cauldron/oauth_authorize.html:75
 msgid "That address is a program on this computer. Only continue if you just started it yourself — for example Claude Code in your terminal."
 msgstr "Esa dirección es un programa en esta computadora. Continúa solo si tú mismo acabas de iniciarlo, por ejemplo Claude Code en tu terminal."
 
-#: templates/the_cauldron/oauth_authorize.html:74
+#: templates/the_cauldron/oauth_authorize.html:80
 #, python-format
 msgid "What the assistant reads goes to your AI provider, under their terms (see our <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a>). You can disconnect it anytime from your profile."
 msgstr "Lo que lea el asistente llega a tu proveedor de IA, bajo sus términos (consulta nuestro <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a>). Puedes desconectarlo cuando quieras desde tu perfil."
 
-#: templates/the_cauldron/oauth_authorize.html:79
+#: templates/the_cauldron/oauth_authorize.html:85
 msgid "Allow"
 msgstr "Permitir"
 
-#: templates/the_cauldron/oauth_authorize.html:84
+#: templates/the_cauldron/oauth_authorize.html:90
 msgid "This connection can't continue"
 msgstr "Esta conexión no puede continuar"
 
-#: templates/the_cauldron/oauth_authorize.html:85
+#: templates/the_cauldron/oauth_authorize.html:91
 msgid "The assistant sent an invalid request. Go back to it and try connecting again."
 msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta conectarte de nuevo."
 

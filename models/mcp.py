@@ -23,8 +23,9 @@ class McpConnection(ForgeBaseModel):
     application = models.ForeignKey(
         oauth2_settings.APPLICATION_MODEL, on_delete=models.CASCADE, related_name="cauldron_connections"
     )
-    # Normalized from the client's registered name — the only client detail
-    # analytics ever sees (an enum, never the free-text name).
+    # Normalized client kind — the only client detail analytics ever sees (an
+    # enum, never the free-text name). "claude*" only for Anthropic's own
+    # clients (``client_identity``); a self-declared name never earns it.
     client = models.CharField(max_length=12, choices=Client.choices, default=Client.OTHER)
     # The page language when the user connected: tool answers use it.
     language = models.CharField(max_length=8, default="es")
@@ -40,10 +41,12 @@ class McpConnection(ForgeBaseModel):
         return f"{self.user} ↔ {self.application_id}"
 
     @staticmethod
-    def client_for(name):
-        name = (name or "").lower()
-        if "claude code" in name or "claude-code" in name:
+    def client_for(application):
+        from the_cauldron.client_identity import is_anthropic_client
+
+        if not is_anthropic_client(application.client_id):
+            return McpConnection.Client.OTHER
+        hint = f"{application.client_id} {application.name}".lower()
+        if "claude code" in hint or "claude-code" in hint:
             return McpConnection.Client.CLAUDE_CODE
-        if "claude" in name:
-            return McpConnection.Client.CLAUDE
-        return McpConnection.Client.OTHER
+        return McpConnection.Client.CLAUDE

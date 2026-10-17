@@ -466,6 +466,11 @@ Missing scope → **403** `error="insufficient_scope"`.
 
 **Consent screen**: `oauth_views.CauldronAuthorizationView` (`oauth_authorize.html`) behind `cauldron_page`
 (login + legal gate); shows the self-declared client name, the redirect host, and a warning for loopback.
+**The name "Claude" is reserved** (`client_identity.py`): a client name that says or imitates Claude/Anthropic
+(case, accents, full-width, Cyrillic and digit look-alikes folded) is allowed only for a CIMD client whose
+`client_id` URL is on claude.ai / claude.com / anthropic.com. DCR register/rename refuses it (400
+`invalid_client_metadata`, `GuardedRegistrationView`); the consent screen answers 403 for any other app using it
+(before DOT can auto-approve). `McpConnection.client` is `claude`/`claude_code` only for those Anthropic clients.
 Approving creates `McpConnection` (user, application, normalized `client` enum, `language`, `last_used_at`).
 Profile → "Your AI assistants": `GET api/mcp/connections/`, `DELETE api/mcp/connections/{uuid}/` deletes the
 client's tokens + grants for the user (next call 401).

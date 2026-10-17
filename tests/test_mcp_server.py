@@ -63,9 +63,14 @@ def bob(db):
     return _user("bob")
 
 
-def _app(name="Claude"):
+CLAUDE_CIMD = "https://claude.ai/oauth/mcp-client-metadata"  # how Anthropic's hosted Claude identifies itself
+CLAUDE_CODE_CIMD = "https://claude.ai/oauth/claude-code-client-metadata"
+
+
+def _app(name="Assistant", client_id=None):
+    extra = {"client_id": client_id} if client_id else {}
     return Application.objects.create(
-        name=name, client_type=Application.CLIENT_PUBLIC,
+        name=name, client_type=Application.CLIENT_PUBLIC, **extra,
         authorization_grant_type=Application.GRANT_AUTHORIZATION_CODE,
         redirect_uris="https://claude.ai/api/mcp/auth_callback",
     )
@@ -190,7 +195,7 @@ def _pkce():
     return verifier, challenge
 
 
-def _register(name="Claude Code", redirect_uris=("http://localhost/callback", "http://127.0.0.1/callback")):
+def _register(name="Pocket Assistant", redirect_uris=("http://localhost/callback", "http://127.0.0.1/callback")):
     r = Client().post("/cauldron/oauth/register/", data=json.dumps({
         "client_name": name, "redirect_uris": list(redirect_uris), "token_endpoint_auth_method": "none",
         "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],
@@ -222,7 +227,7 @@ class TestOAuthFlow:
         page, params = self._authorize(browser, reg["client_id"], challenge)
         assert page.status_code == 200
         html = page.content.decode()
-        assert "Claude Code" in html and "localhost" in html
+        assert "Pocket Assistant" in html and "localhost" in html
         assert "program on this computer" in html  # loopback warning
         approved = browser.post("/cauldron/oauth/authorize/", {**params, "allow": "Authorize"})
         assert approved.status_code == 302
@@ -242,7 +247,7 @@ class TestOAuthFlow:
         init = _rpc(tokens["access_token"], "initialize", {"protocolVersion": "2025-11-25"})
         assert init.status_code == 200
         conn = McpConnection.objects.get(user=alice)
-        assert conn.client == McpConnection.Client.CLAUDE_CODE
+        assert conn.client == McpConnection.Client.OTHER  # a self-declared client is never "claude"
 
         # Refresh rotates: the old refresh token is spent (invalid_grant).
         fresh = Client().post("/cauldron/oauth/token/", {
@@ -304,9 +309,70 @@ class TestOAuthFlow:
         assert not McpConnection.objects.exists()
 
 
+class TestReservedClaudeName:
+    """Only Anthropic's own clients (CIMD documents on claude.ai / anthropic.com)
+    may present themselves as Claude; anyone else is refused."""
+
+    @pytest.mark.parametrize("name", [
+        "Claude", "Claude Code", "claude", "C1aude", "Cl4ude", "Ｃｌａｕｄｅ", "Сlaude", "C l a u d e",
+        "Claudé Desktop", "Official Anthropic app",
+    ])
+    def test_dcr_refuses_reserved_names(self, db, name):
+        r = Client().post("/cauldron/oauth/register/", data=json.dumps({
+            "client_name": name, "redirect_uris": ["https://evil.example/cb"],
+            "token_endpoint_auth_method": "none", "grant_types": ["authorization_code"],
+        }), content_type="application/json")
+        assert r.status_code == 400 and r.json()["error"] == "invalid_client_metadata"
+        assert not Application.objects.exists()
+
+    @pytest.mark.parametrize("name", ["Claudia's planner", "Clade", "Pocket Assistant"])
+    def test_other_names_register(self, db, name):
+        assert _register(name)["client_name"] == name
+
+    def test_a_client_cant_rename_itself_claude(self, db):
+        reg = _register()
+        r = Client().put(
+            f"/cauldron/oauth/register/{reg['client_id']}/",
+            data=json.dumps({**{k: reg[k] for k in ("redirect_uris", "grant_types", "token_endpoint_auth_method")},
+                             "client_name": "Claude"}),
+            content_type="application/json", HTTP_AUTHORIZATION=f"Bearer {reg['registration_access_token']}",
+        )
+        assert r.status_code == 400
+        assert Application.objects.get(client_id=reg["client_id"]).name == "Pocket Assistant"
+
+    def _consent(self, user, app, method="get"):
+        browser = Client()
+        browser.force_login(user)
+        params = {
+            "response_type": "code", "client_id": app.client_id, "redirect_uri": app.redirect_uris.split()[0],
+            "scope": BOTH, "state": "s", "code_challenge": _pkce()[1], "code_challenge_method": "S256",
+        }
+        if method == "get":
+            return browser.get("/cauldron/oauth/authorize/", params)
+        return browser.post("/cauldron/oauth/authorize/", {**params, "allow": "Authorize"})
+
+    @pytest.mark.parametrize("client_id", [None, "https://evil.example/claude.json", "https://claude.ai.evil.com/m"])
+    def test_consent_blocks_impersonators(self, alice, client_id):
+        app = _app("Claude", client_id=client_id)  # e.g. created before the guard, or a look-alike CIMD document
+        page = self._consent(alice, app)
+        assert page.status_code == 403
+        assert "isn't one of Anthropic's own apps" in page.content.decode()
+        approved = self._consent(alice, app, method="post")
+        assert approved.status_code == 403 and "code=" not in approved.get("Location", "")
+        assert not McpConnection.objects.exists()
+
+    @pytest.mark.parametrize("client_id,kind", [(CLAUDE_CIMD, "claude"), (CLAUDE_CODE_CIMD, "claude_code")])
+    def test_anthropic_clients_connect_as_claude(self, alice, client_id, kind):
+        app = _app("Claude Code" if kind == "claude_code" else "Claude", client_id=client_id)
+        assert self._consent(alice, app).status_code == 200
+        approved = self._consent(alice, app, method="post")
+        assert approved.status_code == 302 and "code=" in approved["Location"]
+        assert McpConnection.objects.get(user=alice).client == kind
+
+
 class TestConnections:
     def test_list_and_disconnect_revokes_at_once(self, alice, bob):
-        app = _app("Claude")
+        app = _app("Claude", client_id=CLAUDE_CIMD)
         token = _token(alice, app=app)
         assert _rpc(token, "ping").status_code == 200  # first use records the connection
         conn = McpConnection.objects.get(user=alice, application=app)
@@ -419,7 +485,7 @@ class TestAnalytics:
         events = []
         monkeypatch.setattr("posthog.capture", lambda event, **kw: events.append((event, kw)))
         _entry(alice, label="Secret taco recipe")
-        token = _token(alice, app=_app("Claude"))
+        token = _token(alice, app=_app("Claude", client_id=CLAUDE_CIMD))
         _ok(token, "get_today")
         _err(token, "get_spell", {"id": "nope"})
         calls = [kw["properties"] for e, kw in events if e == "mcp_tool_called"]

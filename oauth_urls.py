@@ -15,13 +15,14 @@ application-management pages are left out on purpose.
 
 from django.urls import path
 from oauth2_provider import views as dot
-from oauth2_provider.views.dynamic_client_registration import (
-    DynamicClientRegistrationManagementView,
-    DynamicClientRegistrationView,
-)
 from oauth2_provider.views.metadata import OAuthServerMetadataView
 
-from the_cauldron.oauth_views import CauldronAuthorizationView, CauldronResourceMetadataView
+from the_cauldron.oauth_views import (
+    CauldronAuthorizationView,
+    CauldronResourceMetadataView,
+    GuardedRegistrationManagementView,
+    GuardedRegistrationView,
+)
 
 app_name = "oauth2_provider"
 
@@ -36,12 +37,12 @@ urlpatterns = [
     path("cauldron/oauth/authorize/", CauldronAuthorizationView.as_view(), name="authorize"),
     path("cauldron/oauth/token/", dot.TokenView.as_view(), name="token"),
     path("cauldron/oauth/revoke_token/", dot.RevokeTokenView.as_view(), name="revoke-token"),
-    path("cauldron/oauth/register/", DynamicClientRegistrationView.as_view(), name="dcr-register"),
+    path("cauldron/oauth/register/", GuardedRegistrationView.as_view(), name="dcr-register"),
     # RFC 7592: a client reads/updates its own registration with the
     # registration token it got back — DOT's DCR response links here.
     path(
         "cauldron/oauth/register/<str:client_id>/",
-        DynamicClientRegistrationManagementView.as_view(),
+        GuardedRegistrationManagementView.as_view(),
         name="dcr-register-management",
     ),
 ]

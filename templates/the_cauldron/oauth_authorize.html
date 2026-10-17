@@ -46,7 +46,13 @@ spec), with a warning when that's only this computer (Claude Code's loopback).
   <article class="grim-spell-page nut-narrow">
     <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
     <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-    {% if not error %}
+    {% if impersonation %}
+    <div class="grim-spell-page-body">
+      <h1 class="grim-h2">{% trans "This app can't connect" %}</h1>
+      <p class="grim-help">{% trans "It presents itself as Claude, but it isn't one of Anthropic's own apps. To protect your account, The Cauldron blocks it." %}</p>
+      <p class="grim-help">{% trans "If you were trying to connect Claude, add the connector again from Claude itself, or ask us for help." %}</p>
+    </div>
+    {% elif not error %}
     <form class="grim-spell-page-body grim-form" method="post">
       {% csrf_token %}
       {% for field in form %}{% if field.is_hidden %}{{ field }}{% endif %}{% endfor %}
