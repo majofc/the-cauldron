@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 01:16+0000\n"
+"POT-Creation-Date: 2026-10-17 02:28+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,19 +25,19 @@ msgstr "Ya existe un ingrediente con ese nombre."
 msgid "Only your own ingredients can be edited, until they're approved."
 msgstr "Solo puedes editar tus propios ingredientes, mientras no estén aprobados."
 
-#: grimoire_api.py:156
+#: grimoire_api.py:147
 msgid "Only the recipe's owner can change it."
 msgstr "Solo quien escribió la receta puede cambiarla."
 
-#: grimoire_api.py:254
+#: grimoire_api.py:245
 msgid "Those amounts can't be converted to grams — use g."
 msgstr "Esas cantidades no se pueden convertir a gramos — usa g."
 
-#: grimoire_api.py:347
+#: grimoire_api.py:338
 msgid "Send a JSON object."
 msgstr "Envía un objeto JSON."
 
-#: grimoire_api.py:357 services/nutrition.py:264
+#: grimoire_api.py:348 services/nutrition.py:264
 msgid "This spell has no weighed ingredients."
 msgstr "Este hechizo no tiene ingredientes con peso."
 
@@ -734,7 +734,7 @@ msgstr "Prueba una porción"
 msgid "day total"
 msgstr "total del día"
 
-#: grimoire_i18n.py:190 nutrition_i18n.py:102
+#: grimoire_i18n.py:190 nutrition_i18n.py:109
 msgid "I ate this"
 msgstr "Me lo comí"
 
@@ -1085,72 +1085,79 @@ msgstr "Las cantidades deben ser 0 o más."
 msgid "Enter the amount you used."
 msgstr "Escribe la cantidad que usaste."
 
-#: nutrition_api.py:56
+#: mcp_server/registry.py:104
+msgid "Goals, the meal log and the meal plan need your consent to handle sensitive data. Open this page, accept, and ask again."
+msgstr "Las metas, el diario de comidas y el plan necesitan tu consentimiento para tratar datos sensibles. Abre esta página, acepta y vuelve a pedirlo."
+
+#: mcp_server/registry.py:165
+msgid "Not found."
+msgstr "No se encontró."
+
+#: mcp_server/registry.py:169
+msgid "Something went wrong. Try again."
+msgstr "Algo salió mal. Inténtalo de nuevo."
+
+#: nutrition_api.py:57
 msgid "Accept the sensitive-data consent to use goals and the meal log."
 msgstr "Acepta el consentimiento para datos sensibles para usar las metas y el diario de comidas."
 
-#: nutrition_api.py:208
+#: nutrition_api.py:198
 msgid "Choose what you ate: a spell, an ingredient or a quick entry."
 msgstr "Elige qué comiste: un hechizo, un ingrediente o una entrada rápida."
 
-#: nutrition_api.py:222 nutrition_api.py:446 nutrition_api.py:512
+#: nutrition_api.py:212 nutrition_api.py:409 nutrition_api.py:475
 msgid "That spell is private or no longer exists."
 msgstr "Ese hechizo es privado o ya no existe."
 
-#: nutrition_api.py:226 nutrition_api.py:450
+#: nutrition_api.py:216 nutrition_api.py:413
 msgid "Choose a spell."
 msgstr "Elige un hechizo."
 
-#: nutrition_api.py:231 services/nutrition.py:291
+#: nutrition_api.py:221 services/nutrition.py:291
 msgid "Use grams or servings for a spell."
 msgstr "Para un hechizo usa gramos o porciones."
 
-#: nutrition_api.py:252
+#: nutrition_api.py:242
 msgid "That ingredient isn't available."
 msgstr "Ese ingrediente no está disponible."
 
-#: nutrition_api.py:256
+#: nutrition_api.py:246
 msgid "Choose an ingredient."
 msgstr "Elige un ingrediente."
 
-#: nutrition_api.py:260
+#: nutrition_api.py:250
 msgid "Enter how much you ate."
 msgstr "Escribe cuánto comiste."
 
-#: nutrition_api.py:262
+#: nutrition_api.py:252
 msgid "Use a weight, a volume or pieces for an ingredient."
 msgstr "Para un ingrediente usa un peso, un volumen o piezas."
 
-#: nutrition_api.py:273
+#: nutrition_api.py:263
 msgid "Name what you ate."
 msgstr "Escribe qué comiste."
 
-#: nutrition_api.py:278 services/nutrition.py:327
+#: nutrition_api.py:268 services/nutrition.py:327
 msgid "Enter at least one value, e.g. the calories."
 msgstr "Escribe al menos un valor, por ejemplo las calorías."
 
-#: nutrition_api.py:381
+#: nutrition_api.py:353
 msgid "Use 7 or 30 days."
 msgstr "Usa 7 o 30 días."
 
-#: nutrition_api.py:399
+#: nutrition_api.py:371
 msgid "Use span 24h or 7d and 7, 30 or 90 days."
 msgstr "Usa una ventana de 24h o 7d y 7, 30 o 90 días."
 
-#: nutrition_api.py:432
-#, python-format
-msgid "Ask for at most %(n)s days."
-msgstr "Pide como máximo %(n)s días."
-
-#: nutrition_api.py:457
+#: nutrition_api.py:420
 msgid "Choose a meal: breakfast, lunch, dinner or snack."
 msgstr "Elige una comida: desayuno, comida, cena o colación."
 
-#: nutrition_api.py:477
+#: nutrition_api.py:440
 msgid "This meal is already logged as eaten. Edit the log entry instead."
 msgstr "Ya registraste esta comida; edita su registro en el diario."
 
-#: nutrition_api.py:509
+#: nutrition_api.py:472
 msgid "Already marked as eaten."
 msgstr "Ya está marcado como comido."
 
@@ -1400,89 +1407,124 @@ msgstr "ingrediente"
 msgid "Not here? Type “%(q)s” in by hand"
 msgstr "¿No está? Escribe «%(q)s» a mano"
 
-#: nutrition_i18n.py:85 templates/the_cauldron/nutrition.html:239
+#: nutrition_i18n.py:85
+msgid "An assistant"
+msgstr "Un asistente"
+
+#: nutrition_i18n.py:86
+#, python-format
+msgid "connected %(date)s"
+msgstr "conectado el %(date)s"
+
+#: nutrition_i18n.py:87
+#, python-format
+msgid "last used %(date)s"
+msgstr "último uso el %(date)s"
+
+#: nutrition_i18n.py:88
+msgid "Disconnect"
+msgstr "Desconectar"
+
+#: nutrition_i18n.py:89
+msgid "Disconnect? Click again"
+msgstr "¿Desconectar? Haz clic otra vez"
+
+#: nutrition_i18n.py:90
+msgid "No assistant is connected."
+msgstr "No hay ningún asistente conectado."
+
+#: nutrition_i18n.py:91
+msgid "Disconnected. It can't use your account anymore."
+msgstr "Desconectado. Ya no puede usar tu cuenta."
+
+#: nutrition_i18n.py:92 templates/the_cauldron/nutrition.html:239
 msgid "Log something"
 msgstr "Registrar algo"
 
-#: nutrition_i18n.py:86 templates/the_cauldron/nutrition.html:272
+#: nutrition_i18n.py:93 templates/the_cauldron/nutrition.html:272
 msgid "Log it"
 msgstr "Registrar"
 
-#: nutrition_i18n.py:87
+#: nutrition_i18n.py:94
 msgid "Edit entry"
 msgstr "Editar registro"
 
-#: nutrition_i18n.py:88
+#: nutrition_i18n.py:95
 msgid "Save entry"
 msgstr "Guardar registro"
 
-#: nutrition_i18n.py:89
+#: nutrition_i18n.py:96
 msgid "Nothing logged on this day."
 msgstr "No hay nada registrado este día."
 
-#: nutrition_i18n.py:90
+#: nutrition_i18n.py:97
 msgid "Nothing logged yet today."
 msgstr "Aún no registras nada hoy."
 
-#: nutrition_i18n.py:91
+#: nutrition_i18n.py:98
 msgid "planned"
 msgstr "planeado"
 
-#: nutrition_i18n.py:92
+#: nutrition_i18n.py:99
 msgid "Logged."
 msgstr "Registrado."
 
-#: nutrition_i18n.py:93
+#: nutrition_i18n.py:100
 msgid "Entry saved."
 msgstr "Registro guardado."
 
-#: nutrition_i18n.py:94
+#: nutrition_i18n.py:101
 msgid "serving"
 msgstr "porción"
 
-#: nutrition_i18n.py:95 templates/the_cauldron/nutrition.html:307
+#: nutrition_i18n.py:102 templates/the_cauldron/nutrition.html:307
 msgid "servings"
 msgstr "porciones"
 
-#: nutrition_i18n.py:97 templates/the_cauldron/nutrition.html:298
+#: nutrition_i18n.py:104 templates/the_cauldron/nutrition.html:298
 msgid "Breakfast"
 msgstr "Desayuno"
 
-#: nutrition_i18n.py:98 templates/the_cauldron/nutrition.html:299
+#: nutrition_i18n.py:105 templates/the_cauldron/nutrition.html:299
 msgid "Lunch"
 msgstr "Comida"
 
-#: nutrition_i18n.py:99 templates/the_cauldron/nutrition.html:300
+#: nutrition_i18n.py:106 templates/the_cauldron/nutrition.html:300
 msgid "Dinner"
 msgstr "Cena"
 
-#: nutrition_i18n.py:100 templates/the_cauldron/nutrition.html:301
+#: nutrition_i18n.py:107 templates/the_cauldron/nutrition.html:301
 msgid "Snack"
 msgstr "Colación"
 
-#: nutrition_i18n.py:101
+#: nutrition_i18n.py:108
 msgid "Nothing planned."
 msgstr "Nada planeado."
 
-#: nutrition_i18n.py:103
+#: nutrition_i18n.py:110
 msgid "eaten"
 msgstr "comido"
 
-#: nutrition_i18n.py:104
+#: nutrition_i18n.py:111
 msgid "This spell is no longer available."
 msgstr "Este hechizo ya no está disponible."
 
-#: nutrition_i18n.py:105
+#: nutrition_i18n.py:112
 msgid "If you eat what's planned"
 msgstr "Si comes lo planeado"
 
-#: nutrition_i18n.py:106
+#: nutrition_i18n.py:113
 msgid "Added to the ritual."
 msgstr "Agregado al ritual."
 
-#: nutrition_i18n.py:107
+#: nutrition_i18n.py:114
 msgid "Logged as eaten."
 msgstr "Registrado como comido."
+
+#: nutrition_payloads.py:60
+#, python-format
+msgid "Ask for at most %(n)s days."
+msgstr "Pide como máximo %(n)s días."
 
 #: services/grimoire.py:35
 msgid "Quantity can't be negative."
@@ -1634,12 +1676,14 @@ msgstr "Guarda, comparte y adapta tus hechizos — el recetario de The Cauldron.
 
 #: templates/the_cauldron/grimoire.html:18
 #: templates/the_cauldron/nutrition.html:26
+#: templates/the_cauldron/oauth_authorize.html:24
 msgid "The Cauldron home"
 msgstr "Inicio de The Cauldron"
 
 #: templates/the_cauldron/grimoire.html:40
 #: templates/the_cauldron/nutrition.html:48
 #: templates/the_cauldron/nutrition.html:78
+#: templates/the_cauldron/oauth_authorize.html:40
 msgid "Sign out"
 msgstr "Cerrar sesión"
 
@@ -1710,6 +1754,7 @@ msgstr "Pasos — uno por línea"
 #: templates/the_cauldron/grimoire.html:159
 #: templates/the_cauldron/grimoire.html:225
 #: templates/the_cauldron/nutrition.html:271
+#: templates/the_cauldron/oauth_authorize.html:78
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -2168,6 +2213,73 @@ msgstr "Agregar al ritual"
 #: templates/the_cauldron/nutrition.html:321
 msgid "Log a meal"
 msgstr "Registrar comida"
+
+#: templates/the_cauldron/nutrition.html:333
+msgid "Your AI assistants"
+msgstr "Tus asistentes de IA"
+
+#: templates/the_cauldron/nutrition.html:334
+msgid "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once."
+msgstr "Los asistentes que conectaste (Claude y otros) pueden leer y registrar por ti. Si desconectas uno, pierde el acceso de inmediato."
+
+#: templates/the_cauldron/oauth_authorize.html:10
+msgid "Connect an assistant — The Cauldron"
+msgstr "Conectar un asistente — The Cauldron"
+
+#: templates/the_cauldron/oauth_authorize.html:11
+msgid "Let your AI assistant use your Cauldron account."
+msgstr "Deja que tu asistente de IA use tu cuenta de The Cauldron."
+
+#: templates/the_cauldron/oauth_authorize.html:53
+msgid "Connect an assistant to your Cauldron?"
+msgstr "¿Conectar un asistente a tu Cauldron?"
+
+#: templates/the_cauldron/oauth_authorize.html:55
+msgid "An app"
+msgstr "Una aplicación"
+
+#: templates/the_cauldron/oauth_authorize.html:55
+#, python-format
+msgid "<strong>“%(name)s”</strong> wants to use your Cauldron account."
+msgstr "<strong>«%(name)s»</strong> quiere usar tu cuenta de The Cauldron."
+
+#: templates/the_cauldron/oauth_authorize.html:57
+msgid "It will be able to:"
+msgstr "Podrá:"
+
+#: templates/the_cauldron/oauth_authorize.html:59
+msgid "See your goals, meal journal and meal plan, your recipes and ingredients, and your training in The Forge."
+msgstr "Ver tus metas, tu diario y plan de comidas, tus recetas e ingredientes, y tu entrenamiento en The Forge."
+
+#: templates/the_cauldron/oauth_authorize.html:61
+msgid "Log meals, plan, create recipes and ingredients, set goals and log workouts for you. Changes and deletions always show you a preview first."
+msgstr "Registrar comidas, planear, crear recetas e ingredientes, fijar metas y registrar entrenamientos por ti. Los cambios y borrados siempre te muestran una vista previa antes."
+
+#: templates/the_cauldron/oauth_authorize.html:65
+#, python-format
+msgid "When you allow it, you'll be sent back to <strong>%(host)s</strong>."
+msgstr "Al permitirlo, volverás a <strong>%(host)s</strong>."
+
+#: templates/the_cauldron/oauth_authorize.html:69
+msgid "That address is a program on this computer. Only continue if you just started it yourself — for example Claude Code in your terminal."
+msgstr "Esa dirección es un programa en esta computadora. Continúa solo si tú mismo acabas de iniciarlo, por ejemplo Claude Code en tu terminal."
+
+#: templates/the_cauldron/oauth_authorize.html:74
+#, python-format
+msgid "What the assistant reads goes to your AI provider, under their terms (see our <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a>). You can disconnect it anytime from your profile."
+msgstr "Lo que lea el asistente llega a tu proveedor de IA, bajo sus términos (consulta nuestro <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a>). Puedes desconectarlo cuando quieras desde tu perfil."
+
+#: templates/the_cauldron/oauth_authorize.html:79
+msgid "Allow"
+msgstr "Permitir"
+
+#: templates/the_cauldron/oauth_authorize.html:84
+msgid "This connection can't continue"
+msgstr "Esta conexión no puede continuar"
+
+#: templates/the_cauldron/oauth_authorize.html:85
+msgid "The assistant sent an invalid request. Go back to it and try connecting again."
+msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta conectarte de nuevo."
 
 #~ msgid "Find an ingredient…"
 #~ msgstr "Busca un ingrediente…"

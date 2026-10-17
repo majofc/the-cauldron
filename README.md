@@ -81,3 +81,29 @@ provenance stays obvious. Always update `tests/test_norms.py` alongside.
 
 Good sources for upgrades: CSEP-PATH / ACSM fitness batteries, Topend Sports
 norm tables, and peer-reviewed AMRAP/endurance studies for the specific movement.
+
+## MCP — The Cauldron in your AI assistant (#89)
+
+Users can connect The Cauldron to Claude (claude.ai, mobile, Desktop) or Claude Code and ask things like
+"¿cómo voy hoy?" or "¿qué cocino con huevo, jitomate y cebolla?". Their assistant does the reasoning and
+any vision; the server exposes tools over the existing services.
+
+**Connect**
+- claude.ai / Claude mobile / Desktop: Settings → Connectors → *Add custom connector* →
+  `https://<host>/cauldron/mcp/`. Sign in to The Cauldron and allow. (Connectors added on the web appear on mobile.)
+- Claude Code: `claude mcp add --transport http cauldron https://<host>/cauldron/mcp/`, then `/mcp` to sign in.
+- Render free tier: the first call after a sleep can take 30–50 s; retry if the connector times out.
+
+**How it works**: OAuth 2.1 (django-oauth-toolkit; dynamic client registration, PKCE S256) → bearer token
+→ stateless JSON-RPC at `/cauldron/mcp/`. Architecture and rules: `CLAUDE.md` → "MCP server".
+
+**Tools (phase 1, read-only)**: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_meal_plan`,
+`search_spells`, `get_spell`, `search_reagents`, `get_reagent`.
+
+**Add a tool**: write a function `handler(ctx, **args) -> dict` in `mcp_server/tools/<area>.py`, decorate it
+with `@tool(name, title=…, description=…, schema=…, scope=READ|WRITE, consent=True if it touches goals/meals/plans)`,
+call services (never re-implement rules), and add tests in `tests/test_mcp_server.py` (happy path, other user →
+`not_found`, no consent, bad arguments).
+
+**Analytics** (PostHog, no PII): `mcp_tool_called {tool, ok, error_code, latency_ms, client}`,
+`mcp_connected` / `mcp_disconnected {client}`.

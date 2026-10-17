@@ -322,6 +322,20 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     </button>
     {% endif %}
   </div>
+
+  {% if page == "profile" %}
+  <!-- ── Connected AI assistants (MCP, #89) — outside #nut-app: managing a
+       connection needs no nutrition consent ── -->
+  <section class="grim-spell-page" aria-labelledby="nut-mcp-title">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="nut-mcp-title">{% trans "Your AI assistants" %}</h2>
+      <p class="grim-help">{% trans "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once." %}</p>
+      <ul class="nut-mcp-list" id="nut-mcp-list" aria-live="polite"></ul>
+    </div>
+  </section>
+  {% endif %}
   {% endif %}
 
   <div class="grim-toast" id="grim-toast" role="status" aria-live="polite" hidden></div>

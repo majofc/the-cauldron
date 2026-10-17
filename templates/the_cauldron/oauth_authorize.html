@@ -1,0 +1,93 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+{% comment %}
+OAuth consent screen for The Cauldron's MCP server (#89) — CauldronAuthorizationView.
+The client's name is self-declared at registration, so it is shown as such; the
+redirect host is what really tells the user where access goes (MCP authorization
+spec), with a warning when that's only this computer (Claude Code's loopback).
+{% endcomment %}
+
+{% block title %}{% trans "Connect an assistant — The Cauldron" %}{% endblock %}
+{% block meta_description %}{% trans "Let your AI assistant use your Cauldron account." %}{% endblock %}
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-page.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/nutrition.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="grim nut nut-oauth">
+  <article class="grim-spell-page nut-narrow">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    {% if not error %}
+    <form class="grim-spell-page-body grim-form" method="post">
+      {% csrf_token %}
+      {% for field in form %}{% if field.is_hidden %}{{ field }}{% endif %}{% endfor %}
+      <h1 class="grim-h2">{% trans "Connect an assistant to your Cauldron?" %}</h1>
+      <p class="nut-oauth-client">
+        {% blocktrans with name=application.name|default:_("An app") %}<strong>“{{ name }}”</strong> wants to use your Cauldron account.{% endblocktrans %}
+      </p>
+      <p class="grim-help">{% trans "It will be able to:" %}</p>
+      <ul class="nut-oauth-scopes">
+        <li>{% trans "See your goals, meal journal and meal plan, your recipes and ingredients, and your training in The Forge." %}</li>
+        {% if can_write %}
+        <li>{% trans "Log meals, plan, create recipes and ingredients, set goals and log workouts for you. Changes and deletions always show you a preview first." %}</li>
+        {% endif %}
+      </ul>
+      <p class="grim-help">
+        {% blocktrans with host=redirect_host %}When you allow it, you'll be sent back to <strong>{{ host }}</strong>.{% endblocktrans %}
+      </p>
+      {% if redirect_is_loopback %}
+      <p class="nut-oauth-warning" role="note">
+        {% trans "That address is a program on this computer. Only continue if you just started it yourself — for example Claude Code in your terminal." %}
+      </p>
+      {% endif %}
+      <p class="grim-help">
+        {% url 'the_cauldron:privacy' as privacy_url %}
+        {% blocktrans with url=privacy_url %}What the assistant reads goes to your AI provider, under their terms (see our <a href="{{ url }}" target="_blank" rel="noopener">Privacy Notice</a>). You can disconnect it anytime from your profile.{% endblocktrans %}
+      </p>
+      {{ form.non_field_errors }}
+      <div class="grim-actions">
+        <button type="submit" class="btn-cauldron btn-cauldron--ghost">{% trans "Cancel" %}</button>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary" name="allow" value="Authorize">{% trans "Allow" %}</button>
+      </div>
+    </form>
+    {% else %}
+    <div class="grim-spell-page-body">
+      <h1 class="grim-h2">{% trans "This connection can't continue" %}</h1>
+      <p class="grim-help">{% trans "The assistant sent an invalid request. Go back to it and try connecting again." %}</p>
+      <p class="grim-error">{{ error.error }}</p>
+    </div>
+    {% endif %}
+  </article>
+</main>
+{% endblock %}
+
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

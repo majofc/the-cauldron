@@ -3,7 +3,8 @@ from django.views.generic import TemplateView
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from . import api, grimoire_api, nutrition_api, views
+from . import api, grimoire_api, nutrition_api, oauth_views, views
+from .mcp_server.protocol import McpView
 
 app_name = "the_cauldron"
 
@@ -69,6 +70,12 @@ api_urlpatterns = [
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
+    path("mcp/connections/", oauth_views.McpConnectionsView.as_view(), name="mcp-connections"),
+    path(
+        "mcp/connections/<uuid:uuid>/",
+        oauth_views.McpConnectionDetailView.as_view(),
+        name="mcp-connection",
+    ),
     path("", include(router.urls)),
 ]
 
@@ -79,6 +86,9 @@ urlpatterns = [
     path('accept/', views.legal_accept_view, name='legal-accept'),
     path('profile/', views.profile_view, name='profile'),
     path('journal/', views.journal_view, name='journal'),
+    # The MCP endpoint (#89). OAuth routes + /.well-known/ live in oauth_urls.py,
+    # included at the site root by arcano.
+    path('mcp/', McpView.as_view(), name='mcp'),
     path('forge/', views.forge_view, name='forge'),
     path('forge/<slug:section>/', views.forge_view, name='forge-section'),
     path('grimoire/', views.grimoire_view, name='grimoire'),

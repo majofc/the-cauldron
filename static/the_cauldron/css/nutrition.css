@@ -324,3 +324,18 @@
    row is always the way out — typing it in by hand. */
 .nut-kind { margin-left: 0.5rem; font-size: 0.8125rem; color: var(--grimoire-text-dim); }
 .grim-suggest li.nut-manual { border-top: 1px solid var(--grimoire-border); color: var(--grimoire-gilt); font-style: italic; }
+
+/* OAuth consent screen (MCP connect, #89): the self-declared client name, what it
+   may do, and a loud note when the code goes back to a program on this computer. */
+.nut-oauth-client { font-size: 1.05rem; margin: 0 0 1rem; }
+.nut-oauth-scopes { margin: 0 0 1rem 1.25rem; display: grid; gap: 0.4rem; }
+.nut-oauth-warning {
+  border-left: 3px solid var(--grimoire-accent-fill); padding: 0.6rem 0.9rem; margin: 0 0 1rem;
+  background: color-mix(in srgb, var(--grimoire-accent) 10%, transparent); max-width: 70ch;
+}
+.nut-mcp-list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.nut-mcp-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--grimoire-border);
+}
+.nut .grim-help a, .nut-oauth-client a { color: var(--grimoire-gilt); }

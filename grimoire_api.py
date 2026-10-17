@@ -27,7 +27,7 @@ from the_cauldron.grimoire_serializers import (
     SpellSerializer,
     TagSerializer,
 )
-from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag, normalize_search
+from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag
 from the_cauldron.services import grimoire, grimoire_nutrition, grimoire_scaling, legal, nutrition
 
 
@@ -133,18 +133,9 @@ class SpellViewSet(viewsets.ModelViewSet):
             # never 404 because a stray ?tag= or ?scope= rode along on the URL.
             return qs
         params = self.request.query_params
-        scope = params.get("scope")
-        if scope == "mine":
-            qs = qs.filter(owner=user)
-        elif scope in ("coven", "public"):
-            qs = qs.filter(visibility=Spell.Visibility.PUBLIC).exclude(owner=user)
-        if params.get("tag"):
-            qs = qs.filter(tags__slug=params["tag"])
-        q = normalize_search(params.get("q", ""))
-        for word in q.split():
-            qs = qs.filter(search_title__contains=word)
-        own_first = Case(When(owner=user, then=Value(0)), default=Value(1), output_field=IntegerField())
-        return qs.distinct().order_by(own_first, "-updated_at")
+        return grimoire.filter_spells(
+            qs, user, scope=params.get("scope"), tag=params.get("tag"), q=params.get("q", "")
+        )
 
     def list(self, request, *args, **kwargs):
         qs = self.get_queryset()[: self.LIST_LIMIT]
