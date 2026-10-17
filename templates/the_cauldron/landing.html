@@ -1,5 +1,5 @@
 {% extends 'arcano/base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}The Cauldron — Recipes & the Alchemy of the Kitchen{% endblock %}
 {% block meta_description %}Guard your secret recipes. Share ancient kitchen knowledge. Discover the alchemy of every ingredient. The Cauldron, the third Arcana.{% endblock %}
@@ -32,6 +32,7 @@
 <li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">The Forge</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">The Grimoire</a></li>
+<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link">{% trans "The Journal" %}</a></li>
 <li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">The Cauldron</a></li>
 {% endblock %}
 

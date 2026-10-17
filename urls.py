@@ -3,7 +3,7 @@ from django.views.generic import TemplateView
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from . import api, grimoire_api, views
+from . import api, grimoire_api, nutrition_api, views
 
 app_name = "the_cauldron"
 
@@ -11,6 +11,8 @@ router = DefaultRouter()
 router.register(r"patterns", api.PatternViewSet, basename="forge-pattern")
 router.register(r"exercises", api.ExerciseViewSet, basename="forge-exercise")
 router.register(r"sessions", api.SessionViewSet, basename="forge-session")
+router.register(r"intake", nutrition_api.IntakeViewSet, basename="nutrition-intake")
+router.register(r"plan", nutrition_api.PlanViewSet, basename="nutrition-plan")
 
 grimoire_router = SimpleRouter()
 grimoire_router.register(r"reagents", grimoire_api.ReagentViewSet, basename="grimoire-reagent")
@@ -59,6 +61,14 @@ api_urlpatterns = [
         name="grimoire-preferences",
     ),
     path("grimoire/", include(grimoire_router.urls)),
+    path("legal/", nutrition_api.LegalView.as_view(), name="legal"),
+    path("legal/accept/", nutrition_api.LegalAcceptView.as_view(), name="legal-accept"),
+    path("legal/withdraw/", nutrition_api.LegalWithdrawView.as_view(), name="legal-withdraw"),
+    path("me/", nutrition_api.MeView.as_view(), name="nutrition-me"),
+    path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
+    path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
+    path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
+    path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
     path("", include(router.urls)),
 ]
 
@@ -66,6 +76,9 @@ urlpatterns = [
     path('', views.landing_view, name='landing'),
     path('terms/', TemplateView.as_view(template_name='the_cauldron/legal/terms.html'), name='terms'),
     path('privacy/', TemplateView.as_view(template_name='the_cauldron/legal/privacy.html'), name='privacy'),
+    path('accept/', views.legal_accept_view, name='legal-accept'),
+    path('profile/', views.profile_view, name='profile'),
+    path('journal/', views.journal_view, name='journal'),
     path('forge/', views.forge_view, name='forge'),
     path('forge/<slug:section>/', views.forge_view, name='forge-section'),
     path('grimoire/', views.grimoire_view, name='grimoire'),

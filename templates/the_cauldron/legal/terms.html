@@ -7,12 +7,13 @@
 {% block legal_body %}
 {% if LANGUAGE_CODE == "es" %}
 <h1 class="cauldron-legal-title">Términos y Condiciones de The Cauldron</h1>
-<p class="cauldron-legal-version">Versión 1.0 — Vigente a partir del 12 de octubre de 2026</p>
+<p class="cauldron-legal-version">Versión 1.1 — Vigente a partir del 15 de octubre de 2026</p>
 
 <section>
   <h2>1. El servicio</h2>
-  <p>The Cauldron (“el Servicio”) incluye The Forge (entrenamiento de calistenia adaptativo) y El Grimorio
-    (recetario: hechizos, reactivos y el Aquelarre). Lo opera Sistemas Ingeniería y Ecología S.A. de C.V.
+  <p>The Cauldron (“el Servicio”) incluye The Forge (entrenamiento de calistenia adaptativo), El Grimorio
+    (recetario: hechizos, reactivos y el Aquelarre), tu perfil con metas diarias de nutrientes y El Diario (registro
+    de comidas y planeador de comidas o “ritual”). Lo opera Sistemas Ingeniería y Ecología S.A. de C.V.
     (“SIESA”, “nosotros”), con domicilio en Ciudad de México, México. Al crear una cuenta o usar el Servicio
     aceptas estos Términos. Si no estás de acuerdo, no uses el Servicio.</p>
 </section>
@@ -67,43 +68,61 @@
 
 <section>
   <h2>5. Nutrición y ejercicio: solo información</h2>
-  <p>La información nutricional, las porciones, las conversiones de unidades y los programas de entrenamiento
-    son estimaciones con fines informativos. No son consejo médico, nutricional ni de salud. Consulta a un
+  <p>La información nutricional, las porciones, las conversiones de unidades, los totales del día, el cumplimiento de
+    tus metas, las porciones sugeridas y los programas de entrenamiento son estimaciones con fines informativos,
+    calculadas con datos de USDA FoodData Central y con los que aportan las personas usuarias. No son consejo médico, nutricional ni de salud. Consulta a un
     profesional antes de cambiar tu alimentación o empezar un programa de ejercicio, sobre todo si tienes
     alergias, una condición médica o estás embarazada. Revisa siempre las etiquetas de los productos que usas.</p>
 </section>
 
 <section>
-  <h2>6. Uso aceptable</h2>
+  <h2>6. Metas, registro de comidas y planeador</h2>
+  <ul>
+    <li><strong>Tú decides tus metas.</strong> Las metas diarias de nutrientes las fijas tú; el Servicio no te
+      recomienda cuánto comer ni sustituye a un profesional de la salud. No uses el Servicio para tratar un trastorno
+      de la conducta alimentaria ni una condición médica.</li>
+    <li><strong>Lo que registras es privado.</strong> Tus metas, lo que comes y tus planes de comida solo los ves tú.
+      Como pueden revelar información sobre tu salud, los tratamos como datos personales sensibles y solo con tu
+      consentimiento expreso, que puedes retirar en cualquier momento desde tu perfil. Sin ese consentimiento puedes
+      seguir usando The Forge y El Grimorio.</li>
+    <li><strong>Exactitud.</strong> Los totales dependen de lo que registras y de los datos nutricionales disponibles;
+      un valor desconocido nunca se cuenta como cero, por lo que algunos totales se muestran como mínimos (“≥”).</li>
+  </ul>
+  <p>El detalle sobre estos datos está en el <a href="{% url 'the_cauldron:privacy' %}">Aviso de Privacidad</a>.</p>
+</section>
+
+<section>
+  <h2>7. Uso aceptable</h2>
   <p>No uses el Servicio para fines ilícitos, para publicar contenido ofensivo, engañoso o que infrinja derechos,
     para intentar acceder a datos de otras personas, ni para eludir medidas de seguridad. Podemos suspender o
     cancelar cuentas que incumplan estos Términos.</p>
 </section>
 
 <section>
-  <h2>7. Sin garantía y limitación de responsabilidad</h2>
+  <h2>8. Sin garantía y limitación de responsabilidad</h2>
   <p>El Servicio se ofrece “tal como está” y “según disponibilidad”. En la medida máxima que permita la ley, SIESA
     no será responsable por daños indirectos, incidentales o consecuentes derivados del uso del Servicio o de su
     contenido, incluidas las recetas y los datos nutricionales aportados por otras personas.</p>
 </section>
 
 <section>
-  <h2>8. Ley aplicable y cambios</h2>
+  <h2>9. Ley aplicable y cambios</h2>
   <p>Estos Términos se rigen por las leyes de los Estados Unidos Mexicanos y por la jurisdicción de los tribunales de
     la Ciudad de México, sin perjuicio de los derechos que como persona consumidora no puedas renunciar. Podemos
-    actualizar estos Términos; la versión y la fecha de arriba cambiarán, y avisaremos dentro del Servicio de los
-    cambios importantes. Seguir usando el Servicio después del cambio significa que aceptas la nueva versión.</p>
+    actualizar estos Términos; la versión y la fecha de arriba cambiarán y, antes de que sigas usando el Servicio, te
+    pediremos que aceptes la nueva versión. Guardamos qué versión aceptaste y cuándo.</p>
   <p>Contacto: <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a></p>
 </section>
 
 {% else %}
 <h1 class="cauldron-legal-title">The Cauldron Terms &amp; Conditions</h1>
-<p class="cauldron-legal-version">Version 1.0 — Effective October 12, 2026</p>
+<p class="cauldron-legal-version">Version 1.1 — Effective October 15, 2026</p>
 
 <section>
   <h2>1. The service</h2>
-  <p>The Cauldron (“the Service”) includes The Forge (adaptive calisthenics training) and The Grimoire (a recipe
-    book: spells, reagents and the Coven). It is operated by Sistemas Ingeniería y Ecología S.A. de C.V. (“SIESA”,
+  <p>The Cauldron (“the Service”) includes The Forge (adaptive calisthenics training), The Grimoire (a recipe
+    book: spells, reagents and the Coven), your profile with daily nutrient goals, and The Journal (a meal log and a
+    meal planner, the “ritual”). It is operated by Sistemas Ingeniería y Ecología S.A. de C.V. (“SIESA”,
     “we”), based in Mexico City, Mexico. By creating an account or using the Service you accept these Terms. If you
     don't agree, don't use the Service.</p>
 </section>
@@ -153,32 +172,49 @@
 
 <section>
   <h2>5. Nutrition and exercise: information only</h2>
-  <p>Nutrition data, portions, unit conversions and training programs are estimates for information only. They are not
+  <p>Nutrition data, portions, unit conversions, day totals, goal adherence, suggested portions and training programs
+    are estimates for information only, calculated from USDA FoodData Central data and data contributed by users. They are not
     medical, nutritional or health advice. Talk to a professional before changing your diet or starting an exercise
     program, especially if you have allergies, a medical condition or are pregnant. Always check the labels of the
     products you use.</p>
 </section>
 
 <section>
-  <h2>6. Acceptable use</h2>
+  <h2>6. Goals, meal log and planner</h2>
+  <ul>
+    <li><strong>You set your goals.</strong> Daily nutrient goals are set by you; the Service doesn't recommend how
+      much to eat and doesn't replace a health professional. Don't use the Service to manage an eating disorder or a
+      medical condition.</li>
+    <li><strong>What you log is private.</strong> Your goals, what you eat and your meal plans are visible only to you.
+      Because they can reveal information about your health, we treat them as sensitive personal data and process
+      them only with your express consent, which you can withdraw at any time from your profile. Without that consent
+      you can keep using The Forge and The Grimoire.</li>
+    <li><strong>Accuracy.</strong> Totals depend on what you log and on the nutrition data available; an unknown value
+      is never counted as zero, so some totals are shown as minimums (“≥”).</li>
+  </ul>
+  <p>Details about this data are in the <a href="{% url 'the_cauldron:privacy' %}">Privacy Notice</a>.</p>
+</section>
+
+<section>
+  <h2>7. Acceptable use</h2>
   <p>Don't use the Service for unlawful purposes, to publish offensive, misleading or infringing content, to try to
     access other people's data, or to get around security measures. We may suspend or close accounts that break these
     Terms.</p>
 </section>
 
 <section>
-  <h2>7. No warranty and limitation of liability</h2>
+  <h2>8. No warranty and limitation of liability</h2>
   <p>The Service is provided “as is” and “as available”. To the fullest extent the law allows, SIESA is not liable for
     indirect, incidental or consequential damages arising from use of the Service or its content, including recipes
     and nutrition data contributed by other users.</p>
 </section>
 
 <section>
-  <h2>8. Governing law and changes</h2>
+  <h2>9. Governing law and changes</h2>
   <p>These Terms are governed by the laws of the United Mexican States and the jurisdiction of the courts of Mexico
     City, without prejudice to consumer rights you cannot waive. We may update these Terms; the version and date above
-    will change, and we will announce important changes inside the Service. Continuing to use the Service after a
-    change means you accept the new version.</p>
+    will change and, before you keep using the Service, we will ask you to accept the new version. We keep a record of
+    which version you accepted and when.</p>
   <p>Contact: <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a></p>
 </section>
 {% endif %}

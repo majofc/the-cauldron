@@ -1,11 +1,19 @@
+import uuid
+from datetime import timedelta
+from functools import wraps
+from urllib.parse import urlencode
+
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import get_language
 
 from .grimoire_i18n import grimoire_strings
 from .models import Casting, GrimoirePreferences, Program, Spell, UserEquipmentProfile
-from .services import grimoire
+from .nutrition_i18n import nutrition_strings
+from .services import grimoire, legal, nutrition
 
 # URL slug → the ``data-tab`` key forge.js switches on. Mirrored client-side by
 # TAB_SLUGS in forge.js; keep the two in step.
@@ -26,6 +34,22 @@ SECTION_REQUIREMENTS = {
     'the-trial': ('equipment',),
     'today': ('equipment', 'the-trial'),
 }
+
+
+def cauldron_page(view):
+    """``login_required`` plus the legal gate (#84): a signed-in user who hasn't
+    accepted the current terms and privacy notice is sent to the acceptance
+    page first, and comes back here afterwards."""
+
+    @wraps(view)
+    @login_required(login_url='the_cauldron:login')
+    def wrapped(request, *args, **kwargs):
+        if legal.pending_documents(request.user):
+            query = urlencode({'next': request.get_full_path()})
+            return redirect(f"{reverse('the_cauldron:legal-accept')}?{query}")
+        return view(request, *args, **kwargs)
+
+    return wrapped
 
 
 def landing_view(request):
@@ -49,7 +73,7 @@ def _first_unready_section(user):
     return None
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def forge_view(request, section=None):
     """The Forge — adaptive calisthenics. Single page; sections driven by JS
     against the /cauldron/api/ endpoints.
@@ -82,14 +106,14 @@ def _grimoire_context(request, **extra):
     return {'grimoire_strings': grimoire_strings(), 'unit_system': prefs.unit_system, **extra}
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_view(request):
     """The Grimoire — recipe book: spells list + reagents, driven by the
     /cauldron/api/grimoire/ endpoints (grimoire.js)."""
     return render(request, 'the_cauldron/grimoire.html', _grimoire_context(request, page='list'))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_spell_view(request, spell_uuid):
     """One spell on its own page (shareable URL, browser back works).
 
@@ -104,7 +128,7 @@ def grimoire_spell_view(request, spell_uuid):
     ))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_cast_view(request, spell_uuid):
     """Log a casting of a spell (#68) on a full page. Any spell the user can
     read — their own or a public one — can be cast; anything else is a 404."""
@@ -115,7 +139,7 @@ def grimoire_cast_view(request, spell_uuid):
     ))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_casting_edit_view(request, casting_uuid):
     """Edit one of your own castings; anyone else's is a 404."""
     casting = get_object_or_404(Casting.objects.select_related('spell'), uuid=casting_uuid, user=request.user)
@@ -128,7 +152,7 @@ def grimoire_casting_edit_view(request, casting_uuid):
     ))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_reagent_view(request, reagent_uuid):
     """One ingredient on its own page: full nutrient profile and measures.
     Visible like the API (approved + the user's own), else 404."""
@@ -140,7 +164,7 @@ def grimoire_reagent_view(request, reagent_uuid):
     ))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_reagent_new_view(request, reagent_uuid=None):
     """Add an ingredient (with its nutrients) on a full page, or edit one of
     your own that isn't approved yet (404 otherwise). ``?name=`` prefills the
@@ -156,7 +180,7 @@ def grimoire_reagent_new_view(request, reagent_uuid=None):
     ))
 
 
-@login_required(login_url='the_cauldron:login')
+@cauldron_page
 def grimoire_edit_view(request, spell_uuid=None):
     """Write a new spell, or edit one of your own, on a full page.
 
@@ -170,3 +194,87 @@ def grimoire_edit_view(request, spell_uuid=None):
     return render(request, 'the_cauldron/grimoire.html', _grimoire_context(
         request, page='edit', spell_uuid=spell_uuid, spell_title=title,
     ))
+
+
+# ── Daily nutrition (#80–#84) ───────────────────────────────────────────────
+
+
+def _safe_next(request):
+    target = request.GET.get('next', '')
+    if target and url_has_allowed_host_and_scheme(
+        target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return target
+    return reverse('the_cauldron:landing')
+
+
+def _nutrition_context(request, page, **extra):
+    prefs, _created = GrimoirePreferences.objects.get_or_create(user=request.user)
+    return {
+        'page': page,
+        'nutrition_strings': nutrition_strings(),
+        'unit_system': prefs.unit_system,
+        'legal_versions': legal.CURRENT_VERSIONS,
+        **extra,
+    }
+
+
+@login_required(login_url='the_cauldron:login')
+def legal_accept_view(request):
+    """Accept the current terms and privacy notice (#84). The form posts to
+    ``api/legal/accept/``; with nothing pending this just moves on."""
+    target = _safe_next(request)
+    pending = legal.pending_documents(request.user)
+    if not pending:
+        return redirect(target)
+    return render(request, 'the_cauldron/nutrition.html', _nutrition_context(
+        request, 'accept', pending=pending, next_url=target,
+    ))
+
+
+@cauldron_page
+def profile_view(request):
+    """The Cauldron profile (#80, #82): timezone, sensitive-data consent,
+    daily nutrient goals and adherence. Driven by nutrition.js."""
+    return render(request, 'the_cauldron/nutrition.html', _nutrition_context(
+        request, 'profile', has_consent=legal.has_sensitive_consent(request.user),
+    ))
+
+
+@cauldron_page
+def journal_view(request):
+    """One day of the meal log and the ritual planner (#81, #83).
+    ``?date=YYYY-MM-DD`` (default today, user's timezone); ``?log_spell=`` /
+    ``?plan_spell=`` preselect a readable spell in the add forms."""
+    user = request.user
+    try:
+        day = nutrition.parse_day(request.GET.get('date'), user)
+    except nutrition.NutritionInputError:
+        day = nutrition.today_for(user)
+    prefill = None
+    for param, mode in (('log_spell', 'log'), ('plan_spell', 'plan')):
+        raw = request.GET.get(param)
+        if not raw:
+            continue
+        spell = grimoire.readable_spells(user).filter(uuid=raw).first() if _is_uuid(raw) else None
+        if spell is not None:
+            prefill = {
+                'mode': mode,
+                'uuid': str(spell.uuid),
+                'title': grimoire.localized_text(spell, get_language())[0],
+                'servings': spell.servings,
+            }
+        break
+    return render(request, 'the_cauldron/nutrition.html', _nutrition_context(
+        request, 'journal', has_consent=legal.has_sensitive_consent(user),
+        day=day.isoformat(), today=nutrition.today_for(user).isoformat(), prefill=prefill,
+        prev_day=(day - timedelta(days=1)).isoformat(), next_day=(day + timedelta(days=1)).isoformat(),
+    ))
+
+
+def _is_uuid(value):
+    try:
+        uuid.UUID(str(value))
+    except ValueError:
+        return False
+    return True

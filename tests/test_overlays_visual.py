@@ -30,7 +30,7 @@ from the_cauldron.models import (
     Exercise,
     MovementPattern,
 )
-from the_cauldron.services import forge
+from the_cauldron.services import forge, legal
 
 playwright_sync = pytest.importorskip("playwright.sync_api")
 
@@ -71,6 +71,7 @@ def forge_user(transactional_db):
     user = User.objects.create_user(
         username="phone-user", email="phone@example.com", password="pw12345!"
     )
+    legal.accept(user, legal.GATED)  # past the terms gate (#84)
     profile = forge.get_or_create_equipment_profile(user)
     profile.equipment.set(Equipment.objects.filter(key__in=["bodyweight", "bands", "dumbbells"]))
     profile.band_levels = ["light", "medium", "heavy"]

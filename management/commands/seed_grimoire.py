@@ -1,7 +1,8 @@
 """Seed the Grimoire: tags, the USDA reagent catalog and the public starter spells.
 
 Idempotent — safe to re-run, and it runs on every container start. By default
-it only *creates* what is missing (reagents keyed by ``fdc_id``, tags by slug,
+it only *creates* what is missing (USDA reagents keyed by ``fdc_id``, staff
+reagents by name, tags by slug,
 spells by system user + title), so a restart never bumps the starter spells'
 ``updated_at`` (which would float them above users' spells) and never undoes
 staff edits or moderation in the admin.
@@ -13,6 +14,9 @@ User data is never touched.
 
 Data lives in ``the_cauldron/seed_data/`` (committed, so no USDA API key is
 needed at deploy). Rebuild the reagents with ``build_grimoire_reagents``.
+``grimoire_staff_reagents.json`` holds staff-entered products USDA doesn't
+cover (e.g. Mexican Coca-Cola), from their labels; they're approved catalog
+rows owned by the system user.
 """
 
 import json
@@ -90,6 +94,29 @@ class Command(BaseCommand):
             reagents[row["fdc_id"]] = reagent
 
         owner = self._system_user()
+        n_staff = 0
+        for row in _load("grimoire_staff_reagents.json")["reagents"]:
+            fields = {
+                "name_es": row["name_es"],
+                "category": row["category"],
+                "grams_per_unit": row["grams_per_unit"],
+                "density_g_per_ml": row["density_g_per_ml"],
+            }
+            reagent = (Reagent.objects.filter(source=Reagent.Source.STAFF, name=row["name"])
+                       .order_by("created_at").first())
+            created = reagent is None
+            if created:
+                reagent = Reagent.objects.create(
+                    name=row["name"], source=Reagent.Source.STAFF, status=Reagent.Status.APPROVED,
+                    created_by=owner, **fields,
+                )
+            elif refresh:
+                for key, value in fields.items():
+                    setattr(reagent, key, value)
+                reagent.save()
+            if created or refresh or not hasattr(reagent, "nutrients"):
+                ReagentNutrients.objects.update_or_create(reagent=reagent, defaults=row["nutrients"])
+            n_staff += 1
         n_spells = 0
         for data in _load("grimoire_spells.json")["spells"]:
             fields = {
@@ -133,7 +160,7 @@ class Command(BaseCommand):
             SpellReagent.objects.bulk_create(lines)
 
         self.stdout.write(self.style.SUCCESS(
-            f"Grimoire seeded: {len(tags)} tags, {len(reagents)} reagents, "
+            f"Grimoire seeded: {len(tags)} tags, {len(reagents)} USDA + {n_staff} staff reagents, "
             f"{n_spells} starter spells {'written' if refresh else 'created'}."
         ))
 

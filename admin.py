@@ -7,6 +7,7 @@ from the_cauldron.models import (
     BlockedExercise,
     Equipment,
     Exercise,
+    LegalAcceptance,
     MovementPattern,
     Muscle,
     PrescribedExercise,
@@ -135,3 +136,24 @@ class CastingAdmin(admin.ModelAdmin):
     list_filter = ("score",)
     search_fields = ("spell_title", "user__username")
     raw_id_fields = ("spell", "user")
+
+
+@admin.register(LegalAcceptance)
+class LegalAcceptanceAdmin(admin.ModelAdmin):
+    """Read-only record of who accepted which legal version and when (#84) —
+    for ARCO requests. Rows are append-only; nothing is editable here."""
+
+    list_display = ("user", "document", "version", "accepted_at", "withdrawn_at")
+    list_filter = ("document", "version")
+    search_fields = ("user__username",)
+    date_hierarchy = "accepted_at"
+    readonly_fields = ("user", "document", "version", "accepted_at", "withdrawn_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

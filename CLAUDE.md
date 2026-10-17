@@ -294,7 +294,8 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
   **except** reagents already on that spell (a fork may carry the source owner's private reagent).
 - User reagents are created `private`, or `pending` when the user ticks "share"; staff approve in the
   admin (`ReagentAdmin` actions). `source`/`status` can't be set through the API.
-- `to_grams(reagent, qty, unit)`: mass units fixed; `grams_per_unit` for cup/tbsp/tsp/piece; volume
+- `to_grams(reagent, qty, unit)`: mass units fixed; `grams_per_unit` for cup/tbsp/tsp/piece/glass (a glass
+  has no generic volume — only the reagent's own weight per glass); volume
   units through `density_g_per_ml`; otherwise `ConversionError` → 400 on the line.
 - Search is case- and accent-insensitive through the stored `search_name` / `search_title`
   (`normalize_search`) — works on Postgres and the sqlite fallback, no `unaccent`. Every query word
@@ -360,12 +361,15 @@ an unknown value (null, or no `ReagentNutrients` row) is never 0 — it's left o
 `cooked_weight_g` (as a ratio over `casting_raw_grams` — the batch as actually cast, adjustments included) →
 `Spell.cooked_yield_g` → `Spell.yield_pct` → raw weight, `source: "unknown"` (flagged in the UI). Other users'
 castings never count. `GET spells/{uuid}/nutrition/?servings=|?scale=` (batch scales, per serving and per 100 g
-cooked don't); `POST spells/{uuid}/portion/` `{"goals": [{nutrient, at_least, at_most}]}` → gram range of the
-cooked dish, or `conflicts` (the goals setting the tightest lower and upper bound; a minimum of a nutrient the
-dish lacks conflicts alone). `reagents_missing_data` names only reagents missing the basics (`CORE`).
+cooked don't); `POST spells/{uuid}/portion/` → gram range of the cooked dish against what's left of the user's
+**daily goals** (#80/#83, see "Daily nutrition" below), or `conflicts` (the goals setting the tightest lower and
+upper bound). `reagents_missing_data` names only reagents missing the basics (`CORE`).
 
 **Seed**: `python manage.py seed_grimoire` (idempotent; also run at container start) loads
-`seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain) and
+`seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain),
+`seed_data/grimoire_staff_reagents.json` (staff-entered products USDA lacks, from their labels — e.g. Mexican
+Coca-Cola, 1 `glass` = 250 ml; `source=staff`, approved, keyed by English name, owned by the system user;
+values not on the label stay null) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
 `the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
 reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
@@ -375,3 +379,65 @@ reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>
   use g or add `grams_per_unit`.
 - Another user can't find a reagent → it's not `approved` yet.
 - `seed_grimoire` IntegrityError on `auth_user_email_unique` → the system user must keep its own email.
+
+---
+
+## Daily nutrition — goals, meal log, adherence, planner (#85)
+
+Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules in `services/legal.py`,
+`services/nutrition.py`, `services/adherence.py`; API in `nutrition_api.py`; one template
+`nutrition.html` (page = `accept` | `profile` | `journal`) + `static/the_cauldron/js/nutrition.js` +
+`css/nutrition.css`; JS strings in `nutrition_i18n.py` (reuses the Grimoire's `n_*`/`grp_*`/`unit_*`).
+
+| Model | Notes |
+|---|---|
+| `LegalAcceptance` | `user`, `document` terms/privacy/sensitive_consent, `version`, `accepted_at`, `withdrawn_at`. **Append-only**: `save()` on an existing row raises; the only change ever made is `withdrawn_at` via `legal.withdraw_consent` (queryset update). No IP/UA. Read-only admin (ARCO) |
+| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. Lazy (`nutrition.get_profile`) |
+| `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
+| `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
+| `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
+
+**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.1, privacy 1.2, consent 1.0); the
+legal pages state the same versions. `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
+whose latest terms/privacy version isn't current goes to `the_cauldron:legal-accept` (`/cauldron/accept/?next=`,
+`next` checked with `url_has_allowed_host_and_scheme`). The gate covers **pages only** — Forge/Grimoire APIs
+are not gated. Goals/intake/plan/adherence APIs need `NutritionConsent` (current terms+privacy **and** a live
+sensitive-data consent) → else 403 `{"code": "consent_required"}`. Bumping a version re-prompts everyone.
+Tests that load Cauldron pages must `legal.accept(user, legal.GATED)` first.
+
+**Rules** (`services/nutrition.py`)
+- Unknown is never 0: totals carry `missing`; shown "≥ x".
+- `judge(goal, total, final=)` → met / missed / uncertain (missing data could flip it). With `final=False`
+  (today): an exceeded max is `missed`, a reached min with no max is `met`, anything else `pending`.
+- Remaining-budget portion: `POST grimoire/spells/{uuid}/portion/` `{date?}` ignores any body goals and uses
+  the goals active that day minus what's eaten **and** still planned (`consumed_and_planned`). A remaining
+  minimum the dish can't bring is `not_covered` (not a conflict); a used-up max the dish contains is `over`.
+  `{"has_goals": false}` without goals or consent → the spell page hides the section.
+
+**Adherence (#82)** — computed on read, `?days=7|30`. % met = met / (met+missed+uncertain); not-logged days
+never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. Streaks look back 90 days.
+
+**Rolling window + time in range** (`services/rolling.py`, `GET rolling/?span=24h|7d&days=7|30|90`) — the
+Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
+days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
+average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
+and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 23), per-goal-nutrient
+`status`/`low`/`high` arrays, `summary` (time in range %), `daily` (share of each day in range). The page
+scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
+`adherence/` endpoint (#82) stays but no page uses it now.
+
+**API** (`/cauldron/api/`): `legal/`, `legal/accept/` `{documents}`, `legal/withdraw/` `{delete_data}`,
+`me/` (GET/PATCH timezone), `goals/` (GET/PUT full set), `goals/history/`, `intake/` (CRUD, `?date=`),
+`intake/day/?date=`, `adherence/?days=`, `plan/` (CRUD, `?from=&to=` ≤ 62 days), `plan/day/?date=`,
+`plan/{uuid}/eat/`. Naive `eaten_at` is read in the user's timezone (`UserTimezoneMixin`).
+
+**Pages**: `the_cauldron:profile` (goals, timezone, withdraw consent), `the_cauldron:journal`
+(`?date=`, `?log_spell=` / `?plan_spell=` preselect a readable spell; the spell page's "I ate this" /
+"Plan it" link here). The Journal's entry form is one search over spells **and** reagents (the pick sets
+`source`); "type it in by hand" (`quick`) is the last search row, not an up-front choice. A picked reagent
+offers its own measures first (`grams_per_unit`, e.g. `glass`) as the default unit. A floating "Log a meal"
+button (`#nut-fab`) jumps to the form. `rolling/` ticks are on the user's clock (`-06:00`), since the page
+reads date/hour straight off the string. The Profile and the Journal show the consent panel instead of the app until consent is given.
+
+**PostHog**: only counts/enums (`intake_logged {source}`, `plan_meal_added {slot}`, `nutrition_goals_saved
+{goal_count, changed_count}`, `legal_accepted {document, version}`…) — never values, foods or goals.
