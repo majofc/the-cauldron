@@ -2,7 +2,6 @@
 
 import uuid as uuid_module
 
-from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import mixins, status, viewsets
@@ -17,9 +16,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     MovementPattern,
-    Muscle,
     PrescribedExercise,
-    Program,
     WorkoutSession,
 )
 from the_cauldron.serializers import (
@@ -31,7 +28,7 @@ from the_cauldron.serializers import (
     UserEquipmentProfileSerializer,
     WorkoutSessionSerializer,
 )
-from the_cauldron.services import forge, progression
+from the_cauldron.services import forge
 
 
 class PatternViewSet(viewsets.ReadOnlyModelViewSet):
@@ -194,9 +191,7 @@ class EquipmentProfileView(APIView):
         serializer = UserEquipmentProfileSerializer(profile, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        if profile.configured_at is None:
-            profile.configured_at = timezone.now()
-            profile.save(update_fields=["configured_at", "updated_at"])
+        if forge.mark_equipment_configured(profile):
             posthog.capture("equipment_profile_configured")
         return Response(serializer.data)
 
@@ -220,53 +215,13 @@ class AssessmentView(APIView):
         return Response(AssessmentSessionSerializer(active).data)
 
     def post(self, request):
-        profile = forge.get_or_create_equipment_profile(request.user)
-        # Reuse an open (resultless) active assessment, else open one.
-        session = AssessmentSession.objects.filter(
-            user=request.user, is_active=True, completed_at__isnull=True
-        ).first()
-        if session is None:
-            session = forge.retake_assessment(request.user)
-
-        results = request.data.get("results", [])
-        if not results:
-            return Response({"detail": "results required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        blocked = forge.blocked_exercise_ids(request.user)
-        peer = []
-        for item in results:
-            pattern = get_object_or_404(MovementPattern, key=item["pattern_key"])
-            tested = get_object_or_404(Exercise, uuid=item["tested_exercise"])
-            score = int(item["reps_or_seconds"])
-            ladder = forge.eligible_exercises(pattern, profile, exclude_ids=blocked)
-            placed = progression.place_from_assessment(ladder, score)
-            session.results.update_or_create(
-                pattern=pattern,
-                defaults={
-                    "tested_exercise": tested,
-                    "reps_or_seconds": score,
-                    "placed_exercise": placed,
-                },
-            )
-            peer.append(
-                {
-                    "pattern_key": pattern.key,
-                    "exercise": tested.name,
-                    "value": score,
-                    "score": forge.peer_score(request.user, tested.name, score),
-                }
-            )
-
-        session.completed_at = timezone.now()
-        session.save(update_fields=["completed_at"])
-
-        # The Trial no longer asks for a split — every program is the same single
-        # all-patterns day. ``Program.split`` keeps its default so historical rows
-        # (and anything still reading the field) resolve.
-        program = forge.generate_program(request.user, session)
+        try:
+            session, program, peer = forge.submit_assessment(request.user, request.data.get("results", []))
+        except forge.TrialInputError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         posthog.capture(
             "assessment_completed",
-            properties={"result_count": len(results)},
+            properties={"result_count": len(request.data.get("results", []))},
         )
         return Response(
             {
@@ -393,19 +348,7 @@ class ProgramView(APIView):
         # Prescriptions are reconciled when equipment changes, so this is a plain
         # read. Anything still unperformable had no stand-in to swap in — hide it
         # rather than show a movement the user cannot do.
-        hidden = forge.unperformable_prescription_ids(request.user)
-        program = (
-            Program.objects.filter(user=request.user, is_active=True)
-            .prefetch_related(
-                Prefetch(
-                    "days__prescriptions",
-                    queryset=PrescribedExercise.objects.exclude(
-                        pk__in=hidden
-                    ).select_related("exercise", "pattern", "pending_progression"),
-                )
-            )
-            .first()
-        )
+        program = forge.active_program(request.user)
         if not program:
             return Response({"detail": "No active program."}, status=404)
         return Response(ProgramSerializer(program).data)
@@ -526,60 +469,11 @@ class ProgressView(APIView):
         # Optional ?exercise=<name> narrows every point to that one movement;
         # optional ?muscle=<key> narrows to sets that train that muscle;
         # omitted = totals across all exercises (the default view).
-        only = request.query_params.get("exercise") or None
-        muscle = request.query_params.get("muscle") or None
-        sessions = (
-            WorkoutSession.objects.filter(user=request.user, status="completed")
-            .prefetch_related("set_logs__exercise__muscles")
-            .order_by("performed_at", "created_at")
-        )
-        points = []
-        exercises = set()
-        for s in sessions:
-            total_reps = 0
-            total_volume = 0.0
-            top_set = 0
-            counted = False
-            for sl in s.set_logs.all():
-                # Grip variants of a bar pull-up collapse to one rung label so the
-                # daily grip choice stays invisible (a chin-up session still counts
-                # toward the "Pull-up" series instead of a separate line).
-                label = sl.exercise.rung_label
-                exercises.add(label)
-                if only and label != only:
-                    continue
-                if muscle and not any(m.key == muscle for m in sl.exercise.muscles.all()):
-                    continue
-                if sl.actual_reps is None:
-                    continue
-                counted = True
-                total_reps += sl.actual_reps
-                total_volume += sl.actual_reps * (sl.actual_load or 1)
-                if sl.is_amrap:
-                    top_set = max(top_set, sl.actual_reps)
-            if (only or muscle) and not counted:
-                continue  # nothing matching the filter was trained that session
-            when = s.performed_at or s.created_at
-            points.append(
-                {
-                    "date": when.isoformat(),
-                    "total_reps": total_reps,
-                    "total_volume": round(total_volume, 1),
-                    "best_amrap": top_set,
-                }
-            )
-
-        muscles = [
-            {"key": m.key, "name": m.name}
-            for m in Muscle.objects.all().order_by("name")
-        ]
-        return Response(
-            {
-                "points": points,
-                "exercises": sorted(exercises),
-                "muscles": muscles,
-            }
-        )
+        return Response(forge.progress_points(
+            request.user,
+            exercise=request.query_params.get("exercise") or None,
+            muscle=request.query_params.get("muscle") or None,
+        ))
 
 
 def _exercise_or_400(value):
@@ -709,15 +603,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
             properties={"logged_set_count": len(set_results)},
         )
         # Peer "flames" score for each AMRAP test set performed this session.
-        peer = [
-            {
-                "exercise": a.exercise.name,
-                "value": a.actual_reps,
-                "score": forge.peer_score(request.user, a.exercise.name, a.actual_reps),
-            }
-            for a in session.set_logs.filter(is_amrap=True).select_related("exercise")
-            if a.actual_reps is not None
-        ]
+        peer = forge.session_peer_scores(request.user, session)
         return Response(
             {
                 "session": WorkoutSessionSerializer(session).data,

@@ -446,9 +446,9 @@ reads date/hour straight off the string. The Profile and the Journal show the co
 
 ## MCP server — drive The Cauldron from an AI assistant (#89)
 
-Shipped: phase 1 (OAuth 2.1 + nutrition/Grimoire **read** tools) and phase 2 (nutrition/Grimoire **write**
-tools, two-step confirmation, idempotency, `channel`, estimated nutrients). Forge tools, the info page and the
-legal update are later phases (see the issue).
+Shipped: phase 1 (OAuth 2.1 + nutrition/Grimoire **read** tools), phase 2 (nutrition/Grimoire **write**
+tools, two-step confirmation, idempotency, `channel`, estimated nutrients) and phase 3 (**Forge** tools). The
+info page, analytics dashboard and legal update are phase 4 (see the issue).
 
 **Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
 Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
@@ -509,6 +509,21 @@ back. Holds even if the user "always allows" the tool in their client.
 **Estimated nutrients**: `Reagent.nutrients_estimated` (set only by MCP, read-only in `ReagentSerializer`) and
 `IntakeEntry.basis["estimated"]` (quick entries; spell/reagent snapshots copy it from estimated reagents).
 UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reagents, "estimated" on log entries.
+
+**Forge tools** (`tools/forge.py`, `tools/forge_writes.py`; no nutrition consent needed):
+read `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions` (≤ 62 days),
+`get_equipment`, `get_trial`; write `set_equipment`✱, `submit_trial_results`, `retake_trial`✱,
+`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱.
+They call the same `services/forge.py` functions as the web, so placement, programs and progression match for the
+same inputs. Logic that lived in `api.py` views moved there: `submit_assessment` (+ `TrialInputError`),
+`progress_points`, `session_peer_scores`, `active_program`, `mark_equipment_configured`; new `trial_anchors` and
+`pending_unfinished` (read-only, unlike `unfinished_session`). `create_session_from_plan` / `retake_assessment`
+take `channel=`. `get_forge_today` states the day as `no_program` | `unfinished_past_session` | `in_progress` |
+`done` | `not_started` and never writes (the plan has `id: null` sets until `start_forge_session`). The
+unfinished-session rule holds: `start_forge_session` → `unfinished_session` error until that past session is
+finished (`finish_forge_session`, keeps its own date) or deleted. `log_forge_set` refuses an already-logged set
+(`already_logged` → `update_forge_set`); finished sessions are read-only (`conflict`). `get_today` adds a `forge`
+summary.
 
 **PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}` (`preview`/`applied`
 for two-step tools), `mcp_duplicate_prevented {kind, overridden}`, `mcp_connected {client}`,
