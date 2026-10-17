@@ -444,6 +444,7 @@
         <div class="nut-entry-body">${name}
           <span class="nut-entry-amount">${esc(amountText(e))}${grams}</span>
           ${e.planned_meal ? `<span class="grim-badge">${esc(t("from_plan"))}</span>` : ""}
+          ${e.estimated ? `<span class="grim-badge is-warn">${esc(t("badge_estimated_short"))}</span>` : ""}
         </div>
         <span class="nut-entry-kcal">${esc(kcal)}</span>
         <div class="grim-casting-actions">

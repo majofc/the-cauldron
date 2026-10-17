@@ -134,6 +134,18 @@ def exact_duplicates(user, name):
     ]
 
 
+def exact_spell_duplicates(user, title):
+    """Readable spells (own + public) whose English or Spanish title matches
+    ``title`` once normalized — what to reuse before creating another."""
+    needle = normalize_search(title)
+    if not needle:
+        return []
+    return [
+        s for s in readable_spells(user).filter(search_title__contains=needle).select_related("owner")
+        if needle in (normalize_search(s.title), normalize_search(s.title_es))
+    ]
+
+
 def readable_spells(user):
     """Spells the user may read: their own (any visibility) + every public one."""
     return Spell.objects.filter(Q(owner=user) | Q(visibility=Spell.Visibility.PUBLIC))

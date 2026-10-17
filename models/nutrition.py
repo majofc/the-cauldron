@@ -23,7 +23,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from .forge import ForgeBaseModel
+from .forge import ForgeBaseModel, channel_field
 from .grimoire import Casting, Reagent, ReagentNutrients, Spell
 
 DEFAULT_TIMEZONE = "America/Mexico_City"
@@ -85,6 +85,7 @@ class NutrientGoal(ForgeBaseModel):
         AT_MOST = "at_most", "At most"
         BETWEEN = "between", "Between"
 
+    channel = channel_field()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cauldron_nutrient_goals"
     )
@@ -127,6 +128,7 @@ class IntakeEntry(ForgeBaseModel):
         REAGENT = "reagent", "Reagent"
         QUICK = "quick", "Quick entry"
 
+    channel = channel_field()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cauldron_intake"
     )
@@ -164,6 +166,7 @@ class PlannedMeal(ForgeBaseModel):
         DINNER = "dinner", "Dinner"
         SNACK = "snack", "Snack"
 
+    channel = channel_field()
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="cauldron_planned_meals"
     )

@@ -141,6 +141,9 @@ class McpView(View):
         except (ValueError, UnicodeDecodeError):
             return JsonResponse(_rpc_error(None, PARSE_ERROR, "Parse error"), status=400)
 
+        # The token's user, for the web serializers the write tools reuse
+        # (they read request.user). Only this view sees it: no session is made.
+        request.user = token.user
         conn = touch_connection(token.user, token.application)
         _identify_for_analytics(token.user)
         ctx = McpContext(

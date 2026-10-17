@@ -73,8 +73,10 @@ class ReagentSerializer(serializers.ModelSerializer):
         fields = [
             "uuid", "name", "name_es", "category", "source", "status", "fdc_id",
             "grams_per_unit", "density_g_per_ml", "nutrients", "share", "is_mine", "can_edit",
+            "nutrients_estimated",
         ]
-        read_only_fields = ["uuid", "source", "status", "fdc_id", "is_mine", "can_edit"]
+        # nutrients_estimated is set only by the MCP tools (an AI estimate, #89).
+        read_only_fields = ["uuid", "source", "status", "fdc_id", "is_mine", "can_edit", "nutrients_estimated"]
 
     def get_can_edit(self, obj):
         request = self.context.get("request")
@@ -179,6 +181,7 @@ class SpellSerializer(serializers.ModelSerializer):
     is_mine = serializers.SerializerMethodField()
     forked_from = serializers.SerializerMethodField()
     has_unverified_reagents = serializers.SerializerMethodField()
+    has_estimated_nutrition = serializers.SerializerMethodField()
     # The viewing user's own castings of this spell (#68); annotated by
     # services.grimoire.with_casting_stats.
     my_casting_count = serializers.SerializerMethodField()
@@ -190,7 +193,7 @@ class SpellSerializer(serializers.ModelSerializer):
         fields = [
             "uuid", "title", "title_es", "description", "description_es", "servings",
             "prep_minutes", "cook_minutes", "steps", "steps_es", "visibility", "tags", "lines",
-            "owner_name", "is_mine", "forked_from", "has_unverified_reagents",
+            "owner_name", "is_mine", "forked_from", "has_unverified_reagents", "has_estimated_nutrition",
             "my_casting_count", "my_average_score", "my_last_cast_on", "cooked_yield_g", "yield_pct",
             "created_at", "updated_at",
         ]
@@ -235,6 +238,9 @@ class SpellSerializer(serializers.ModelSerializer):
 
     def get_has_unverified_reagents(self, obj):
         return any(line.reagent.status != Reagent.Status.APPROVED for line in obj.lines.all())
+
+    def get_has_estimated_nutrition(self, obj):
+        return any(line.reagent.nutrients_estimated for line in obj.lines.all())
 
     def validate_title(self, value):
         value = value.strip()

@@ -169,10 +169,11 @@ def current_goals(user):
     return {g.nutrient: g for g in NutrientGoal.objects.filter(user=user, valid_to__isnull=True)}
 
 
-def save_goal_set(user, specs, today):
+def save_goal_set(user, specs, today, *, channel=None):
     """Make ``specs`` the active set. Unchanged goals keep their row; a changed
     or cleared one is closed today (``valid_to``) and a changed one reopens as a
-    new row from today. Returns how many goals changed."""
+    new row from today. Returns how many goals changed. ``channel`` marks
+    where the new rows came from (web / MCP)."""
     wanted = {spec.nutrient: spec for spec in specs}
     changed = 0
     get_profile(user)
@@ -198,6 +199,7 @@ def save_goal_set(user, specs, today):
             NutrientGoal.objects.create(
                 user=user, nutrient=nutrient, kind=spec.kind,
                 min_value=spec.min_value, max_value=spec.max_value, valid_from=today,
+                **({"channel": channel} if channel else {}),
             )
             if goal is None:
                 changed += 1
@@ -263,12 +265,15 @@ def spell_basis_snapshot(spell, user):
     if basis.cooked_g <= 0:
         raise NutritionInputError(_("This spell has no weighed ingredients."))
     per = basis.per_100g_cooked()
-    return {
+    snapshot = {
         "per_100g": {name: _round(total.value) for name, total in per.items()},
         "missing": {name: total.missing for name, total in per.items() if total.missing},
         "serving_g": _round(basis.cooked_g / spell.servings),
         "yield_source": basis.yld.source,
     }
+    if any(line.reagent.nutrients_estimated for line in basis.lines):
+        snapshot["estimated"] = True
+    return snapshot
 
 
 def reagent_basis_snapshot(reagent):
@@ -280,7 +285,10 @@ def reagent_basis_snapshot(reagent):
             missing[name] = 1
         else:
             per[name] = value
-    return {"per_100g": per, "missing": missing}
+    snapshot = {"per_100g": per, "missing": missing}
+    if reagent.nutrients_estimated:
+        snapshot["estimated"] = True
+    return snapshot
 
 
 def spell_grams(basis, quantity, unit):

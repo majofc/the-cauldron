@@ -71,18 +71,24 @@ class IntakeEntrySerializer(serializers.ModelSerializer):
     casting = serializers.UUIDField(source="casting_id", read_only=True)
     local_time = serializers.SerializerMethodField()
     planned_meal = serializers.SerializerMethodField()
+    # Nutrients estimated by the user's AI assistant (quick entry, or a spell /
+    # ingredient whose values were estimated) — shown as a badge (#89).
+    estimated = serializers.SerializerMethodField()
 
     class Meta:
         model = IntakeEntry
         fields = [
             "uuid", "eaten_at", "local_date", "local_time", "source", "spell", "casting", "reagent",
-            "label", "quantity", "unit", "grams", "nutrients", "missing", "planned_meal",
+            "label", "quantity", "unit", "grams", "nutrients", "missing", "planned_meal", "estimated",
         ]
         read_only_fields = fields
 
     def get_local_time(self, obj):
         tz = self.context.get("tz")
         return timezone.localtime(obj.eaten_at, tz).strftime("%H:%M") if tz else None
+
+    def get_estimated(self, obj):
+        return bool((obj.basis or {}).get("estimated"))
 
     def get_planned_meal(self, obj):
         meal = getattr(obj, "planned_meal", None)

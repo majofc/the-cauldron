@@ -446,8 +446,9 @@ reads date/hour straight off the string. The Profile and the Journal show the co
 
 ## MCP server — drive The Cauldron from an AI assistant (#89)
 
-Phase 1 shipped: OAuth 2.1 + the nutrition/Grimoire **read** tools. Writes, two-step confirmation,
-Forge tools, the info page and the legal update are later phases (see the issue).
+Shipped: phase 1 (OAuth 2.1 + nutrition/Grimoire **read** tools) and phase 2 (nutrition/Grimoire **write**
+tools, two-step confirmation, idempotency, `channel`, estimated nutrients). Forge tools, the info page and the
+legal update are later phases (see the issue).
 
 **Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
 Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
@@ -482,10 +483,35 @@ API — never duplicate rules in a tool). Register with `@registry.tool(...)`; e
 `invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
 `/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
 Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
-Phase 1: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
+Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
 `search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
+Write (`cauldron:write`; ✱ = two-step): `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`,
+`update_planned_meal`✱, `delete_planned_meal`✱, `mark_planned_meal_eaten`, `set_goal`, `create_reagent`,
+`update_reagent`✱, `create_spell`, `update_spell`✱, `delete_spell`✱, `fork_spell`, `log_casting`.
+Writes reuse the web code: `nutrition_writes.py` (`apply_entry`, `apply_plan`, `eat_plan` — moved out of
+`nutrition_api.py`, shared with the REST API) and the Grimoire serializers (`request.user` = the token's user,
+set by `McpView`). Errors add `invalid_input` + `fields` (serializer errors), `conflict` (plan already eaten),
+`forbidden` (not the owner / approved reagent), `duplicate` (+ `matches`), `invalid_confirm_token`.
 
-**PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client}`, `mcp_connected {client}`,
+**Two-step** (`@tool(confirm=True)`, every edit and delete): the handler gets `apply=False` and returns
+`{"target", "preview"}`; the caller gets the preview + a `confirm_token` (random; only its SHA-256 is stored in
+`McpConfirmation`, bound to user + tool + target + arguments hash, `TTL_SECONDS` = 300). The second call with the
+same arguments + token claims it atomically (single use) and runs `apply=True`; a failure there rolls the claim
+back. Holds even if the user "always allows" the tool in their client.
+**Idempotency**: every write tool accepts `client_request_id`; a successful result is stored in `McpIdempotency`
+(user + tool + id) and a repeat within `WINDOW_SECONDS` (10 min) returns it unchanged. Errors aren't stored.
+**Search before create**: `create_reagent` (`grimoire.exact_duplicates`, name and name_es) and `create_spell`
+(`grimoire.exact_spell_duplicates`, over readable spells) return `duplicate` + matches and create nothing unless
+`confirm_new: true`. Everything created via MCP is **private** (publishing stays web-only).
+**`channel`** (`web` default / `mcp`, `models.forge.Channel`, not editable) on `IntakeEntry`, `PlannedMeal`,
+`NutrientGoal`, `Spell`, `Reagent`, `Casting`, `WorkoutSession`, `AssessmentSession` — set by the MCP layer
+(`channel=` on `apply_entry` / `apply_plan` / `eat_plan` / `save_goal_set`, serializer `save(channel=…)`).
+**Estimated nutrients**: `Reagent.nutrients_estimated` (set only by MCP, read-only in `ReagentSerializer`) and
+`IntakeEntry.basis["estimated"]` (quick entries; spell/reagent snapshots copy it from estimated reagents).
+UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reagents, "estimated" on log entries.
+
+**PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}` (`preview`/`applied`
+for two-step tools), `mcp_duplicate_prevented {kind, overridden}`, `mcp_connected {client}`,
 `mcp_disconnected {client}` — distinct id = user pk (`posthog.identify_context`), arcano opt-out honoured.
 
 **Debugging**

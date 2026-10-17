@@ -50,3 +50,39 @@ class McpConnection(ForgeBaseModel):
         if "claude code" in hint or "claude-code" in hint:
             return McpConnection.Client.CLAUDE_CODE
         return McpConnection.Client.CLAUDE
+
+
+class McpConfirmation(ForgeBaseModel):
+    """A pending edit/delete awaiting the user's go-ahead (two-step tools).
+
+    The first call changes nothing and returns a preview plus a random token;
+    only its SHA-256 is stored. The second call must bring the token back for
+    the same user, tool, target and payload within ``TTL`` — and only once.
+    """
+
+    TTL_SECONDS = 300
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    tool = models.CharField(max_length=64)
+    target = models.CharField(max_length=64)
+    payload_hash = models.CharField(max_length=64)
+    token_hash = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+
+class McpIdempotency(ForgeBaseModel):
+    """The result of a write tool called with a ``client_request_id``: a repeat
+    within ``WINDOW`` returns this instead of writing twice."""
+
+    WINDOW_SECONDS = 600
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    tool = models.CharField(max_length=64)
+    client_request_id = models.CharField(max_length=100)
+    result = models.JSONField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "tool", "client_request_id"], name="uniq_mcp_request"),
+        ]
