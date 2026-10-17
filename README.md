@@ -103,6 +103,10 @@ any vision; the server exposes tools over the existing services.
 - Write: `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`, `update_planned_meal`✱, `delete_planned_meal`✱,
   `mark_planned_meal_eaten`, `set_goal`, `create_reagent`, `update_reagent`✱, `create_spell`, `update_spell`✱,
   `delete_spell`✱, `fork_spell`, `log_casting`.
+- Forge: `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions`, `get_equipment`,
+  `get_trial`, `set_equipment`✱, `submit_trial_results`, `retake_trial`✱, `start_forge_session`, `log_forge_set`,
+  `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱ — same placement, program and progression
+  as the website for the same inputs.
 - ✱ Two-step: the first call changes nothing and returns a preview + `confirm_token`; the assistant shows it to
   the user and applies only with the token (single use, 5 minutes). Write tools accept `client_request_id` so a
   retry never writes twice. Everything created is private and tagged `channel="mcp"`.

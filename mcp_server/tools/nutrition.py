@@ -44,11 +44,14 @@ def _day(ctx, day):
     description=(
         "The user's day so far, in their timezone: what they ate (entries with nutrients), the day's "
         "totals, each daily goal with its status (met / missed / uncertain / pending / not_logged), "
-        "and the meals still planned for today with the projected end of day. Start here for "
+        "the meals still planned for today with the projected end of day, and where today's Forge workout "
+        "stands. Start here for "
         "\"how am I doing today?\" or before suggesting what to eat next."
     ),
 )
 def get_today(ctx):
+    from the_cauldron.mcp_server.tools.forge import forge_summary  # forge imports this module
+
     today = nutrition.today_for(ctx.user)
     plan = payloads.plan_day_payload(ctx.user, today, ctx.serializer_request)
     return {
@@ -57,6 +60,7 @@ def get_today(ctx):
         **_day(ctx, today),
         "planned_meals": [fmt.planned(m) for m in plan["meals"] if not m["eaten"]],
         "projected_with_plan": [fmt.goal(g) for g in plan["goals"]],
+        "forge": forge_summary(ctx.user),
     }
 
 

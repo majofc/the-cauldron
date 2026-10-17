@@ -12,6 +12,7 @@ from datetime import datetime, time, timedelta
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 from django.utils import timezone
 
@@ -21,6 +22,7 @@ from the_cauldron.models import (
     BlockedExercise,
     Exercise,
     MovementPattern,
+    Muscle,
     PrescribedExercise,
     Program,
     ProgramDay,
@@ -898,7 +900,7 @@ def build_today_plan(user, program_day: ProgramDay) -> list:
 
 
 @transaction.atomic
-def create_session_from_plan(user, program_day: ProgramDay, plan_sets) -> WorkoutSession:
+def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channel=None) -> WorkoutSession:
     """Persist the on-screen plan as a real session, on the first logged value.
 
     ``plan_sets`` is the client's snapshot: one entry per set, carrying
@@ -909,7 +911,7 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets) -> Workou
     program prescribes for them.
 
     Raises ``ValueError`` if the snapshot is empty or names a prescription that
-    is not on this day.
+    is not on this day. ``channel`` marks where the session came from (web/MCP).
     """
     sync_program_equipment(user)
 
@@ -961,6 +963,7 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets) -> Workou
         program_day=program_day,
         scheduled_for=timezone.now().date(),
         status=WorkoutSession.Status.PLANNED,
+        **({"channel": channel} if channel else {}),
     )
     for presc_uuid, exercise_uuid in blocks:
         exercise = exercises.get(str(exercise_uuid))
@@ -1729,7 +1732,7 @@ def discard_session(session: WorkoutSession) -> None:
 
 
 @transaction.atomic
-def retake_assessment(user) -> AssessmentSession:
+def retake_assessment(user, *, channel=None) -> AssessmentSession:
     """Deactivate the current assessment + program and open a fresh assessment.
     History is preserved (rows are kept, just flagged inactive)."""
     AssessmentSession.objects.filter(user=user, is_active=True).update(is_active=False)
@@ -1738,7 +1741,9 @@ def retake_assessment(user) -> AssessmentSession:
     # through the Trial, otherwise the banner nags through the very flow it asked
     # for. The 30-day clock only clears once the retake is completed.
     dismiss_retest_prompt(user)
-    return AssessmentSession.objects.create(user=user, is_active=True)
+    return AssessmentSession.objects.create(
+        user=user, is_active=True, **({"channel": channel} if channel else {})
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1860,3 +1865,164 @@ def trial_history(user) -> dict:
             }
         )
     return {"patterns": list(by_pattern.values())}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Shared by the REST API (api.py) and the MCP tools (mcp_server/tools/forge*.py)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TrialInputError(ValueError):
+    """A Trial submission the user has to fix (no results, a bad score)."""
+
+
+def trial_anchors(user) -> list:
+    """``[(pattern, anchor_exercise | None)]`` — what each pattern is tested
+    with for this user's equipment and blocks (``_anchor_for``)."""
+    profile = get_or_create_equipment_profile(user)
+    owned = owned_equipment_keys(profile)
+    blocked = blocked_exercise_ids(user)
+    return [(p, _anchor_for(p.pk, owned, blocked)) for p in MovementPattern.objects.order_by("name")]
+
+
+@transaction.atomic
+def submit_assessment(user, results, *, channel=None):
+    """Record the Trial's AMRAP results, place each pattern and forge the program.
+
+    ``results``: ``[{"pattern_key", "tested_exercise" (uuid), "reps_or_seconds"}]``.
+    Reuses an open (resultless) active assessment, else opens one. Returns
+    ``(assessment, program, peer)``; ``peer`` holds the "fires" of each result.
+    An unknown pattern or exercise is a 404; a bad score a ``TrialInputError``.
+    """
+    if not results:
+        raise TrialInputError("results required.")
+    profile = get_or_create_equipment_profile(user)
+    session = AssessmentSession.objects.filter(user=user, is_active=True, completed_at__isnull=True).first()
+    if session is None:
+        session = retake_assessment(user, channel=channel)
+    blocked = blocked_exercise_ids(user)
+    peer = []
+    for item in results:
+        pattern = get_object_or_404(MovementPattern, key=item.get("pattern_key"))
+        try:
+            tested_uuid = uuid.UUID(str(item.get("tested_exercise")))
+        except (TypeError, ValueError):
+            raise TrialInputError(f"tested_exercise for {pattern.key} must be an exercise id.") from None
+        tested = get_object_or_404(Exercise, uuid=tested_uuid)
+        try:
+            score = int(item.get("reps_or_seconds"))
+        except (TypeError, ValueError):
+            raise TrialInputError(f"reps_or_seconds for {pattern.key} must be a whole number.") from None
+        if score < 0:
+            raise TrialInputError(f"reps_or_seconds for {pattern.key} can't be negative.")
+        ladder = eligible_exercises(pattern, profile, exclude_ids=blocked)
+        placed = progression.place_from_assessment(ladder, score)
+        session.results.update_or_create(
+            pattern=pattern,
+            defaults={"tested_exercise": tested, "reps_or_seconds": score, "placed_exercise": placed},
+        )
+        peer.append({
+            "pattern_key": pattern.key,
+            "exercise": tested.name,
+            "value": score,
+            "score": peer_score(user, tested.name, score),
+        })
+    session.completed_at = timezone.now()
+    session.save(update_fields=["completed_at"])
+    # The Trial no longer asks for a split — every program is the same single
+    # all-patterns day. ``Program.split`` keeps its default.
+    program = generate_program(user, session)
+    return session, program, peer
+
+
+def progress_points(user, exercise=None, muscle=None) -> dict:
+    """One point per completed session (total reps, volume, best AMRAP) for the
+    progress chart. ``exercise`` (a rung label) or ``muscle`` (a key) narrow
+    every point; sessions with nothing matching are left out."""
+    sessions = (
+        WorkoutSession.objects.filter(user=user, status="completed")
+        .prefetch_related("set_logs__exercise__muscles")
+        .order_by("performed_at", "created_at")
+    )
+    points = []
+    exercises = set()
+    for s in sessions:
+        total_reps = 0
+        total_volume = 0.0
+        top_set = 0
+        counted = False
+        for sl in s.set_logs.all():
+            # Grip variants of a bar pull-up collapse to one rung label so the
+            # daily grip choice stays invisible.
+            label = sl.exercise.rung_label
+            exercises.add(label)
+            if exercise and label != exercise:
+                continue
+            if muscle and not any(m.key == muscle for m in sl.exercise.muscles.all()):
+                continue
+            if sl.actual_reps is None:
+                continue
+            counted = True
+            total_reps += sl.actual_reps
+            total_volume += sl.actual_reps * (sl.actual_load or 1)
+            if sl.is_amrap:
+                top_set = max(top_set, sl.actual_reps)
+        if (exercise or muscle) and not counted:
+            continue
+        when = s.performed_at or s.created_at
+        points.append({
+            "date": when.isoformat(),
+            "total_reps": total_reps,
+            "total_volume": round(total_volume, 1),
+            "best_amrap": top_set,
+        })
+    muscles = [{"key": m.key, "name": m.name} for m in Muscle.objects.all().order_by("name")]
+    return {"points": points, "exercises": sorted(exercises), "muscles": muscles}
+
+
+def session_peer_scores(user, session) -> list:
+    """Peer "fires" for each AMRAP test set performed in ``session``."""
+    return [
+        {
+            "exercise": a.exercise.name,
+            "value": a.actual_reps,
+            "score": peer_score(user, a.exercise.name, a.actual_reps),
+        }
+        for a in session.set_logs.filter(is_amrap=True).select_related("exercise")
+        if a.actual_reps is not None
+    ]
+
+
+def pending_unfinished(user) -> "WorkoutSession | None":
+    """The unfinished past session gating Today, **without writing** — unlike
+    ``unfinished_session``, which also closes stale/older ones as skipped."""
+    return _unfinished_sessions(user).exclude(pk__in=_stale_unfinished(user)).first()
+
+
+def mark_equipment_configured(profile) -> bool:
+    """Stamp the first time the equipment profile is saved. True if it was new."""
+    if profile.configured_at is not None:
+        return False
+    profile.configured_at = timezone.now()
+    profile.save(update_fields=["configured_at", "updated_at"])
+    return True
+
+
+def active_program(user) -> "Program | None":
+    """The active program with its prescriptions prefetched, hiding any the user
+    can no longer perform (no stand-in to swap in)."""
+    from django.db.models import Prefetch
+
+    hidden = unperformable_prescription_ids(user)
+    return (
+        Program.objects.filter(user=user, is_active=True)
+        .prefetch_related(
+            Prefetch(
+                "days__prescriptions",
+                queryset=PrescribedExercise.objects.exclude(pk__in=hidden).select_related(
+                    "exercise", "pattern", "pending_progression"
+                ),
+            )
+        )
+        .first()
+    )
