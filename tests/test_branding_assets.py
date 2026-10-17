@@ -14,6 +14,8 @@ from django.contrib.staticfiles import finders
 from django.test import Client
 from django.urls import reverse
 
+from the_cauldron.services import legal
+
 User = get_user_model()
 
 CAULDRON_ICON_MARK = "stroke='%23B23A1F'"
@@ -30,7 +32,9 @@ def plain_static_storage(settings):
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(username="smith", password="pw12345!")
+    user = User.objects.create_user(username="smith", password="pw12345!")
+    legal.accept(user, legal.GATED)  # past the terms gate (#84)
+    return user
 
 
 @pytest.fixture

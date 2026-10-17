@@ -2,6 +2,7 @@
 
 - ``forge``    — The Forge (adaptive calisthenics)
 - ``grimoire`` — The Grimoire (recipe book, #67)
+- ``nutrition`` — daily goals, meal log, plan, legal acceptance (#85)
 
 Everything is re-exported here so ``from the_cauldron.models import X`` keeps
 working for every caller and migration.
@@ -32,4 +33,11 @@ from .grimoire import (  # noqa: F401
     SpellReagent,
     Tag,
     normalize_search,
+)
+from .nutrition import (  # noqa: F401
+    CauldronProfile,
+    IntakeEntry,
+    LegalAcceptance,
+    NutrientGoal,
+    PlannedMeal,
 )

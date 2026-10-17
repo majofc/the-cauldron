@@ -16,7 +16,7 @@ MASS_UNITS = {"g": 1.0, "kg": 1000.0, "oz": 28.349523125, "lb": 453.59237}
 # Volume units, in millilitres (US customary for the spoon/cup measures).
 VOLUME_UNITS = {"ml": 1.0, "l": 1000.0, "tsp": 4.92892, "tbsp": 14.7868, "cup": 236.588}
 # Household units a reagent can define its own weight for (grams_per_unit keys).
-HOUSEHOLD_UNITS = ("cup", "tbsp", "tsp", "piece")
+HOUSEHOLD_UNITS = ("cup", "tbsp", "tsp", "piece", "glass")
 
 
 class ConversionError(ValueError):
@@ -137,6 +137,11 @@ def exact_duplicates(user, name):
 def readable_spells(user):
     """Spells the user may read: their own (any visibility) + every public one."""
     return Spell.objects.filter(Q(owner=user) | Q(visibility=Spell.Visibility.PUBLIC))
+
+
+def can_read(spell, user):
+    """``readable_spells`` for one already-loaded spell, without a query."""
+    return spell.owner_id == user.pk or spell.visibility == Spell.Visibility.PUBLIC
 
 
 def with_casting_stats(qs, user):

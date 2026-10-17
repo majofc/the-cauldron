@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from the_cauldron.models import Casting, Reagent, ReagentNutrients, Spell, SpellReagent
 from the_cauldron.services import grimoire_nutrition as nu
-from the_cauldron.services.grimoire_nutrition import Goal, Ingredient, NutritionError, Total
+from the_cauldron.services.grimoire_nutrition import Goal, Ingredient, Total
 
 User = get_user_model()
 API = "/cauldron/api/grimoire/"
@@ -145,25 +145,6 @@ class TestRecommendPortion:
         p = nu.recommend_portion(PER_100, [Goal("fiber_g", at_least=4)])
         assert p.incomplete == ["fiber_g"]
         assert p.min_g == 200
-
-
-class TestCleanGoals:
-    def test_valid_goals(self):
-        goals = nu.clean_goals([{"nutrient": "protein_g", "at_least": 40}, {"nutrient": "sodium_mg", "at_most": 600}])
-        assert goals == [Goal("protein_g", 40, None), Goal("sodium_mg", None, 600)]
-
-    @pytest.mark.parametrize("raw", [
-        [],
-        [{"nutrient": "unobtainium", "at_least": 1}],
-        [{"nutrient": "protein_g"}],
-        [{"nutrient": "protein_g", "at_least": 50, "at_most": 10}],
-        [{"nutrient": "protein_g", "at_least": -5}],
-        [{"nutrient": "protein_g", "at_least": "lots"}],
-        [{"nutrient": "protein_g", "at_least": 1}] * (nu.MAX_GOALS + 1),
-    ])
-    def test_bad_goals_are_rejected(self, raw):
-        with pytest.raises(NutritionError):
-            nu.clean_goals(raw)
 
 
 # ── API ─────────────────────────────────────────────────────────────────────
@@ -302,40 +283,6 @@ class TestNutritionApi:
         for name, value in expected.items():
             assert data[name]["batch"] == pytest.approx(value, abs=0.01)
             assert data[name]["per_serving"] == pytest.approx(value / seed["servings"], abs=0.01)
-
-
-class TestPortionApi:
-    def _portion(self, client, spell, goals):
-        return client.post(f"{API}spells/{spell.uuid}/portion/", {"goals": goals}, format="json")
-
-    def test_feasible_goals_give_a_gram_range(self, alice, porridge):
-        porridge.cooked_yield_g = 240
-        porridge.save()
-        # Per 100 g cooked: protein (33.8 + 12.6) / 2.4 = 19.33 g; cholesterol 372 / 2.4 = 155 mg.
-        r = self._portion(_client(alice), porridge, [
-            {"nutrient": "protein_g", "at_least": 29},
-            {"nutrient": "cholesterol_mg", "at_most": 310},
-        ])
-        assert r.status_code == 200, r.data
-        assert r.data["feasible"]
-        assert r.data["min_g"] == pytest.approx(150, abs=0.1)
-        assert r.data["max_g"] == pytest.approx(200, abs=0.1)
-
-    def test_infeasible_goals_are_named(self, alice, porridge):
-        r = self._portion(_client(alice), porridge, [
-            {"nutrient": "protein_g", "at_least": 100},
-            {"nutrient": "cholesterol_mg", "at_most": 100},
-        ])
-        assert r.status_code == 200
-        assert not r.data["feasible"]
-        assert r.data["conflicts"] == ["protein_g", "cholesterol_mg"]
-
-    def test_bad_goals_are_400(self, alice, porridge):
-        assert self._portion(_client(alice), porridge, [{"nutrient": "nope", "at_least": 1}]).status_code == 400
-        assert self._portion(_client(alice), porridge, []).status_code == 400
-
-    def test_private_spell_of_someone_else_is_404(self, bob, porridge):
-        assert self._portion(_client(bob), porridge, [{"nutrient": "kcal", "at_most": 500}]).status_code == 404
 
 
 class TestYieldFields:

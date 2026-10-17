@@ -23,13 +23,12 @@ from the_cauldron.grimoire_serializers import (
     CastingSerializer,
     GrimoirePreferencesSerializer,
     ReagentSerializer,
-    SpellPortionSerializer,
     SpellScaleSerializer,
     SpellSerializer,
     TagSerializer,
 )
-from the_cauldron.models import Casting, GrimoirePreferences, Spell, SpellReagent, Tag, normalize_search
-from the_cauldron.services import grimoire, grimoire_nutrition, grimoire_scaling
+from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag, normalize_search
+from the_cauldron.services import grimoire, grimoire_nutrition, grimoire_scaling, legal, nutrition
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -277,41 +276,14 @@ class SpellViewSet(viewsets.ModelViewSet):
 
     # ── Nutrition (#70) ──────────────────────────────────────────────────────
 
-    def _nutrition_basis(self, spell):
-        """(lines, per-batch totals, raw grams, Yield) for the requesting user."""
-        lines = list(
-            SpellReagent.objects.filter(spell=spell).select_related("reagent", "reagent__nutrients")
-        )
-        ingredients = []
-        for line in lines:
-            profile = getattr(line.reagent, "nutrients", None)
-            per = {name: getattr(profile, name) for name in grimoire_nutrition.FIELDS} if profile else None
-            ingredients.append(grimoire_nutrition.Ingredient(key=line.reagent_id, grams=line.grams, per_100g=per))
-        raw_g = sum(line.grams for line in lines)
-        # The user's own latest weighed casting — castings are private, so
-        # nobody else's pot ever changes what this user sees.
-        weighed = (
-            Casting.objects.filter(spell=spell, user=self.request.user, cooked_weight_g__isnull=False)
-            .order_by("-cast_on", "-created_at")
-            .first()
-        )
-        ratio = None
-        if weighed:
-            cast_raw = grimoire_nutrition.casting_raw_grams(lines, weighed.adjustments)
-            ratio = weighed.cooked_weight_g / cast_raw if cast_raw > 0 else None
-        yld = grimoire_nutrition.resolve_yield(
-            raw_g, casting_ratio=ratio, cast_on=weighed.cast_on if weighed else None,
-            cooked_yield_g=spell.cooked_yield_g, yield_pct=spell.yield_pct,
-        )
-        return lines, ingredients, raw_g, yld
-
     @action(detail=True, methods=["get"])
     def nutrition(self, request, uuid=None):
         """Batch / per-serving / per-100 g-cooked nutrients of a readable spell.
         ``?servings=N`` or ``?scale=F`` scale the batch like the scaler (#69);
         per serving and per 100 g don't change with the scale."""
         spell = self.get_object()
-        lines, ingredients, raw_g, yld = self._nutrition_basis(spell)
+        basis = grimoire_nutrition.spell_basis(spell, request.user)
+        lines, ingredients, raw_g, yld = basis.lines, basis.ingredients, basis.raw_g, basis.yld
         plain = [
             grimoire_scaling.Line(key=line.reagent_id, quantity=line.quantity, unit=line.unit, grams=line.grams)
             for line in lines
@@ -362,36 +334,54 @@ class SpellViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def portion(self, request, uuid=None):
-        """``{"goals": [{nutrient, at_least, at_most}]}`` → the range of grams of
-        the cooked dish that meets every goal, or the conflicting goals."""
+        """How much of the cooked dish fits what's left of the user's daily
+        goals on ``date`` (default today, in their timezone): goals minus what's
+        already eaten and still planned that day (#80, #83). ``{"has_goals":
+        false}`` when the user has no goals (or no sensitive-data consent) — the
+        spell page then hides the section."""
         spell = self.get_object()
-        req = SpellPortionSerializer(data=request.data)
-        req.is_valid(raise_exception=True)
+        user = request.user
+        if legal.pending_documents(user) or not legal.has_sensitive_consent(user):
+            return Response({"has_goals": False})
+        if not isinstance(request.data, dict):
+            return Response({"detail": _("Send a JSON object.")}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            goals = grimoire_nutrition.clean_goals(req.validated_data["goals"])
-        except grimoire_nutrition.NutritionError as exc:
+            day = nutrition.parse_day(request.data.get("date"), user)
+        except nutrition.NutritionInputError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        _lines, ingredients, raw_g, yld = self._nutrition_basis(spell)
-        cooked_g = raw_g * yld.ratio
-        if cooked_g <= 0:
+        goals = nutrition.goals_on(nutrition.goal_rows_between(user, day, day), day)
+        if not goals:
+            return Response({"has_goals": False})
+        basis = grimoire_nutrition.spell_basis(spell, user)
+        if basis.cooked_g <= 0:
             return Response({"detail": _("This spell has no weighed ingredients.")}, status=status.HTTP_400_BAD_REQUEST)
-        per_100g = {
-            name: grimoire_nutrition.Total(total.value / cooked_g * 100, total.missing)
-            for name, total in grimoire_nutrition.batch_totals(ingredients).items()
-        }
-        result = grimoire_nutrition.recommend_portion(per_100g, goals)
+        consumed = nutrition.consumed_and_planned(user, day)
+        result, not_covered, over = nutrition.recommend_within_budget(basis.per_100g_cooked(), goals, consumed)
         posthog.capture(
             "portion_calculated",
             properties={"goal_count": len(goals), "feasible": result.feasible},
         )
         return Response({
+            "has_goals": True,
+            "date": day,
             "feasible": result.feasible,
             "min_g": result.min_g,
             "max_g": result.max_g,
             "conflicts": result.conflicts,
+            "over": over,
+            "not_covered": not_covered,
             "incomplete": result.incomplete,
-            "cooked_g": round(cooked_g, 1),
-            "yield_source": yld.source,
+            "cooked_g": round(basis.cooked_g, 1),
+            "serving_g": round(basis.cooked_g / spell.servings, 1),
+            "yield_source": basis.yld.source,
+            "goals": [
+                {
+                    **nutrition.goal_payload(goal),
+                    "consumed": round(consumed[nutrient].value, 3),
+                    "missing": consumed[nutrient].missing,
+                }
+                for nutrient, goal in sorted(goals.items(), key=lambda kv: nutrition.FIELDS.index(kv[0]))
+            ],
         })
 
 

@@ -407,6 +407,26 @@ margins…"*, *"Copying out the spell…"*, *"The grimoire stirs…"*.
 Under **`prefers-reduced-motion: reduce`**, every animation stops and the turning leaves are hidden. The book renders
 open and still.
 
+### Daily nutrition pages (`nutrition.css`, #85)
+
+`/cauldron/accept/`, `/cauldron/profile/` and `/cauldron/journal/` reuse the Grimoire stack (`.grim-spell-page`
+cards with corner ornaments, `.grim-field`, `.grim-scope`, `.grim-suggest`) and add:
+
+| Component | Use |
+|---|---|
+| `.nut-check` | Legal / consent checkbox row. Never pre-ticked; links in gilt |
+| `.nut-goal` | One goal row: name · kind select · min · max · unit. A hidden min/max keeps its grid cell |
+| `.nut-status--{met,missed,uncertain,pending,not_logged}` | Status pill: herb / accent / gilt / sigil / dim |
+| `.nut-goal-line--{status}` | Goal total line, left border in the status colour |
+| `.nut-timeline` | Window scrubber: neutral track, the counted stretch highlighted (`.nut-timeline-window`), day labels that never overlap, "from → to" above in Playfair |
+| `.nut-gauge` | One goal in the window: value, bar against the goal band, status pill; uncertain = 45° hatch |
+| `.nut-strip-day` / `.nut-chart` | Time-in-range history: share of each day in range (herb), line chart with hover crosshair + table view |
+| `.nut-entry` / `.nut-plan-item` | Log / plan rows: time (Cormorant, gilt) · name + amount · kcal · actions |
+| Entry search | ONE search box ("What did you eat or drink?") over spells and ingredients; each result carries a dim `.nut-kind` tag; the last row (`.nut-manual`, gilt italic) types it in by hand. No up-front source choice |
+| `.nut-fab` | Floating "Log a meal" pill (Journal only): bottom-right, centred on phones, `--arcano-z-nav`; fades out (`.is-away`) while the entry form is on screen |
+
+"≥ x" marks a total with missing data, and the status is always text as well as colour.
+
 ---
 
 ## Non-negotiables (these extend global rules)

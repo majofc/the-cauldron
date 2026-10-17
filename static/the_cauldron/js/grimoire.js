@@ -25,7 +25,7 @@
     return s;
   }
 
-  const UNITS = ["g", "kg", "ml", "l", "tsp", "tbsp", "cup", "oz", "lb", "piece"];
+  const UNITS = ["g", "kg", "ml", "l", "tsp", "tbsp", "cup", "oz", "lb", "piece", "glass"];
   const MASS_G = { g: 1, kg: 1000, oz: 28.349523125, lb: 453.59237 };
   const VOLUME_ML = { ml: 1, l: 1000, tsp: 4.92892, tbsp: 14.7868, cup: 236.588 }; // US spoons/cup
   const CATEGORIES = ["vegetable", "fruit", "grain", "legume", "protein", "dairy", "fat",
@@ -369,12 +369,13 @@
       <h3 class="grim-h3">${esc(t("h_reagents"))}</h3>
       ${lines ? scalerHtml(s) : ""}
       ${lines ? `<ul class="grim-detail-lines" id="grim-detail-lines">${lines}</ul>` : `<p class="grim-help">${esc(t("no_lines"))}</p>`}
-      ${lines ? nutritionShellHtml() : ""}
+      ${lines ? nutritionShellHtml(s) : ""}
       <h3 class="grim-h3">${esc(t("h_method"))}</h3>
       ${steps ? `<ol class="grim-steps">${steps}</ol>` : `<p class="grim-help">${esc(t("no_steps"))}</p>`}
       <div class="grim-actions">${actions}</div>`;
     body._spell = s;
     document.title = `${spellTitle(s)} — ${document.title.split(" — ").slice(-1)[0]}`;
+    nutri.portionAsked = false; // the shell was just rebuilt
     if (lines) loadNutrition(s, 1);
   }
 
@@ -567,11 +568,14 @@
   // GET spells/{uuid}/nutrition/?scale= (services/grimoire_nutrition.py) and
   // POST …/portion/ for the recommender. Values with missing reagent data are
   // shown as "≥ x": the real amount can only be higher.
-  const nutri = { seq: 0, data: null, view: "serving", portionSeq: 0, portion: null };
+  const nutri = { seq: 0, data: null, view: "serving", portionSeq: 0, portion: null, portionAsked: false };
   const NUTRIENT_UNIT = Object.fromEntries(NUTRIENTS);
   const MACRO_KCAL = [["protein_g", 4, "protein"], ["carbs_g", 4, "carbs"], ["fat_g", 9, "fat"]];
 
-  function nutritionShellHtml() {
+  // "I ate this" / "Plan it" open the Journal with this spell preselected (#81, #83).
+  const journalLink = (s, param) => `${CFG.journal}?${param}=${encodeURIComponent(s.uuid)}`;
+
+  function nutritionShellHtml(s) {
     const views = [["batch", t("nut_view_batch")], ["serving", t("nut_view_serving")], ["100g", t("nut_view_100g")]];
     return `
       <section class="grim-nutrition" id="grim-nutrition" aria-labelledby="grim-nutrition-title">
@@ -582,11 +586,9 @@
         </div>
         <p class="grim-nutrition-yield" id="grim-nutrition-yield"></p>
         <div id="grim-nutrition-body" aria-live="polite"></div>
-        <div class="grim-portion" id="grim-portion">
+        <div class="grim-portion" id="grim-portion" hidden>
           <h4 class="grim-section-title">${esc(t("portion_title"))}</h4>
-          <p class="grim-help">${esc(t("portion_help"))}</p>
-          <div class="grim-goals" id="grim-goals"></div>
-          <button type="button" class="grim-scale-have-toggle" id="grim-goal-add">${esc(t("portion_add"))}</button>
+          <p class="grim-help">${esc(t("portion_help"))} <a class="grim-back" href="${esc(CFG.profile)}">${esc(t("portion_edit_goals"))}</a></p>
           <p class="grim-portion-result" id="grim-portion-result" aria-live="polite"></p>
           <div class="grim-portion-try" id="grim-portion-try" hidden>
             <label class="grim-field"><span>${esc(t("portion_try"))}</span>
@@ -594,6 +596,10 @@
               <output id="grim-portion-out" for="grim-portion-slider"></output></span></label>
             <ul class="grim-goal-status" id="grim-goal-status"></ul>
           </div>
+        </div>
+        <div class="grim-actions grim-journal-actions">
+          <a class="btn-cauldron btn-cauldron--ghost" href="${esc(journalLink(s, "plan_spell"))}">${esc(t("journal_plan"))}</a>
+          <a class="btn-cauldron btn-cauldron--primary" href="${esc(journalLink(s, "log_spell"))}">${esc(t("journal_ate"))}</a>
         </div>
       </section>`;
   }
@@ -667,7 +673,10 @@
       if (my !== nutri.seq) return;
       nutri.data = d;
       renderNutrition();
-      if (!$("#grim-goals").children.length) addGoalRow({ nutrient: "protein_g", kind: "at_least" });
+      if (!nutri.portionAsked) {
+        nutri.portionAsked = true;
+        runPortion();
+      }
     } catch (err) {
       if (my !== nutri.seq) return;
       const body = $("#grim-nutrition-body");
@@ -677,90 +686,60 @@
   const nutritionSoon = debounce(loadNutrition, 250);
 
   // ── Portion recommender ──
-  const GOAL_KINDS = ["at_least", "at_most", "between"];
-
-  function addGoalRow(goal = {}) {
-    const box = $("#grim-goals");
-    if (!box || box.children.length >= 10) return;
-    const row = document.createElement("div");
-    row.className = "grim-goal";
-    const kind = goal.kind || "at_least";
-    row.innerHTML = `
-      <select class="grim-goal-nutrient" aria-label="${esc(t("portion_nutrient"))}">${NUTRIENTS.map(([k]) =>
-        `<option value="${k}"${k === goal.nutrient ? " selected" : ""}>${esc(t(`n_${k}`))}</option>`).join("")}</select>
-      <select class="grim-goal-kind" aria-label="${esc(t("portion_kind"))}">${GOAL_KINDS.map((k) =>
-        `<option value="${k}"${k === kind ? " selected" : ""}>${esc(t(`goal_${k}`))}</option>`).join("")}</select>
-      <input type="number" class="grim-goal-a" min="0" step="any" inputmode="decimal" aria-label="${esc(t("portion_value"))}">
-      <input type="number" class="grim-goal-b" min="0" step="any" inputmode="decimal" aria-label="${esc(t("portion_value_max"))}"${kind === "between" ? "" : " hidden"}>
-      <span class="grim-goal-unit"></span>
-      <button type="button" class="grim-link-btn grim-danger" data-goal-remove aria-label="${esc(t("portion_remove"))}">✕</button>`;
-    box.appendChild(row);
-    syncGoalUnit(row);
-  }
-
-  function syncGoalUnit(row) {
-    row.querySelector(".grim-goal-unit").textContent = NUTRIENT_UNIT[row.querySelector(".grim-goal-nutrient").value];
-    row.querySelector(".grim-goal-b").hidden = row.querySelector(".grim-goal-kind").value !== "between";
-  }
-
-  // Rows with their numbers filled in; ``null`` while any row is half-done.
-  function readGoals() {
-    const goals = [];
-    for (const row of $$("#grim-goals .grim-goal")) {
-      const kind = row.querySelector(".grim-goal-kind").value;
-      const a = row.querySelector(".grim-goal-a").value;
-      const b = row.querySelector(".grim-goal-b").value;
-      if (a === "" || (kind === "between" && b === "")) return null;
-      const g = { nutrient: row.querySelector(".grim-goal-nutrient").value };
-      if (kind === "at_least") g.at_least = Number(a);
-      else if (kind === "at_most") g.at_most = Number(a);
-      else { g.at_least = Number(a); g.at_most = Number(b); }
-      goals.push(g);
-    }
-    return goals;
-  }
+  // POST …/portion/ answers against what's left of the user's daily goals
+  // today (goals − eaten − planned, #80/#83). No goals → the section stays hidden.
+  const goalBounds = (g) => ({
+    low: g.kind === "at_most" ? null : g.min_value,
+    high: g.kind === "at_least" ? null : g.max_value,
+  });
 
   async function runPortion() {
     const s = spellBody()._spell;
-    const result = $("#grim-portion-result");
-    const goals = readGoals();
+    const box = $("#grim-portion");
+    if (!s || !box) return;
     const my = ++nutri.portionSeq;
-    if (!s || !goals || !goals.length) {
-      nutri.portion = null;
-      result.textContent = "";
-      result.className = "grim-portion-result";
-      $("#grim-portion-try").hidden = true;
-      return;
-    }
+    const result = $("#grim-portion-result");
     try {
-      const p = await api(`spells/${encodeURIComponent(s.uuid)}/portion/`, { method: "POST", body: { goals } });
+      const p = await api(`spells/${encodeURIComponent(s.uuid)}/portion/`, { method: "POST", body: {} });
       if (my !== nutri.portionSeq) return;
-      nutri.portion = { ...p, goals };
+      if (!p.has_goals) {
+        box.hidden = true;
+        nutri.portion = null;
+        return;
+      }
+      box.hidden = false;
+      nutri.portion = p;
       result.className = `grim-portion-result ${p.feasible ? "is-ok" : "is-bad"}`;
       const label = (k) => t(`n_${k}`);
       let text;
-      if (!p.feasible) text = t("portion_conflict", { goals: p.conflicts.map(label).join(", ") });
-      else if (p.max_g == null) text = t("portion_at_least", { min: fmtWeight(p.min_g) });
+      if (!p.feasible) {
+        text = p.over.length && p.conflicts.every((k) => p.over.includes(k))
+          ? t("portion_over", { goals: p.over.map(label).join(", ") })
+          : t("portion_conflict", { goals: p.conflicts.map(label).join(", ") });
+      } else if (p.max_g == null) text = p.min_g ? t("portion_at_least", { min: fmtWeight(p.min_g) }) : t("portion_any");
       else if (!p.min_g) text = t("portion_up_to", { max: fmtWeight(p.max_g) });
       else text = t("portion_between", { min: fmtWeight(p.min_g), max: fmtWeight(p.max_g) });
+      if (p.not_covered.length) text += ` ${t("portion_not_covered", { goals: p.not_covered.map(label).join(", ") })}`;
       if (p.incomplete.length) text += ` ${t("portion_incomplete", { goals: p.incomplete.map(label).join(", ") })}`;
       result.textContent = text;
       const slider = $("#grim-portion-slider");
       const top = Math.max(p.cooked_g || 0, (p.max_g || p.min_g || 0) * 1.5, 100);
       slider.max = String(Math.ceil(top / 5) * 5);
-      const start = p.feasible ? (p.max_g == null ? p.min_g : (p.min_g + p.max_g) / 2) : Math.min(p.cooked_g || 100, top);
+      const start = p.feasible
+        ? (p.max_g == null ? (p.min_g || p.serving_g) : ((p.min_g || 0) + p.max_g) / 2)
+        : Math.min(p.serving_g || 100, top);
       slider.value = String(Math.round(start / 5) * 5);
       $("#grim-portion-try").hidden = false;
       renderGoalStatus();
     } catch (err) {
       if (my !== nutri.portionSeq) return;
       nutri.portion = null;
+      box.hidden = false;
       result.className = "grim-portion-result is-bad";
       result.textContent = errorText(err);
       $("#grim-portion-try").hidden = true;
     }
   }
-  const portionSoon = debounce(runPortion, 300);
 
   // Client-side preview only: the per-100 g values times the slider's grams.
   function renderGoalStatus() {
@@ -772,22 +751,19 @@
     const byKey = Object.fromEntries(nutri.data.nutrients.map((n) => [n.key, n]));
     list.innerHTML = p.goals.map((g) => {
       const n = byKey[g.nutrient];
-      const value = (n.per_100g || 0) * grams / 100;
-      const ok = (g.at_least == null || value >= g.at_least) && (g.at_most == null || value <= g.at_most);
-      const want = g.at_least != null && g.at_most != null ? `${fmtAmount(g.at_least)}–${fmtAmount(g.at_most)}`
-        : g.at_least != null ? `≥ ${fmtAmount(g.at_least)}` : `≤ ${fmtAmount(g.at_most)}`;
+      const day = g.consumed + (n.per_100g || 0) * grams / 100;
+      const { low, high } = goalBounds(g);
+      const ok = (low == null || day >= low) && (high == null || day <= high);
+      const want = low != null && high != null ? `${fmtAmount(low)}–${fmtAmount(high)}`
+        : low != null ? `≥ ${fmtAmount(low)}` : `≤ ${fmtAmount(high)}`;
+      const shown = `${g.missing || n.missing ? "≥ " : ""}${fmtAmount(day)} ${NUTRIENT_UNIT[g.nutrient]}`;
       return `<li class="${ok ? "is-ok" : "is-bad"}"><span>${esc(t(`n_${g.nutrient}`))}</span>
-        <strong>${esc(nutrientText(n, value))}</strong> <span class="grim-help">${esc(want)} ${esc(NUTRIENT_UNIT[g.nutrient])} · ${esc(ok ? t("goal_met") : t("goal_missed"))}</span></li>`;
+        <strong>${esc(shown)}</strong> <span class="grim-help">${esc(t("portion_day_total"))} · ${esc(want)} ${esc(NUTRIENT_UNIT[g.nutrient])} · ${esc(ok ? t("goal_met") : t("goal_missed"))}</span></li>`;
     }).join("");
   }
 
   function onNutritionInput(e) {
-    const el = e.target;
-    if (el.id === "grim-portion-slider") { renderGoalStatus(); return; }
-    const row = el.closest(".grim-goal");
-    if (!row) return;
-    if (el.classList.contains("grim-goal-nutrient") || el.classList.contains("grim-goal-kind")) syncGoalUnit(row);
-    portionSoon();
+    if (e.target.id === "grim-portion-slider") renderGoalStatus();
   }
 
   function onNutritionClick(e) {
@@ -799,18 +775,6 @@
         b.setAttribute("aria-pressed", String(b === view));
       });
       renderNutrition();
-      return true;
-    }
-    if (e.target.closest("#grim-goal-add")) {
-      addGoalRow({ nutrient: "cholesterol_mg", kind: "at_most" });
-      const rows = $$("#grim-goals .grim-goal");
-      rows[rows.length - 1].querySelector(".grim-goal-a").focus();
-      return true;
-    }
-    const rm = e.target.closest("[data-goal-remove]");
-    if (rm) {
-      rm.closest(".grim-goal").remove();
-      portionSoon();
       return true;
     }
     return false;
@@ -1240,7 +1204,7 @@
     R.name.value = r.name || "";
     R.name_es.value = r.name_es || "";
     R.category.value = r.category;
-    ["cup", "tbsp", "piece"].forEach((u) => { R[`unit_${u}`].value = (r.grams_per_unit || {})[u] ?? ""; });
+    ["cup", "tbsp", "piece", "glass"].forEach((u) => { R[`unit_${u}`].value = (r.grams_per_unit || {})[u] ?? ""; });
     R.density_g_per_ml.value = r.density_g_per_ml ?? "";
     NUTRIENTS.forEach(([field]) => { R[field].value = (r.nutrients || {})[field] ?? ""; });
     R.share.checked = r.status === "pending";
@@ -1256,7 +1220,7 @@
     const status = r.status === "approved" ? "" :
       `<span class="grim-badge">${esc(r.status === "pending" ? t("status_pending") : t("status_private"))}</span>`;
     const g = r.grams_per_unit || {};
-    const measures = ["cup", "tbsp", "tsp", "piece"].filter((u) => g[u]).map((u) =>
+    const measures = ["glass", "cup", "tbsp", "tsp", "piece"].filter((u) => g[u]).map((u) =>
       `<div><dt>${esc(t(`measure_${u}`))}</dt><dd>${esc(fmtWeight(g[u]))}</dd></div>`);
     if (r.density_g_per_ml) {
       measures.push(`<div><dt>${esc(t("measure_density"))}</dt><dd>${esc(fmtNum(r.density_g_per_ml))} g/ml</dd></div>`);
@@ -1335,7 +1299,7 @@
     const nutrients = {};
     NUTRIENTS.forEach(([field]) => { nutrients[field] = numberOrNull(R[field].value); });
     const grams = {};
-    ["cup", "tbsp", "piece"].forEach((u) => {
+    ["cup", "tbsp", "piece", "glass"].forEach((u) => {
       const v = R[`unit_${u}`].value;
       if (v !== "") grams[u] = Number(v);
     });

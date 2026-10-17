@@ -475,17 +475,3 @@ class SpellScaleSerializer(serializers.Serializer):
     servings = serializers.FloatField(required=False)
     grams = serializers.FloatField(required=False)
     available = OnHandSerializer(many=True, required=False, max_length=MAX_LINES)
-
-
-class PortionGoalSerializer(serializers.Serializer):
-    """One portion goal (#70); bounds are checked by services.grimoire_nutrition."""
-
-    nutrient = serializers.CharField(max_length=32)
-    at_least = serializers.FloatField(required=False, allow_null=True)
-    at_most = serializers.FloatField(required=False, allow_null=True)
-
-
-class SpellPortionSerializer(serializers.Serializer):
-    """``POST spells/{uuid}/portion/``."""
-
-    goals = PortionGoalSerializer(many=True, max_length=20)

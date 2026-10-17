@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from the_cauldron.models import Program, UserEquipmentProfile
-from the_cauldron.services import forge
+from the_cauldron.services import forge, legal
 
 User = get_user_model()
 
@@ -25,7 +25,9 @@ def plain_static_storage(settings):
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(username="wanderer", password="pw12345!")
+    user = User.objects.create_user(username="wanderer", password="pw12345!")
+    legal.accept(user, legal.GATED)  # past the terms gate (#84)
+    return user
 
 
 @pytest.fixture

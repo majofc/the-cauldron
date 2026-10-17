@@ -208,6 +208,7 @@ class SpellReagent(ForgeBaseModel):
         OZ = "oz", "oz"
         LB = "lb", "lb"
         PIECE = "piece", "piece"
+        GLASS = "glass", "glass"
 
     spell = models.ForeignKey(Spell, on_delete=models.CASCADE, related_name="lines")
     reagent = models.ForeignKey(Reagent, on_delete=models.PROTECT, related_name="spell_lines")
