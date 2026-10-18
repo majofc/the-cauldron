@@ -72,7 +72,7 @@ META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
 # the instructions follow the user's language.
 LIST_TTL_MS = 5 * 60 * 1000
 _UNPARSABLE = object()
-DEFAULT_ALLOWED_ORIGINS = ("https://claude.ai", "https://claude.com")
+DEFAULT_ALLOWED_ORIGINS = ("https://claude.ai", "https://claude.com", "https://gemini.google.com")
 
 
 def _allowed_origin(request, origin):

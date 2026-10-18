@@ -37,6 +37,7 @@ class TestInfoPage:
         body = r.content.decode()
         assert "http://testserver/cauldron/mcp/" in body
         assert "claude mcp add --transport http cauldron http://testserver/cauldron/mcp/" in body
+        assert "gemini.google.com" in body and "Add a custom app" in body
         assert "Accept" in r["Vary"]
         assert events == [("mcp_page_viewed", {"signed_in": False})]
 
@@ -70,7 +71,7 @@ class TestInfoPage:
 class TestConnectClicked:
     URL = "/cauldron/api/mcp/connect-clicked/"
 
-    @pytest.mark.parametrize("target", ["claude_ai", "desktop", "code"])
+    @pytest.mark.parametrize("target", ["claude_ai", "desktop", "code", "gemini"])
     def test_records_only_the_target(self, db, events, target):
         r = Client().post(self.URL, {"target": target}, content_type="application/json")
         assert r.status_code == 204

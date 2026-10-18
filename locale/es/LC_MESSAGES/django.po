@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 22:02+0000\n"
+"POT-Creation-Date: 2026-10-18 06:14+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1671,7 +1671,7 @@ msgid "AI assistants"
 msgstr "Asistentes de IA"
 
 #: templates/the_cauldron/_footer_links.html:6
-#: templates/the_cauldron/mcp_info.html:152
+#: templates/the_cauldron/mcp_info.html:163
 msgid "Privacy"
 msgstr "Privacidad"
 
@@ -1986,8 +1986,8 @@ msgid "Use The Cauldron from your AI assistant"
 msgstr "Usa The Cauldron desde tu asistente de IA"
 
 #: templates/the_cauldron/mcp_info.html:10
-msgid "Connect Claude to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts."
-msgstr "Conecta Claude a The Cauldron: registra comidas con una foto, encuentra recetas con lo que hay en tu refri, planea tu semana y registra tus entrenamientos."
+msgid "Connect Claude or Gemini to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts."
+msgstr "Conecta Claude o Gemini a The Cauldron: registra comidas con una foto, encuentra recetas con lo que hay en tu refri, planea tu semana y registra tus entrenamientos."
 
 #: templates/the_cauldron/mcp_info.html:49
 msgid "Sign in"
@@ -2002,8 +2002,8 @@ msgid "Your Cauldron, from your AI assistant"
 msgstr "Tu Cauldron, desde tu asistente de IA"
 
 #: templates/the_cauldron/mcp_info.html:61
-msgid "Connect Claude — on your phone, on the web, on your desktop or in your terminal — and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site."
-msgstr "Conecta Claude —en tu celular, en la web, en tu computadora o en tu terminal— y habla con The Cauldron: registra lo que comiste con una foto, encuentra recetas con lo que hay en tu refri, planea la semana y registra tu entrenamiento sin abrir el sitio."
+msgid "Connect Claude — on your phone, on the web, on your desktop or in your terminal — or Gemini, and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site."
+msgstr "Conecta Claude —en tu celular, en la web, en tu computadora o en tu terminal— o Gemini, y habla con The Cauldron: registra lo que comiste con una foto, encuentra recetas con lo que hay en tu refri, planea la semana y registra tu entrenamiento sin abrir el sitio."
 
 #: templates/the_cauldron/mcp_info.html:65
 #, python-format
@@ -2027,6 +2027,7 @@ msgstr "Esta es la dirección de The Cauldron para tu asistente:"
 #: templates/the_cauldron/mcp_info.html:79
 #: templates/the_cauldron/mcp_info.html:100
 #: templates/the_cauldron/mcp_info.html:108
+#: templates/the_cauldron/mcp_info.html:120
 msgid "Copied"
 msgstr "Copiado"
 
@@ -2072,6 +2073,7 @@ msgid "Press Connect, sign in and allow access."
 msgstr "Presiona Conectar, inicia sesión y permite el acceso."
 
 #: templates/the_cauldron/mcp_info.html:100
+#: templates/the_cauldron/mcp_info.html:120
 msgid "Copy the address"
 msgstr "Copiar la dirección"
 
@@ -2083,104 +2085,124 @@ msgstr "Claude Code"
 msgid "Run this in your terminal, then type /mcp inside Claude Code to sign in:"
 msgstr "Ejecuta esto en tu terminal y luego escribe /mcp dentro de Claude Code para iniciar sesión:"
 
+#: templates/the_cauldron/mcp_info.html:113
+msgid "Gemini"
+msgstr "Gemini"
+
+#: templates/the_cauldron/mcp_info.html:115
+msgid "On <a href=\"https://gemini.google.com\" target=\"_blank\" rel=\"noopener\" data-target=\"gemini\">gemini.google.com</a>, open <strong>Settings → Connected apps</strong>."
+msgstr "En <a href=\"https://gemini.google.com\" target=\"_blank\" rel=\"noopener\" data-target=\"gemini\">gemini.google.com</a>, abre <strong>Configuración → Apps conectadas</strong>."
+
+#: templates/the_cauldron/mcp_info.html:116
+msgid "Choose “Add a custom app”, name it “The Cauldron” and paste the address above."
+msgstr "Elige “Agregar app personalizada”, llámala “The Cauldron” y pega la dirección de arriba."
+
+#: templates/the_cauldron/mcp_info.html:117
+msgid "Sign in to The Cauldron and allow access."
+msgstr "Inicia sesión en The Cauldron y permite el acceso."
+
 #: templates/the_cauldron/mcp_info.html:119
+msgid "Custom apps depend on your Google account and country; if you don't see the option, Gemini doesn't offer it to you yet."
+msgstr "Las apps personalizadas dependen de tu cuenta de Google y tu país; si no ves la opción, Gemini todavía no te la ofrece."
+
+#: templates/the_cauldron/mcp_info.html:130
 msgid "What you can ask"
 msgstr "Qué puedes pedir"
 
-#: templates/the_cauldron/mcp_info.html:121
+#: templates/the_cauldron/mcp_info.html:132
 msgid "“Log this” — with a photo of your plate."
 msgstr "“Registra esto”, con una foto de tu plato."
 
-#: templates/the_cauldron/mcp_info.html:122
+#: templates/the_cauldron/mcp_info.html:133
 msgid "“Last night I had two tacos al pastor and a Coke.”"
 msgstr "“Anoche cené dos tacos al pastor y una Coca.”"
 
-#: templates/the_cauldron/mcp_info.html:123
+#: templates/the_cauldron/mcp_info.html:134
 msgid "“Here's my fridge. What can I cook from my Grimoire?”"
 msgstr "“Este es mi refri. ¿Qué puedo cocinar de mi Grimorio?”"
 
-#: templates/the_cauldron/mcp_info.html:124
+#: templates/the_cauldron/mcp_info.html:135
 msgid "“Save this recipe to my Grimoire.”"
 msgstr "“Guarda esta receta en mi Grimorio.”"
 
-#: templates/the_cauldron/mcp_info.html:125
+#: templates/the_cauldron/mcp_info.html:136
 msgid "“Plan my dinners for this week.”"
 msgstr "“Planea mis cenas de esta semana.”"
 
-#: templates/the_cauldron/mcp_info.html:126
+#: templates/the_cauldron/mcp_info.html:137
 msgid "“How am I doing with my protein this week?”"
 msgstr "“¿Cómo voy con mi proteína esta semana?”"
 
-#: templates/the_cauldron/mcp_info.html:127
+#: templates/the_cauldron/mcp_info.html:138
 msgid "“What's my workout today?” — then “12 push-ups, done.”"
 msgstr "“¿Qué entreno hoy?” y luego “12 lagartijas, listo.”"
 
-#: templates/the_cauldron/mcp_info.html:128
+#: templates/the_cauldron/mcp_info.html:139
 msgid "“I want to take the Trial. What do I do?”"
 msgstr "“Quiero hacer la Prueba. ¿Qué hago?”"
 
-#: templates/the_cauldron/mcp_info.html:137
+#: templates/the_cauldron/mcp_info.html:148
 msgid "How it works"
 msgstr "Cómo funciona"
 
-#: templates/the_cauldron/mcp_info.html:139
+#: templates/the_cauldron/mcp_info.html:150
 msgid "Your assistant does the seeing and the thinking: it looks at the photo, estimates portions and suggests recipes. The Cauldron stores the result — your Journal, Grimoire and Forge stay the same as on the site."
 msgstr "Tu asistente ve y piensa: mira la foto, estima las porciones y sugiere recetas. The Cauldron guarda el resultado; tu Diario, tu Grimorio y The Forge son los mismos que en el sitio."
 
-#: templates/the_cauldron/mcp_info.html:140
+#: templates/the_cauldron/mcp_info.html:151
 msgid "Nutrition your assistant estimates is saved marked “estimated”, so you can tell it apart from measured data."
 msgstr "La información nutricional que estima tu asistente se guarda marcada como “estimada”, para que la distingas de los datos medidos."
 
-#: templates/the_cauldron/mcp_info.html:141
+#: templates/the_cauldron/mcp_info.html:152
 msgid "Before changing or deleting anything, your assistant shows you what will change and asks you to confirm."
 msgstr "Antes de cambiar o borrar algo, tu asistente te muestra qué va a cambiar y te pide confirmar."
 
-#: templates/the_cauldron/mcp_info.html:142
+#: templates/the_cauldron/mcp_info.html:153
 msgid "Everything it creates is private. Sharing a recipe with the Coven is done only on the site."
 msgstr "Todo lo que crea es privado. Compartir una receta con el Aquelarre se hace solo en el sitio."
 
-#: templates/the_cauldron/mcp_info.html:143
+#: templates/the_cauldron/mcp_info.html:154
 msgid "Your meal journal, goals and plans need the same consent as on the site; your assistant will send you to accept it if needed."
 msgstr "Tu diario de comidas, tus metas y tus planes necesitan el mismo consentimiento que en el sitio; si hace falta, tu asistente te mandará a aceptarlo."
 
-#: templates/the_cauldron/mcp_info.html:155
+#: templates/the_cauldron/mcp_info.html:166
 #, python-format
-msgid "What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic, for Claude) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href=\"%(url)s\">Privacy Notice</a>."
-msgstr "Lo que tu asistente lee de tu Cauldron —incluidos lo que comes y tus metas— llega a la empresa que lo ofrece (Anthropic, en el caso de Claude) bajo sus términos. Nosotros solo sabemos qué herramienta se usó y si funcionó, nunca lo que pediste. Desconéctalo cuando quieras desde tu perfil y el acceso termina de inmediato. Detalles en nuestro <a href=\"%(url)s\">Aviso de Privacidad</a>."
+msgid "What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic for Claude, Google for Gemini) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href=\"%(url)s\">Privacy Notice</a>."
+msgstr "Lo que tu asistente lee de tu Cauldron —incluidos lo que comes y tus metas— llega a la empresa que lo ofrece (Anthropic en el caso de Claude, Google en el de Gemini) bajo sus términos. Nosotros solo sabemos qué herramienta se usó y si funcionó, nunca lo que pediste. Desconéctalo cuando quieras desde tu perfil y el acceso termina de inmediato. Detalles en nuestro <a href=\"%(url)s\">Aviso de Privacidad</a>."
 
-#: templates/the_cauldron/mcp_info.html:164
+#: templates/the_cauldron/mcp_info.html:175
 msgid "Troubleshooting"
 msgstr "Si algo falla"
 
-#: templates/the_cauldron/mcp_info.html:166
+#: templates/the_cauldron/mcp_info.html:177
 msgid "The first request is slow or times out"
 msgstr "La primera solicitud tarda mucho o no responde"
 
-#: templates/the_cauldron/mcp_info.html:167
+#: templates/the_cauldron/mcp_info.html:178
 msgid "The Cauldron sleeps when nobody uses it and takes up to a minute to wake up. Ask again after a moment."
 msgstr "The Cauldron se duerme cuando nadie lo usa y tarda hasta un minuto en despertar. Vuelve a pedirlo en un momento."
 
-#: templates/the_cauldron/mcp_info.html:168
+#: templates/the_cauldron/mcp_info.html:179
 msgid "“Couldn't reach the server” or it stopped working"
 msgstr "“No se pudo conectar con el servidor” o dejó de funcionar"
 
-#: templates/the_cauldron/mcp_info.html:169
-msgid "Check the address is exactly the one above, including the final slash. If you disconnected it from your profile, connect it again from your assistant."
-msgstr "Revisa que la dirección sea exactamente la de arriba, incluida la diagonal final. Si lo desconectaste desde tu perfil, vuelve a conectarlo desde tu asistente."
+#: templates/the_cauldron/mcp_info.html:180
+msgid "Check the address is exactly the one above. If you disconnected it from your profile, connect it again from your assistant."
+msgstr "Revisa que la dirección sea exactamente la de arriba. Si lo desconectaste desde tu perfil, vuelve a conectarlo desde tu asistente."
 
-#: templates/the_cauldron/mcp_info.html:170
+#: templates/the_cauldron/mcp_info.html:181
 msgid "It asks me to accept something"
 msgstr "Me pide aceptar algo"
 
-#: templates/the_cauldron/mcp_info.html:171
+#: templates/the_cauldron/mcp_info.html:182
 msgid "Meal logging needs your consent for health-related data, and new terms must be accepted on the site. Open the link your assistant gives you, accept, and try again."
 msgstr "Registrar comidas necesita tu consentimiento para datos relacionados con la salud, y los términos nuevos se aceptan en el sitio. Abre el enlace que te da tu asistente, acepta y vuelve a intentarlo."
 
-#: templates/the_cauldron/mcp_info.html:172
+#: templates/the_cauldron/mcp_info.html:183
 msgid "It can read but not log"
 msgstr "Puede leer pero no registrar"
 
-#: templates/the_cauldron/mcp_info.html:173
+#: templates/the_cauldron/mcp_info.html:184
 msgid "You allowed read-only access. Disconnect it in your profile and connect again, allowing it to log."
 msgstr "Le diste acceso solo de lectura. Desconéctalo en tu perfil y vuelve a conectarlo permitiéndole registrar."
 
