@@ -1,5 +1,15 @@
-"""The MCP endpoint — Streamable HTTP, stateless, JSON responses
-(spec 2025-11-25, also answering 2025-06-18 / 2025-03-26 clients).
+"""The MCP endpoint — Streamable HTTP, stateless, JSON responses. Dual-era:
+
+- **Modern** (spec 2026-07-28, ``MCP-Protocol-Version: 2026-07-28``): no
+  handshake; every request carries its version in ``params._meta`` and the
+  ``Mcp-Method`` (+ ``Mcp-Name`` for ``tools/call``) headers, which must match
+  the body (else 400 ``HeaderMismatch``). ``server/discover`` advertises the
+  versions; results carry ``resultType`` and ``_meta`` server info; an unknown
+  method is 404.
+- **Legacy** (2025-11-25 / 2025-06-18 / 2025-03-26, or no header):
+  ``initialize`` handshake semantics, answered statelessly.
+- An unknown version → 400 ``UnsupportedProtocolVersionError`` listing ours,
+  so a modern client retries with one of them (or falls back to ``initialize``).
 
 - ``POST`` one JSON-RPC message (or, for 2025-03-26 clients, a batch):
   requests get ``application/json``; notifications and responses get
@@ -12,12 +22,12 @@
   the authorization server and sign the user in (RFC 9728).
 - A present ``Origin`` header must be ours or a known assistant's (DNS
   rebinding protection) → otherwise 403.
-- An unsupported ``MCP-Protocol-Version`` header → 400.
 
 Cookies are never read here: a browser session can't drive the tools, and no
 CSRF token is needed.
 """
 
+import base64
 import json
 import logging
 
@@ -35,10 +45,12 @@ from oauth2_provider.oauth2_backends import get_oauthlib_core
 from the_cauldron.mcp_server import tools  # noqa: F401  (registers every tool)
 from the_cauldron.mcp_server.context import McpContext
 from the_cauldron.mcp_server.errors import (
+    HEADER_MISMATCH,
     INTERNAL_ERROR,
     INVALID_REQUEST,
     METHOD_NOT_FOUND,
     PARSE_ERROR,
+    UNSUPPORTED_PROTOCOL_VERSION,
     InsufficientScope,
     ProtocolError,
 )
@@ -49,9 +61,17 @@ from the_cauldron.services import nutrition
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
-LATEST_VERSION = SUPPORTED_VERSIONS[0]
+MODERN_VERSIONS = ("2026-07-28",)
+LEGACY_VERSIONS = ("2025-11-25", "2025-06-18", "2025-03-26")
+SUPPORTED_VERSIONS = MODERN_VERSIONS + LEGACY_VERSIONS
+LATEST_VERSION = LEGACY_VERSIONS[0]  # what a legacy ``initialize`` negotiates down to
 SERVER_VERSION = "1.0.0"
+META_VERSION = "io.modelcontextprotocol/protocolVersion"
+META_SERVER_INFO = "io.modelcontextprotocol/serverInfo"
+# tools/list and server/discover are cacheable (2026-07-28); "private" because
+# the instructions follow the user's language.
+LIST_TTL_MS = 5 * 60 * 1000
+_UNPARSABLE = object()
 DEFAULT_ALLOWED_ORIGINS = ("https://claude.ai", "https://claude.com")
 
 
@@ -66,6 +86,34 @@ def _rpc_error(id_, code, message, data=None):
     if data is not None:
         err["data"] = data
     return {"jsonrpc": "2.0", "id": id_, "error": err}
+
+
+def _decode_header(value):
+    """``=?base64?…?=`` sentinel values (2026-07-28 Value Encoding) → text."""
+    if value and value.startswith("=?base64?") and value.endswith("?="):
+        try:
+            return base64.b64decode(value[9:-2], validate=True).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            return None
+    return value
+
+
+def _header_mismatch(request, message):
+    """None if the mirrored headers match the body; else the reason (modern era)."""
+    if not isinstance(message, dict) or "method" not in message:
+        return None
+    if "id" not in message:  # notifications: no header requirements in this revision
+        return None
+    method = message["method"]
+    if request.headers.get("Mcp-Method") != method:
+        return f"Mcp-Method header must be '{method}'"
+    params = message.get("params") if isinstance(message.get("params"), dict) else {}
+    meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+    if meta.get(META_VERSION) != request.headers.get("MCP-Protocol-Version"):
+        return f"MCP-Protocol-Version header must match params._meta['{META_VERSION}']"
+    if method == "tools/call" and _decode_header(request.headers.get("Mcp-Name")) != params.get("name"):
+        return "Mcp-Name header must match params.name"
+    return None
 
 
 def _resource_metadata_url(request):
@@ -138,17 +186,27 @@ class McpView(View):
 
     def post(self, request, *args, **kwargs):
         version = request.headers.get("MCP-Protocol-Version")
-        if version and version not in SUPPORTED_VERSIONS:
-            return JsonResponse(
-                _rpc_error(None, INVALID_REQUEST, f"Unsupported MCP-Protocol-Version: {version}"), status=400
-            )
-        token, error = self._authenticate(request)
-        if error:
-            return error
         try:
             message = json.loads(request.body or b"")
         except (ValueError, UnicodeDecodeError):
+            message = _UNPARSABLE
+        id_ = message.get("id") if isinstance(message, dict) else None
+        if version and version not in SUPPORTED_VERSIONS:
+            return JsonResponse(_rpc_error(id_, UNSUPPORTED_PROTOCOL_VERSION, "Unsupported protocol version", {
+                "supported": list(SUPPORTED_VERSIONS), "requested": version,
+            }), status=400)
+        modern = version in MODERN_VERSIONS
+        token, error = self._authenticate(request)
+        if error:
+            return error
+        if message is _UNPARSABLE:
             return JsonResponse(_rpc_error(None, PARSE_ERROR, "Parse error"), status=400)
+        if modern:
+            if isinstance(message, list):
+                return JsonResponse(_rpc_error(None, INVALID_REQUEST, "Batches are not supported"), status=400)
+            mismatch = _header_mismatch(request, message)
+            if mismatch:
+                return JsonResponse(_rpc_error(id_, HEADER_MISMATCH, f"Header mismatch: {mismatch}"), status=400)
 
         # The token's user, for the web serializers the write tools reuse
         # (they read request.user). Only this view sees it: no session is made.
@@ -163,6 +221,7 @@ class McpView(View):
             request=request,
             language="es" if (conn.language or "").startswith("es") else "en",
             tz=nutrition.user_tz(token.user),
+            modern=modern,
         )
         try:
             if isinstance(message, list):  # JSON-RPC batch (2025-03-26 clients only)
@@ -175,7 +234,8 @@ class McpView(View):
             return _challenge(request, 403, error="insufficient_scope", scope=f"{READ} {exc.scope}")
         if reply is None:
             return HttpResponse(status=202)
-        return JsonResponse(reply)
+        not_found = modern and reply.get("error", {}).get("code") == METHOD_NOT_FOUND
+        return JsonResponse(reply, status=404 if not_found else 200)
 
     def _handle(self, ctx, message):
         """One JSON-RPC message → a reply dict, or None for notifications/responses."""
@@ -191,7 +251,11 @@ class McpView(View):
         if not isinstance(params, dict):
             return _rpc_error(id_, INVALID_REQUEST, "params must be an object")
         try:
-            return {"jsonrpc": "2.0", "id": id_, "result": self._result(ctx, method, params)}
+            result = self._result(ctx, method, params)
+            if ctx.modern:
+                result = {"resultType": "complete", **result}
+                result["_meta"] = {**result.get("_meta", {}), META_SERVER_INFO: self._server_info(ctx)}
+            return {"jsonrpc": "2.0", "id": id_, "result": result}
         except ProtocolError as exc:
             return _rpc_error(id_, exc.code, exc.message, exc.data)
         except InsufficientScope:
@@ -200,25 +264,41 @@ class McpView(View):
             logger.exception("MCP method %s failed", method)
             return _rpc_error(id_, INTERNAL_ERROR, "Internal error")
 
+    def _server_info(self, ctx):
+        return {
+            "name": "the-cauldron",
+            "title": "The Cauldron",
+            "version": SERVER_VERSION,
+            "websiteUrl": ctx.absolute(reverse("the_cauldron:landing")),
+        }
+
     def _result(self, ctx, method, params):
-        if method == "initialize":
-            requested = params.get("protocolVersion")
-            with translation.override(ctx.language):
-                return {
-                    "protocolVersion": requested if requested in SUPPORTED_VERSIONS else LATEST_VERSION,
-                    "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {
-                        "name": "the-cauldron",
-                        "title": "The Cauldron",
-                        "version": SERVER_VERSION,
-                        "websiteUrl": ctx.absolute(reverse("the_cauldron:landing")),
-                    },
-                    "instructions": server_instructions(ctx),
-                }
-        if method == "ping":
-            return {}
-        if method == "tools/list":
-            return {"tools": list_tools()}
+        if ctx.modern:
+            if method == "server/discover":
+                with translation.override(ctx.language):
+                    return {
+                        "supportedVersions": list(SUPPORTED_VERSIONS),
+                        "capabilities": {"tools": {}},
+                        "instructions": server_instructions(ctx),
+                        "ttlMs": LIST_TTL_MS,
+                        "cacheScope": "private",
+                    }
+            if method == "tools/list":
+                return {"tools": list_tools(), "ttlMs": LIST_TTL_MS, "cacheScope": "private"}
+        else:
+            if method == "initialize":
+                requested = params.get("protocolVersion")
+                with translation.override(ctx.language):
+                    return {
+                        "protocolVersion": requested if requested in LEGACY_VERSIONS else LATEST_VERSION,
+                        "capabilities": {"tools": {"listChanged": False}},
+                        "serverInfo": self._server_info(ctx),
+                        "instructions": server_instructions(ctx),
+                    }
+            if method == "ping":
+                return {}
+            if method == "tools/list":
+                return {"tools": list_tools()}
         if method == "tools/call":
             name = params.get("name")
             if not isinstance(name, str):
