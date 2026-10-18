@@ -13,6 +13,7 @@ class McpContext:
     request: object  # the Django request (absolute URLs)
     language: str  # "es" / "en"
     tz: object  # the user's ZoneInfo
+    modern: bool = False  # spec 2026-07-28 request (per-request _meta, no handshake)
 
     @property
     def client(self):

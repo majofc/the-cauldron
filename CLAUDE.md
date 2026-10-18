@@ -451,15 +451,20 @@ Complete: OAuth 2.1, nutrition/Grimoire/Forge read and write tools, two-step con
 User docs, analytics events, the dashboard definition and how to add a tool: `README.md` → "MCP".
 
 **Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
-Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
-2025-06-18 / 2025-03-26, batches included). No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405,
+Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, **dual-era**: spec **2026-07-28**
+(`MCP-Protocol-Version: 2026-07-28` — no handshake, version in `params._meta`, `Mcp-Method`/`Mcp-Name` headers must
+match the body → else 400 `HeaderMismatch` -32020; `server/discover`; results carry `resultType: "complete"` and
+`_meta["io.modelcontextprotocol/serverInfo"]`; `tools/list` adds `ttlMs`/`cacheScope`; unknown method → 404) and the
+legacy `initialize` versions 2025-11-25 / 2025-06-18 / 2025-03-26 (batches included). An unknown version → 400
+`UnsupportedProtocolVersionError` (-32022, `data.supported`) — Claude speaks 2026-07-28 first and needs this to
+work out what we support. No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405,
 **except** a `GET` whose `Accept` has `text/html` and not `text/event-stream` (a browser): it renders the public
 info page (`oauth_views.mcp_info_view`, `mcp_info.html` + `mcp-info.css` / `mcp-info.js`), `Vary: Accept`. So the
 URL users paste into Claude is also the page explaining it. Its buttons post `{target}` to
 `api/mcp/connect-clicked/` (AllowAny, enum only). Nav: `_assistant_link.html` (✦ icon beside the profile icon),
 footer `_footer_links.html`, landing hero, Profile → "Your AI assistants".
 Present `Origin` must be ours or `CAULDRON_MCP_ALLOWED_ORIGINS` (default claude.ai/claude.com) → else 403.
-Unsupported `MCP-Protocol-Version` header → 400. Cookies are never read: bearer tokens only.
+Cookies are never read: bearer tokens only.
 
 **Auth**: django-oauth-toolkit 3.4 (settings `OAUTH2_PROVIDER` in arcano): authorization code + S256 PKCE only,
 public clients via DCR (`/cauldron/oauth/register/`) or CIMD, `localhost`/`127.0.0.1` loopback on any port
@@ -547,6 +552,9 @@ stores or sends means another bump.
   comes from `SECURE_PROXY_SSL_HEADER`.
 - Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
 - `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
+- Claude connects but says it has no tools → its requests never pass `McpView.post` (connection `last_used_at`
+  stays null). Usually a protocol-version problem: a new MCP revision must be added to `MODERN_VERSIONS` /
+  `LEGACY_VERSIONS` (`protocol.py`) with its changes; `tests/test_mcp_modern.py` covers 2026-07-28.
 - Connecting from Claude ends on "This connection can't continue / invalid_request" → DOT refused the client's CIMD
   document. Claude's lists the jwt-bearer grant; `oauth_cimd.CauldronMetadataFetcher` (arcano setting
   `CIMD_METADATA_FETCHER`) drops grant types we never issue — keep it wired.
