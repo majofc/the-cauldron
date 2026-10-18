@@ -8,6 +8,7 @@ from the_cauldron.models import (
     Equipment,
     Exercise,
     LegalAcceptance,
+    McpRequestLog,
     MovementPattern,
     Muscle,
     PrescribedExercise,
@@ -157,3 +158,20 @@ class LegalAcceptanceAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(McpRequestLog)
+class McpRequestLogAdmin(admin.ModelAdmin):
+    """What MCP clients sent and what we answered (newest 500) — read-only."""
+
+    list_display = ("created_at", "rpc_method", "status", "error_code", "protocol_version", "header_method",
+                    "has_bearer", "authenticated", "client", "detail", "user_agent")
+    list_filter = ("status", "rpc_method", "protocol_version", "authenticated")
+    readonly_fields = [f.name for f in McpRequestLog._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+

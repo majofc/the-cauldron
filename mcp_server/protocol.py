@@ -104,16 +104,53 @@ def _header_mismatch(request, message):
         return None
     if "id" not in message:  # notifications: no header requirements in this revision
         return None
+    # A header that is present must match the body (that is what protects an
+    # intermediary routing on headers); one a client leaves out isn't held
+    # against it — nothing in front of us routes on them.
     method = message["method"]
-    if request.headers.get("Mcp-Method") != method:
+    header_method = request.headers.get("Mcp-Method")
+    if header_method is not None and header_method != method:
         return f"Mcp-Method header must be '{method}'"
     params = message.get("params") if isinstance(message.get("params"), dict) else {}
     meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
-    if meta.get(META_VERSION) != request.headers.get("MCP-Protocol-Version"):
+    if META_VERSION in meta and meta[META_VERSION] != request.headers.get("MCP-Protocol-Version"):
         return f"MCP-Protocol-Version header must match params._meta['{META_VERSION}']"
-    if method == "tools/call" and _decode_header(request.headers.get("Mcp-Name")) != params.get("name"):
+    header_name = request.headers.get("Mcp-Name")
+    if method == "tools/call" and header_name is not None and _decode_header(header_name) != params.get("name"):
         return "Mcp-Name header must match params.name"
     return None
+
+
+def _log_request(request, response):
+    """One ``McpRequestLog`` row (technical metadata only); never breaks a request."""
+    try:
+        from the_cauldron.models import McpRequestLog
+
+        info = getattr(request, "_mcp_log", {})
+        error_code = None
+        if response.get("Content-Type", "").startswith("application/json") and response.content:
+            body = json.loads(response.content)
+            if isinstance(body, dict) and isinstance(body.get("error"), dict):
+                error_code = body["error"].get("code")
+                info.setdefault("detail", str(body["error"].get("message", "")))
+            elif isinstance(body, dict) and isinstance(body.get("result"), dict) and body["result"].get("isError"):
+                info.setdefault("detail", "tool error")
+        McpRequestLog.objects.create(
+            status=response.status_code,
+            rpc_method=info.get("rpc_method", ""),
+            error_code=error_code if isinstance(error_code, int) else None,
+            detail=(info.get("detail") or "")[:200],
+            protocol_version=(request.headers.get("MCP-Protocol-Version") or "")[:32],
+            header_method=(request.headers.get("Mcp-Method") or "")[:64],
+            has_bearer=request.headers.get("Authorization", "").startswith("Bearer "),
+            authenticated=bool(info.get("authenticated")),
+            client=info.get("client", ""),
+            user_agent=(request.headers.get("User-Agent") or "")[:200],
+        )
+        stale = McpRequestLog.objects.order_by("-created_at").values_list("pk", flat=True)[McpRequestLog.KEEP:]
+        McpRequestLog.objects.filter(pk__in=list(stale)).delete()
+    except Exception:  # diagnostics must never break the endpoint
+        logger.exception("MCP request log failed")
 
 
 def _resource_metadata_url(request):
@@ -185,12 +222,22 @@ class McpView(View):
         return token, None
 
     def post(self, request, *args, **kwargs):
+        request._mcp_log = {}
+        response = self._post(request)
+        _log_request(request, response)
+        return response
+
+    def _post(self, request):
         version = request.headers.get("MCP-Protocol-Version")
         try:
             message = json.loads(request.body or b"")
         except (ValueError, UnicodeDecodeError):
             message = _UNPARSABLE
         id_ = message.get("id") if isinstance(message, dict) else None
+        if isinstance(message, dict):
+            request._mcp_log["rpc_method"] = str(message.get("method", ""))[:64]
+        elif isinstance(message, list):
+            request._mcp_log["rpc_method"] = "(batch)"
         if version and version not in SUPPORTED_VERSIONS:
             return JsonResponse(_rpc_error(id_, UNSUPPORTED_PROTOCOL_VERSION, "Unsupported protocol version", {
                 "supported": list(SUPPORTED_VERSIONS), "requested": version,
@@ -205,6 +252,7 @@ class McpView(View):
             if isinstance(message, list):
                 return JsonResponse(_rpc_error(None, INVALID_REQUEST, "Batches are not supported"), status=400)
             mismatch = _header_mismatch(request, message)
+            request._mcp_log["detail"] = mismatch or ""
             if mismatch:
                 return JsonResponse(_rpc_error(id_, HEADER_MISMATCH, f"Header mismatch: {mismatch}"), status=400)
 
@@ -212,6 +260,7 @@ class McpView(View):
         # (they read request.user). Only this view sees it: no session is made.
         request.user = token.user
         conn = touch_connection(token.user, token.application)
+        request._mcp_log.update(authenticated=True, client=conn.client)
         _identify_for_analytics(token.user)
         ctx = McpContext(
             user=token.user,
