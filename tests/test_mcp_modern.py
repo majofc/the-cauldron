@@ -134,3 +134,30 @@ def test_legacy_clients_unchanged(alice):
     assert init["protocolVersion"] == "2025-11-25" and "resultType" not in init
     res = _post({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}, token).json()["result"]
     assert len(res["tools"]) == 38 and "resultType" not in res and "_meta" not in res
+
+
+def test_rejections_before_the_view_and_crashes_are_logged(alice, monkeypatch):
+    """Origin rejections, non-POST methods and crashes leave a row too (a
+    crash records the exception type and where, never its message)."""
+    from django.test import Client
+
+    from the_cauldron.mcp_server import protocol
+    from the_cauldron.models import McpRequestLog
+
+    token = _token(alice)
+    _modern(token, "tools/list", headers={"HTTP_ORIGIN": "https://evil.example"})
+    Client().get("/cauldron/mcp/", HTTP_ACCEPT="text/event-stream")
+    Client().get("/cauldron/mcp/", HTTP_ACCEPT="text/html")  # the info page: a person, not logged
+
+    def boom(*a, **kw):
+        raise ValueError("secret user data")
+    monkeypatch.setattr(protocol, "touch_connection", boom)
+    with pytest.raises(ValueError):
+        _modern(token, "tools/list")
+
+    origin, get, crash = McpRequestLog.objects.order_by("created_at")
+    assert (origin.status, origin.header_method) == (403, "tools/list")
+    assert origin.detail == "Origin not allowed: https://evil.example"
+    assert (get.status, get.rpc_method) == (405, "(GET)")
+    assert (crash.status, crash.rpc_method, crash.has_bearer) == (500, "tools/list", True)
+    assert crash.detail.startswith("ValueError at ") and "secret" not in crash.detail
