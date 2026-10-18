@@ -2,12 +2,12 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-17 04:49+0000\n"
+"POT-Creation-Date: 2026-10-17 22:02+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -41,15 +41,15 @@ msgstr "Envía un objeto JSON."
 msgid "This spell has no weighed ingredients."
 msgstr "Este hechizo no tiene ingredientes con peso."
 
-#: grimoire_i18n.py:16 templates/the_cauldron/grimoire.html:256
+#: grimoire_i18n.py:16 templates/the_cauldron/grimoire.html:257
 msgid "All"
 msgstr "Todos"
 
-#: grimoire_i18n.py:17 templates/the_cauldron/grimoire.html:257
+#: grimoire_i18n.py:17 templates/the_cauldron/grimoire.html:258
 msgid "My spells"
 msgstr "Mis hechizos"
 
-#: grimoire_i18n.py:18 templates/the_cauldron/grimoire.html:258
+#: grimoire_i18n.py:18 templates/the_cauldron/grimoire.html:259
 msgid "The Coven"
 msgstr "El Aquelarre"
 
@@ -147,7 +147,7 @@ msgstr "Adaptado de “%(title)s”."
 msgid "Forked from a spell that is no longer shared."
 msgstr "Adaptado de un hechizo que ya no se comparte."
 
-#: grimoire_i18n.py:42 templates/the_cauldron/grimoire.html:239
+#: grimoire_i18n.py:42 templates/the_cauldron/grimoire.html:240
 msgid "Reagents"
 msgstr "Reactivos"
 
@@ -212,8 +212,8 @@ msgid "The coven hasn't shared a spell yet."
 msgstr "El aquelarre aún no ha compartido ningún hechizo."
 
 #: grimoire_i18n.py:59 grimoire_i18n.py:71
-#: templates/the_cauldron/grimoire.html:73
-#: templates/the_cauldron/grimoire.html:253
+#: templates/the_cauldron/grimoire.html:74
+#: templates/the_cauldron/grimoire.html:254
 msgid "Write a spell"
 msgstr "Escribir un hechizo"
 
@@ -253,7 +253,7 @@ msgstr "Hechizo escrito en tu grimorio."
 msgid "Ingredient added — only you can see it until it's approved."
 msgstr "Ingrediente agregado — solo tú puedes verlo hasta que se apruebe."
 
-#: grimoire_i18n.py:72 templates/the_cauldron/grimoire.html:73
+#: grimoire_i18n.py:72 templates/the_cauldron/grimoire.html:74
 msgid "Edit spell"
 msgstr "Editar hechizo"
 
@@ -306,12 +306,12 @@ msgstr "No hay ingredientes con ese nombre"
 msgid "Add it — it stays visible only to you until approved."
 msgstr "Agrégalo — solo tú lo verás hasta que se apruebe."
 
-#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:190
-#: templates/the_cauldron/grimoire.html:271
+#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:191
+#: templates/the_cauldron/grimoire.html:272
 msgid "Add a reagent"
 msgstr "Agregar un reactivo"
 
-#: grimoire_i18n.py:86 templates/the_cauldron/grimoire.html:226
+#: grimoire_i18n.py:86 templates/the_cauldron/grimoire.html:227
 msgid "Add ingredient"
 msgstr "Agregar ingrediente"
 
@@ -513,7 +513,7 @@ msgstr "Aún no has lanzado este hechizo."
 msgid "No castings yet — open a spell and cast it."
 msgstr "Aún no hay lanzamientos — abre un hechizo y lánzalo."
 
-#: grimoire_i18n.py:135 templates/the_cauldron/grimoire.html:127
+#: grimoire_i18n.py:135 templates/the_cauldron/grimoire.html:128
 msgid "Cast this spell"
 msgstr "Lanzar este hechizo"
 
@@ -544,7 +544,7 @@ msgstr "sin calificación"
 msgid "Spell removed"
 msgstr "Hechizo eliminado"
 
-#: grimoire_i18n.py:142 templates/the_cauldron/grimoire.html:150
+#: grimoire_i18n.py:142 templates/the_cauldron/grimoire.html:151
 msgid "Substitutions"
 msgstr "Sustituciones"
 
@@ -593,7 +593,7 @@ msgid "Scale"
 msgstr "Escalar"
 
 #: grimoire_i18n.py:157 services/grimoire_scaling.py:106
-#: templates/the_cauldron/grimoire.html:79
+#: templates/the_cauldron/grimoire.html:80
 msgid "Servings"
 msgstr "Porciones"
 
@@ -830,7 +830,7 @@ msgstr "También conocido como %(name)s"
 msgid "Source data on USDA FoodData Central ↗"
 msgstr "Datos de origen en USDA FoodData Central ↗"
 
-#: grimoire_i18n.py:213 templates/the_cauldron/grimoire.html:204
+#: grimoire_i18n.py:213 templates/the_cauldron/grimoire.html:205
 msgid "Household measures"
 msgstr "Medidas caseras"
 
@@ -838,11 +838,11 @@ msgstr "Medidas caseras"
 msgid "No household measures yet — recipes can use it by weight."
 msgstr "Aún sin medidas caseras — las recetas pueden usarlo por peso."
 
-#: grimoire_i18n.py:215 templates/the_cauldron/grimoire.html:216
+#: grimoire_i18n.py:215 templates/the_cauldron/grimoire.html:217
 msgid "Nutrients per 100 g"
 msgstr "Nutrientes por 100 g"
 
-#: grimoire_i18n.py:216 templates/the_cauldron/grimoire.html:190
+#: grimoire_i18n.py:216 templates/the_cauldron/grimoire.html:191
 msgid "Edit ingredient"
 msgstr "Editar ingrediente"
 
@@ -879,7 +879,7 @@ msgid "1 glass"
 msgstr "1 vaso"
 
 #: grimoire_i18n.py:225 grimoire_serializers.py:114
-#: templates/the_cauldron/grimoire.html:211
+#: templates/the_cauldron/grimoire.html:212
 msgid "Density"
 msgstr "Densidad"
 
@@ -1141,7 +1141,7 @@ msgstr "Quitar"
 msgid "Change"
 msgstr "Cambiar"
 
-#: nutrition_i18n.py:23 templates/the_cauldron/nutrition.html:96
+#: nutrition_i18n.py:23 templates/the_cauldron/nutrition.html:97
 msgid "Today"
 msgstr "Hoy"
 
@@ -1183,7 +1183,7 @@ msgstr "meta %(min)s–%(max)s %(unit)s"
 msgid "Goals saved."
 msgstr "Metas guardadas."
 
-#: nutrition_i18n.py:33 templates/the_cauldron/nutrition.html:138
+#: nutrition_i18n.py:33 templates/the_cauldron/nutrition.html:139
 msgid "Show goal history"
 msgstr "Ver historial de metas"
 
@@ -1237,7 +1237,7 @@ msgstr "Define una meta diaria para ver qué tan seguido la cumples."
 msgid "24 hours"
 msgstr "24 horas"
 
-#: nutrition_i18n.py:50 templates/the_cauldron/nutrition.html:221
+#: nutrition_i18n.py:50 templates/the_cauldron/nutrition.html:222
 msgid "7 days"
 msgstr "7 días"
 
@@ -1285,7 +1285,7 @@ msgstr "faltan hasta %(n)s %(unit)s"
 msgid "in range"
 msgstr "en rango"
 
-#: nutrition_i18n.py:61 templates/the_cauldron/nutrition.html:208
+#: nutrition_i18n.py:61 templates/the_cauldron/nutrition.html:209
 msgid "Show every nutrient"
 msgstr "Ver todos los nutrientes"
 
@@ -1413,11 +1413,11 @@ msgstr "No hay ningún asistente conectado."
 msgid "Disconnected. It can't use your account anymore."
 msgstr "Desconectado. Ya no puede usar tu cuenta."
 
-#: nutrition_i18n.py:93 templates/the_cauldron/nutrition.html:239
+#: nutrition_i18n.py:93 templates/the_cauldron/nutrition.html:240
 msgid "Log something"
 msgstr "Registrar algo"
 
-#: nutrition_i18n.py:94 templates/the_cauldron/nutrition.html:272
+#: nutrition_i18n.py:94 templates/the_cauldron/nutrition.html:273
 msgid "Log it"
 msgstr "Registrar"
 
@@ -1453,23 +1453,23 @@ msgstr "Registro guardado."
 msgid "serving"
 msgstr "porción"
 
-#: nutrition_i18n.py:103 templates/the_cauldron/nutrition.html:307
+#: nutrition_i18n.py:103 templates/the_cauldron/nutrition.html:308
 msgid "servings"
 msgstr "porciones"
 
-#: nutrition_i18n.py:105 templates/the_cauldron/nutrition.html:298
+#: nutrition_i18n.py:105 templates/the_cauldron/nutrition.html:299
 msgid "Breakfast"
 msgstr "Desayuno"
 
-#: nutrition_i18n.py:106 templates/the_cauldron/nutrition.html:299
+#: nutrition_i18n.py:106 templates/the_cauldron/nutrition.html:300
 msgid "Lunch"
 msgstr "Comida"
 
-#: nutrition_i18n.py:107 templates/the_cauldron/nutrition.html:300
+#: nutrition_i18n.py:107 templates/the_cauldron/nutrition.html:301
 msgid "Dinner"
 msgstr "Cena"
 
-#: nutrition_i18n.py:108 templates/the_cauldron/nutrition.html:301
+#: nutrition_i18n.py:108 templates/the_cauldron/nutrition.html:302
 msgid "Snack"
 msgstr "Colación"
 
@@ -1658,15 +1658,24 @@ msgstr "Ese ingrediente ya no existe; usa un peso."
 msgid "Send the values as an object."
 msgstr "Envía los valores como un objeto."
 
+#: templates/the_cauldron/_assistant_link.html:5
+msgid "Use with your AI assistant"
+msgstr "Úsalo con tu asistente de IA"
+
 #: templates/the_cauldron/_footer_links.html:4
 msgid "Terms"
 msgstr "Términos"
 
 #: templates/the_cauldron/_footer_links.html:5
+msgid "AI assistants"
+msgstr "Asistentes de IA"
+
+#: templates/the_cauldron/_footer_links.html:6
+#: templates/the_cauldron/mcp_info.html:152
 msgid "Privacy"
 msgstr "Privacidad"
 
-#: templates/the_cauldron/_footer_links.html:6
+#: templates/the_cauldron/_footer_links.html:7
 msgid "Contact"
 msgstr "Contacto"
 
@@ -1676,8 +1685,9 @@ msgstr "Perfil"
 
 #: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4
 #: templates/the_cauldron/grimoire.html:33
-#: templates/the_cauldron/grimoire.html:234
+#: templates/the_cauldron/grimoire.html:235
 #: templates/the_cauldron/legal/_base.html:32
+#: templates/the_cauldron/mcp_info.html:38
 #: templates/the_cauldron/nutrition.html:41
 msgid "The Grimoire"
 msgstr "El Grimorio"
@@ -1685,8 +1695,9 @@ msgstr "El Grimorio"
 #: templates/the_cauldron/forge.html:32 templates/the_cauldron/grimoire.html:34
 #: templates/the_cauldron/landing.html:35
 #: templates/the_cauldron/legal/_base.html:33
+#: templates/the_cauldron/mcp_info.html:39
 #: templates/the_cauldron/nutrition.html:42
-#: templates/the_cauldron/nutrition.html:90
+#: templates/the_cauldron/nutrition.html:91
 msgid "The Journal"
 msgstr "El Diario"
 
@@ -1699,270 +1710,479 @@ msgid "Keep, share and fork your spells — the recipe book of The Cauldron."
 msgstr "Guarda, comparte y adapta tus hechizos — el recetario de The Cauldron."
 
 #: templates/the_cauldron/grimoire.html:18
+#: templates/the_cauldron/mcp_info.html:23
 #: templates/the_cauldron/nutrition.html:26
 #: templates/the_cauldron/oauth_authorize.html:24
 msgid "The Cauldron home"
 msgstr "Inicio de The Cauldron"
 
-#: templates/the_cauldron/grimoire.html:40
-#: templates/the_cauldron/nutrition.html:48
-#: templates/the_cauldron/nutrition.html:78
+#: templates/the_cauldron/grimoire.html:41
+#: templates/the_cauldron/mcp_info.html:47
+#: templates/the_cauldron/nutrition.html:49
+#: templates/the_cauldron/nutrition.html:79
 #: templates/the_cauldron/oauth_authorize.html:40
 msgid "Sign out"
 msgstr "Cerrar sesión"
 
-#: templates/the_cauldron/grimoire.html:50
-#: templates/the_cauldron/grimoire.html:67
+#: templates/the_cauldron/grimoire.html:51
+#: templates/the_cauldron/grimoire.html:68
 msgid "Back to the Grimoire"
 msgstr "Volver al Grimorio"
 
-#: templates/the_cauldron/grimoire.html:67
-#: templates/the_cauldron/grimoire.html:120
+#: templates/the_cauldron/grimoire.html:68
+#: templates/the_cauldron/grimoire.html:121
 msgid "Back to the spell"
 msgstr "Volver al hechizo"
 
-#: templates/the_cauldron/grimoire.html:74
+#: templates/the_cauldron/grimoire.html:75
 msgid "Recipe name"
 msgstr "Nombre de la receta"
 
-#: templates/the_cauldron/grimoire.html:76
+#: templates/the_cauldron/grimoire.html:77
 msgid "Description"
 msgstr "Descripción"
 
-#: templates/the_cauldron/grimoire.html:81
+#: templates/the_cauldron/grimoire.html:82
 msgid "Prep (min)"
 msgstr "Preparación (min)"
 
-#: templates/the_cauldron/grimoire.html:83
+#: templates/the_cauldron/grimoire.html:84
 msgid "Cook (min)"
 msgstr "Cocción (min)"
 
-#: templates/the_cauldron/grimoire.html:87
+#: templates/the_cauldron/grimoire.html:88
 msgid "Cooked weight of the batch (g)"
 msgstr "Peso cocinado de la tanda (g)"
 
-#: templates/the_cauldron/grimoire.html:89
+#: templates/the_cauldron/grimoire.html:90
 #, python-format
 msgid "or yield (%% of raw weight)"
 msgstr "o rendimiento (%% del peso crudo)"
 
-#: templates/the_cauldron/grimoire.html:92
+#: templates/the_cauldron/grimoire.html:93
 msgid "Optional. Cooking loses or gains water; this makes nutrition per 100 g of the dish right. Weighing the pot when you cast it is better still."
 msgstr "Opcional. Al cocinar se pierde o gana agua; esto corrige la nutrición por 100 g del platillo. Pesarlo cuando lo lances es aún mejor."
 
-#: templates/the_cauldron/grimoire.html:94
+#: templates/the_cauldron/grimoire.html:95
 msgid "Tags"
 msgstr "Etiquetas"
 
-#: templates/the_cauldron/grimoire.html:98
+#: templates/the_cauldron/grimoire.html:99
 msgid "Ingredients"
 msgstr "Ingredientes"
 
-#: templates/the_cauldron/grimoire.html:101
+#: templates/the_cauldron/grimoire.html:102
 msgid "Find an ingredient to add…"
 msgstr "Busca un ingrediente para agregar…"
 
-#: templates/the_cauldron/grimoire.html:102
+#: templates/the_cauldron/grimoire.html:103
 msgid "Find an ingredient to add"
 msgstr "Busca un ingrediente para agregar"
 
-#: templates/the_cauldron/grimoire.html:105
+#: templates/the_cauldron/grimoire.html:106
 msgid "Missing an ingredient? Add it (opens in a new tab)."
 msgstr "¿Falta un ingrediente? Agrégalo (se abre en otra pestaña)."
 
-#: templates/the_cauldron/grimoire.html:107
+#: templates/the_cauldron/grimoire.html:108
 msgid "Steps — one per line"
 msgstr "Pasos — uno por línea"
 
-#: templates/the_cauldron/grimoire.html:111
-#: templates/the_cauldron/grimoire.html:159
-#: templates/the_cauldron/grimoire.html:225
-#: templates/the_cauldron/nutrition.html:271
+#: templates/the_cauldron/grimoire.html:112
+#: templates/the_cauldron/grimoire.html:160
+#: templates/the_cauldron/grimoire.html:226
+#: templates/the_cauldron/nutrition.html:272
 #: templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: templates/the_cauldron/grimoire.html:112
+#: templates/the_cauldron/grimoire.html:113
 msgid "Save spell"
 msgstr "Guardar hechizo"
 
-#: templates/the_cauldron/grimoire.html:120
+#: templates/the_cauldron/grimoire.html:121
 msgid "Back to your castings"
 msgstr "Volver a tus lanzamientos"
 
-#: templates/the_cauldron/grimoire.html:127
+#: templates/the_cauldron/grimoire.html:128
 msgid "Edit casting"
 msgstr "Editar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:128
+#: templates/the_cauldron/grimoire.html:129
 msgid "Only you see your castings. Changes here are noted on the casting — the spell stays as it is."
 msgstr "Solo tú ves tus lanzamientos. Los cambios se anotan en el lanzamiento — el hechizo queda igual."
 
-#: templates/the_cauldron/grimoire.html:131
+#: templates/the_cauldron/grimoire.html:132
 msgid "How it went"
 msgstr "Cómo salió"
 
-#: templates/the_cauldron/grimoire.html:133
+#: templates/the_cauldron/grimoire.html:134
 msgid "Date you made it"
 msgstr "Fecha en que lo preparaste"
 
-#: templates/the_cauldron/grimoire.html:135
+#: templates/the_cauldron/grimoire.html:136
 msgid "Score"
 msgstr "Calificación"
 
-#: templates/the_cauldron/grimoire.html:138
+#: templates/the_cauldron/grimoire.html:139
 msgid "No score"
 msgstr "Sin calificación"
 
-#: templates/the_cauldron/grimoire.html:142
+#: templates/the_cauldron/grimoire.html:143
 msgid "Notes"
 msgstr "Notas"
 
-#: templates/the_cauldron/grimoire.html:143
+#: templates/the_cauldron/grimoire.html:144
 msgid "What worked, what you would change next time…"
 msgstr "Qué funcionó, qué cambiarías la próxima vez…"
 
-#: templates/the_cauldron/grimoire.html:147
+#: templates/the_cauldron/grimoire.html:148
 msgid "Amounts you used"
 msgstr "Cantidades que usaste"
 
-#: templates/the_cauldron/grimoire.html:148
+#: templates/the_cauldron/grimoire.html:149
 msgid "Change an amount if you used more or less than the spell says. Only changed lines are saved."
 msgstr "Cambia una cantidad si usaste más o menos de lo que dice el hechizo. Solo se guardan las líneas que cambies."
 
-#: templates/the_cauldron/grimoire.html:151
+#: templates/the_cauldron/grimoire.html:152
 msgid "e.g. lime instead of lemon"
 msgstr "p. ej., limón verde en lugar de amarillo"
 
-#: templates/the_cauldron/grimoire.html:152
+#: templates/the_cauldron/grimoire.html:153
 msgid "Cooked weight (g)"
 msgstr "Peso cocinado (g)"
 
-#: templates/the_cauldron/grimoire.html:154
+#: templates/the_cauldron/grimoire.html:155
 msgid "Weigh the finished dish without the pot. It sets nutrition per 100 g for this spell."
 msgstr "Pesa el platillo terminado sin la olla. Con eso se calcula la nutrición por 100 g de este hechizo."
 
-#: templates/the_cauldron/grimoire.html:160
+#: templates/the_cauldron/grimoire.html:161
 msgid "Save casting"
 msgstr "Guardar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:168
-#: templates/the_cauldron/grimoire.html:183
+#: templates/the_cauldron/grimoire.html:169
+#: templates/the_cauldron/grimoire.html:184
 msgid "Back to the reagents"
 msgstr "Volver a los reactivos"
 
-#: templates/the_cauldron/grimoire.html:181
+#: templates/the_cauldron/grimoire.html:182
 msgid "Back to the ingredient"
 msgstr "Volver al ingrediente"
 
-#: templates/the_cauldron/grimoire.html:191
+#: templates/the_cauldron/grimoire.html:192
 msgid "Ingredients you add stay visible only to you until they're approved."
 msgstr "Los ingredientes que agregues solo los verás tú hasta que se aprueben."
 
-#: templates/the_cauldron/grimoire.html:194
+#: templates/the_cauldron/grimoire.html:195
 msgid "The ingredient"
 msgstr "El ingrediente"
 
-#: templates/the_cauldron/grimoire.html:196
+#: templates/the_cauldron/grimoire.html:197
 msgid "Name in English"
 msgstr "Nombre en inglés"
 
-#: templates/the_cauldron/grimoire.html:197
+#: templates/the_cauldron/grimoire.html:198
 msgid "Name in Spanish"
 msgstr "Nombre en español"
 
-#: templates/the_cauldron/grimoire.html:198
+#: templates/the_cauldron/grimoire.html:199
 msgid "Category"
 msgstr "Categoría"
 
-#: templates/the_cauldron/grimoire.html:205
+#: templates/the_cauldron/grimoire.html:206
 msgid "Optional. They let recipes use cups, spoons or pieces of this ingredient."
 msgstr "Opcional. Permiten usar tazas, cucharadas o piezas de este ingrediente en las recetas."
 
-#: templates/the_cauldron/grimoire.html:207
+#: templates/the_cauldron/grimoire.html:208
 msgid "One cup weighs"
 msgstr "Una taza pesa"
 
-#: templates/the_cauldron/grimoire.html:208
+#: templates/the_cauldron/grimoire.html:209
 msgid "One tablespoon weighs"
 msgstr "Una cucharada pesa"
 
-#: templates/the_cauldron/grimoire.html:209
+#: templates/the_cauldron/grimoire.html:210
 msgid "One piece weighs"
 msgstr "Una pieza pesa"
 
-#: templates/the_cauldron/grimoire.html:210
+#: templates/the_cauldron/grimoire.html:211
 msgid "One glass weighs"
 msgstr "Un vaso pesa"
 
-#: templates/the_cauldron/grimoire.html:217
+#: templates/the_cauldron/grimoire.html:218
 msgid "Leave a field blank if you don't know it — it shows as “—”, never as 0."
 msgstr "Deja en blanco lo que no sepas — se muestra como “—”, nunca como 0."
 
-#: templates/the_cauldron/grimoire.html:221
+#: templates/the_cauldron/grimoire.html:222
 msgid "Suggest it for the shared catalog (staff review)"
 msgstr "Sugerirlo para el catálogo compartido (revisión del equipo)"
 
-#: templates/the_cauldron/grimoire.html:222
+#: templates/the_cauldron/grimoire.html:223
 #, python-format
 msgid "Ingredients are reference data, not private content: our team may review them and add them to the shared catalog at any time, without notice. Don't include personal data. <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">See the Terms</a>."
 msgstr "Los ingredientes son datos de referencia, no contenido privado: nuestro equipo puede revisarlos y agregarlos al catálogo compartido en cualquier momento, sin aviso. No incluyas datos personales. <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Consulta los Términos</a>."
 
-#: templates/the_cauldron/grimoire.html:226
+#: templates/the_cauldron/grimoire.html:227
 msgid "Save ingredient"
 msgstr "Guardar ingrediente"
 
-#: templates/the_cauldron/grimoire.html:235
+#: templates/the_cauldron/grimoire.html:236
 msgid "Keep your spells, share the good ones with the coven, and make theirs your own."
 msgstr "Guarda tus hechizos, comparte los buenos con el aquelarre y haz tuyos los de ellos."
 
-#: templates/the_cauldron/grimoire.html:237
+#: templates/the_cauldron/grimoire.html:238
 msgid "Grimoire sections"
 msgstr "Secciones del grimorio"
 
-#: templates/the_cauldron/grimoire.html:238
+#: templates/the_cauldron/grimoire.html:239
 msgid "Spells"
 msgstr "Hechizos"
 
-#: templates/the_cauldron/grimoire.html:240
+#: templates/the_cauldron/grimoire.html:241
 msgid "Castings"
 msgstr "Lanzamientos"
 
-#: templates/the_cauldron/grimoire.html:250
+#: templates/the_cauldron/grimoire.html:251
 msgid "Search spells"
 msgstr "Buscar hechizos"
 
-#: templates/the_cauldron/grimoire.html:251
+#: templates/the_cauldron/grimoire.html:252
 msgid "Search your spells and the coven’s…"
 msgstr "Busca en tus hechizos y en los del aquelarre…"
 
-#: templates/the_cauldron/grimoire.html:255
+#: templates/the_cauldron/grimoire.html:256
 msgid "Whose spells"
 msgstr "De quién son los hechizos"
 
-#: templates/the_cauldron/grimoire.html:260
+#: templates/the_cauldron/grimoire.html:261
 msgid "Filter by tag"
 msgstr "Filtrar por etiqueta"
 
-#: templates/the_cauldron/grimoire.html:268
+#: templates/the_cauldron/grimoire.html:269
 msgid "Search ingredients"
 msgstr "Buscar ingredientes"
 
-#: templates/the_cauldron/grimoire.html:269
+#: templates/the_cauldron/grimoire.html:270
 msgid "Search ingredients…"
 msgstr "Buscar ingredientes…"
 
-#: templates/the_cauldron/grimoire.html:273
+#: templates/the_cauldron/grimoire.html:274
 msgid "Nutrients per 100 g. “—” means unknown. Ingredients you add stay visible only to you until they're approved."
 msgstr "Nutrientes por 100 g. “—” significa desconocido. Los ingredientes que agregues solo los verás tú hasta que se aprueben."
 
-#: templates/the_cauldron/grimoire.html:279
+#: templates/the_cauldron/grimoire.html:280
 msgid "Every time you made a spell, newest first. Only you see these."
 msgstr "Cada vez que preparaste un hechizo, del más reciente al más antiguo. Solo tú los ves."
 
 #: templates/the_cauldron/grimoire/_units.html:4
 msgid "Units"
 msgstr "Unidades"
+
+#: templates/the_cauldron/landing.html:124
+msgid "✦ Use it from Claude — log meals from a photo, plan and train by chat"
+msgstr "✦ Úsalo desde Claude: registra comidas con una foto, planea y entrena por chat"
+
+#: templates/the_cauldron/mcp_info.html:9
+msgid "Use The Cauldron from your AI assistant"
+msgstr "Usa The Cauldron desde tu asistente de IA"
+
+#: templates/the_cauldron/mcp_info.html:10
+msgid "Connect Claude to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts."
+msgstr "Conecta Claude a The Cauldron: registra comidas con una foto, encuentra recetas con lo que hay en tu refri, planea tu semana y registra tus entrenamientos."
+
+#: templates/the_cauldron/mcp_info.html:49
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+#: templates/the_cauldron/mcp_info.html:58
+msgid "The Cauldron · AI assistants"
+msgstr "The Cauldron · Asistentes de IA"
+
+#: templates/the_cauldron/mcp_info.html:59
+msgid "Your Cauldron, from your AI assistant"
+msgstr "Tu Cauldron, desde tu asistente de IA"
+
+#: templates/the_cauldron/mcp_info.html:61
+msgid "Connect Claude — on your phone, on the web, on your desktop or in your terminal — and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site."
+msgstr "Conecta Claude —en tu celular, en la web, en tu computadora o en tu terminal— y habla con The Cauldron: registra lo que comiste con una foto, encuentra recetas con lo que hay en tu refri, planea la semana y registra tu entrenamiento sin abrir el sitio."
+
+#: templates/the_cauldron/mcp_info.html:65
+#, python-format
+msgid "You have %(n)s assistant connected."
+msgid_plural "You have %(n)s assistants connected."
+msgstr[0] "Tienes %(n)s asistente conectado."
+msgstr[1] "Tienes %(n)s asistentes conectados."
+
+#: templates/the_cauldron/mcp_info.html:66
+msgid "Manage them in your profile"
+msgstr "Adminístralos en tu perfil"
+
+#: templates/the_cauldron/mcp_info.html:75
+msgid "Connect"
+msgstr "Conectar"
+
+#: templates/the_cauldron/mcp_info.html:76
+msgid "This is the address of The Cauldron for your assistant:"
+msgstr "Esta es la dirección de The Cauldron para tu asistente:"
+
+#: templates/the_cauldron/mcp_info.html:79
+#: templates/the_cauldron/mcp_info.html:100
+#: templates/the_cauldron/mcp_info.html:108
+msgid "Copied"
+msgstr "Copiado"
+
+#: templates/the_cauldron/mcp_info.html:79
+#: templates/the_cauldron/mcp_info.html:108
+msgid "Copy"
+msgstr "Copiar"
+
+#: templates/the_cauldron/mcp_info.html:84
+msgid "claude.ai and the Claude app (phone)"
+msgstr "claude.ai y la app de Claude (celular)"
+
+#: templates/the_cauldron/mcp_info.html:86
+msgid "On <a href=\"https://claude.ai/settings/connectors\" target=\"_blank\" rel=\"noopener\" data-target=\"claude_ai\">claude.ai</a>, open <strong>Settings → Connectors</strong>."
+msgstr "En <a href=\"https://claude.ai/settings/connectors\" target=\"_blank\" rel=\"noopener\" data-target=\"claude_ai\">claude.ai</a>, abre <strong>Configuración → Conectores</strong>."
+
+#: templates/the_cauldron/mcp_info.html:87
+msgid "Choose “Add custom connector”, name it “The Cauldron” and paste the address above."
+msgstr "Elige “Agregar conector personalizado”, llámalo “The Cauldron” y pega la dirección de arriba."
+
+#: templates/the_cauldron/mcp_info.html:88
+msgid "Press Connect, sign in to The Cauldron and allow access."
+msgstr "Presiona Conectar, inicia sesión en The Cauldron y permite el acceso."
+
+#: templates/the_cauldron/mcp_info.html:90
+msgid "A connector added on claude.ai also shows up in the Claude app on your phone. Custom connectors depend on your Claude plan."
+msgstr "Un conector agregado en claude.ai también aparece en la app de Claude de tu celular. Los conectores personalizados dependen de tu plan de Claude."
+
+#: templates/the_cauldron/mcp_info.html:94
+msgid "Claude Desktop"
+msgstr "Claude Desktop"
+
+#: templates/the_cauldron/mcp_info.html:96
+msgid "Open Settings → Connectors."
+msgstr "Abre Configuración → Conectores."
+
+#: templates/the_cauldron/mcp_info.html:97
+msgid "Choose “Add custom connector” and paste the address above."
+msgstr "Elige “Agregar conector personalizado” y pega la dirección de arriba."
+
+#: templates/the_cauldron/mcp_info.html:98
+msgid "Press Connect, sign in and allow access."
+msgstr "Presiona Conectar, inicia sesión y permite el acceso."
+
+#: templates/the_cauldron/mcp_info.html:100
+msgid "Copy the address"
+msgstr "Copiar la dirección"
+
+#: templates/the_cauldron/mcp_info.html:104
+msgid "Claude Code"
+msgstr "Claude Code"
+
+#: templates/the_cauldron/mcp_info.html:105
+msgid "Run this in your terminal, then type /mcp inside Claude Code to sign in:"
+msgstr "Ejecuta esto en tu terminal y luego escribe /mcp dentro de Claude Code para iniciar sesión:"
+
+#: templates/the_cauldron/mcp_info.html:119
+msgid "What you can ask"
+msgstr "Qué puedes pedir"
+
+#: templates/the_cauldron/mcp_info.html:121
+msgid "“Log this” — with a photo of your plate."
+msgstr "“Registra esto”, con una foto de tu plato."
+
+#: templates/the_cauldron/mcp_info.html:122
+msgid "“Last night I had two tacos al pastor and a Coke.”"
+msgstr "“Anoche cené dos tacos al pastor y una Coca.”"
+
+#: templates/the_cauldron/mcp_info.html:123
+msgid "“Here's my fridge. What can I cook from my Grimoire?”"
+msgstr "“Este es mi refri. ¿Qué puedo cocinar de mi Grimorio?”"
+
+#: templates/the_cauldron/mcp_info.html:124
+msgid "“Save this recipe to my Grimoire.”"
+msgstr "“Guarda esta receta en mi Grimorio.”"
+
+#: templates/the_cauldron/mcp_info.html:125
+msgid "“Plan my dinners for this week.”"
+msgstr "“Planea mis cenas de esta semana.”"
+
+#: templates/the_cauldron/mcp_info.html:126
+msgid "“How am I doing with my protein this week?”"
+msgstr "“¿Cómo voy con mi proteína esta semana?”"
+
+#: templates/the_cauldron/mcp_info.html:127
+msgid "“What's my workout today?” — then “12 push-ups, done.”"
+msgstr "“¿Qué entreno hoy?” y luego “12 lagartijas, listo.”"
+
+#: templates/the_cauldron/mcp_info.html:128
+msgid "“I want to take the Trial. What do I do?”"
+msgstr "“Quiero hacer la Prueba. ¿Qué hago?”"
+
+#: templates/the_cauldron/mcp_info.html:137
+msgid "How it works"
+msgstr "Cómo funciona"
+
+#: templates/the_cauldron/mcp_info.html:139
+msgid "Your assistant does the seeing and the thinking: it looks at the photo, estimates portions and suggests recipes. The Cauldron stores the result — your Journal, Grimoire and Forge stay the same as on the site."
+msgstr "Tu asistente ve y piensa: mira la foto, estima las porciones y sugiere recetas. The Cauldron guarda el resultado; tu Diario, tu Grimorio y The Forge son los mismos que en el sitio."
+
+#: templates/the_cauldron/mcp_info.html:140
+msgid "Nutrition your assistant estimates is saved marked “estimated”, so you can tell it apart from measured data."
+msgstr "La información nutricional que estima tu asistente se guarda marcada como “estimada”, para que la distingas de los datos medidos."
+
+#: templates/the_cauldron/mcp_info.html:141
+msgid "Before changing or deleting anything, your assistant shows you what will change and asks you to confirm."
+msgstr "Antes de cambiar o borrar algo, tu asistente te muestra qué va a cambiar y te pide confirmar."
+
+#: templates/the_cauldron/mcp_info.html:142
+msgid "Everything it creates is private. Sharing a recipe with the Coven is done only on the site."
+msgstr "Todo lo que crea es privado. Compartir una receta con el Aquelarre se hace solo en el sitio."
+
+#: templates/the_cauldron/mcp_info.html:143
+msgid "Your meal journal, goals and plans need the same consent as on the site; your assistant will send you to accept it if needed."
+msgstr "Tu diario de comidas, tus metas y tus planes necesitan el mismo consentimiento que en el sitio; si hace falta, tu asistente te mandará a aceptarlo."
+
+#: templates/the_cauldron/mcp_info.html:155
+#, python-format
+msgid "What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic, for Claude) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href=\"%(url)s\">Privacy Notice</a>."
+msgstr "Lo que tu asistente lee de tu Cauldron —incluidos lo que comes y tus metas— llega a la empresa que lo ofrece (Anthropic, en el caso de Claude) bajo sus términos. Nosotros solo sabemos qué herramienta se usó y si funcionó, nunca lo que pediste. Desconéctalo cuando quieras desde tu perfil y el acceso termina de inmediato. Detalles en nuestro <a href=\"%(url)s\">Aviso de Privacidad</a>."
+
+#: templates/the_cauldron/mcp_info.html:164
+msgid "Troubleshooting"
+msgstr "Si algo falla"
+
+#: templates/the_cauldron/mcp_info.html:166
+msgid "The first request is slow or times out"
+msgstr "La primera solicitud tarda mucho o no responde"
+
+#: templates/the_cauldron/mcp_info.html:167
+msgid "The Cauldron sleeps when nobody uses it and takes up to a minute to wake up. Ask again after a moment."
+msgstr "The Cauldron se duerme cuando nadie lo usa y tarda hasta un minuto en despertar. Vuelve a pedirlo en un momento."
+
+#: templates/the_cauldron/mcp_info.html:168
+msgid "“Couldn't reach the server” or it stopped working"
+msgstr "“No se pudo conectar con el servidor” o dejó de funcionar"
+
+#: templates/the_cauldron/mcp_info.html:169
+msgid "Check the address is exactly the one above, including the final slash. If you disconnected it from your profile, connect it again from your assistant."
+msgstr "Revisa que la dirección sea exactamente la de arriba, incluida la diagonal final. Si lo desconectaste desde tu perfil, vuelve a conectarlo desde tu asistente."
+
+#: templates/the_cauldron/mcp_info.html:170
+msgid "It asks me to accept something"
+msgstr "Me pide aceptar algo"
+
+#: templates/the_cauldron/mcp_info.html:171
+msgid "Meal logging needs your consent for health-related data, and new terms must be accepted on the site. Open the link your assistant gives you, accept, and try again."
+msgstr "Registrar comidas necesita tu consentimiento para datos relacionados con la salud, y los términos nuevos se aceptan en el sitio. Abre el enlace que te da tu asistente, acepta y vuelve a intentarlo."
+
+#: templates/the_cauldron/mcp_info.html:172
+msgid "It can read but not log"
+msgstr "Puede leer pero no registrar"
+
+#: templates/the_cauldron/mcp_info.html:173
+msgid "You allowed read-only access. Disconnect it in your profile and connect again, allowing it to log."
+msgstr "Le diste acceso solo de lectura. Desconéctalo en tu perfil y vuelve a conectarlo permitiéndole registrar."
 
 #: templates/the_cauldron/nutrition.html:11
 msgid "Your profile — The Cauldron"
@@ -1980,271 +2200,275 @@ msgstr "Actualización de términos — The Cauldron"
 msgid "Daily nutrient goals, a meal log and a meal planner — The Cauldron."
 msgstr "Metas diarias de nutrientes, diario de comidas y planeador de comidas — The Cauldron."
 
-#: templates/the_cauldron/nutrition.html:61
+#: templates/the_cauldron/nutrition.html:62
 msgid "Our terms have changed"
 msgstr "Actualizamos nuestros términos"
 
-#: templates/the_cauldron/nutrition.html:62
+#: templates/the_cauldron/nutrition.html:63
 msgid "The Cauldron now has daily goals, a meal log and a meal planner. Please read the updated documents and accept them to continue."
 msgstr "The Cauldron ahora tiene metas diarias, un diario de comidas y un planeador de comidas. Lee los documentos actualizados y acéptalos para continuar."
 
-#: templates/the_cauldron/nutrition.html:67
+#: templates/the_cauldron/nutrition.html:68
 #, python-format
 msgid "I have read and accept the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Terms &amp; Conditions</a> (version %(version)s)."
 msgstr "He leído y acepto los <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Términos y Condiciones</a> (versión %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:73
+#: templates/the_cauldron/nutrition.html:74
 #, python-format
 msgid "I have read the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a> (version %(version)s)."
 msgstr "He leído el <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a> (versión %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:79
+#: templates/the_cauldron/nutrition.html:80
 msgid "Accept and continue"
 msgstr "Aceptar y continuar"
 
-#: templates/the_cauldron/nutrition.html:87
+#: templates/the_cauldron/nutrition.html:88
 msgid "Your profile"
 msgstr "Tu perfil"
 
-#: templates/the_cauldron/nutrition.html:88
+#: templates/the_cauldron/nutrition.html:89
 msgid "Your daily goals, and how often you meet them."
 msgstr "Tus metas diarias y qué tan seguido las cumples."
 
-#: templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/nutrition.html:92
 msgid "What you ate, what's planned, and how the day adds up."
 msgstr "Lo que comiste, lo que está planeado y cómo va el día."
 
-#: templates/the_cauldron/nutrition.html:92
+#: templates/the_cauldron/nutrition.html:93
 msgid "Choose a day"
 msgstr "Elige un día"
 
-#: templates/the_cauldron/nutrition.html:93
+#: templates/the_cauldron/nutrition.html:94
 msgid "Previous day"
 msgstr "Día anterior"
 
-#: templates/the_cauldron/nutrition.html:95
+#: templates/the_cauldron/nutrition.html:96
 msgid "Next day"
 msgstr "Día siguiente"
 
-#: templates/the_cauldron/nutrition.html:106
+#: templates/the_cauldron/nutrition.html:107
 msgid "Your food data is sensitive"
 msgstr "Tus datos de alimentación son sensibles"
 
-#: templates/the_cauldron/nutrition.html:107
+#: templates/the_cauldron/nutrition.html:108
 msgid "Your nutrient goals, what you eat and your meal plans can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent."
 msgstr "Tus metas de nutrientes, lo que comes y tus planes de comida pueden revelar cosas sobre tu salud. Según la ley mexicana de protección de datos (LFPDPPP), eso los vuelve datos personales sensibles, así que solo los tratamos con tu consentimiento expreso."
 
-#: templates/the_cauldron/nutrition.html:109
+#: templates/the_cauldron/nutrition.html:110
 msgid "We use them only to show you your totals, goals, plans and how often you meet them."
 msgstr "Los usamos solo para mostrarte tus totales, metas, planes y qué tan seguido cumples tus metas."
 
-#: templates/the_cauldron/nutrition.html:110
+#: templates/the_cauldron/nutrition.html:111
 msgid "Only you see them. They are never sent to our analytics provider."
 msgstr "Solo tú los ves. Nunca se envían a nuestro proveedor de analítica."
 
-#: templates/the_cauldron/nutrition.html:111
+#: templates/the_cauldron/nutrition.html:112
 msgid "Nutrient values are estimates, not medical advice."
 msgstr "Los valores de nutrientes son estimaciones, no consejo médico."
 
-#: templates/the_cauldron/nutrition.html:112
+#: templates/the_cauldron/nutrition.html:113
 msgid "You can withdraw your consent at any time from your profile, and delete what you logged."
 msgstr "Puedes retirar tu consentimiento cuando quieras desde tu perfil y borrar lo que registraste."
 
-#: templates/the_cauldron/nutrition.html:117
+#: templates/the_cauldron/nutrition.html:118
 #, python-format
 msgid "I consent to The Cauldron processing my nutrient goals, meal log and meal plans — sensitive personal data — as described in the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a> (consent version %(version)s)."
 msgstr "Doy mi consentimiento para que The Cauldron trate mis metas de nutrientes, mi diario de comidas y mis planes de comida —datos personales sensibles— como se describe en el <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a> (versión del consentimiento %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:121
+#: templates/the_cauldron/nutrition.html:122
 msgid "Give my consent"
 msgstr "Dar mi consentimiento"
 
-#: templates/the_cauldron/nutrition.html:133
+#: templates/the_cauldron/nutrition.html:134
 msgid "Daily goals"
 msgstr "Metas diarias"
 
-#: templates/the_cauldron/nutrition.html:134
+#: templates/the_cauldron/nutrition.html:135
 msgid "Per day, midnight to midnight in your timezone. “No goal” still shows the nutrient in your totals, it just isn't judged. Changing a goal keeps the old one for the days it was active."
 msgstr "Por día, de medianoche a medianoche en tu zona horaria. “Sin meta” sigue mostrando el nutriente en tus totales, solo que no se evalúa. Si cambias una meta, la anterior se conserva para los días en que estuvo activa."
 
-#: templates/the_cauldron/nutrition.html:139
+#: templates/the_cauldron/nutrition.html:140
 msgid "Save goals"
 msgstr "Guardar metas"
 
-#: templates/the_cauldron/nutrition.html:151
-#: templates/the_cauldron/nutrition.html:186
+#: templates/the_cauldron/nutrition.html:152
+#: templates/the_cauldron/nutrition.html:187
 msgid "How you're doing"
 msgstr "Cómo voy"
 
-#: templates/the_cauldron/nutrition.html:152
+#: templates/the_cauldron/nutrition.html:153
 msgid "Your last 24 hours or 7 days against these goals, and how often you're in range, live in the Journal."
 msgstr "Tus últimas 24 horas o 7 días contra estas metas, y qué tan seguido estás en rango, están en El Diario."
 
-#: templates/the_cauldron/nutrition.html:154
+#: templates/the_cauldron/nutrition.html:155
 msgid "Open the Journal"
 msgstr "Abrir El Diario"
 
-#: templates/the_cauldron/nutrition.html:163
+#: templates/the_cauldron/nutrition.html:164
 msgid "Settings"
 msgstr "Configuración"
 
-#: templates/the_cauldron/nutrition.html:165
+#: templates/the_cauldron/nutrition.html:166
 msgid "Timezone — where your day starts and ends"
 msgstr "Zona horaria: dónde empieza y termina tu día"
 
-#: templates/the_cauldron/nutrition.html:168
+#: templates/the_cauldron/nutrition.html:169
 msgid "Save"
 msgstr "Guardar"
 
-#: templates/the_cauldron/nutrition.html:170
+#: templates/the_cauldron/nutrition.html:171
 msgid "Sensitive-data consent"
 msgstr "Consentimiento para datos sensibles"
 
-#: templates/the_cauldron/nutrition.html:172
+#: templates/the_cauldron/nutrition.html:173
 msgid "Also delete my goals, meal log and meal plans"
 msgstr "Borrar también mis metas, mi diario de comidas y mis planes"
 
-#: templates/the_cauldron/nutrition.html:174
+#: templates/the_cauldron/nutrition.html:175
 msgid "Withdraw my consent"
 msgstr "Retirar mi consentimiento"
 
-#: templates/the_cauldron/nutrition.html:187
+#: templates/the_cauldron/nutrition.html:188
 msgid "Window"
 msgstr "Ventana"
 
-#: templates/the_cauldron/nutrition.html:188
+#: templates/the_cauldron/nutrition.html:189
 msgid "Last 24 hours"
 msgstr "Últimas 24 horas"
 
-#: templates/the_cauldron/nutrition.html:189
+#: templates/the_cauldron/nutrition.html:190
 msgid "Last 7 days"
 msgstr "Últimos 7 días"
 
-#: templates/the_cauldron/nutrition.html:199
+#: templates/the_cauldron/nutrition.html:200
 msgid "Move the window back in time"
 msgstr "Mover la ventana hacia atrás en el tiempo"
 
-#: templates/the_cauldron/nutrition.html:204
+#: templates/the_cauldron/nutrition.html:205
 msgid "Back to now"
 msgstr "Volver a ahora"
 
-#: templates/the_cauldron/nutrition.html:219
+#: templates/the_cauldron/nutrition.html:220
 msgid "How often you're in range"
 msgstr "Qué tan seguido estoy en rango"
 
-#: templates/the_cauldron/nutrition.html:220
+#: templates/the_cauldron/nutrition.html:221
 msgid "Period"
 msgstr "Periodo"
 
-#: templates/the_cauldron/nutrition.html:222
+#: templates/the_cauldron/nutrition.html:223
 msgid "30 days"
 msgstr "30 días"
 
-#: templates/the_cauldron/nutrition.html:223
+#: templates/the_cauldron/nutrition.html:224
 msgid "90 days"
 msgstr "90 días"
 
-#: templates/the_cauldron/nutrition.html:226
+#: templates/the_cauldron/nutrition.html:227
 msgid "Nutrient"
 msgstr "Nutriente"
 
-#: templates/the_cauldron/nutrition.html:236
+#: templates/the_cauldron/nutrition.html:237
 msgid "What you ate"
 msgstr "Lo que comiste"
 
-#: templates/the_cauldron/nutrition.html:243
+#: templates/the_cauldron/nutrition.html:244
 msgid "What did you eat or drink?"
 msgstr "¿Qué comiste o bebiste?"
 
-#: templates/the_cauldron/nutrition.html:245
+#: templates/the_cauldron/nutrition.html:246
 msgid "A dish, an ingredient, a drink…"
 msgstr "Un platillo, un ingrediente, una bebida…"
 
-#: templates/the_cauldron/nutrition.html:249
+#: templates/the_cauldron/nutrition.html:250
 msgid "← Search instead"
 msgstr "← Mejor buscarlo"
 
-#: templates/the_cauldron/nutrition.html:251
+#: templates/the_cauldron/nutrition.html:252
 msgid "What was it?"
 msgstr "¿Qué era?"
 
-#: templates/the_cauldron/nutrition.html:252
+#: templates/the_cauldron/nutrition.html:253
 msgid "e.g. Tacos al pastor at the stand"
 msgstr "p. ej. Tacos al pastor del puesto"
 
-#: templates/the_cauldron/nutrition.html:255
+#: templates/the_cauldron/nutrition.html:256
 msgid "Calories (kcal)"
 msgstr "Calorías (kcal)"
 
-#: templates/the_cauldron/nutrition.html:256
+#: templates/the_cauldron/nutrition.html:257
 msgid "Protein (g)"
 msgstr "Proteína (g)"
 
-#: templates/the_cauldron/nutrition.html:257
+#: templates/the_cauldron/nutrition.html:258
 msgid "Carbs (g)"
 msgstr "Carbohidratos (g)"
 
-#: templates/the_cauldron/nutrition.html:258
+#: templates/the_cauldron/nutrition.html:259
 msgid "Fat (g)"
 msgstr "Grasa (g)"
 
-#: templates/the_cauldron/nutrition.html:260
+#: templates/the_cauldron/nutrition.html:261
 msgid "Leave blank what you don't know — it's counted as unknown, never as zero."
 msgstr "Deja en blanco lo que no sepas: cuenta como desconocido, nunca como cero."
 
-#: templates/the_cauldron/nutrition.html:262
-#: templates/the_cauldron/nutrition.html:303
+#: templates/the_cauldron/nutrition.html:263
+#: templates/the_cauldron/nutrition.html:304
 msgid "How much"
 msgstr "Cuánto"
 
-#: templates/the_cauldron/nutrition.html:264
-#: templates/the_cauldron/nutrition.html:305
+#: templates/the_cauldron/nutrition.html:265
+#: templates/the_cauldron/nutrition.html:306
 msgid "Unit"
 msgstr "Unidad"
 
-#: templates/the_cauldron/nutrition.html:266
+#: templates/the_cauldron/nutrition.html:267
 msgid "At"
 msgstr "A las"
 
-#: templates/the_cauldron/nutrition.html:283
+#: templates/the_cauldron/nutrition.html:284
 msgid "The ritual"
 msgstr "El ritual"
 
-#: templates/the_cauldron/nutrition.html:284
+#: templates/the_cauldron/nutrition.html:285
 msgid "Plan spells for this day and see how it would add up before you eat."
 msgstr "Planea hechizos para este día y mira cómo quedaría antes de comer."
 
-#: templates/the_cauldron/nutrition.html:288
+#: templates/the_cauldron/nutrition.html:289
 msgid "Plan a spell"
 msgstr "Planear un hechizo"
 
-#: templates/the_cauldron/nutrition.html:291
+#: templates/the_cauldron/nutrition.html:292
 msgid "Find a spell"
 msgstr "Busca un hechizo"
 
-#: templates/the_cauldron/nutrition.html:291
+#: templates/the_cauldron/nutrition.html:292
 msgid "Find a spell…"
 msgstr "Busca un hechizo…"
 
-#: templates/the_cauldron/nutrition.html:296
+#: templates/the_cauldron/nutrition.html:297
 msgid "Meal"
 msgstr "Comida del día"
 
-#: templates/the_cauldron/nutrition.html:313
+#: templates/the_cauldron/nutrition.html:314
 msgid "Add to the ritual"
 msgstr "Agregar al ritual"
 
-#: templates/the_cauldron/nutrition.html:321
+#: templates/the_cauldron/nutrition.html:322
 msgid "Log a meal"
 msgstr "Registrar comida"
 
-#: templates/the_cauldron/nutrition.html:333
+#: templates/the_cauldron/nutrition.html:334
 msgid "Your AI assistants"
 msgstr "Tus asistentes de IA"
 
-#: templates/the_cauldron/nutrition.html:334
+#: templates/the_cauldron/nutrition.html:335
 msgid "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once."
 msgstr "Los asistentes que conectaste (Claude y otros) pueden leer y registrar por ti. Si desconectas uno, pierde el acceso de inmediato."
+
+#: templates/the_cauldron/nutrition.html:337
+msgid "How to connect an assistant →"
+msgstr "Cómo conectar un asistente →"
 
 #: templates/the_cauldron/oauth_authorize.html:10
 msgid "Connect an assistant — The Cauldron"

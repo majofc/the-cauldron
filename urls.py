@@ -71,6 +71,7 @@ api_urlpatterns = [
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
     path("mcp/connections/", oauth_views.McpConnectionsView.as_view(), name="mcp-connections"),
+    path("mcp/connect-clicked/", oauth_views.McpConnectClickView.as_view(), name="mcp-connect-clicked"),
     path(
         "mcp/connections/<uuid:uuid>/",
         oauth_views.McpConnectionDetailView.as_view(),
@@ -86,8 +87,8 @@ urlpatterns = [
     path('accept/', views.legal_accept_view, name='legal-accept'),
     path('profile/', views.profile_view, name='profile'),
     path('journal/', views.journal_view, name='journal'),
-    # The MCP endpoint (#89). OAuth routes + /.well-known/ live in oauth_urls.py,
-    # included at the site root by arcano.
+    # The MCP endpoint (#89); a browser GET renders the info page. OAuth routes +
+    # /.well-known/ live in oauth_urls.py, included at the site root by arcano.
     path('mcp/', McpView.as_view(), name='mcp'),
     path('forge/', views.forge_view, name='forge'),
     path('forge/<slug:section>/', views.forge_view, name='forge-section'),

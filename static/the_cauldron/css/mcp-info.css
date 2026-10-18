@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════
+   Arcano Design System — The Cauldron
+   All values → CSS tokens in tokens.css
+   Component rules → STYLE_GUIDE.md
+   ═══════════════════════════════════════════════
+
+   The MCP info page (#89): /cauldron/mcp/ in a browser. Loaded after
+   grimoire-page.css and reuses its .grim-spell-page cards; this file only
+   adds the hero, the copy boxes, the per-client steps and the FAQ. */
+
+.mcpi { max-width: 860px; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
+.mcpi-hero { text-align: center; margin-bottom: 2rem; }
+.mcpi-title {
+  font-family: var(--arcano-font-display);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  margin: 0.5rem 0 1rem;
+}
+.mcpi-lead { color: var(--grimoire-text-dim); max-width: 640px; margin: 0 auto; line-height: 1.6; }
+.mcpi-status { margin-top: 1rem; color: var(--grimoire-herb); }
+.mcpi a { color: var(--grimoire-gilt); }
+
+.mcpi-card + .mcpi-card { margin-top: 1.5rem; }
+
+.mcpi-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1.25rem;
+}
+.mcpi-code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--grimoire-border);
+  border-radius: var(--arcano-radius-md);
+  background: var(--grimoire-page-raised);
+  color: var(--grimoire-text);
+  font-size: 0.9rem;
+}
+.mcpi-copy-btn { flex-shrink: 0; }
+
+.mcpi-clients {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.25rem;
+}
+.mcpi-client {
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+  padding: 1rem 1.1rem;
+}
+.mcpi-client .mcpi-copy { flex-direction: column; align-items: stretch; }
+.mcpi-client .mcpi-code { white-space: normal; overflow-wrap: anywhere; }
+.mcpi-client-title { font-family: var(--arcano-font-display); font-size: 1.15rem; margin: 0 0 0.6rem; }
+.mcpi-steps, .mcpi-list, .mcpi-prompts { margin: 0 0 0.75rem 1.25rem; display: grid; gap: 0.45rem; line-height: 1.5; }
+.mcpi-prompts li { font-style: italic; }
+
+.mcpi-faq dt { font-weight: 600; margin-top: 1rem; }
+.mcpi-faq dd { margin: 0.3rem 0 0; color: var(--grimoire-text-dim); line-height: 1.5; }
+
+@media (max-width: 560px) {
+  .mcpi-copy { flex-direction: column; align-items: stretch; }
+}

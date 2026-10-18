@@ -44,6 +44,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 
 {% block nav_cta %}
 <div class="nav-cta">
+  {% if page != "accept" %}{% include 'the_cauldron/_assistant_link.html' %}{% endif %}
   {% if page == "profile" %}{% include 'the_cauldron/_profile_link.html' with active=True %}{% elif page != "accept" %}{% include 'the_cauldron/_profile_link.html' %}{% endif %}
   <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
 </div>
@@ -333,6 +334,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       <h2 class="grim-h2" id="nut-mcp-title">{% trans "Your AI assistants" %}</h2>
       <p class="grim-help">{% trans "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once." %}</p>
       <ul class="nut-mcp-list" id="nut-mcp-list" aria-live="polite"></ul>
+      <p class="grim-help"><a href="{% url 'the_cauldron:mcp' %}">{% trans "How to connect an assistant →" %}</a></p>
     </div>
   </section>
   {% endif %}

@@ -446,13 +446,18 @@ reads date/hour straight off the string. The Profile and the Journal show the co
 
 ## MCP server — drive The Cauldron from an AI assistant (#89)
 
-Shipped: phase 1 (OAuth 2.1 + nutrition/Grimoire **read** tools), phase 2 (nutrition/Grimoire **write**
-tools, two-step confirmation, idempotency, `channel`, estimated nutrients) and phase 3 (**Forge** tools). The
-info page, analytics dashboard and legal update are phase 4 (see the issue).
+Complete: OAuth 2.1, nutrition/Grimoire/Forge read and write tools, two-step confirmation, idempotency,
+`channel`, estimated nutrients, the info page, analytics and the legal update (terms 1.2 / privacy 1.3).
+User docs, analytics events, the dashboard definition and how to add a tool: `README.md` → "MCP".
 
 **Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
 Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
-2025-06-18 / 2025-03-26, batches included). No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405.
+2025-06-18 / 2025-03-26, batches included). No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405,
+**except** a `GET` whose `Accept` has `text/html` and not `text/event-stream` (a browser): it renders the public
+info page (`oauth_views.mcp_info_view`, `mcp_info.html` + `mcp-info.css` / `mcp-info.js`), `Vary: Accept`. So the
+URL users paste into Claude is also the page explaining it. Its buttons post `{target}` to
+`api/mcp/connect-clicked/` (AllowAny, enum only). Nav: `_assistant_link.html` (✦ icon beside the profile icon),
+footer `_footer_links.html`, landing hero, Profile → "Your AI assistants".
 Present `Origin` must be ours or `CAULDRON_MCP_ALLOWED_ORIGINS` (default claude.ai/claude.com) → else 403.
 Unsupported `MCP-Protocol-Version` header → 400. Cookies are never read: bearer tokens only.
 
@@ -527,7 +532,14 @@ summary.
 
 **PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}` (`preview`/`applied`
 for two-step tools), `mcp_duplicate_prevented {kind, overridden}`, `mcp_connected {client}`,
-`mcp_disconnected {client}` — distinct id = user pk (`posthog.identify_context`), arcano opt-out honoured.
+`mcp_disconnected {client}`, `mcp_page_viewed {signed_in}`, `mcp_connect_clicked {target}` — distinct id = user pk
+(`posthog.identify_context`), arcano opt-out honoured. A new event or property → update the privacy notice too.
+
+**Legal**: terms §7 "AI assistants" and the privacy notice (assistant data, data reaching the user's AI provider,
+the MCP analytics) were added in terms 1.2 / privacy 1.3 — everyone re-accepts once. Changing what the MCP server
+stores or sends means another bump.
+
+**Evals**: `tests/mcp_eval_prompts.md` — run by hand against Claude after changing tool names/descriptions/schemas.
 
 **Debugging**
 - Claude says "Couldn't reach the MCP server" → `/.well-known/oauth-protected-resource/cauldron/mcp/` must
@@ -535,3 +547,7 @@ for two-step tools), `mcp_duplicate_prevented {kind, overridden}`, `mcp_connecte
   comes from `SECURE_PROXY_SSL_HEADER`.
 - Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
 - `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
+- `/cauldron/mcp/` shows 405 in a browser → the browser didn't send `text/html` in `Accept` (or a proxy stripped it).
+- Info-page tests fail with "Missing staticfiles manifest entry" → run `collectstatic` (manifest storage).
+- Connecting shows "This app can't connect" → the client calls itself Claude but isn't a claude.ai/claude.com/
+  anthropic.com CIMD client (`client_identity.py`); a DCR registration with that name gets 400.
