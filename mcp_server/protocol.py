@@ -121,14 +121,30 @@ def _header_mismatch(request, message):
     return None
 
 
+def _exception_summary(exc):
+    """``ValueError at protocol.py:123`` — the type and where, never the message
+    (it can carry user data)."""
+    frame = None
+    tb = exc.__traceback__
+    while tb is not None:
+        if "the_cauldron" in tb.tb_frame.f_code.co_filename:
+            frame = tb
+        tb = tb.tb_next
+    where = f" at {frame.tb_frame.f_code.co_filename.replace(chr(92), '/').rsplit('/', 1)[-1]}:{frame.tb_lineno}" if frame else ""
+    return f"{type(exc).__name__}{where}"
+
+
 def _log_request(request, response):
-    """One ``McpRequestLog`` row (technical metadata only); never breaks a request."""
+    """One ``McpRequestLog`` row (technical metadata only); never breaks a
+    request. ``response`` None means the view raised (logged as a 500)."""
     try:
         from the_cauldron.models import McpRequestLog
 
         info = getattr(request, "_mcp_log", {})
+        if request.method != "POST":
+            info.setdefault("rpc_method", f"({request.method})")
         error_code = None
-        if response.get("Content-Type", "").startswith("application/json") and response.content:
+        if response is not None and response.get("Content-Type", "").startswith("application/json") and response.content:
             body = json.loads(response.content)
             if isinstance(body, dict) and isinstance(body.get("error"), dict):
                 error_code = body["error"].get("code")
@@ -136,7 +152,7 @@ def _log_request(request, response):
             elif isinstance(body, dict) and isinstance(body.get("result"), dict) and body["result"].get("isError"):
                 info.setdefault("detail", "tool error")
         McpRequestLog.objects.create(
-            status=response.status_code,
+            status=response.status_code if response is not None else 500,
             rpc_method=info.get("rpc_method", ""),
             error_code=error_code if isinstance(error_code, int) else None,
             detail=(info.get("detail") or "")[:200],
@@ -188,14 +204,28 @@ class McpView(View):
     http_method_names = ["get", "post", "delete", "options"]
 
     def dispatch(self, request, *args, **kwargs):
-        origin = request.headers.get("Origin")
-        if origin and not _allowed_origin(request, origin):
-            return JsonResponse(_rpc_error(None, INVALID_REQUEST, "Origin not allowed"), status=403)
-        return super().dispatch(request, *args, **kwargs)
+        # Every request a client makes is logged — rejections before the view
+        # method and crashes too — so "connected but no tools" can be traced.
+        request._mcp_log = {}
+        try:
+            origin = request.headers.get("Origin")
+            if origin and not _allowed_origin(request, origin):
+                request._mcp_log["detail"] = f"Origin not allowed: {origin}"
+                response = JsonResponse(_rpc_error(None, INVALID_REQUEST, "Origin not allowed"), status=403)
+            else:
+                response = super().dispatch(request, *args, **kwargs)
+        except Exception as exc:
+            request._mcp_log["detail"] = _exception_summary(exc)
+            _log_request(request, None)
+            raise
+        if not getattr(request, "_mcp_info_page", False):
+            _log_request(request, response)
+        return response
 
     def get(self, request, *args, **kwargs):
         accept = request.headers.get("Accept", "")
         if "text/html" in accept and "text/event-stream" not in accept:
+            request._mcp_info_page = True  # a person in a browser: not logged
             response = mcp_info_view(request)
         else:
             response = self.delete(request)
@@ -222,12 +252,6 @@ class McpView(View):
         return token, None
 
     def post(self, request, *args, **kwargs):
-        request._mcp_log = {}
-        response = self._post(request)
-        _log_request(request, response)
-        return response
-
-    def _post(self, request):
         version = request.headers.get("MCP-Protocol-Version")
         try:
             message = json.loads(request.body or b"")
