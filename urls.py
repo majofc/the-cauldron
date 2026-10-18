@@ -90,6 +90,9 @@ urlpatterns = [
     # The MCP endpoint (#89); a browser GET renders the info page. OAuth routes +
     # /.well-known/ live in oauth_urls.py, included at the site root by arcano.
     path('mcp/', McpView.as_view(), name='mcp'),
+    # Without the slash too: APPEND_SLASH's 301 turns a client's POST into a
+    # GET without body or token, so a URL pasted without it got no tools.
+    path('mcp', McpView.as_view(), name='mcp-no-slash'),
     path('forge/', views.forge_view, name='forge'),
     path('forge/<slug:section>/', views.forge_view, name='forge-section'),
     path('grimoire/', views.grimoire_view, name='grimoire'),
