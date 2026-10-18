@@ -42,4 +42,4 @@ from .nutrition import (  # noqa: F401
     NutrientGoal,
     PlannedMeal,
 )
-from .mcp import McpConfirmation, McpConnection, McpIdempotency  # noqa: F401
+from .mcp import McpConfirmation, McpConnection, McpIdempotency, McpRequestLog  # noqa: F401

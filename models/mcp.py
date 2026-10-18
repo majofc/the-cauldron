@@ -86,3 +86,31 @@ class McpIdempotency(ForgeBaseModel):
         constraints = [
             models.UniqueConstraint(fields=["user", "tool", "client_request_id"], name="uniq_mcp_request"),
         ]
+
+
+class McpRequestLog(models.Model):
+    """Diagnostics: one row per POST to the MCP endpoint — what the client
+    asked for and what we answered, so a client that "has no tools" can be
+    debugged from the admin. Technical metadata only: no body, no arguments,
+    no token, no IP. Only the newest ``KEEP`` rows are kept."""
+
+    KEEP = 500
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    status = models.PositiveSmallIntegerField()
+    rpc_method = models.CharField(max_length=64, blank=True)
+    error_code = models.IntegerField(null=True, blank=True)
+    detail = models.CharField(max_length=200, blank=True)
+    protocol_version = models.CharField(max_length=32, blank=True)
+    header_method = models.CharField(max_length=64, blank=True)
+    has_bearer = models.BooleanField(default=False)
+    authenticated = models.BooleanField(default=False)
+    client = models.CharField(max_length=12, blank=True)
+    user_agent = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M:%S} {self.rpc_method or '?'} → {self.status}"
+
