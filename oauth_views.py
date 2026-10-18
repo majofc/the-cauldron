@@ -217,7 +217,7 @@ def touch_connection(user, application, *, every_seconds=300):
 # (McpView.get), MCP clients never do.
 # ─────────────────────────────────────────────────────────────────────────────
 
-CONNECT_TARGETS = ("claude_ai", "desktop", "code")
+CONNECT_TARGETS = ("claude_ai", "desktop", "code", "gemini")
 
 
 def mcp_info_view(request):
@@ -235,7 +235,7 @@ def mcp_info_view(request):
 
 
 class McpConnectClickView(APIView):
-    """``POST /cauldron/api/mcp/connect-clicked/`` ``{"target": claude_ai|desktop|code}``
+    """``POST /cauldron/api/mcp/connect-clicked/`` ``{"target": claude_ai|desktop|code|gemini}``
     — the info page's copy/connect buttons. Only the enum reaches PostHog."""
 
     permission_classes = [AllowAny]

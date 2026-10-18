@@ -7,7 +7,7 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
 {% endcomment %}
 
 {% block title %}{% trans "Use The Cauldron from your AI assistant" %}{% endblock %}
-{% block meta_description %}{% trans "Connect Claude to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts." %}{% endblock %}
+{% block meta_description %}{% trans "Connect Claude or Gemini to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts." %}{% endblock %}
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
 
 {% block app_styles %}
@@ -58,7 +58,7 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
     <p class="cauldron-eyebrow">{% trans "The Cauldron · AI assistants" %}</p>
     <h1 class="mcpi-title">{% trans "Your Cauldron, from your AI assistant" %}</h1>
     <p class="mcpi-lead">
-      {% trans "Connect Claude — on your phone, on the web, on your desktop or in your terminal — and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site." %}
+      {% trans "Connect Claude — on your phone, on the web, on your desktop or in your terminal — or Gemini, and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site." %}
     </p>
     {% if connection_count %}
     <p class="mcpi-status" role="status">
@@ -108,6 +108,17 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
             <button type="button" class="btn-cauldron btn-cauldron--ghost mcpi-copy-btn" data-copy="#mcpi-command" data-target="code" data-copied="{% trans 'Copied' %}">{% trans "Copy" %}</button>
           </div>
         </article>
+
+        <article class="mcpi-client">
+          <h3 class="mcpi-client-title">{% trans "Gemini" %}</h3>
+          <ol class="mcpi-steps">
+            <li>{% blocktrans %}On <a href="https://gemini.google.com" target="_blank" rel="noopener" data-target="gemini">gemini.google.com</a>, open <strong>Settings → Connected apps</strong>.{% endblocktrans %}</li>
+            <li>{% trans "Choose “Add a custom app”, name it “The Cauldron” and paste the address above." %}</li>
+            <li>{% trans "Sign in to The Cauldron and allow access." %}</li>
+          </ol>
+          <p class="grim-help">{% trans "Custom apps depend on your Google account and country; if you don't see the option, Gemini doesn't offer it to you yet." %}</p>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost mcpi-copy-btn" data-copy="#mcpi-url" data-target="gemini" data-copied="{% trans 'Copied' %}">{% trans "Copy the address" %}</button>
+        </article>
       </div>
     </div>
   </section>
@@ -152,7 +163,7 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
       <h2 class="grim-h2" id="mcpi-privacy">{% trans "Privacy" %}</h2>
       <p class="grim-help">
         {% url 'the_cauldron:privacy' as privacy_url %}
-        {% blocktrans with url=privacy_url %}What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic, for Claude) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href="{{ url }}">Privacy Notice</a>.{% endblocktrans %}
+        {% blocktrans with url=privacy_url %}What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic for Claude, Google for Gemini) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href="{{ url }}">Privacy Notice</a>.{% endblocktrans %}
       </p>
     </div>
   </section>
@@ -166,7 +177,7 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
         <dt>{% trans "The first request is slow or times out" %}</dt>
         <dd>{% trans "The Cauldron sleeps when nobody uses it and takes up to a minute to wake up. Ask again after a moment." %}</dd>
         <dt>{% trans "“Couldn't reach the server” or it stopped working" %}</dt>
-        <dd>{% trans "Check the address is exactly the one above, including the final slash. If you disconnected it from your profile, connect it again from your assistant." %}</dd>
+        <dd>{% trans "Check the address is exactly the one above. If you disconnected it from your profile, connect it again from your assistant." %}</dd>
         <dt>{% trans "It asks me to accept something" %}</dt>
         <dd>{% trans "Meal logging needs your consent for health-related data, and new terms must be accepted on the site. Open the link your assistant gives you, accept, and try again." %}</dd>
         <dt>{% trans "It can read but not log" %}</dt>
