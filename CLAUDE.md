@@ -547,6 +547,9 @@ stores or sends means another bump.
   comes from `SECURE_PROXY_SSL_HEADER`.
 - Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
 - `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
+- Connecting from Claude ends on "This connection can't continue / invalid_request" → DOT refused the client's CIMD
+  document. Claude's lists the jwt-bearer grant; `oauth_cimd.CauldronMetadataFetcher` (arcano setting
+  `CIMD_METADATA_FETCHER`) drops grant types we never issue — keep it wired.
 - `/cauldron/mcp/` shows 405 in a browser → the browser didn't send `text/html` in `Accept` (or a proxy stripped it).
 - Info-page tests fail with "Missing staticfiles manifest entry" → run `collectstatic` (manifest storage).
 - Connecting shows "This app can't connect" → the client calls itself Claude but isn't a claude.ai/claude.com/
