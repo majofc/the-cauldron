@@ -161,3 +161,16 @@ def test_rejections_before_the_view_and_crashes_are_logged(alice, monkeypatch):
     assert (get.status, get.rpc_method) == (405, "(GET)")
     assert (crash.status, crash.rpc_method, crash.has_bearer) == (500, "tools/list", True)
     assert crash.detail.startswith("ValueError at ") and "secret" not in crash.detail
+
+
+def test_url_without_trailing_slash_is_served_not_redirected(alice):
+    """APPEND_SLASH's 301 makes clients retry a POST as a bodiless, tokenless GET."""
+    from django.test import Client
+
+    body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {"_meta": _meta()}}
+    r = Client().post("/cauldron/mcp", data=json.dumps(body), content_type="application/json",
+                      HTTP_AUTHORIZATION=f"Bearer {_token(alice)}", HTTP_MCP_PROTOCOL_VERSION=V,
+                      HTTP_MCP_METHOD="tools/list")
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
+    r = Client().post("/cauldron/mcp", data=json.dumps(body), content_type="application/json")
+    assert r.status_code == 401 and "resource_metadata=" in r["WWW-Authenticate"]
