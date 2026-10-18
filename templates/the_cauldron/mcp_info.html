@@ -1,0 +1,185 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+{% comment %}
+The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser opens
+/cauldron/mcp/ (the connector URL itself). Public. Copy / connect buttons post
+{target} to api/mcp/connect-clicked/ (mcp-info.js); nothing else is tracked.
+{% endcomment %}
+
+{% block title %}{% trans "Use The Cauldron from your AI assistant" %}{% endblock %}
+{% block meta_description %}{% trans "Connect Claude to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts." %}{% endblock %}
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-page.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/mcp-info.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
+<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
+{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  {% include 'the_cauldron/_assistant_link.html' with active=True %}
+  {% if user.is_authenticated %}
+    {% include 'the_cauldron/_profile_link.html' %}
+    <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
+  {% else %}
+    <a href="{% url 'the_cauldron:login' %}?next={{ request.path|urlencode }}" class="btn-primary btn-sm">{% trans "Sign in" %}</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="grim mcpi">
+
+  <header class="mcpi-hero">
+    <p class="cauldron-eyebrow">{% trans "The Cauldron · AI assistants" %}</p>
+    <h1 class="mcpi-title">{% trans "Your Cauldron, from your AI assistant" %}</h1>
+    <p class="mcpi-lead">
+      {% trans "Connect Claude — on your phone, on the web, on your desktop or in your terminal — and talk to The Cauldron: log what you ate from a photo, find recipes for what's in your fridge, plan the week and log your workout without opening the site." %}
+    </p>
+    {% if connection_count %}
+    <p class="mcpi-status" role="status">
+      {% blocktrans count n=connection_count %}You have {{ n }} assistant connected.{% plural %}You have {{ n }} assistants connected.{% endblocktrans %}
+      <a href="{% url 'the_cauldron:profile' %}#nut-mcp-title">{% trans "Manage them in your profile" %}</a>
+    </p>
+    {% endif %}
+  </header>
+
+  <section class="grim-spell-page mcpi-card" aria-labelledby="mcpi-connect">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="mcpi-connect">{% trans "Connect" %}</h2>
+      <p class="grim-help">{% trans "This is the address of The Cauldron for your assistant:" %}</p>
+      <div class="mcpi-copy">
+        <code class="mcpi-code" id="mcpi-url">{{ mcp_url }}</code>
+        <button type="button" class="btn-cauldron btn-cauldron--ghost mcpi-copy-btn" data-copy="#mcpi-url" data-target="claude_ai" data-copied="{% trans 'Copied' %}">{% trans "Copy" %}</button>
+      </div>
+
+      <div class="mcpi-clients">
+        <article class="mcpi-client">
+          <h3 class="mcpi-client-title">{% trans "claude.ai and the Claude app (phone)" %}</h3>
+          <ol class="mcpi-steps">
+            <li>{% blocktrans %}On <a href="https://claude.ai/settings/connectors" target="_blank" rel="noopener" data-target="claude_ai">claude.ai</a>, open <strong>Settings → Connectors</strong>.{% endblocktrans %}</li>
+            <li>{% trans "Choose “Add custom connector”, name it “The Cauldron” and paste the address above." %}</li>
+            <li>{% trans "Press Connect, sign in to The Cauldron and allow access." %}</li>
+          </ol>
+          <p class="grim-help">{% trans "A connector added on claude.ai also shows up in the Claude app on your phone. Custom connectors depend on your Claude plan." %}</p>
+        </article>
+
+        <article class="mcpi-client">
+          <h3 class="mcpi-client-title">{% trans "Claude Desktop" %}</h3>
+          <ol class="mcpi-steps">
+            <li>{% trans "Open Settings → Connectors." %}</li>
+            <li>{% trans "Choose “Add custom connector” and paste the address above." %}</li>
+            <li>{% trans "Press Connect, sign in and allow access." %}</li>
+          </ol>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost mcpi-copy-btn" data-copy="#mcpi-url" data-target="desktop" data-copied="{% trans 'Copied' %}">{% trans "Copy the address" %}</button>
+        </article>
+
+        <article class="mcpi-client">
+          <h3 class="mcpi-client-title">{% trans "Claude Code" %}</h3>
+          <p class="grim-help">{% trans "Run this in your terminal, then type /mcp inside Claude Code to sign in:" %}</p>
+          <div class="mcpi-copy">
+            <code class="mcpi-code" id="mcpi-command">{{ claude_code_command }}</code>
+            <button type="button" class="btn-cauldron btn-cauldron--ghost mcpi-copy-btn" data-copy="#mcpi-command" data-target="code" data-copied="{% trans 'Copied' %}">{% trans "Copy" %}</button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="grim-spell-page mcpi-card" aria-labelledby="mcpi-ask">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="mcpi-ask">{% trans "What you can ask" %}</h2>
+      <ul class="mcpi-prompts">
+        <li>{% trans "“Log this” — with a photo of your plate." %}</li>
+        <li>{% trans "“Last night I had two tacos al pastor and a Coke.”" %}</li>
+        <li>{% trans "“Here's my fridge. What can I cook from my Grimoire?”" %}</li>
+        <li>{% trans "“Save this recipe to my Grimoire.”" %}</li>
+        <li>{% trans "“Plan my dinners for this week.”" %}</li>
+        <li>{% trans "“How am I doing with my protein this week?”" %}</li>
+        <li>{% trans "“What's my workout today?” — then “12 push-ups, done.”" %}</li>
+        <li>{% trans "“I want to take the Trial. What do I do?”" %}</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grim-spell-page mcpi-card" aria-labelledby="mcpi-how">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="mcpi-how">{% trans "How it works" %}</h2>
+      <ul class="mcpi-list">
+        <li>{% trans "Your assistant does the seeing and the thinking: it looks at the photo, estimates portions and suggests recipes. The Cauldron stores the result — your Journal, Grimoire and Forge stay the same as on the site." %}</li>
+        <li>{% trans "Nutrition your assistant estimates is saved marked “estimated”, so you can tell it apart from measured data." %}</li>
+        <li>{% trans "Before changing or deleting anything, your assistant shows you what will change and asks you to confirm." %}</li>
+        <li>{% trans "Everything it creates is private. Sharing a recipe with the Coven is done only on the site." %}</li>
+        <li>{% trans "Your meal journal, goals and plans need the same consent as on the site; your assistant will send you to accept it if needed." %}</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grim-spell-page mcpi-card" aria-labelledby="mcpi-privacy">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="mcpi-privacy">{% trans "Privacy" %}</h2>
+      <p class="grim-help">
+        {% url 'the_cauldron:privacy' as privacy_url %}
+        {% blocktrans with url=privacy_url %}What your assistant reads from your Cauldron — including what you eat and your goals — goes to the company behind it (Anthropic, for Claude) under their terms. We only learn which tool was used and whether it worked, never what you asked. Disconnect anytime from your profile and access stops at once. Details in our <a href="{{ url }}">Privacy Notice</a>.{% endblocktrans %}
+      </p>
+    </div>
+  </section>
+
+  <section class="grim-spell-page mcpi-card" aria-labelledby="mcpi-help">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="mcpi-help">{% trans "Troubleshooting" %}</h2>
+      <dl class="mcpi-faq">
+        <dt>{% trans "The first request is slow or times out" %}</dt>
+        <dd>{% trans "The Cauldron sleeps when nobody uses it and takes up to a minute to wake up. Ask again after a moment." %}</dd>
+        <dt>{% trans "“Couldn't reach the server” or it stopped working" %}</dt>
+        <dd>{% trans "Check the address is exactly the one above, including the final slash. If you disconnected it from your profile, connect it again from your assistant." %}</dd>
+        <dt>{% trans "It asks me to accept something" %}</dt>
+        <dd>{% trans "Meal logging needs your consent for health-related data, and new terms must be accepted on the site. Open the link your assistant gives you, accept, and try again." %}</dd>
+        <dt>{% trans "It can read but not log" %}</dt>
+        <dd>{% trans "You allowed read-only access. Disconnect it in your profile and connect again, allowing it to log." %}</dd>
+      </dl>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
+
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}
+
+{% block app_scripts %}
+<script src="{% static 'the_cauldron/js/mcp-info.js' %}" defer></script>
+{% endblock %}

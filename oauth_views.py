@@ -25,6 +25,7 @@ from urllib.parse import urlsplit
 import posthog
 from django.db import transaction
 from django.http import JsonResponse
+from django.middleware.csrf import get_token
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
@@ -44,7 +45,7 @@ from oauth2_provider.views.dynamic_client_registration import (
 )
 from oauth2_provider.views.metadata import OAuthProtectedResourceMetadataView
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -209,3 +210,39 @@ def touch_connection(user, application, *, every_seconds=300):
     elif conn.last_used_at is None or (now - conn.last_used_at).total_seconds() > every_seconds:
         McpConnection.objects.filter(pk=conn.pk).update(last_used_at=now)
     return conn
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The info page (#89): a browser opening /cauldron/mcp/ lands here
+# (McpView.get), MCP clients never do.
+# ─────────────────────────────────────────────────────────────────────────────
+
+CONNECT_TARGETS = ("claude_ai", "desktop", "code")
+
+
+def mcp_info_view(request):
+    """What the MCP server is, how to connect each client, privacy and
+    troubleshooting. Public; a signed-in user also sees their connections."""
+    get_token(request)  # mcp-info.js posts connect clicks
+    mcp_url = mcp_resource_url(request)
+    signed_in = request.user.is_authenticated
+    posthog.capture("mcp_page_viewed", properties={"signed_in": signed_in})
+    return render(request, "the_cauldron/mcp_info.html", {
+        "mcp_url": mcp_url,
+        "claude_code_command": f"claude mcp add --transport http cauldron {mcp_url}",
+        "connection_count": McpConnection.objects.filter(user=request.user).count() if signed_in else None,
+    })
+
+
+class McpConnectClickView(APIView):
+    """``POST /cauldron/api/mcp/connect-clicked/`` ``{"target": claude_ai|desktop|code}``
+    — the info page's copy/connect buttons. Only the enum reaches PostHog."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        target = request.data.get("target")
+        if target not in CONNECT_TARGETS:
+            return Response({"detail": "Unknown target."}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture("mcp_connect_clicked", properties={"target": target})
+        return Response(status=status.HTTP_204_NO_CONTENT)

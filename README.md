@@ -88,7 +88,8 @@ Users can connect The Cauldron to Claude (claude.ai, mobile, Desktop) or Claude 
 "¿cómo voy hoy?" or "¿qué cocino con huevo, jitomate y cebolla?". Their assistant does the reasoning and
 any vision; the server exposes tools over the existing services.
 
-**Connect**
+**Connect** — the info page is the connector URL itself: open `https://<host>/cauldron/mcp/` in a browser
+(linked from the landing, the nav ✦ icon, the footer and Profile → "Your AI assistants").
 - claude.ai / Claude mobile / Desktop: Settings → Connectors → *Add custom connector* →
   `https://<host>/cauldron/mcp/`. Sign in to The Cauldron and allow. (Connectors added on the web appear on mobile.)
 - Claude Code: `claude mcp add --transport http cauldron https://<host>/cauldron/mcp/`, then `/mcp` to sign in.
@@ -119,5 +120,37 @@ happy path, other user → `not_found`, no consent, bad arguments, and the two-s
 A two-step handler takes `apply`: with `apply=False` it validates and returns `{"target", "preview"}` without
 changing anything; with `apply=True` it does the change.
 
-**Analytics** (PostHog, no PII): `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}`,
-`mcp_duplicate_prevented {kind, overridden}`, `mcp_connected` / `mcp_disconnected {client}`.
+**Analytics** (PostHog, no PII — only enums, flags, counts and the internal user id):
+
+| Event | Properties | Where |
+|---|---|---|
+| `mcp_tool_called` | `tool`, `ok`, `error_code`, `latency_ms`, `client`, `confirm_step` (`preview`/`applied`, two-step tools) | `registry.call_tool` |
+| `mcp_duplicate_prevented` | `kind` (spell/reagent), `overridden` | `create_spell` / `create_reagent` |
+| `mcp_connected` / `mcp_disconnected` | `client` (`claude`, `claude_code`, `other`) | consent screen / Profile |
+| `mcp_page_viewed` | `signed_in` | info page |
+| `mcp_connect_clicked` | `target` (`claude_ai`, `desktop`, `code`) | info page buttons |
+
+**"Cauldron MCP" dashboard** (PostHog → Dashboards; create these insights):
+1. *Connections* — trend, weekly: `mcp_connected` vs `mcp_disconnected`, breakdown `client`.
+2. *Funnel* — `mcp_page_viewed` → `mcp_connect_clicked` → `mcp_connected` (unique users, 7-day window).
+3. *Active MCP users* — trend, weekly unique users of `mcp_tool_called`.
+4. *Tool usage* — trend, total `mcp_tool_called`, breakdown `tool`.
+5. *Error rate* — formula `A / B`: A = `mcp_tool_called` where `ok = false`, B = all `mcp_tool_called`; table by
+   `error_code`.
+6. *Latency* — `mcp_tool_called`, property `latency_ms`, p50 / p95, breakdown `tool`.
+7. *Two-step follow-through* — `applied` / `preview` counts of `confirm_step` (low = users backing out of edits).
+8. *Duplicates prevented* — `mcp_duplicate_prevented`, breakdown `kind` and `overridden`.
+9. *Meals via MCP* — formula `A / (A + B)`: A = `mcp_tool_called` where `tool = log_meal` and `ok = true`,
+   B = `intake_logged` (web only).
+10. *Forge via MCP* — `mcp_tool_called` where `tool = finish_forge_session` and `ok = true`, weekly.
+
+Effectiveness from `channel` (database, Django shell or admin; PostHog doesn't see records):
+- logging days/week before vs after a user's first `McpConnection.created_at` (`IntakeEntry.local_date`, distinct);
+- % of `IntakeEntry` with `channel="mcp"`;
+- accuracy proxy: MCP entries edited (`updated_at - created_at > 1 min`) or deleted within 24 h — deletions show as
+  `mcp_tool_called {tool: delete_meal, confirm_step: applied}`;
+- adherence (`services.adherence`) of users with ≥ 1 MCP entry vs web-only users;
+- `PlannedMeal` with `channel="mcp"` that got an `intake_entry`; `WorkoutSession` completed with `channel="mcp"`.
+
+**LLM evaluation**: `tests/mcp_eval_prompts.md` — 18 prompts (ES/EN) with the tool each should pick. Run them by
+hand against Claude before changing tool names, descriptions or schemas, and log the run in that file.

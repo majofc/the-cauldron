@@ -4,7 +4,8 @@
 - ``POST`` one JSON-RPC message (or, for 2025-03-26 clients, a batch):
   requests get ``application/json``; notifications and responses get
   ``202 Accepted``. No session id is issued — every request stands alone.
-- ``GET`` / ``DELETE`` → 405: no server-initiated stream, no sessions.
+- ``GET`` / ``DELETE`` → 405: no server-initiated stream, no sessions —
+  except a browser asking for HTML, which gets the info page (``mcp_info_view``).
 - Every request needs an OAuth access token issued for this endpoint
   (``Authorization: Bearer``); without one: ``401`` with
   ``WWW-Authenticate: Bearer resource_metadata=…`` so the client can discover
@@ -25,6 +26,7 @@ from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.utils import translation
+from django.utils.cache import patch_vary_headers
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -42,7 +44,7 @@ from the_cauldron.mcp_server.errors import (
 )
 from the_cauldron.mcp_server.instructions import server_instructions
 from the_cauldron.mcp_server.registry import READ, WRITE, call_tool, list_tools
-from the_cauldron.oauth_views import mcp_resource_url, touch_connection
+from the_cauldron.oauth_views import mcp_info_view, mcp_resource_url, touch_connection
 from the_cauldron.services import nutrition
 
 logger = logging.getLogger(__name__)
@@ -107,11 +109,18 @@ class McpView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+        accept = request.headers.get("Accept", "")
+        if "text/html" in accept and "text/event-stream" not in accept:
+            response = mcp_info_view(request)
+        else:
+            response = self.delete(request)
+        patch_vary_headers(response, ["Accept"])
+        return response
+
+    def delete(self, request, *args, **kwargs):
         response = HttpResponse(status=405)
         response["Allow"] = "POST"
         return response
-
-    delete = get
 
     def _authenticate(self, request):
         """``(token, None)`` or ``(None, error_response)``."""

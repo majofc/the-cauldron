@@ -38,6 +38,7 @@
 
 {% block nav_cta %}
 <div class="nav-cta">
+  {% include 'the_cauldron/_assistant_link.html' %}
   {% if user.is_authenticated %}
     <a href="{% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter the Forge →</a>
   {% else %}
@@ -119,6 +120,9 @@
       <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Begin Your Practice</a>
       <a href="#pillars" class="btn-cauldron btn-cauldron--ghost">Explore the Arts</a>
     </div>
+    <p class="cauldron-hero-assistant">
+      <a href="{% url 'the_cauldron:mcp' %}">{% trans "✦ Use it from Claude — log meals from a photo, plan and train by chat" %}</a>
+    </p>
   </section>
 
   <!-- ═══════════════════════════════════════

@@ -34,6 +34,7 @@
 
 {% block nav_cta %}
 <div class="nav-cta">
+  {% include 'the_cauldron/_assistant_link.html' %}
   {% include 'the_cauldron/_profile_link.html' %}
   <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">Sign out</a>
 </div>

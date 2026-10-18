@@ -167,6 +167,10 @@ body {
   margin-top: 1rem;
 }
 
+/* Link to the AI-assistant (MCP) page under the hero buttons (#89) */
+.cauldron-hero-assistant { margin-top: 1.25rem; font-size: 0.95rem; }
+.cauldron-hero-assistant a { color: var(--cauldron-paprika-light); text-underline-offset: 3px; }
+
 /* ─────────────────────────────────────────────────
    BUTTONS
 ───────────────────────────────────────────────── */
