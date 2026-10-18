@@ -13,19 +13,12 @@ finally the raw weight itself, flagged ``unknown``.
 import math
 from dataclasses import dataclass, field
 
-from django.utils.translation import gettext as _
-
-from the_cauldron.models import ReagentNutrients
+from the_cauldron.models import Casting, ReagentNutrients, SpellReagent
 from the_cauldron.services.grimoire import ConversionError, to_grams
 
 FIELDS = ReagentNutrients.FIELDS
 # A reagent missing any of these is named in the UI as "no basic data".
 CORE = ("kcal", "protein_g", "carbs_g", "fat_g")
-MAX_GOALS = 10
-
-
-class NutritionError(ValueError):
-    """A portion goal set that can't be evaluated (bad nutrient, bad bounds)."""
 
 
 @dataclass(frozen=True)
@@ -132,6 +125,60 @@ def resolve_yield(raw_g, *, casting_ratio=None, cast_on=None, cooked_yield_g=Non
     return Yield(1.0, "unknown")
 
 
+def ingredients_of(lines):
+    """``Ingredient`` per spell line (lines fetched with ``reagent__nutrients``)."""
+    out = []
+    for line in lines:
+        profile = getattr(line.reagent, "nutrients", None)
+        per = {name: getattr(profile, name) for name in FIELDS} if profile else None
+        out.append(Ingredient(key=line.reagent_id, grams=line.grams, per_100g=per))
+    return out
+
+
+@dataclass(frozen=True)
+class SpellBasis:
+    lines: list
+    ingredients: list
+    raw_g: float
+    yld: Yield
+
+    @property
+    def cooked_g(self):
+        return self.raw_g * self.yld.ratio
+
+    def per_100g_cooked(self):
+        """``{field: Total}`` per 100 g of the cooked dish (empty if nothing is weighed)."""
+        cooked = self.cooked_g
+        if cooked <= 0:
+            return {}
+        return {
+            name: Total(total.value / cooked * 100, total.missing)
+            for name, total in batch_totals(self.ingredients).items()
+        }
+
+
+def spell_basis(spell, user):
+    """Lines, ingredients, raw weight and cooked yield of a spell as ``user``
+    sees it. Only the user's own latest weighed casting counts — castings are
+    private, so nobody else's pot ever changes what this user sees."""
+    lines = list(SpellReagent.objects.filter(spell=spell).select_related("reagent", "reagent__nutrients"))
+    raw_g = sum(line.grams for line in lines)
+    weighed = (
+        Casting.objects.filter(spell=spell, user=user, cooked_weight_g__isnull=False)
+        .order_by("-cast_on", "-created_at")
+        .first()
+    )
+    ratio = None
+    if weighed:
+        cast_raw = casting_raw_grams(lines, weighed.adjustments)
+        ratio = weighed.cooked_weight_g / cast_raw if cast_raw > 0 else None
+    yld = resolve_yield(
+        raw_g, casting_ratio=ratio, cast_on=weighed.cast_on if weighed else None,
+        cooked_yield_g=spell.cooked_yield_g, yield_pct=spell.yield_pct,
+    )
+    return SpellBasis(lines, ingredients_of(lines), raw_g, yld)
+
+
 # ── Portion recommender ─────────────────────────────────────────────────────
 
 
@@ -152,39 +199,6 @@ class Portion:
     @property
     def feasible(self):
         return self.min_g is not None
-
-
-def _finite_positive(value, label):
-    if value is None:
-        return None
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        raise NutritionError(_("%(label)s must be a number.") % {"label": label}) from None
-    if not math.isfinite(number) or number < 0:
-        raise NutritionError(_("%(label)s must be 0 or more.") % {"label": label})
-    return number
-
-
-def clean_goals(raw_goals):
-    """Validate ``[{nutrient, at_least, at_most}]`` into ``Goal`` objects."""
-    if not raw_goals:
-        raise NutritionError(_("Add at least one goal."))
-    if len(raw_goals) > MAX_GOALS:
-        raise NutritionError(_("At most %(n)s goals.") % {"n": MAX_GOALS})
-    goals = []
-    for raw in raw_goals:
-        nutrient = raw.get("nutrient")
-        if nutrient not in FIELDS:
-            raise NutritionError(_("Unknown nutrient."))
-        low = _finite_positive(raw.get("at_least"), _("The minimum"))
-        high = _finite_positive(raw.get("at_most"), _("The maximum"))
-        if low is None and high is None:
-            raise NutritionError(_("Each goal needs a minimum, a maximum or both."))
-        if low is not None and high is not None and low > high:
-            raise NutritionError(_("A goal's minimum can't be above its maximum."))
-        goals.append(Goal(nutrient, low, high))
-    return goals
 
 
 def recommend_portion(per_100g, goals):

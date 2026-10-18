@@ -15,7 +15,7 @@ from the_cauldron.models import (
     SpellReagent,
     Tag,
 )
-from the_cauldron.services import grimoire
+from the_cauldron.services import grimoire, legal
 
 User = get_user_model()
 API = "/cauldron/api/grimoire/"
@@ -29,7 +29,9 @@ def plain_static_storage(settings):
 
 @pytest.fixture
 def alice(db):
-    return User.objects.create_user(username="alice", email="alice@example.com", password="pw12345!")
+    user = User.objects.create_user(username="alice", email="alice@example.com", password="pw12345!")
+    legal.accept(user, legal.GATED)  # past the terms gate (#84) for the page tests
+    return user
 
 
 @pytest.fixture
@@ -620,6 +622,16 @@ class TestSeed:
         call_command("seed_grimoire")
         call_command("seed_grimoire", refresh=True)
         assert Spell.objects.filter(title=spell.title).count() == 2
+
+    def test_staff_reagents_come_from_their_labels(self, db):
+        call_command("seed_grimoire")
+        call_command("seed_grimoire")  # keyed by name: no duplicate on reboot
+        coke = Reagent.objects.get(source="staff", name="Mexican Coca-Cola")
+        assert (coke.status, coke.name_es, coke.fdc_id) == ("approved", "Coca-Cola mexicana", None)
+        assert grimoire.to_grams(coke, 1, "glass") == 260  # its standard measure: a 250 ml glass
+        assert coke.nutrients.sugar_g > 10 and coke.nutrients.protein_g == 0
+        assert coke.nutrients.sodium_mg is None  # not on the label → unknown, never 0
+        assert coke in grimoire.visible_reagents(User.objects.create_user("someone"))
 
     def test_seed_keeps_unknown_nutrients_null(self, db):
         call_command("seed_grimoire")

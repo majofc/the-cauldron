@@ -28,13 +28,16 @@
 {% endblock %}
 
 {% block nav_links %}
-<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">The Forge</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link active cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
+<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
 <div class="nav-cta">
+  {% include 'the_cauldron/_assistant_link.html' %}
+  {% include 'the_cauldron/_profile_link.html' %}
   <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
 </div>
 {% endblock %}
@@ -205,6 +208,7 @@
           <label class="grim-field"><span>{% trans "One cup weighs" %}</span><span class="grim-unit-input"><input name="unit_cup" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
           <label class="grim-field"><span>{% trans "One tablespoon weighs" %}</span><span class="grim-unit-input"><input name="unit_tbsp" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
           <label class="grim-field"><span>{% trans "One piece weighs" %}</span><span class="grim-unit-input"><input name="unit_piece" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
+          <label class="grim-field"><span>{% trans "One glass weighs" %}</span><span class="grim-unit-input"><input name="unit_glass" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g</span></span></label>
           <label class="grim-field"><span>{% trans "Density" %}</span><span class="grim-unit-input"><input name="density_g_per_ml" type="number" min="0" step="any" inputmode="decimal"><span class="grim-unit-suffix">g/ml</span></span></label>
         </div>
       </section>
@@ -290,6 +294,8 @@
   window.GRIMOIRE = {
     api: "{% url 'the_cauldron:forge-api:grimoire-spell-list' %}".replace(/spells\/$/, ""),
     root: "{% url 'the_cauldron:grimoire' %}",
+    profile: "{% url 'the_cauldron:profile' %}",
+    journal: "{% url 'the_cauldron:journal' %}",
     page: "{{ page|escapejs }}",
     spell: "{{ spell_uuid|default:''|escapejs }}",
     prefillName: "{{ prefill_name|default:''|escapejs }}",

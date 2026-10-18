@@ -1,5 +1,5 @@
 {% extends 'arcano/base.html' %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}The Forge — Adaptive Calisthenics{% endblock %}
 {% block meta_description %}Take the Trial and forge a calisthenics program that adapts to you and your equipment.{% endblock %}
@@ -26,13 +26,16 @@
 {% endblock %}
 
 {% block nav_links %}
-<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active cauldron-nav-tight">The Forge</a></li>
-<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">The Grimoire</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
+<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
 <div class="nav-cta">
+  {% include 'the_cauldron/_assistant_link.html' %}
+  {% include 'the_cauldron/_profile_link.html' %}
   <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">Sign out</a>
 </div>
 {% endblock %}

@@ -9,6 +9,7 @@ from django.test import Client
 from rest_framework.test import APIClient
 
 from the_cauldron.models import Casting, Reagent, ReagentNutrients, Spell, SpellReagent
+from the_cauldron.services import legal
 
 User = get_user_model()
 API = "/cauldron/api/grimoire/"
@@ -21,7 +22,9 @@ def plain_static_storage(settings):
 
 @pytest.fixture
 def alice(db):
-    return User.objects.create_user(username="alice", email="alice@example.com", password="pw12345!")
+    user = User.objects.create_user(username="alice", email="alice@example.com", password="pw12345!")
+    legal.accept(user, legal.GATED)  # past the terms gate (#84) for the page tests
+    return user
 
 
 @pytest.fixture

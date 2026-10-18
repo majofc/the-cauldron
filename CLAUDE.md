@@ -294,7 +294,8 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
   **except** reagents already on that spell (a fork may carry the source owner's private reagent).
 - User reagents are created `private`, or `pending` when the user ticks "share"; staff approve in the
   admin (`ReagentAdmin` actions). `source`/`status` can't be set through the API.
-- `to_grams(reagent, qty, unit)`: mass units fixed; `grams_per_unit` for cup/tbsp/tsp/piece; volume
+- `to_grams(reagent, qty, unit)`: mass units fixed; `grams_per_unit` for cup/tbsp/tsp/piece/glass (a glass
+  has no generic volume — only the reagent's own weight per glass); volume
   units through `density_g_per_ml`; otherwise `ConversionError` → 400 on the line.
 - Search is case- and accent-insensitive through the stored `search_name` / `search_title`
   (`normalize_search`) — works on Postgres and the sqlite fallback, no `unaccent`. Every query word
@@ -360,12 +361,15 @@ an unknown value (null, or no `ReagentNutrients` row) is never 0 — it's left o
 `cooked_weight_g` (as a ratio over `casting_raw_grams` — the batch as actually cast, adjustments included) →
 `Spell.cooked_yield_g` → `Spell.yield_pct` → raw weight, `source: "unknown"` (flagged in the UI). Other users'
 castings never count. `GET spells/{uuid}/nutrition/?servings=|?scale=` (batch scales, per serving and per 100 g
-cooked don't); `POST spells/{uuid}/portion/` `{"goals": [{nutrient, at_least, at_most}]}` → gram range of the
-cooked dish, or `conflicts` (the goals setting the tightest lower and upper bound; a minimum of a nutrient the
-dish lacks conflicts alone). `reagents_missing_data` names only reagents missing the basics (`CORE`).
+cooked don't); `POST spells/{uuid}/portion/` → gram range of the cooked dish against what's left of the user's
+**daily goals** (#80/#83, see "Daily nutrition" below), or `conflicts` (the goals setting the tightest lower and
+upper bound). `reagents_missing_data` names only reagents missing the basics (`CORE`).
 
 **Seed**: `python manage.py seed_grimoire` (idempotent; also run at container start) loads
-`seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain) and
+`seed_data/grimoire_reagents.json` (66 USDA SR Legacy reagents with `fdc_id`, public domain),
+`seed_data/grimoire_staff_reagents.json` (staff-entered products USDA lacks, from their labels — e.g. Mexican
+Coca-Cola, 1 `glass` = 250 ml; `source=staff`, approved, keyed by English name, owned by the system user;
+values not on the label stay null) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
 `the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
 reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
@@ -375,3 +379,175 @@ reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>
   use g or add `grams_per_unit`.
 - Another user can't find a reagent → it's not `approved` yet.
 - `seed_grimoire` IntegrityError on `auth_user_email_unique` → the system user must keep its own email.
+
+---
+
+## Daily nutrition — goals, meal log, adherence, planner (#85)
+
+Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules in `services/legal.py`,
+`services/nutrition.py`, `services/adherence.py`; API in `nutrition_api.py`; one template
+`nutrition.html` (page = `accept` | `profile` | `journal`) + `static/the_cauldron/js/nutrition.js` +
+`css/nutrition.css`; JS strings in `nutrition_i18n.py` (reuses the Grimoire's `n_*`/`grp_*`/`unit_*`).
+
+| Model | Notes |
+|---|---|
+| `LegalAcceptance` | `user`, `document` terms/privacy/sensitive_consent, `version`, `accepted_at`, `withdrawn_at`. **Append-only**: `save()` on an existing row raises; the only change ever made is `withdrawn_at` via `legal.withdraw_consent` (queryset update). No IP/UA. Read-only admin (ARCO) |
+| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. Lazy (`nutrition.get_profile`) |
+| `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
+| `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
+| `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
+
+**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.1, privacy 1.2, consent 1.0); the
+legal pages state the same versions. `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
+whose latest terms/privacy version isn't current goes to `the_cauldron:legal-accept` (`/cauldron/accept/?next=`,
+`next` checked with `url_has_allowed_host_and_scheme`). The gate covers **pages only** — Forge/Grimoire APIs
+are not gated. Goals/intake/plan/adherence APIs need `NutritionConsent` (current terms+privacy **and** a live
+sensitive-data consent) → else 403 `{"code": "consent_required"}`. Bumping a version re-prompts everyone.
+Tests that load Cauldron pages must `legal.accept(user, legal.GATED)` first.
+
+**Rules** (`services/nutrition.py`)
+- Unknown is never 0: totals carry `missing`; shown "≥ x".
+- `judge(goal, total, final=)` → met / missed / uncertain (missing data could flip it). With `final=False`
+  (today): an exceeded max is `missed`, a reached min with no max is `met`, anything else `pending`.
+- Remaining-budget portion: `POST grimoire/spells/{uuid}/portion/` `{date?}` ignores any body goals and uses
+  the goals active that day minus what's eaten **and** still planned (`consumed_and_planned`). A remaining
+  minimum the dish can't bring is `not_covered` (not a conflict); a used-up max the dish contains is `over`.
+  `{"has_goals": false}` without goals or consent → the spell page hides the section.
+
+**Adherence (#82)** — computed on read, `?days=7|30`. % met = met / (met+missed+uncertain); not-logged days
+never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. Streaks look back 90 days.
+
+**Rolling window + time in range** (`services/rolling.py`, `GET rolling/?span=24h|7d&days=7|30|90`) — the
+Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
+days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
+average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
+and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 23), per-goal-nutrient
+`status`/`low`/`high` arrays, `summary` (time in range %), `daily` (share of each day in range). The page
+scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
+`adherence/` endpoint (#82) stays but no page uses it now.
+
+**API** (`/cauldron/api/`): `legal/`, `legal/accept/` `{documents}`, `legal/withdraw/` `{delete_data}`,
+`me/` (GET/PATCH timezone), `goals/` (GET/PUT full set), `goals/history/`, `intake/` (CRUD, `?date=`),
+`intake/day/?date=`, `adherence/?days=`, `plan/` (CRUD, `?from=&to=` ≤ 62 days), `plan/day/?date=`,
+`plan/{uuid}/eat/`. Naive `eaten_at` is read in the user's timezone (`UserTimezoneMixin`).
+
+**Pages**: `the_cauldron:profile` (goals, timezone, withdraw consent), `the_cauldron:journal`
+(`?date=`, `?log_spell=` / `?plan_spell=` preselect a readable spell; the spell page's "I ate this" /
+"Plan it" link here). The Journal's entry form is one search over spells **and** reagents (the pick sets
+`source`); "type it in by hand" (`quick`) is the last search row, not an up-front choice. A picked reagent
+offers its own measures first (`grams_per_unit`, e.g. `glass`) as the default unit. A floating "Log a meal"
+button (`#nut-fab`) jumps to the form. `rolling/` ticks are on the user's clock (`-06:00`), since the page
+reads date/hour straight off the string. The Profile and the Journal show the consent panel instead of the app until consent is given.
+
+**PostHog**: only counts/enums (`intake_logged {source}`, `plan_meal_added {slot}`, `nutrition_goals_saved
+{goal_count, changed_count}`, `legal_accepted {document, version}`…) — never values, foods or goals.
+
+---
+
+## MCP server — drive The Cauldron from an AI assistant (#89)
+
+Complete: OAuth 2.1, nutrition/Grimoire/Forge read and write tools, two-step confirmation, idempotency,
+`channel`, estimated nutrients, the info page, analytics and the legal update (terms 1.2 / privacy 1.3).
+User docs, analytics events, the dashboard definition and how to add a tool: `README.md` → "MCP".
+
+**Serving**: a plain Django view (`mcp_server/protocol.py::McpView`, `the_cauldron:mcp` → `/cauldron/mcp/`),
+Streamable HTTP, **stateless** (no `MCP-Session-Id`), JSON responses only, spec 2025-11-25 (also answers
+2025-06-18 / 2025-03-26, batches included). No ASGI, no MCP SDK — gunicorn/WSGI unchanged. `GET`/`DELETE` → 405,
+**except** a `GET` whose `Accept` has `text/html` and not `text/event-stream` (a browser): it renders the public
+info page (`oauth_views.mcp_info_view`, `mcp_info.html` + `mcp-info.css` / `mcp-info.js`), `Vary: Accept`. So the
+URL users paste into Claude is also the page explaining it. Its buttons post `{target}` to
+`api/mcp/connect-clicked/` (AllowAny, enum only). Nav: `_assistant_link.html` (✦ icon beside the profile icon),
+footer `_footer_links.html`, landing hero, Profile → "Your AI assistants".
+Present `Origin` must be ours or `CAULDRON_MCP_ALLOWED_ORIGINS` (default claude.ai/claude.com) → else 403.
+Unsupported `MCP-Protocol-Version` header → 400. Cookies are never read: bearer tokens only.
+
+**Auth**: django-oauth-toolkit 3.4 (settings `OAUTH2_PROVIDER` in arcano): authorization code + S256 PKCE only,
+public clients via DCR (`/cauldron/oauth/register/`) or CIMD, `localhost`/`127.0.0.1` loopback on any port
+(Claude Code), refresh tokens rotate (reuse → `invalid_grant`), access tokens 1 h, refresh 60 days. Scopes
+`cauldron:read` / `cauldron:write` (write implies read). Routes live in `oauth_urls.py` (namespace
+`oauth2_provider`, included at the **site root** by arcano, guarded with `find_spec`): `/.well-known/oauth-authorization-server`
+(issuer = site root), `/.well-known/oauth-protected-resource[/cauldron/mcp/]` (`resource` = the MCP URL exactly).
+No token / bad token / token bound (RFC 8707) to another resource → **401** + `WWW-Authenticate: Bearer resource_metadata=…`.
+Missing scope → **403** `error="insufficient_scope"`.
+
+**Consent screen**: `oauth_views.CauldronAuthorizationView` (`oauth_authorize.html`) behind `cauldron_page`
+(login + legal gate); shows the self-declared client name, the redirect host, and a warning for loopback.
+**The name "Claude" is reserved** (`client_identity.py`): a client name that says or imitates Claude/Anthropic
+(case, accents, full-width, Cyrillic and digit look-alikes folded) is allowed only for a CIMD client whose
+`client_id` URL is on claude.ai / claude.com / anthropic.com. DCR register/rename refuses it (400
+`invalid_client_metadata`, `GuardedRegistrationView`); the consent screen answers 403 for any other app using it
+(before DOT can auto-approve). `McpConnection.client` is `claude`/`claude_code` only for those Anthropic clients.
+Approving creates `McpConnection` (user, application, normalized `client` enum, `language`, `last_used_at`).
+Profile → "Your AI assistants": `GET api/mcp/connections/`, `DELETE api/mcp/connections/{uuid}/` deletes the
+client's tokens + grants for the user (next call 401).
+
+**Tools** (`mcp_server/tools/`): thin adapters over `services/` and `nutrition_payloads.py` (shared with the REST
+API — never duplicate rules in a tool). Register with `@registry.tool(...)`; every call goes through
+`registry.call_tool` (scope → JSON Schema → consent → `translation.override(conn.language)` +
+`timezone.override(user tz)` → result). Errors are tool results with `isError: true` and `{"code", "message", …}`:
+`invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
+`/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
+Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
+Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
+`search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
+Write (`cauldron:write`; ✱ = two-step): `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`,
+`update_planned_meal`✱, `delete_planned_meal`✱, `mark_planned_meal_eaten`, `set_goal`, `create_reagent`,
+`update_reagent`✱, `create_spell`, `update_spell`✱, `delete_spell`✱, `fork_spell`, `log_casting`.
+Writes reuse the web code: `nutrition_writes.py` (`apply_entry`, `apply_plan`, `eat_plan` — moved out of
+`nutrition_api.py`, shared with the REST API) and the Grimoire serializers (`request.user` = the token's user,
+set by `McpView`). Errors add `invalid_input` + `fields` (serializer errors), `conflict` (plan already eaten),
+`forbidden` (not the owner / approved reagent), `duplicate` (+ `matches`), `invalid_confirm_token`.
+
+**Two-step** (`@tool(confirm=True)`, every edit and delete): the handler gets `apply=False` and returns
+`{"target", "preview"}`; the caller gets the preview + a `confirm_token` (random; only its SHA-256 is stored in
+`McpConfirmation`, bound to user + tool + target + arguments hash, `TTL_SECONDS` = 300). The second call with the
+same arguments + token claims it atomically (single use) and runs `apply=True`; a failure there rolls the claim
+back. Holds even if the user "always allows" the tool in their client.
+**Idempotency**: every write tool accepts `client_request_id`; a successful result is stored in `McpIdempotency`
+(user + tool + id) and a repeat within `WINDOW_SECONDS` (10 min) returns it unchanged. Errors aren't stored.
+**Search before create**: `create_reagent` (`grimoire.exact_duplicates`, name and name_es) and `create_spell`
+(`grimoire.exact_spell_duplicates`, over readable spells) return `duplicate` + matches and create nothing unless
+`confirm_new: true`. Everything created via MCP is **private** (publishing stays web-only).
+**`channel`** (`web` default / `mcp`, `models.forge.Channel`, not editable) on `IntakeEntry`, `PlannedMeal`,
+`NutrientGoal`, `Spell`, `Reagent`, `Casting`, `WorkoutSession`, `AssessmentSession` — set by the MCP layer
+(`channel=` on `apply_entry` / `apply_plan` / `eat_plan` / `save_goal_set`, serializer `save(channel=…)`).
+**Estimated nutrients**: `Reagent.nutrients_estimated` (set only by MCP, read-only in `ReagentSerializer`) and
+`IntakeEntry.basis["estimated"]` (quick entries; spell/reagent snapshots copy it from estimated reagents).
+UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reagents, "estimated" on log entries.
+
+**Forge tools** (`tools/forge.py`, `tools/forge_writes.py`; no nutrition consent needed):
+read `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions` (≤ 62 days),
+`get_equipment`, `get_trial`; write `set_equipment`✱, `submit_trial_results`, `retake_trial`✱,
+`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱.
+They call the same `services/forge.py` functions as the web, so placement, programs and progression match for the
+same inputs. Logic that lived in `api.py` views moved there: `submit_assessment` (+ `TrialInputError`),
+`progress_points`, `session_peer_scores`, `active_program`, `mark_equipment_configured`; new `trial_anchors` and
+`pending_unfinished` (read-only, unlike `unfinished_session`). `create_session_from_plan` / `retake_assessment`
+take `channel=`. `get_forge_today` states the day as `no_program` | `unfinished_past_session` | `in_progress` |
+`done` | `not_started` and never writes (the plan has `id: null` sets until `start_forge_session`). The
+unfinished-session rule holds: `start_forge_session` → `unfinished_session` error until that past session is
+finished (`finish_forge_session`, keeps its own date) or deleted. `log_forge_set` refuses an already-logged set
+(`already_logged` → `update_forge_set`); finished sessions are read-only (`conflict`). `get_today` adds a `forge`
+summary.
+
+**PostHog**: `mcp_tool_called {tool, ok, error_code, latency_ms, client, confirm_step}` (`preview`/`applied`
+for two-step tools), `mcp_duplicate_prevented {kind, overridden}`, `mcp_connected {client}`,
+`mcp_disconnected {client}`, `mcp_page_viewed {signed_in}`, `mcp_connect_clicked {target}` — distinct id = user pk
+(`posthog.identify_context`), arcano opt-out honoured. A new event or property → update the privacy notice too.
+
+**Legal**: terms §7 "AI assistants" and the privacy notice (assistant data, data reaching the user's AI provider,
+the MCP analytics) were added in terms 1.2 / privacy 1.3 — everyone re-accepts once. Changing what the MCP server
+stores or sends means another bump.
+
+**Evals**: `tests/mcp_eval_prompts.md` — run by hand against Claude after changing tool names/descriptions/schemas.
+
+**Debugging**
+- Claude says "Couldn't reach the MCP server" → `/.well-known/oauth-protected-resource/cauldron/mcp/` must
+  answer and its `resource` must equal the URL pasted (trailing slash included); behind Render the scheme
+  comes from `SECURE_PROXY_SSL_HEADER`.
+- Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
+- `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
+- `/cauldron/mcp/` shows 405 in a browser → the browser didn't send `text/html` in `Accept` (or a proxy stripped it).
+- Info-page tests fail with "Missing staticfiles manifest entry" → run `collectstatic` (manifest storage).
+- Connecting shows "This app can't connect" → the client calls itself Claude but isn't a claude.ai/claude.com/
+  anthropic.com CIMD client (`client_identity.py`); a DCR registration with that name gets 400.

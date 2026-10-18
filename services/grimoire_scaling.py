@@ -63,14 +63,14 @@ def _round_to(value, step):
 
 
 def display_quantity(quantity, unit):
-    """Practical rounding: pieces to ½ (never "0.37 eggs"), spoons and cups to ¼,
+    """Practical rounding: pieces to ½ (never "0.37 eggs"), spoons, cups and glasses to ¼,
     grams/ml to 5 above 100, metric/imperial bulk units to two decimals.
     Anything above zero stays above zero, at the smallest step."""
     if quantity <= 0:
         return 0.0
     if unit == "piece":
         return max(_round_to(quantity, 0.5), 0.5)
-    if unit in ("tsp", "tbsp", "cup"):
+    if unit in ("tsp", "tbsp", "cup", "glass"):
         return max(_round_to(quantity, 0.25), 0.25)
     if unit in ("g", "ml"):
         if quantity > 100:

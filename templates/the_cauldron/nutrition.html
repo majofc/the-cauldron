@@ -1,0 +1,371 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+{% comment %}
+Daily nutrition pages (#80–#84), one template switched by ``page``:
+- accept  — accept the current terms + privacy notice (the legal gate)
+- profile — timezone, sensitive-data consent, daily goals, adherence
+- journal — one day: what you ate, the ritual (meal plan), totals vs goals
+Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
+{% endcomment %}
+
+{% block title %}{% if page == "profile" %}{% trans "Your profile — The Cauldron" %}{% elif page == "journal" %}{% trans "The Journal — The Cauldron" %}{% else %}{% trans "Terms update — The Cauldron" %}{% endif %}{% endblock %}
+{% block meta_description %}{% trans "Daily nutrient goals, a meal log and a meal planner — The Cauldron." %}{% endblock %}
+
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/grimoire-page.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/nutrition.css' %}">
+{% endblock %}
+
+{% block nav_brand %}
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+  <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="12" y1="24" x2="52" y2="24" />
+    <path d="M14 24 Q14 48 32 48 Q50 48 50 24" />
+    <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
+    <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
+  </svg>
+  The Cauldron
+</a>
+{% endblock %}
+
+{% block nav_links %}
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">The Forge</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
+<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight{% if page == 'journal' %} active{% endif %}">{% trans "The Journal" %}</a></li>
+{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  {% if page != "accept" %}{% include 'the_cauldron/_assistant_link.html' %}{% endif %}
+  {% if page == "profile" %}{% include 'the_cauldron/_profile_link.html' with active=True %}{% elif page != "accept" %}{% include 'the_cauldron/_profile_link.html' %}{% endif %}
+  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<main class="grim nut" id="nut-app-root" data-page="{{ page }}">
+
+  {% if page == "accept" %}
+  <!-- ── Legal gate (#84) ── -->
+  <article class="grim-spell-page nut-narrow">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="nut-accept-form" novalidate>
+      <h1 class="grim-h2">{% trans "Our terms have changed" %}</h1>
+      <p class="grim-help">{% trans "The Cauldron now has daily goals, a meal log and a meal planner. Please read the updated documents and accept them to continue." %}</p>
+      {% url 'the_cauldron:terms' as terms_url %}{% url 'the_cauldron:privacy' as privacy_url %}
+      {% if "terms" in pending %}
+      <label class="nut-check">
+        <input type="checkbox" name="documents" value="terms">
+        <span>{% blocktrans with url=terms_url version=legal_versions.terms %}I have read and accept the <a href="{{ url }}" target="_blank" rel="noopener">Terms &amp; Conditions</a> (version {{ version }}).{% endblocktrans %}</span>
+      </label>
+      {% endif %}
+      {% if "privacy" in pending %}
+      <label class="nut-check">
+        <input type="checkbox" name="documents" value="privacy">
+        <span>{% blocktrans with url=privacy_url version=legal_versions.privacy %}I have read the <a href="{{ url }}" target="_blank" rel="noopener">Privacy Notice</a> (version {{ version }}).{% endblocktrans %}</span>
+      </label>
+      {% endif %}
+      <p class="grim-error" id="nut-accept-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" href="{% url 'the_cauldron:logout' %}">{% trans "Sign out" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary" id="nut-accept-btn" disabled>{% trans "Accept and continue" %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% else %}
+  <header class="grim-header">
+    {% if page == "profile" %}
+    <h1 class="grim-title">{% trans "Your profile" %}</h1>
+    <p class="grim-subtitle">{% trans "Your daily goals, and how often you meet them." %}</p>
+    {% else %}
+    <h1 class="grim-title">{% trans "The Journal" %}</h1>
+    <p class="grim-subtitle">{% trans "What you ate, what's planned, and how the day adds up." %}</p>
+    <nav class="nut-daybar" aria-label="{% trans 'Choose a day' %}">
+      <a class="grim-unit-btn" href="?date={{ prev_day }}" aria-label="{% trans 'Previous day' %}">←</a>
+      <h2 class="nut-day-title" id="nut-day-title">{{ day }}</h2>
+      <a class="grim-unit-btn" href="?date={{ next_day }}" aria-label="{% trans 'Next day' %}">→</a>
+      {% if day != today %}<a class="grim-unit-btn" href="?date={{ today }}">{% trans "Today" %}</a>{% endif %}
+    </nav>
+    {% endif %}
+  </header>
+
+  <!-- ── Sensitive-data consent (#84), asked before goals / meal log ── -->
+  <section class="grim-spell-page nut-narrow" id="nut-consent" aria-labelledby="nut-consent-title"{% if has_consent %} hidden{% endif %}>
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="nut-consent-title">{% trans "Your food data is sensitive" %}</h2>
+      <p>{% trans "Your nutrient goals, what you eat and your meal plans can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent." %}</p>
+      <ul class="nut-list">
+        <li>{% trans "We use them only to show you your totals, goals, plans and how often you meet them." %}</li>
+        <li>{% trans "Only you see them. They are never sent to our analytics provider." %}</li>
+        <li>{% trans "Nutrient values are estimates, not medical advice." %}</li>
+        <li>{% trans "You can withdraw your consent at any time from your profile, and delete what you logged." %}</li>
+      </ul>
+      {% url 'the_cauldron:privacy' as privacy_url %}
+      <label class="nut-check">
+        <input type="checkbox" id="nut-consent-check">
+        <span>{% blocktrans with url=privacy_url version=legal_versions.sensitive_consent %}I consent to The Cauldron processing my nutrient goals, meal log and meal plans — sensitive personal data — as described in the <a href="{{ url }}" target="_blank" rel="noopener">Privacy Notice</a> (consent version {{ version }}).{% endblocktrans %}</span>
+      </label>
+      <p class="grim-error" id="nut-consent-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <button type="button" class="btn-cauldron btn-cauldron--primary" id="nut-consent-btn" disabled>{% trans "Give my consent" %}</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="nut-app"{% if not has_consent %} hidden{% endif %}>
+    {% if page == "profile" %}
+    <!-- ── Daily goals (#80) ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-goals-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <form class="grim-spell-page-body grim-form" id="nut-goal-form" novalidate>
+        <h2 class="grim-h2" id="nut-goals-title">{% trans "Daily goals" %}</h2>
+        <p class="grim-help">{% trans "Per day, midnight to midnight in your timezone. “No goal” still shows the nutrient in your totals, it just isn't judged. Changing a goal keeps the old one for the days it was active." %}</p>
+        <div id="nut-goal-rows" class="nut-goal-groups"></div>
+        <p class="grim-error" id="nut-goal-error" role="alert" hidden></p>
+        <div class="grim-actions">
+          <button type="button" class="grim-link-btn" id="nut-history-toggle" aria-expanded="false" aria-controls="nut-history">{% trans "Show goal history" %}</button>
+          <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save goals" %}</button>
+        </div>
+        <div id="nut-history" class="nut-history" hidden></div>
+      </form>
+    </section>
+
+    <!-- ── Where to see progress ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-progress-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body nut-progress-link">
+        <div>
+          <h2 class="grim-h2" id="nut-progress-title">{% trans "How you're doing" %}</h2>
+          <p class="grim-help">{% trans "Your last 24 hours or 7 days against these goals, and how often you're in range, live in the Journal." %}</p>
+        </div>
+        <a class="btn-cauldron btn-cauldron--primary" href="{% url 'the_cauldron:journal' %}">{% trans "Open the Journal" %}</a>
+      </div>
+    </section>
+
+    <!-- ── Settings + consent ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-settings-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body grim-form">
+        <h2 class="grim-h2" id="nut-settings-title">{% trans "Settings" %}</h2>
+        <form class="grim-row nut-tz" id="nut-tz-form" novalidate>
+          <label class="grim-field"><span>{% trans "Timezone — where your day starts and ends" %}</span>
+            <input name="timezone" id="nut-tz" list="nut-tz-list" autocomplete="off" required maxlength="64"></label>
+          <datalist id="nut-tz-list"></datalist>
+          <button type="submit" class="btn-cauldron btn-cauldron--ghost">{% trans "Save" %}</button>
+        </form>
+        <h3 class="grim-section-title">{% trans "Sensitive-data consent" %}</h3>
+        <p class="grim-help" id="nut-consent-state"></p>
+        <label class="nut-check"><input type="checkbox" id="nut-withdraw-delete"> <span>{% trans "Also delete my goals, meal log and meal plans" %}</span></label>
+        <div class="grim-actions">
+          <button type="button" class="btn-cauldron btn-cauldron--ghost grim-danger" id="nut-withdraw-btn">{% trans "Withdraw my consent" %}</button>
+        </div>
+      </div>
+    </section>
+
+    {% else %}
+    <!-- ── How am I doing: the moving window (services/rolling.py) ── -->
+    <section class="grim-spell-page nut-now" aria-labelledby="nut-now-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body">
+        <div class="grim-nutrition-head">
+          <h2 class="grim-h2" id="nut-now-title">{% trans "How you're doing" %}</h2>
+          <div class="grim-scope" role="group" aria-label="{% trans 'Window' %}">
+            <button type="button" class="grim-scope-btn is-on" data-span="24h" aria-pressed="true">{% trans "Last 24 hours" %}</button>
+            <button type="button" class="grim-scope-btn" data-span="7d" aria-pressed="false">{% trans "Last 7 days" %}</button>
+          </div>
+        </div>
+        <div class="nut-scrub">
+          <p class="nut-window-range" id="nut-window-range"></p>
+          <div class="nut-timeline">
+            <div class="nut-timeline-track" aria-hidden="true">
+              <span class="nut-timeline-window" id="nut-timeline-window"></span>
+            </div>
+            <input type="range" id="nut-scrub" min="0" max="0" step="1" value="0"
+                   aria-label="{% trans 'Move the window back in time' %}">
+            <div class="nut-timeline-days" id="nut-timeline-days" aria-hidden="true"></div>
+          </div>
+          <div class="nut-scrub-meta">
+            <span id="nut-window-label" class="nut-window-label"></span>
+            <button type="button" class="grim-link-btn" id="nut-now-btn" hidden>{% trans "Back to now" %}</button>
+          </div>
+        </div>
+        <div id="nut-gauges" class="nut-gauges" aria-live="polite"></div>
+        <button type="button" class="grim-link-btn" id="nut-all-toggle" aria-expanded="false" aria-controls="nut-all">{% trans "Show every nutrient" %}</button>
+        <div id="nut-all" class="nut-all" hidden></div>
+      </div>
+    </section>
+
+    <!-- ── Time in range: how often each goal is met ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-hist-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body">
+        <div class="grim-nutrition-head">
+          <h2 class="grim-h2" id="nut-hist-title">{% trans "How often you're in range" %}</h2>
+          <div class="grim-scope" role="group" aria-label="{% trans 'Period' %}">
+            <button type="button" class="grim-scope-btn is-on" data-days="7" aria-pressed="true">{% trans "7 days" %}</button>
+            <button type="button" class="grim-scope-btn" data-days="30" aria-pressed="false">{% trans "30 days" %}</button>
+            <button type="button" class="grim-scope-btn" data-days="90" aria-pressed="false">{% trans "90 days" %}</button>
+          </div>
+        </div>
+        <div class="nut-chips" id="nut-hist-chips" role="group" aria-label="{% trans 'Nutrient' %}"></div>
+        <div id="nut-hist" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ── What you ate (#81) ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-log-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body">
+        <h2 class="grim-h2" id="nut-log-title">{% trans "What you ate" %}</h2>
+        <ul class="nut-entries" id="nut-entries"></ul>
+        <form class="grim-form nut-entry-form" id="nut-entry-form" novalidate>
+          <h3 class="grim-section-title" id="nut-entry-form-title">{% trans "Log something" %}</h3>
+          <!-- One search for everything (spells and ingredients alike); typing it
+               by hand is the way out when it isn't there, not a choice up front. -->
+          <div data-for="spell reagent" class="grim-line-add">
+            <label class="grim-field" for="nut-entry-search"><span>{% trans "What did you eat or drink?" %}</span></label>
+            <input type="search" class="nut-search" id="nut-entry-search" autocomplete="off"
+                   aria-controls="nut-entry-results" placeholder="{% trans 'A dish, an ingredient, a drink…' %}">
+            <ul class="grim-suggest" id="nut-entry-results" role="listbox" hidden></ul>
+            <p class="nut-picked" id="nut-entry-picked" hidden></p>
+          </div>
+          <p class="grim-help" data-for="quick"><button type="button" class="grim-link-btn" data-back-search>{% trans "← Search instead" %}</button></p>
+          <div class="grim-row" data-for="quick">
+            <label class="grim-field"><span>{% trans "What was it?" %}</span>
+              <input name="label" maxlength="150" placeholder="{% trans 'e.g. Tacos al pastor at the stand' %}"></label>
+          </div>
+          <div class="grim-row" data-for="quick">
+            <label class="grim-field"><span>{% trans "Calories (kcal)" %}</span><input name="kcal" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label class="grim-field"><span>{% trans "Protein (g)" %}</span><input name="protein_g" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label class="grim-field"><span>{% trans "Carbs (g)" %}</span><input name="carbs_g" type="number" min="0" step="any" inputmode="decimal"></label>
+            <label class="grim-field"><span>{% trans "Fat (g)" %}</span><input name="fat_g" type="number" min="0" step="any" inputmode="decimal"></label>
+          </div>
+          <p class="grim-help" data-for="quick">{% trans "Leave blank what you don't know — it's counted as unknown, never as zero." %}</p>
+          <div class="grim-row">
+            <label class="grim-field" data-for="spell reagent"><span>{% trans "How much" %}</span>
+              <input name="quantity" type="number" min="0.01" step="any" inputmode="decimal" value="1"></label>
+            <label class="grim-field" data-for="spell reagent"><span>{% trans "Unit" %}</span>
+              <select name="unit" id="nut-entry-unit"></select></label>
+            <label class="grim-field"><span>{% trans "At" %}</span>
+              <input name="time" type="time" required></label>
+          </div>
+          <p class="grim-error" id="nut-entry-error" role="alert" hidden></p>
+          <div class="grim-actions">
+            <button type="button" class="btn-cauldron btn-cauldron--ghost" id="nut-entry-cancel" hidden>{% trans "Cancel" %}</button>
+            <button type="submit" class="btn-cauldron btn-cauldron--primary" id="nut-entry-submit">{% trans "Log it" %}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ── The ritual: meal plan (#83) ── -->
+    <section class="grim-spell-page" aria-labelledby="nut-plan-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="grim-spell-page-body">
+        <h2 class="grim-h2" id="nut-plan-title">{% trans "The ritual" %}</h2>
+        <p class="grim-help">{% trans "Plan spells for this day and see how it would add up before you eat." %}</p>
+        <div id="nut-plan" class="nut-slots"></div>
+        <div id="nut-projected" aria-live="polite"></div>
+        <form class="grim-form nut-plan-form" id="nut-plan-form" novalidate>
+          <h3 class="grim-section-title">{% trans "Plan a spell" %}</h3>
+          <div class="grim-line-add">
+            <input type="search" class="nut-search" id="nut-plan-search" autocomplete="off"
+                   aria-controls="nut-plan-results" aria-label="{% trans 'Find a spell' %}" placeholder="{% trans 'Find a spell…' %}">
+            <ul class="grim-suggest" id="nut-plan-results" role="listbox" hidden></ul>
+            <p class="nut-picked" id="nut-plan-picked" hidden></p>
+          </div>
+          <div class="grim-row">
+            <label class="grim-field"><span>{% trans "Meal" %}</span>
+              <select name="slot">
+                <option value="breakfast">{% trans "Breakfast" %}</option>
+                <option value="lunch">{% trans "Lunch" %}</option>
+                <option value="dinner">{% trans "Dinner" %}</option>
+                <option value="snack">{% trans "Snack" %}</option>
+              </select></label>
+            <label class="grim-field"><span>{% trans "How much" %}</span>
+              <input name="quantity" type="number" min="0.01" step="any" inputmode="decimal" value="1"></label>
+            <label class="grim-field"><span>{% trans "Unit" %}</span>
+              <select name="unit">
+                <option value="serving">{% trans "servings" %}</option>
+                <option value="g">g</option>
+              </select></label>
+          </div>
+          <p class="grim-error" id="nut-plan-error" role="alert" hidden></p>
+          <div class="grim-actions">
+            <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Add to the ritual" %}</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- The most frequent action, always one tap away; hidden while the form is on screen -->
+    <button type="button" class="btn-cauldron btn-cauldron--primary nut-fab" id="nut-fab" aria-controls="nut-entry-form">
+      <span aria-hidden="true">+</span> {% trans "Log a meal" %}
+    </button>
+    {% endif %}
+  </div>
+
+  {% if page == "profile" %}
+  <!-- ── Connected AI assistants (MCP, #89) — outside #nut-app: managing a
+       connection needs no nutrition consent ── -->
+  <section class="grim-spell-page" aria-labelledby="nut-mcp-title">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h2 class="grim-h2" id="nut-mcp-title">{% trans "Your AI assistants" %}</h2>
+      <p class="grim-help">{% trans "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once." %}</p>
+      <ul class="nut-mcp-list" id="nut-mcp-list" aria-live="polite"></ul>
+      <p class="grim-help"><a href="{% url 'the_cauldron:mcp' %}">{% trans "How to connect an assistant →" %}</a></p>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <div class="grim-toast" id="grim-toast" role="status" aria-live="polite" hidden></div>
+</main>
+{% endblock %}
+
+{% block app_scripts %}
+{% get_current_language as LANGUAGE_CODE %}
+{{ nutrition_strings|json_script:"nutrition-i18n" }}
+{{ prefill|json_script:"nutrition-prefill" }}
+<script>
+  window.NUTRITION = {
+    api: "{% url 'the_cauldron:forge-api:nutrition-goals' %}".replace(/goals\/$/, ""),
+    grimoireApi: "{% url 'the_cauldron:forge-api:grimoire-spell-list' %}".replace(/spells\/$/, ""),
+    grimoireRoot: "{% url 'the_cauldron:grimoire' %}",
+    profile: "{% url 'the_cauldron:profile' %}",
+    page: "{{ page|escapejs }}",
+    day: "{{ day|default:''|escapejs }}",
+    today: "{{ today|default:''|escapejs }}",
+    next: "{{ next_url|default:''|escapejs }}",
+    lang: "{{ LANGUAGE_CODE|escapejs }}",
+    units: "{{ unit_system|escapejs }}",
+  };
+</script>
+<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+<script src="{% static 'the_cauldron/js/nutrition.js' %}"></script>
+{% endblock %}
+
+{% block nav_auto_loader %}{% endblock %}
+
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}
