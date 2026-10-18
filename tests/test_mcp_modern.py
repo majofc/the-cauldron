@@ -174,3 +174,9 @@ def test_url_without_trailing_slash_is_served_not_redirected(alice):
     assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
     r = Client().post("/cauldron/mcp", data=json.dumps(body), content_type="application/json")
     assert r.status_code == 401 and "resource_metadata=" in r["WWW-Authenticate"]
+
+
+@pytest.mark.parametrize("origin", ["https://claude.ai", "https://gemini.google.com"])
+def test_assistant_origins_are_allowed(alice, origin):
+    r = _modern(_token(alice), "tools/list", headers={"HTTP_ORIGIN": origin})
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38

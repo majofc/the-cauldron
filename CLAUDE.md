@@ -553,8 +553,11 @@ stores or sends means another bump.
 - Every call 401 after connecting → token `resource` doesn't match `mcp_resource_url` (host/scheme mismatch).
 - `makemigrations` fails with `OAUTH2_PROVIDER_APPLICATION_MODEL` → keep that setting in arcano.
 - Claude connects but says it has no tools → its requests never pass `McpView.post` (connection `last_used_at`
-  stays null). Usually a protocol-version problem: a new MCP revision must be added to `MODERN_VERSIONS` /
-  `LEGACY_VERSIONS` (`protocol.py`) with its changes; `tests/test_mcp_modern.py` covers 2026-07-28.
+  stays null). Read `McpRequestLog` in the admin (every request to the endpoint, rejections and crashes
+  included). `(GET) 405` rows carrying `Mcp-Method` = a redirect turned the client's POST into a tokenless GET
+  (the 2026-10 case: APPEND_SLASH on `/cauldron/mcp` — keep the no-slash route). A 403 "Origin not allowed" →
+  add the assistant's origin to `DEFAULT_ALLOWED_ORIGINS`. An unknown version → add the MCP revision to
+  `MODERN_VERSIONS` / `LEGACY_VERSIONS` (`protocol.py`); `tests/test_mcp_modern.py` covers 2026-07-28.
 - Connecting from Claude ends on "This connection can't continue / invalid_request" → DOT refused the client's CIMD
   document. Claude's lists the jwt-bearer grant; `oauth_cimd.CauldronMetadataFetcher` (arcano setting
   `CIMD_METADATA_FETCHER`) drops grant types we never issue — keep it wired.
