@@ -91,10 +91,28 @@ def test_header_mismatch(alice, headers, meta_version):
     assert r.json()["error"]["code"] == HEADER_MISMATCH
 
 
-def test_missing_mcp_method_header(alice):
-    body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {"_meta": _meta()}}
+def test_missing_headers_and_meta_are_tolerated(alice):
+    """Only a header that is present has to match; a client that leaves the
+    mirrored headers or the _meta version out still gets served."""
+    body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
     r = _post(body, _token(alice), version=V)
-    assert r.status_code == 400 and r.json()["error"]["code"] == HEADER_MISMATCH
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
+
+
+def test_every_post_is_logged_without_secrets(alice):
+    from the_cauldron.models import McpRequestLog
+
+    token = _token(alice)
+    _modern(token, "tools/list")
+    _post({"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}, token, version="2099-01-01")
+    _modern(None, "server/discover")
+    ok, bad_version, no_token = McpRequestLog.objects.order_by("created_at")
+    assert (ok.rpc_method, ok.status, ok.authenticated, ok.protocol_version, ok.header_method) == (
+        "tools/list", 200, True, V, "tools/list")
+    assert (bad_version.status, bad_version.error_code, bad_version.authenticated) == (400, -32022, False)
+    assert (no_token.status, no_token.has_bearer, no_token.authenticated) == (401, False, False)
+    stored = " ".join(str(v) for row in McpRequestLog.objects.values() for v in row.values())
+    assert token not in stored
 
 
 def test_legacy_methods_are_unknown_in_modern_era(alice):
