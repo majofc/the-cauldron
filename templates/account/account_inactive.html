@@ -1,0 +1,10 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Account inactive" %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Account inactive" %}</h1>
+<p class="forge-subtitle">{% trans "This account is inactive. Write to us if you think this is a mistake." %}</p>
+<p class="forge-auth-alt"><a href="{% url 'the_cauldron:landing' %}">{% trans "Back to The Cauldron" %}</a></p>
+{% endblock %}

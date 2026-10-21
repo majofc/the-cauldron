@@ -1,0 +1,17 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Create your account" %}{% endblock %}
+
+{% block auth_card %}
+{# Google gave no usable email (or it belongs to a staff account): ask for one. #}
+<h1 class="forge-title">{% trans "One more step" %}</h1>
+<p class="forge-subtitle">{% blocktrans with provider=account.get_provider.name %}Choose the email for your Cauldron account to finish signing in with {{ provider }}.{% endblocktrans %}</p>
+{% for error in form.non_field_errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}
+<form method="post" action="{% url 'socialaccount_signup' %}" class="forge-form">
+  {% csrf_token %}
+  {% for field in form %}{% if field.is_hidden %}{{ field }}{% else %}{% include 'the_cauldron/auth/_field.html' %}{% endif %}{% endfor %}
+  {{ redirect_field }}
+  <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Create account" %}</button>
+</form>
+{% endblock %}

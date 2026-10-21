@@ -2,12 +2,12 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-18 06:14+0000\n"
+"POT-Creation-Date: 2026-10-20 02:24+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,6 +16,14 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: auth_forms.py:40
+msgid "Display name"
+msgstr "Nombre para mostrar"
+
+#: auth_forms.py:46
+msgid "You must accept the Terms and the Privacy Notice."
+msgstr "Debes aceptar los Términos y el Aviso de Privacidad."
 
 #: grimoire_api.py:93
 msgid "An ingredient with this name already exists."
@@ -211,9 +219,7 @@ msgstr "Nada coincide con esa búsqueda o etiqueta."
 msgid "The coven hasn't shared a spell yet."
 msgstr "El aquelarre aún no ha compartido ningún hechizo."
 
-#: grimoire_i18n.py:59 grimoire_i18n.py:71
-#: templates/the_cauldron/grimoire.html:74
-#: templates/the_cauldron/grimoire.html:254
+#: grimoire_i18n.py:59 grimoire_i18n.py:71 templates/the_cauldron/grimoire.html:74 templates/the_cauldron/grimoire.html:254
 msgid "Write a spell"
 msgstr "Escribir un hechizo"
 
@@ -306,8 +312,7 @@ msgstr "No hay ingredientes con ese nombre"
 msgid "Add it — it stays visible only to you until approved."
 msgstr "Agrégalo — solo tú lo verás hasta que se apruebe."
 
-#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:191
-#: templates/the_cauldron/grimoire.html:272
+#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:191 templates/the_cauldron/grimoire.html:272
 msgid "Add a reagent"
 msgstr "Agregar un reactivo"
 
@@ -592,8 +597,7 @@ msgstr "El hechizo se eliminó; solo quedan los cambios que guardaste."
 msgid "Scale"
 msgstr "Escalar"
 
-#: grimoire_i18n.py:157 services/grimoire_scaling.py:106
-#: templates/the_cauldron/grimoire.html:80
+#: grimoire_i18n.py:157 services/grimoire_scaling.py:106 templates/the_cauldron/grimoire.html:80
 msgid "Servings"
 msgstr "Porciones"
 
@@ -878,8 +882,7 @@ msgstr "1 pieza"
 msgid "1 glass"
 msgstr "1 vaso"
 
-#: grimoire_i18n.py:225 grimoire_serializers.py:114
-#: templates/the_cauldron/grimoire.html:212
+#: grimoire_i18n.py:225 grimoire_serializers.py:114 templates/the_cauldron/grimoire.html:212
 msgid "Density"
 msgstr "Densidad"
 
@@ -1658,6 +1661,227 @@ msgstr "Ese ingrediente ya no existe; usa un peso."
 msgid "Send the values as an object."
 msgstr "Envía los valores como un objeto."
 
+#: templates/account/account_inactive.html:4 templates/account/account_inactive.html:7
+msgid "Account inactive"
+msgstr "Cuenta inactiva"
+
+#: templates/account/account_inactive.html:8
+msgid "This account is inactive. Write to us if you think this is a mistake."
+msgstr "Esta cuenta está inactiva. Escríbenos si crees que es un error."
+
+#: templates/account/account_inactive.html:9 templates/account/verified_email_required.html:9
+msgid "Back to The Cauldron"
+msgstr "Volver a The Cauldron"
+
+#: templates/account/email/base_message.txt:1
+msgid "Hello from The Cauldron!"
+msgstr "¡Hola desde The Cauldron!"
+
+#: templates/account/email/base_message.txt:5
+msgid "— The Cauldron"
+msgstr "— The Cauldron"
+
+#: templates/account/email/google_linked_message.txt:4
+msgid "You just signed in to The Cauldron with Google, and we linked it to the account that uses this email. To keep that account yours only, we removed its password: from now on, use Continue with Google."
+msgstr "Acabas de entrar a The Cauldron con Google y lo vinculamos con la cuenta que usa este correo. Para que esa cuenta sea solo tuya, quitamos su contraseña: desde ahora usa Continuar con Google."
+
+#: templates/account/email/google_linked_message.txt:6
+msgid "If you want a password too, choose a new one here:"
+msgstr "Si también quieres una contraseña, elige una nueva aquí:"
+
+#: templates/account/email/google_linked_subject.txt:1
+msgid "Google is now how you sign in"
+msgstr "Ahora entras con Google"
+
+#: templates/account/email_confirm.html:4 templates/account/email_confirm.html:8
+msgid "Verify your email"
+msgstr "Verifica tu correo"
+
+#: templates/account/email_confirm.html:9
+#, python-format
+msgid "Confirm that %(email)s is your email address."
+msgstr "Confirma que %(email)s es tu correo electrónico."
+
+#: templates/account/email_confirm.html:13
+msgid "Confirm and enter"
+msgstr "Confirmar y entrar"
+
+#: templates/account/email_confirm.html:17 templates/account/password_reset_from_key.html:8
+msgid "This link no longer works"
+msgstr "Este enlace ya no funciona"
+
+#: templates/account/email_confirm.html:18
+msgid "The verification link expired or is invalid. Sign in with your email and password and we'll send you a new one."
+msgstr "El enlace de verificación expiró o no es válido. Inicia sesión con tu correo y contraseña y te enviaremos uno nuevo."
+
+#: templates/account/email_confirm.html:20
+msgid "Send a new link"
+msgstr "Enviar un enlace nuevo"
+
+#: templates/account/login.html:4 templates/account/login.html:7 templates/the_cauldron/auth/_base.html:10
+msgid "Enter The Cauldron"
+msgstr "Entra a The Cauldron"
+
+#: templates/account/login.html:8
+msgid "Sign in to tend your forge."
+msgstr "Inicia sesión para avivar tu forja."
+
+#: templates/account/login.html:17
+msgid "Light the fire"
+msgstr "Encender el fuego"
+
+#: templates/account/login.html:21
+msgid "Forgot password?"
+msgstr "¿Olvidaste tu contraseña?"
+
+#: templates/account/login.html:27
+msgid "New to The Cauldron?"
+msgstr "¿Eres nuevo en The Cauldron?"
+
+#: templates/account/login.html:28 templates/the_cauldron/landing.html:45
+msgid "Create an account"
+msgstr "Crear una cuenta"
+
+#: templates/account/password_reset.html:4 templates/account/password_reset.html:7
+msgid "Reset your password"
+msgstr "Restablece tu contraseña"
+
+#: templates/account/password_reset.html:8
+msgid "Enter your email and we'll send you a link to choose a new password."
+msgstr "Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva."
+
+#: templates/account/password_reset.html:16
+msgid "Send the link"
+msgstr "Enviar el enlace"
+
+#: templates/account/password_reset.html:19 templates/account/password_reset_done.html:11 templates/account/verification_sent.html:10 templates/socialaccount/authentication_error.html:9 templates/socialaccount/login_cancelled.html:9
+msgid "Back to sign in"
+msgstr "Volver a iniciar sesión"
+
+#: templates/account/password_reset_done.html:4 templates/account/password_reset_done.html:8 templates/account/verification_sent.html:4 templates/account/verification_sent.html:7 templates/account/verified_email_required.html:4 templates/account/verified_email_required.html:7
+msgid "Check your email"
+msgstr "Revisa tu correo"
+
+#: templates/account/password_reset_done.html:9
+msgid "If that email belongs to an account, a link to reset its password is on its way."
+msgstr "Si ese correo pertenece a una cuenta, va en camino un enlace para restablecer su contraseña."
+
+#: templates/account/password_reset_done.html:10
+msgid "Can't find it? Look in your spam folder."
+msgstr "¿No lo encuentras? Revisa tu carpeta de spam."
+
+#: templates/account/password_reset_from_key.html:4 templates/account/password_reset_from_key.html:12
+msgid "Choose a new password"
+msgstr "Elige una contraseña nueva"
+
+#: templates/account/password_reset_from_key.html:9
+msgid "The reset link expired or was already used."
+msgstr "El enlace para restablecer expiró o ya se usó."
+
+#: templates/account/password_reset_from_key.html:10
+msgid "Request a new link"
+msgstr "Pedir un enlace nuevo"
+
+#: templates/account/password_reset_from_key.html:19
+msgid "Save password"
+msgstr "Guardar contraseña"
+
+#: templates/account/password_reset_from_key_done.html:4 templates/account/password_reset_from_key_done.html:7
+msgid "Password changed"
+msgstr "Contraseña cambiada"
+
+#: templates/account/password_reset_from_key_done.html:8
+msgid "Your new password is set. Sign in with it."
+msgstr "Tu contraseña nueva quedó guardada. Inicia sesión con ella."
+
+#: templates/account/password_reset_from_key_done.html:10 templates/account/signup.html:39 templates/the_cauldron/mcp_info.html:49
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+#: templates/account/signup.html:4 templates/socialaccount/signup.html:4 templates/the_cauldron/landing.html:124 templates/the_cauldron/landing.html:573
+msgid "Create your account"
+msgstr "Crea tu cuenta"
+
+#: templates/account/signup.html:5
+msgid "Create your account in The Cauldron."
+msgstr "Crea tu cuenta en The Cauldron."
+
+#: templates/account/signup.html:8
+msgid "Join The Cauldron"
+msgstr "Únete a The Cauldron"
+
+#: templates/account/signup.html:9
+msgid "One account for The Forge, The Grimoire and The Journal."
+msgstr "Una sola cuenta para The Forge, El Grimorio y El Diario."
+
+#: templates/account/signup.html:27
+#, python-format
+msgid "I accept the <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Terms and Conditions</a> and the <a href=\"%(privacy_url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a>."
+msgstr "Acepto los <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Términos y Condiciones</a> y el <a href=\"%(privacy_url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a>."
+
+#: templates/account/signup.html:32 templates/socialaccount/signup.html:15
+msgid "Create account"
+msgstr "Crear cuenta"
+
+#: templates/account/signup.html:38
+msgid "Already have an account?"
+msgstr "¿Ya tienes una cuenta?"
+
+#: templates/account/verification_sent.html:8
+msgid "We sent you a link to verify your email address. Open it to light the fire — it expires in 24 hours."
+msgstr "Te enviamos un enlace para verificar tu correo. Ábrelo para encender el fuego; vence en 24 horas."
+
+#: templates/account/verification_sent.html:9
+msgid "Can't find it? Look in your spam folder, or sign in again and we'll send a new link."
+msgstr "¿No lo encuentras? Revisa tu carpeta de spam o vuelve a iniciar sesión y te enviaremos un enlace nuevo."
+
+#: templates/account/verified_email_required.html:8
+msgid "Verify your email address to continue. We sent you a new link."
+msgstr "Verifica tu correo para continuar. Te enviamos un enlace nuevo."
+
+#: templates/socialaccount/authentication_error.html:4 templates/socialaccount/authentication_error.html:7
+msgid "Google sign-in failed"
+msgstr "No se pudo entrar con Google"
+
+#: templates/socialaccount/authentication_error.html:8
+msgid "Something went wrong while signing in with Google. Try again, or use your email and password."
+msgstr "Algo salió mal al entrar con Google. Inténtalo de nuevo o usa tu correo y contraseña."
+
+#: templates/socialaccount/login.html:4 templates/the_cauldron/auth/_google.html:11
+msgid "Continue with Google"
+msgstr "Continuar con Google"
+
+#: templates/socialaccount/login.html:8
+#, python-format
+msgid "Continue with %(provider)s"
+msgstr "Continuar con %(provider)s"
+
+#: templates/socialaccount/login.html:9
+#, python-format
+msgid "You're about to sign in to The Cauldron with your %(provider)s account."
+msgstr "Vas a iniciar sesión en The Cauldron con tu cuenta de %(provider)s."
+
+#: templates/socialaccount/login.html:12
+msgid "Continue"
+msgstr "Continuar"
+
+#: templates/socialaccount/login_cancelled.html:4 templates/socialaccount/login_cancelled.html:7
+msgid "Sign-in cancelled"
+msgstr "Inicio de sesión cancelado"
+
+#: templates/socialaccount/login_cancelled.html:8
+msgid "You cancelled signing in with Google."
+msgstr "Cancelaste el inicio de sesión con Google."
+
+#: templates/socialaccount/signup.html:8
+msgid "One more step"
+msgstr "Un paso más"
+
+#: templates/socialaccount/signup.html:9
+#, python-format
+msgid "Choose the email for your Cauldron account to finish signing in with %(provider)s."
+msgstr "Elige el correo de tu cuenta de The Cauldron para terminar de entrar con %(provider)s."
+
 #: templates/the_cauldron/_assistant_link.html:5
 msgid "Use with your AI assistant"
 msgstr "Úsalo con tu asistente de IA"
@@ -1670,8 +1894,7 @@ msgstr "Términos"
 msgid "AI assistants"
 msgstr "Asistentes de IA"
 
-#: templates/the_cauldron/_footer_links.html:6
-#: templates/the_cauldron/mcp_info.html:163
+#: templates/the_cauldron/_footer_links.html:6 templates/the_cauldron/mcp_info.html:163
 msgid "Privacy"
 msgstr "Privacidad"
 
@@ -1683,21 +1906,19 @@ msgstr "Contacto"
 msgid "Profile"
 msgstr "Perfil"
 
-#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4
-#: templates/the_cauldron/grimoire.html:33
-#: templates/the_cauldron/grimoire.html:235
-#: templates/the_cauldron/legal/_base.html:32
-#: templates/the_cauldron/mcp_info.html:38
-#: templates/the_cauldron/nutrition.html:41
+#: templates/the_cauldron/auth/_base.html:11
+msgid "Sign in to The Cauldron."
+msgstr "Inicia sesión en The Cauldron."
+
+#: templates/the_cauldron/auth/_google.html:5
+msgid "or"
+msgstr "o"
+
+#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4 templates/the_cauldron/grimoire.html:33 templates/the_cauldron/grimoire.html:235 templates/the_cauldron/legal/_base.html:32 templates/the_cauldron/mcp_info.html:38 templates/the_cauldron/nutrition.html:41
 msgid "The Grimoire"
 msgstr "El Grimorio"
 
-#: templates/the_cauldron/forge.html:32 templates/the_cauldron/grimoire.html:34
-#: templates/the_cauldron/landing.html:35
-#: templates/the_cauldron/legal/_base.html:33
-#: templates/the_cauldron/mcp_info.html:39
-#: templates/the_cauldron/nutrition.html:42
-#: templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/forge.html:32 templates/the_cauldron/grimoire.html:34 templates/the_cauldron/landing.html:35 templates/the_cauldron/legal/_base.html:33 templates/the_cauldron/mcp_info.html:39 templates/the_cauldron/nutrition.html:42 templates/the_cauldron/nutrition.html:91
 msgid "The Journal"
 msgstr "El Diario"
 
@@ -1709,28 +1930,19 @@ msgstr "El Grimorio — The Cauldron"
 msgid "Keep, share and fork your spells — the recipe book of The Cauldron."
 msgstr "Guarda, comparte y adapta tus hechizos — el recetario de The Cauldron."
 
-#: templates/the_cauldron/grimoire.html:18
-#: templates/the_cauldron/mcp_info.html:23
-#: templates/the_cauldron/nutrition.html:26
-#: templates/the_cauldron/oauth_authorize.html:24
+#: templates/the_cauldron/grimoire.html:18 templates/the_cauldron/mcp_info.html:23 templates/the_cauldron/nutrition.html:26 templates/the_cauldron/oauth_authorize.html:24
 msgid "The Cauldron home"
 msgstr "Inicio de The Cauldron"
 
-#: templates/the_cauldron/grimoire.html:41
-#: templates/the_cauldron/mcp_info.html:47
-#: templates/the_cauldron/nutrition.html:49
-#: templates/the_cauldron/nutrition.html:79
-#: templates/the_cauldron/oauth_authorize.html:40
+#: templates/the_cauldron/grimoire.html:41 templates/the_cauldron/mcp_info.html:47 templates/the_cauldron/nutrition.html:49 templates/the_cauldron/nutrition.html:79 templates/the_cauldron/oauth_authorize.html:40
 msgid "Sign out"
 msgstr "Cerrar sesión"
 
-#: templates/the_cauldron/grimoire.html:51
-#: templates/the_cauldron/grimoire.html:68
+#: templates/the_cauldron/grimoire.html:51 templates/the_cauldron/grimoire.html:68
 msgid "Back to the Grimoire"
 msgstr "Volver al Grimorio"
 
-#: templates/the_cauldron/grimoire.html:68
-#: templates/the_cauldron/grimoire.html:121
+#: templates/the_cauldron/grimoire.html:68 templates/the_cauldron/grimoire.html:121
 msgid "Back to the spell"
 msgstr "Volver al hechizo"
 
@@ -1787,11 +1999,7 @@ msgstr "¿Falta un ingrediente? Agrégalo (se abre en otra pestaña)."
 msgid "Steps — one per line"
 msgstr "Pasos — uno por línea"
 
-#: templates/the_cauldron/grimoire.html:112
-#: templates/the_cauldron/grimoire.html:160
-#: templates/the_cauldron/grimoire.html:226
-#: templates/the_cauldron/nutrition.html:272
-#: templates/the_cauldron/oauth_authorize.html:84
+#: templates/the_cauldron/grimoire.html:112 templates/the_cauldron/grimoire.html:160 templates/the_cauldron/grimoire.html:226 templates/the_cauldron/nutrition.html:272 templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -1859,8 +2067,7 @@ msgstr "Pesa el platillo terminado sin la olla. Con eso se calcula la nutrición
 msgid "Save casting"
 msgstr "Guardar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:169
-#: templates/the_cauldron/grimoire.html:184
+#: templates/the_cauldron/grimoire.html:169 templates/the_cauldron/grimoire.html:184
 msgid "Back to the reagents"
 msgstr "Volver a los reactivos"
 
@@ -1977,9 +2184,17 @@ msgstr "Cada vez que preparaste un hechizo, del más reciente al más antiguo. S
 msgid "Units"
 msgstr "Unidades"
 
-#: templates/the_cauldron/landing.html:124
+#: templates/the_cauldron/landing.html:129
 msgid "✦ Use it from Claude — log meals from a photo, plan and train by chat"
 msgstr "✦ Úsalo desde Claude: registra comidas con una foto, planea y entrena por chat"
+
+#: templates/the_cauldron/landing.html:600
+msgid "Terms and Conditions"
+msgstr "Términos y Condiciones"
+
+#: templates/the_cauldron/landing.html:602
+msgid "Privacy Notice"
+msgstr "Aviso de Privacidad"
 
 #: templates/the_cauldron/mcp_info.html:9
 msgid "Use The Cauldron from your AI assistant"
@@ -1988,10 +2203,6 @@ msgstr "Usa The Cauldron desde tu asistente de IA"
 #: templates/the_cauldron/mcp_info.html:10
 msgid "Connect Claude or Gemini to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts."
 msgstr "Conecta Claude o Gemini a The Cauldron: registra comidas con una foto, encuentra recetas con lo que hay en tu refri, planea tu semana y registra tus entrenamientos."
-
-#: templates/the_cauldron/mcp_info.html:49
-msgid "Sign in"
-msgstr "Iniciar sesión"
 
 #: templates/the_cauldron/mcp_info.html:58
 msgid "The Cauldron · AI assistants"
@@ -2024,15 +2235,11 @@ msgstr "Conectar"
 msgid "This is the address of The Cauldron for your assistant:"
 msgstr "Esta es la dirección de The Cauldron para tu asistente:"
 
-#: templates/the_cauldron/mcp_info.html:79
-#: templates/the_cauldron/mcp_info.html:100
-#: templates/the_cauldron/mcp_info.html:108
-#: templates/the_cauldron/mcp_info.html:120
+#: templates/the_cauldron/mcp_info.html:79 templates/the_cauldron/mcp_info.html:100 templates/the_cauldron/mcp_info.html:108 templates/the_cauldron/mcp_info.html:120
 msgid "Copied"
 msgstr "Copiado"
 
-#: templates/the_cauldron/mcp_info.html:79
-#: templates/the_cauldron/mcp_info.html:108
+#: templates/the_cauldron/mcp_info.html:79 templates/the_cauldron/mcp_info.html:108
 msgid "Copy"
 msgstr "Copiar"
 
@@ -2072,8 +2279,7 @@ msgstr "Elige “Agregar conector personalizado” y pega la dirección de arrib
 msgid "Press Connect, sign in and allow access."
 msgstr "Presiona Conectar, inicia sesión y permite el acceso."
 
-#: templates/the_cauldron/mcp_info.html:100
-#: templates/the_cauldron/mcp_info.html:120
+#: templates/the_cauldron/mcp_info.html:100 templates/the_cauldron/mcp_info.html:120
 msgid "Copy the address"
 msgstr "Copiar la dirección"
 
@@ -2313,8 +2519,7 @@ msgstr "Por día, de medianoche a medianoche en tu zona horaria. “Sin meta” 
 msgid "Save goals"
 msgstr "Guardar metas"
 
-#: templates/the_cauldron/nutrition.html:152
-#: templates/the_cauldron/nutrition.html:187
+#: templates/the_cauldron/nutrition.html:152 templates/the_cauldron/nutrition.html:187
 msgid "How you're doing"
 msgstr "Cómo voy"
 
@@ -2434,13 +2639,11 @@ msgstr "Grasa (g)"
 msgid "Leave blank what you don't know — it's counted as unknown, never as zero."
 msgstr "Deja en blanco lo que no sepas: cuenta como desconocido, nunca como cero."
 
-#: templates/the_cauldron/nutrition.html:263
-#: templates/the_cauldron/nutrition.html:304
+#: templates/the_cauldron/nutrition.html:263 templates/the_cauldron/nutrition.html:304
 msgid "How much"
 msgstr "Cuánto"
 
-#: templates/the_cauldron/nutrition.html:265
-#: templates/the_cauldron/nutrition.html:306
+#: templates/the_cauldron/nutrition.html:265 templates/the_cauldron/nutrition.html:306
 msgid "Unit"
 msgstr "Unidad"
 

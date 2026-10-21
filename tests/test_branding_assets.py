@@ -49,8 +49,9 @@ def _html(response):
     return response.content.decode()
 
 
+# The login page reads the DB since #72 (allauth looks up social providers).
 @pytest.mark.parametrize("url_name", ["the_cauldron:landing", "the_cauldron:login"])
-def test_public_pages_use_cauldron_favicon(client, url_name):
+def test_public_pages_use_cauldron_favicon(db, client, url_name):
     html = _html(client.get(reverse(url_name)))
     assert CAULDRON_ICON_MARK in html
     assert CAULDRON_THEME_COLOR in html
@@ -65,7 +66,7 @@ def test_forge_uses_cauldron_favicon(web):
 
 
 @pytest.mark.parametrize("url_name", ["the_cauldron:landing", "the_cauldron:login"])
-def test_pages_use_shared_cauldron_loader(client, url_name):
+def test_pages_use_shared_cauldron_loader(db, client, url_name):
     """The loader ships as one file — never re-inlined into a template."""
     html = _html(client.get(reverse(url_name)))
     assert LOADER_SRC in html

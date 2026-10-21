@@ -1,0 +1,8 @@
+{% extends "account/email/base_message.txt" %}
+{% load i18n %}
+
+{% block content %}{% autoescape off %}{% trans "You just signed in to The Cauldron with Google, and we linked it to the account that uses this email. To keep that account yours only, we removed its password: from now on, use Continue with Google." %}
+
+{% trans "If you want a password too, choose a new one here:" %}
+
+{{ password_reset_url }}{% endautoescape %}{% endblock content %}

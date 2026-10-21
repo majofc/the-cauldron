@@ -42,6 +42,7 @@
   {% if user.is_authenticated %}
     <a href="{% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter the Forge →</a>
   {% else %}
+    <a href="{% url 'the_cauldron:register' %}" class="btn-ghost btn-sm">{% trans "Create an account" %}</a>
     <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter →</a>
   {% endif %}
 </div>
@@ -117,7 +118,11 @@
     </p>
 
     <div class="cauldron-hero-cta">
+      {% if user.is_authenticated %}
       <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Begin Your Practice</a>
+      {% else %}
+      <a href="{% url 'the_cauldron:register' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Create your account" %}</a>
+      {% endif %}
       <a href="#pillars" class="btn-cauldron btn-cauldron--ghost">Explore the Arts</a>
     </div>
     <p class="cauldron-hero-assistant">
@@ -562,7 +567,11 @@
       The cauldron is ready. The flame is lit. What will you preserve?
     </p>
     <div class="cauldron-hero-cta">
+      {% if user.is_authenticated %}
       <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Cauldron</a>
+      {% else %}
+      <a href="{% url 'the_cauldron:register' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Create your account" %}</a>
+      {% endif %}
     </div>
   </section>
 
@@ -586,6 +595,11 @@
     <p class="cauldron-footer-meta">
       Part of <a href="{% url 'welcome' %}" style="color:inherit; text-decoration:underline; text-underline-offset:3px;">Arcano</a>
       &nbsp;·&nbsp; The Third Arcana
+    </p>
+    <p class="cauldron-footer-meta cauldron-footer-legal">
+      <a href="{% url 'the_cauldron:terms' %}">{% trans "Terms and Conditions" %}</a>
+      &nbsp;·&nbsp;
+      <a href="{% url 'the_cauldron:privacy' %}">{% trans "Privacy Notice" %}</a>
     </p>
   </footer>
 
