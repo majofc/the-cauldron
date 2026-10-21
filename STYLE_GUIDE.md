@@ -240,6 +240,22 @@ citation — no uncited assertions.
 
 ---
 
+## Account pages (`.forge-auth-*`, #72)
+
+Sign-in, sign-up, verification, reset and Google share one shell, `the_cauldron/auth/_base.html`: a
+`.cauldron-card.forge-auth-card` (max 420px, corner ornaments) inside `.forge-auth`. Inside the card:
+
+- `.forge-title` / `.forge-subtitle` heading pair, then `.forge-form` with `.forge-field` inputs and a
+  full-width `.btn-cauldron--primary` submit. Field errors are `.forge-error` right under the field.
+- `.forge-check` — checkbox + label row (the Terms/Privacy acceptance); links in `--cauldron-paprika-light`.
+- `.forge-auth-divider` — "or" between the form and Google: hairlines in `--cauldron-paprika-border`,
+  uppercase `--cauldron-cream-muted` label.
+- `.forge-auth-google` — full-width `.btn-cauldron--ghost` with Google's own four-colour "G" (brand mark,
+  the one place non-token colours are allowed).
+- `.forge-auth-links` (right-aligned, e.g. "Forgot password?"), `.forge-auth-alt` (the switch to
+  sign-up / sign-in at the bottom), `.forge-auth-note` (muted hint).
+- `.forge-hp` — the honeypot: off-screen, never `display: none`.
+
 ## The Grimoire (recipe book)
 
 The Grimoire is a sub-section of The Cauldron. It **extends** the Cauldron and arcano tokens and

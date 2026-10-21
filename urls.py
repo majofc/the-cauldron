@@ -1,3 +1,4 @@
+from allauth.account import views as allauth_views
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView
 from django.urls import include, path
@@ -112,14 +113,11 @@ urlpatterns = [
         views.grimoire_casting_edit_view,
         name='grimoire-casting-edit',
     ),
-    path(
-        'login/',
-        auth_views.LoginView.as_view(
-            template_name='the_cauldron/login.html',
-            redirect_authenticated_user=True,
-        ),
-        name='login',
-    ),
+    # Sign-in and sign-up go through allauth (#72) so email verification and
+    # rate limits apply; the rest of its flow lives under /cauldron/account/.
+    path('login/', allauth_views.LoginView.as_view(), name='login'),
+    path('register/', allauth_views.SignupView.as_view(), name='register'),
+    path('password-reset/', allauth_views.PasswordResetView.as_view(), name='password-reset'),
     path(
         'logout/',
         auth_views.LogoutView.as_view(next_page='the_cauldron:landing'),

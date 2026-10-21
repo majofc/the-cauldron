@@ -1,0 +1,6 @@
+{% load i18n %}{% autoescape off %}{% trans "Hello from The Cauldron!" %}
+
+{% block content %}{% endblock content %}
+
+{% trans "— The Cauldron" %}
+{% endautoescape %}

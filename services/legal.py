@@ -25,7 +25,7 @@ SENSITIVE_CONSENT = LegalAcceptance.Document.SENSITIVE_CONSENT
 
 CURRENT_VERSIONS = {
     TERMS: "1.2",
-    PRIVACY: "1.3",
+    PRIVACY: "1.4",
     SENSITIVE_CONSENT: "1.0",
 }
 # Accepting these is required to use any part of The Cauldron.

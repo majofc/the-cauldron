@@ -455,6 +455,13 @@ body {
   letter-spacing: 0.05em;
 }
 
+.cauldron-footer-legal a {
+  color: var(--cauldron-cream-dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cauldron-footer-legal a:hover { color: var(--cauldron-paprika-light); }
+
 /* ─────────────────────────────────────────────────
    LOADER — CauldronLoader (matches design spec)
 ───────────────────────────────────────────────── */
