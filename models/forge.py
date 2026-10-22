@@ -58,6 +58,9 @@ class MovementPattern(ForgeBaseModel):
 
     key = models.CharField(max_length=32, choices=Key.choices, unique=True)
     name = models.CharField(max_length=80)
+    # Spanish display name ("" = show ``name``). ``name`` stays English: it is the
+    # identifier the API, norms and forge.js key on (forge_i18n.localized).
+    name_es = models.CharField(max_length=80, blank=True, default="")
     primary_muscles = models.CharField(max_length=200, blank=True, default="")
     is_lower_body = models.BooleanField(default=False)
 
@@ -92,6 +95,7 @@ class Equipment(ForgeBaseModel):
 
     key = models.CharField(max_length=32, choices=Key.choices, unique=True)
     name = models.CharField(max_length=80)
+    name_es = models.CharField(max_length=80, blank=True, default="")
     is_loadable = models.BooleanField(default=False)
     load_unit = models.CharField(
         max_length=16, choices=LoadUnit.choices, default=LoadUnit.NONE
@@ -119,6 +123,7 @@ class Muscle(ForgeBaseModel):
 
     key = models.SlugField(max_length=40, unique=True)
     name = models.CharField(max_length=60)
+    name_es = models.CharField(max_length=60, blank=True, default="")
     region = models.CharField(
         max_length=8, choices=Region.choices, default=Region.FRONT
     )
@@ -152,6 +157,9 @@ class Exercise(ForgeBaseModel):
         MovementPattern, on_delete=models.CASCADE, related_name="exercises"
     )
     name = models.CharField(max_length=120)
+    # Spanish display name ("" = show ``name``); ``name`` stays the English key
+    # (services/norms.py looks norms up by it).
+    name_es = models.CharField(max_length=120, blank=True, default="")
     difficulty_rank = models.PositiveIntegerField(
         help_text="Order within the pattern's ladder; lower = easier."
     )
@@ -226,6 +234,7 @@ class Exercise(ForgeBaseModel):
     )
     video_url = models.URLField(blank=True, default="")
     cues = models.TextField(blank=True, default="")
+    cues_es = models.TextField(blank=True, default="")
     # Recommended rest after a working set, in seconds. Evidence-based: longer
     # rest (≥2 min) favours strength/heavy compounds; ~60-90s for endurance/
     # accessory; ~60s for isometric holds. See seed_forge.rest_for().

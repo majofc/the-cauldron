@@ -392,6 +392,162 @@ PER_SIDE = {
 ASSISTED = {"Band-Assisted Row", "Band-Assisted Pull-up"}
 
 
+# ── Spanish (Mexican) display text ─────────────────────────────────────────
+# Written to ``name_es`` / ``cues_es``; ``name`` stays the English key (norms,
+# progress and forge.js look rows up by it). A row missing here shows English.
+# Glossary: the_cauldron/CLAUDE.md → "Spanish glossary".
+PATTERNS_ES = {
+    "horizontal_push": "Empuje horizontal",
+    "vertical_pull": "Jalón vertical",
+    "vertical_push": "Empuje vertical",
+    "lower_unilateral": "Pierna (unilateral)",
+    "core_anti_extension": "Core (antiextensión)",
+    "hinge": "Bisagra / cadena posterior",
+    "grip": "Agarre / antebrazos",
+}
+
+EQUIPMENT_ES = {
+    "bodyweight": "Peso corporal",
+    "pullup_bar": "Barra de dominadas",
+    "dumbbells": "Mancuernas",
+    "barbell": "Barra y discos",
+    "bands": "Ligas de resistencia",
+    "bench": "Banco",
+    "kettlebell": "Pesa rusa",
+    "rings": "Anillas",
+    "ab_wheel": "Rueda abdominal",
+    "fat_grips": "Fat grips (agarres gruesos)",
+}
+
+MUSCLES_ES = {
+    "chest": "Pecho",
+    "front_delts": "Deltoides anterior",
+    "side_delts": "Deltoides lateral",
+    "rear_delts": "Deltoides posterior",
+    "biceps": "Bíceps",
+    "triceps": "Tríceps",
+    "forearms": "Antebrazos",
+    "abs": "Abdomen",
+    "obliques": "Oblicuos",
+    "quads": "Cuádriceps",
+    "lats": "Dorsales",
+    "traps": "Trapecio",
+    "mid_back": "Espalda media",
+    "lower_back": "Espalda baja",
+    "glutes": "Glúteos",
+    "hamstrings": "Isquiotibiales",
+    "calves": "Pantorrillas",
+}
+
+# English name → (Spanish name, Spanish cues).
+EXERCISES_ES = {
+    # ── Empuje horizontal ──
+    "Wall Push-up": ("Lagartija en pared", "Cuerpo en línea; extiende los brazos por completo."),
+    "Incline Push-up": ("Lagartija inclinada", "Manos elevadas; aprieta el abdomen."),
+    "Knee Push-up": ("Lagartija de rodillas", "Cadera abajo; pecho al piso."),
+    "Push-up": ("Lagartija", "Codos a ~45°; rango completo."),
+    "Incline Archer Push-up": ("Lagartija arquero inclinada",
+                               "Manos elevadas; carga el peso en un brazo, el otro estirado."),
+    "Diamond Push-up": ("Lagartija diamante", "Manos juntas; codos pegados."),
+    "Archer Push-up": ("Lagartija arquero", "Pasa el peso a un brazo; con control."),
+    "Typewriter Push-up": ("Lagartija máquina de escribir",
+                           "Quédate abajo; deslízate de lado a lado, codos cerrados."),
+    "Elevated One-Arm Push-up": ("Lagartija a un brazo elevada",
+                                 "Una mano en una caja o banco, la otra en la espalda. Pies abiertos, "
+                                 "cadera derecha. Baja la superficie cuando se vuelva fácil."),
+    "One-Arm Push-up": ("Lagartija a un brazo", "Abre la base; aprieta fuerte, sin girar el torso."),
+    "Dumbbell Bench Press": ("Press de banca con mancuernas", "Empuja con el pecho; rango completo."),
+    "Barbell Bench Press": ("Press de banca con barra", "Barra al pecho; espalda firme."),
+    # ── Jalón vertical ──
+    "Band-Assisted Row": ("Remo asistido con liga", "Junta los omóplatos."),
+    "Australian Row": ("Remo australiano", "Cuerpo recto; lleva el pecho a la barra."),
+    "Single-Arm Australian Row": ("Remo australiano a un brazo",
+                                  "Una mano en la barra; cuerpo recto, lleva el pecho hacia esa mano."),
+    "Negative Pull-up": ("Dominada negativa", "Baja en 5 s; controla el descenso."),
+    "Band-Assisted Pull-up": ("Dominada asistida con liga",
+                              "Desde colgado por completo hasta la barbilla sobre la barra."),
+    "Pull-up": ("Dominada", "Colgado por completo; barbilla sobre la barra."),
+    "Chin-up": ("Dominada supina", "Agarre supino; sube la barbilla sobre la barra."),
+    "Archer Pull-up": ("Dominada arquero", "Jala hacia un lado; el otro brazo estirado."),
+    "Archer Chin-up": ("Dominada supina arquero", "Arquero con agarre supino; jala hacia un lado."),
+    "Dumbbell Row": ("Remo con mancuerna", "Espalda plana; rema hacia la cadera."),
+    # ── Empuje vertical ──
+    "Incline Pike Push-up": ("Lagartija pike inclinada", "Cadera alta; cabeza entre las manos."),
+    "Pike Push-up": ("Lagartija pike", "Posición pike; coronilla hacia el piso."),
+    "Wall Handstand Hold": ("Parada de manos en pared", "Cuerpo hueco; empuja hacia arriba."),
+    "Assisted Handstand Push-up": ("Flexión en parada de manos asistida", "Rango parcial; con control."),
+    "Dumbbell Shoulder Press": ("Press de hombro con mancuernas", "Empuja sobre la cabeza; costillas abajo."),
+    "Barbell Overhead Press": ("Press militar con barra", "Barra sobre la cabeza; glúteos apretados."),
+    # ── Pierna (unilateral) ──
+    "Squat": ("Sentadilla", "Pies al ancho de hombros; lleva la cadera atrás y abajo, pecho alto."),
+    "Assisted Split Squat": ("Sentadilla dividida asistida",
+                             "Sujétate de un apoyo; rodilla alineada con la punta del pie."),
+    "Goblet Squat": ("Sentadilla goblet", "Peso al pecho; siéntate entre las caderas."),
+    "Split Squat": ("Sentadilla dividida", "Torso erguido; rodilla de atrás hacia abajo."),
+    "Bulgarian Split Squat": ("Sentadilla búlgara", "Pie de atrás elevado; baja en línea recta."),
+    "Barbell Back Squat": ("Sentadilla trasera con barra", "Barra sobre el trapecio; llega a profundidad."),
+    "Dumbbell Bulgarian Split Squat": ("Sentadilla búlgara con mancuernas", "Con peso; pie de atrás elevado."),
+    "Assisted Pistol Squat": ("Sentadilla pistola asistida", "Sujétate de un apoyo; profundidad completa."),
+    "Pistol Squat": ("Sentadilla pistola", "Una pierna; descenso controlado."),
+    "Shrimp Squat": ("Sentadilla camarón", "Toma el pie de atrás; baja recto, pecho alto."),
+    "Dragon Squat": ("Sentadilla dragón", "Pasa la pierna de atrás por detrás; controla el descenso."),
+    "Weighted Pistol Squat": ("Sentadilla pistola con peso",
+                              "Mancuerna o pesa rusa al pecho; una pierna, descenso controlado."),
+    "Weighted Dragon Squat": ("Sentadilla dragón con peso",
+                              "Peso ligero al pecho; pasa la pierna de atrás por detrás, controla el descenso."),
+    # ── Core (antiextensión) ──
+    "Knee Plank": ("Plancha de rodillas", "Línea recta de las rodillas a la cabeza."),
+    "Plank": ("Plancha", "Glúteos y abdomen apretados; sin hundir la cadera."),
+    "Extended Plank": ("Plancha extendida", "Manos adelante de los hombros."),
+    "RKC Plank": ("Plancha RKC", "Tensión máxima; retroversión de cadera."),
+    "Hollow Body Hold": ("Posición hollow", "Espalda baja pegada al piso."),
+    "Band Rollout": ("Rollout con liga", "Aprieta fuerte; no arquees la espalda."),
+    "Knee Ab Wheel Rollout": ("Rueda abdominal de rodillas",
+                              "Rodillas en el piso; aprieta fuerte y rueda sin arquear la espalda."),
+    "Standing Ab Wheel Rollout": ("Rueda abdominal de pie",
+                                  "Desde de pie; cuerpo hueco, rueda de ida y vuelta sin arquear."),
+    # ── Bisagra / cadena posterior ──
+    "Glute Bridge": ("Puente de glúteo", "Empuja la cadera; aprieta los glúteos."),
+    "Single-Leg Glute Bridge": ("Puente de glúteo a una pierna", "Una pierna; cadera nivelada."),
+    "Assisted Nordic Curl": ("Curl nórdico asistido", "Controla la bajada; usa las manos."),
+    "Nordic Curl": ("Curl nórdico", "Los isquiotibiales bajan el cuerpo despacio."),
+    "Dumbbell Romanian Deadlift": ("Peso muerto rumano con mancuernas", "Rodillas suaves; bisagra desde la cadera."),
+    "Barbell Romanian Deadlift": ("Peso muerto rumano con barra", "Barra pegada; espalda plana."),
+    "Kettlebell Swing": ("Swing con pesa rusa", "Golpe de cadera; no es sentadilla."),
+    # ── Agarre / antebrazos ──
+    "Towel Wring Hold": ("Torsión de toalla",
+                         "Retuerce una toalla enrollada con toda tu fuerza, en ambos sentidos. Aprieta, no jales."),
+    "Assisted Bar Hang": ("Colgada asistida en barra",
+                          "Pies en el piso o en una caja cargando parte de tu peso; hombros abajo."),
+    "Dead Hang": ("Colgada en barra",
+                  "Colgado por completo, ambas manos, hombros activos. La prueba de agarre de la Prueba."),
+    "Towel Bar Hang": ("Colgada con toalla",
+                       "Cuélgate de una toalla sobre la barra, un extremo en cada mano. "
+                       "Gruesa y resbalosa a propósito."),
+    "Fat-Grip Hang": ("Colgada con fat grips",
+                      "Fat grips en la barra; apriétalos. Termina la serie cuando se abran las manos, "
+                      "no los hombros."),
+    "Plate Pinch Hold": ("Pinza de discos",
+                         "Pinza dos discos con el lado liso hacia fuera en cada mano, brazos a los costados. "
+                         "Empieza con 5-10 kg por mano."),
+    "Assisted One-Arm Hang": ("Colgada a un brazo asistida",
+                              "Una mano cuelga, la otra sujeta la muñeca o una liga. Por lado."),
+    "One-Arm Dead Hang": ("Colgada a un brazo",
+                          "Colgado por completo de una mano, hombro activo, sin balancearte. Por lado."),
+    "One-Arm Towel Hang": ("Colgada a un brazo con toalla", "Una mano en una toalla sobre la barra. Por lado."),
+    "Farmer Hold": ("Sostén de granjero",
+                    "Una mancuerna en cada mano, de pie y erguido, sostén. El peso indicado es por mano."),
+    "Farmer Walk": ("Caminata de granjero",
+                    "Camina con una mancuerna en cada mano (~20 m cada 20-25 s). El peso indicado es por mano."),
+    "Suitcase Carry": ("Cargada de maleta",
+                       "Una pesa rusa, de un lado, costillas abajo y sin inclinarte (~20 m cada 20-25 s). "
+                       "Por lado."),
+    "Double-Overhand Barbell Hold": ("Sostén de barra con doble agarre prono",
+                                     "Sostén una barra cargada a la altura de la cadera, pulgares por encima, "
+                                     "sin straps ni agarre de gancho."),
+}
+
+
 def rest_for(mode, rmin, rmax, timed, pattern_key=None):
     """Evidence-based rest after a working set, in seconds.
 
@@ -426,7 +582,12 @@ class Command(BaseCommand):
         for key, name, muscles, lower in PATTERNS:
             obj, _ = MovementPattern.objects.update_or_create(
                 key=key,
-                defaults={"name": name, "primary_muscles": muscles, "is_lower_body": lower},
+                defaults={
+                    "name": name,
+                    "name_es": PATTERNS_ES.get(key, ""),
+                    "primary_muscles": muscles,
+                    "is_lower_body": lower,
+                },
             )
             patterns[key] = obj
 
@@ -434,14 +595,19 @@ class Command(BaseCommand):
         for key, name, loadable, unit in EQUIPMENT:
             obj, _ = Equipment.objects.update_or_create(
                 key=key,
-                defaults={"name": name, "is_loadable": loadable, "load_unit": unit},
+                defaults={
+                    "name": name,
+                    "name_es": EQUIPMENT_ES.get(key, ""),
+                    "is_loadable": loadable,
+                    "load_unit": unit,
+                },
             )
             equipment[key] = obj
 
         muscles = {}
         for key, name, region in MUSCLES:
             obj, _ = Muscle.objects.update_or_create(
-                key=key, defaults={"name": name, "region": region}
+                key=key, defaults={"name": name, "name_es": MUSCLES_ES.get(key, ""), "region": region}
             )
             muscles[key] = obj
 
@@ -455,6 +621,7 @@ class Command(BaseCommand):
                 # Optional trailing elements: grip label, then variant group.
                 grip = rung[9] if len(rung) > 9 else Exercise.Grip.NA
                 variant_group = rung[10] if len(rung) > 10 else ""
+                name_es, cues_es = EXERCISES_ES.get(name, ("", ""))
                 # An equipment entry that is a tuple means "any one of these"
                 # (a bar OR rings); a plain string is required outright.
                 required = [e for e in equips if not isinstance(e, tuple)]
@@ -472,6 +639,8 @@ class Command(BaseCommand):
                         "is_assisted": name in ASSISTED,
                         "placement_threshold": threshold,
                         "cues": cues,
+                        "name_es": name_es,
+                        "cues_es": cues_es,
                         "grip": grip,
                         "variant_group": variant_group,
                         "video_url": VIDEOS.get(name, ""),
