@@ -74,6 +74,17 @@
     return '<g class="' + cls + '" data-muscle="' + key + '">' + shapes + '</g>';
   }
 
+  // Labels come translated from the Forge page (#forge-i18n, forge_i18n.py).
+  var FALLBACK = { anat_back_map: 'Back muscle map', anat_front_map: 'Front muscle map', anat_back: 'Back', anat_front: 'Front' };
+  var STRINGS = null;
+  function label(key) {
+    if (STRINGS === null) {
+      var el = document.getElementById('forge-i18n');
+      try { STRINGS = el ? JSON.parse(el.textContent) : {}; } catch (e) { STRINGS = {}; }
+    }
+    return STRINGS[key] || FALLBACK[key];
+  }
+
   function figureMarkup(regions, worked, isBack) {
     var cx = isBack ? 190 : 60;
     var body = silhouette(cx);
@@ -84,10 +95,10 @@
     return (
       '<figure class="fanat-figure">' +
       '<svg class="fanat-svg" viewBox="' + vb + '" role="img" ' +
-      'aria-label="' + (isBack ? 'Back muscle map' : 'Front muscle map') + '">' +
+      'aria-label="' + label(isBack ? 'anat_back_map' : 'anat_front_map') + '">' +
       body +
       '</svg>' +
-      '<figcaption class="fanat-caption">' + (isBack ? 'Back' : 'Front') + '</figcaption>' +
+      '<figcaption class="fanat-caption">' + label(isBack ? 'anat_back' : 'anat_front') + '</figcaption>' +
       '</figure>'
     );
   }
