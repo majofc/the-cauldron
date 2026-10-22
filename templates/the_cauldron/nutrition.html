@@ -8,7 +8,7 @@ Daily nutrition pages (#80–#84), one template switched by ``page``:
 Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 {% endcomment %}
 
-{% block title %}{% if page == "profile" %}{% trans "Your profile — The Cauldron" %}{% elif page == "journal" %}{% trans "The Journal — The Cauldron" %}{% else %}{% trans "Terms update — The Cauldron" %}{% endif %}{% endblock %}
+{% block title %}{% if page == "profile" %}{% trans "Your profile — The Cauldron" %}{% elif page == "journal" %}{% trans "The Cauldron" %}{% else %}{% trans "Terms update — The Cauldron" %}{% endif %}{% endblock %}
 {% block meta_description %}{% trans "Daily nutrient goals, a meal log and a meal planner — The Cauldron." %}{% endblock %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
@@ -23,7 +23,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+<a href="{% url 'the_cauldron:journal' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -36,10 +36,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight{% if page == 'journal' %} active{% endif %}">{% trans "The Cauldron" %}</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight{% if page == 'journal' %} active{% endif %}">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
@@ -88,7 +87,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     <h1 class="grim-title">{% trans "Your profile" %}</h1>
     <p class="grim-subtitle">{% trans "Your daily goals, and how often you meet them." %}</p>
     {% else %}
-    <h1 class="grim-title">{% trans "The Journal" %}</h1>
+    <h1 class="grim-title">{% trans "The Cauldron" %}</h1>
     <p class="grim-subtitle">{% trans "What you ate, what's planned, and how the day adds up." %}</p>
     <nav class="nut-daybar" aria-label="{% trans 'Choose a day' %}">
       <a class="grim-unit-btn" href="?date={{ prev_day }}" aria-label="{% trans 'Previous day' %}">←</a>
@@ -150,9 +149,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       <div class="grim-spell-page-body nut-progress-link">
         <div>
           <h2 class="grim-h2" id="nut-progress-title">{% trans "How you're doing" %}</h2>
-          <p class="grim-help">{% trans "Your last 24 hours or 7 days against these goals, and how often you're in range, live in the Journal." %}</p>
+          <p class="grim-help">{% trans "Your last 24 hours or 7 days against these goals, and how often you're in range, live in The Cauldron." %}</p>
         </div>
-        <a class="btn-cauldron btn-cauldron--primary" href="{% url 'the_cauldron:journal' %}">{% trans "Open the Journal" %}</a>
+        <a class="btn-cauldron btn-cauldron--primary" href="{% url 'the_cauldron:journal' %}">{% trans "Open The Cauldron" %}</a>
       </div>
     </section>
 
