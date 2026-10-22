@@ -70,6 +70,9 @@ class CauldronProfile(ForgeBaseModel):
     )
     # IANA name; a day runs midnight to midnight here.
     timezone = models.CharField(max_length=64, default=DEFAULT_TIMEZONE)
+    # The language last chosen with the switcher ("" = never chosen). Applied on
+    # login so the choice follows the user across browsers (the_cauldron.language).
+    language = models.CharField(max_length=8, blank=True, default="", choices=settings.LANGUAGES)
 
     def __str__(self):
         return f"Cauldron profile for {self.user}"

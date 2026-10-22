@@ -3,6 +3,7 @@
 {% get_current_language as LANGUAGE_CODE %}
 
 {% block title %}{% if LANGUAGE_CODE == "es" %}Aviso de Privacidad — The Cauldron{% else %}Privacy Notice — The Cauldron{% endif %}{% endblock %}
+{% block meta_description %}{% trans "How The Cauldron collects, uses and protects your personal data." %}{% endblock %}
 
 {% block legal_body %}
 {% if LANGUAGE_CODE == "es" %}
