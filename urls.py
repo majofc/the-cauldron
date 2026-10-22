@@ -1,5 +1,4 @@
 from django.contrib.auth import views as auth_views
-from django.views.generic import TemplateView
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
@@ -82,8 +81,12 @@ api_urlpatterns = [
 
 urlpatterns = [
     path('', views.landing_view, name='landing'),
-    path('terms/', TemplateView.as_view(template_name='the_cauldron/legal/terms.html'), name='terms'),
-    path('privacy/', TemplateView.as_view(template_name='the_cauldron/legal/privacy.html'), name='privacy'),
+    path('terms/', views.legal_page_view, {'page': 'terms'}, name='terms'),
+    path('privacy/', views.legal_page_view, {'page': 'privacy'}, name='privacy'),
+    # Spanish URLs of the public pages, for search engines (hreflang alternates).
+    path('es/', views.landing_es_view, name='landing-es'),
+    path('es/terms/', views.legal_page_es_view, {'page': 'terms'}, name='terms-es'),
+    path('es/privacy/', views.legal_page_es_view, {'page': 'privacy'}, name='privacy-es'),
     path('accept/', views.legal_accept_view, name='legal-accept'),
     path('profile/', views.profile_view, name='profile'),
     path('journal/', views.journal_view, name='journal'),

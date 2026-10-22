@@ -31,13 +31,13 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
     <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
   </svg>
-  The Cauldron
+  {% trans "The Cauldron" %}
 </a>
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">The Forge</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
 <li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight{% if page == 'journal' %} active{% endif %}">{% trans "The Journal" %}</a></li>
 {% endblock %}
@@ -362,7 +362,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     units: "{{ unit_system|escapejs }}",
   };
 </script>
-<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+{% include 'the_cauldron/_loader_script.html' %}
 <script src="{% static 'the_cauldron/js/nutrition.js' %}"></script>
 {% endblock %}
 

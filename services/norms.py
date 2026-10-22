@@ -49,6 +49,9 @@ was measured at. Such movements return ``has_data=False``.
 from dataclasses import dataclass
 from typing import Optional
 
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
+
 # Which exercise (by exact catalog name) maps to which norm table. Only the
 # movements that genuinely match a normed test are scored; everything else
 # returns "no peer data".
@@ -74,13 +77,13 @@ AGE_BRACKETS = [(20, 29), (30, 39), (40, 49), (50, 59), (60, 69)]
 
 NORMS = {
     "pushup": {
-        "label": "Push-ups",
+        "label": gettext_noop("Push-ups"),
         "metric": "reps",
         "confidence": "good",
         "source": "CSEP-PATH percentiles (Payne et al., 2000)",
         "url": "https://fitnessnorms.com/strength/push-ups/",
         "type": "percentiles",
-        "female_note": "Female norms use the modified (knee) push-up position.",
+        "female_note": gettext_noop("Female norms use the modified (knee) push-up position."),
         "tables": {
             "male": {
                 (20, 29): {5: 8, 25: 22, 50: 25, 75: 29, 95: 40},
@@ -99,7 +102,7 @@ NORMS = {
         },
     },
     "plank": {
-        "label": "Plank hold",
+        "label": gettext_noop("Plank hold"),
         "metric": "seconds",
         "confidence": "thin",
         "source": "Fitness norms for the plank (Chase/Brigham et al., IJES) — "
@@ -128,7 +131,7 @@ NORMS = {
         },
     },
     "pullup": {
-        "label": "Pull-ups",
+        "label": gettext_noop("Pull-ups"),
         "metric": "reps",
         "confidence": "thin",
         "source": "Topend Sports adult categories, 18-35 (category bands → "
@@ -153,7 +156,7 @@ NORMS = {
     # estimated decline (~15%/decade; flagged via estimated_brackets). "<1" rep
     # at P5 is recorded as 1. See the_cauldron/README.md for replacement notes.
     "australian_row": {
-        "label": "Australian row",
+        "label": gettext_noop("Australian row"),
         "metric": "reps",
         "confidence": "thin",
         "source": "Strength Level community rep standards for the inverted row "
@@ -180,7 +183,7 @@ NORMS = {
         },
     },
     "pike_pushup": {
-        "label": "Pike push-up",
+        "label": gettext_noop("Pike push-up"),
         "metric": "reps",
         "confidence": "thin",
         "source": "Strength Level community rep standards for the pike push-up "
@@ -207,7 +210,7 @@ NORMS = {
         },
     },
     "glute_bridge": {
-        "label": "Glute bridge",
+        "label": gettext_noop("Glute bridge"),
         "metric": "reps",
         "confidence": "thin",
         "source": "Strength Level community rep standards for the bodyweight "
@@ -241,7 +244,7 @@ NORMS = {
     # ~30-60s typical for men, ~20-45s for women, declining ~15%/decade past 40).
     # The WHOLE table is therefore flagged ``estimated``, not just ages 40+.
     "dead_hang": {
-        "label": "Dead hang",
+        "label": gettext_noop("Dead hang"),
         "metric": "seconds",
         "confidence": "estimated",
         "estimated": True,
@@ -273,7 +276,7 @@ NORMS = {
     # the rough per-leg-to-bilateral rep ratio. The 0.5 ratio is our assumption,
     # so the WHOLE table is flagged ``estimated`` (not just ages 40+).
     "squat": {
-        "label": "Bodyweight squat",
+        "label": gettext_noop("Bodyweight squat"),
         "metric": "reps",
         "confidence": "estimated",
         "estimated": True,
@@ -378,28 +381,30 @@ def score(exercise_name: str, value, sex: str, age: Optional[int]) -> PeerScore:
     norm_key = EXERCISE_NORMS.get(exercise_name)
     if norm_key is None:
         return PeerScore(False, confidence="none",
-                         reason=f"No published peer benchmark for {exercise_name} yet.")
+                         reason=_("No published peer benchmark for %(name)s yet.") % {"name": exercise_name})
     if sex not in ("male", "female"):
-        return PeerScore(False, reason="Add your sex in Equipment to unlock peer scoring.")
+        return PeerScore(False, reason=_("Add your sex in Equipment to unlock peer scoring."))
     if age is None:
-        return PeerScore(False, reason="Add your birth year in Equipment to unlock peer scoring.")
+        return PeerScore(False, reason=_("Add your birth year in Equipment to unlock peer scoring."))
 
     norm = NORMS[norm_key]
+    label = _(norm["label"])  # gettext_noop'd above; translated per request
     if "max_age" in norm and age > norm["max_age"]:
         return PeerScore(False, confidence=norm["confidence"],
-                         reason=f"{norm['label']} norms only cover ages up to {norm['max_age']}.")
+                         reason=_("%(label)s norms only cover ages up to %(age)s.")
+                         % {"label": label, "age": norm["max_age"]})
 
     table = norm["tables"].get(sex)
     if not table:
         return PeerScore(False, confidence=norm["confidence"],
-                         reason=f"No {norm['label']} peer data for this group yet.")
+                         reason=_("No %(label)s peer data for this group yet.") % {"label": label})
 
     brackets = list(table.keys())
     bracket = _bracket(age, sorted(brackets))
     anchors = table.get(bracket)
     if anchors is None:
         return PeerScore(False, confidence=norm["confidence"],
-                         reason=f"No {norm['label']} peer data for your age group yet.")
+                         reason=_("No %(label)s peer data for your age group yet.") % {"label": label})
 
     if norm["type"] == "percentiles":
         pct = _pct_from_percentiles(anchors, float(value))
@@ -414,16 +419,16 @@ def score(exercise_name: str, value, sex: str, age: Optional[int]) -> PeerScore:
     )
 
     decile, flames = _flames_from_percentile(pct)
-    note = norm.get("female_note", "") if sex == "female" else ""
+    note = _(norm["female_note"]) if sex == "female" and norm.get("female_note") else ""
     if estimated:
-        est_note = "Estimated benchmark — not yet from published data."
+        est_note = _("Estimated benchmark — not yet from published data.")
         note = f"{note} {est_note}".strip() if note else est_note
     return PeerScore(
         has_data=True,
         flames=flames,
         decile=decile,
         percentile=round(pct, 1),
-        label=norm["label"],
+        label=label,
         confidence=norm["confidence"],
         approximate=approximate,
         estimated=estimated,

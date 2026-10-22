@@ -3,6 +3,7 @@
 {% get_current_language as LANGUAGE_CODE %}
 
 {% block title %}{% if LANGUAGE_CODE == "es" %}Términos y Condiciones — The Cauldron{% else %}Terms &amp; Conditions — The Cauldron{% endif %}{% endblock %}
+{% block meta_description %}{% trans "The Cauldron's terms and conditions: how the recipe book, the Forge and the meal journal may be used." %}{% endblock %}
 
 {% block legal_body %}
 {% if LANGUAGE_CODE == "es" %}

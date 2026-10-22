@@ -1,0 +1,5 @@
+{# Canonical + hreflang alternates for The Cauldron's public pages (language.public_seo). #}
+{% if seo_canonical %}
+<link rel="canonical" href="{{ seo_canonical }}">
+{% for code, url in seo_alternates %}<link rel="alternate" hreflang="{{ code }}" href="{{ url }}">
+{% endfor %}{% endif %}
