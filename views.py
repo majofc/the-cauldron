@@ -56,6 +56,10 @@ def cauldron_page(view):
 
 
 def _landing(request):
+    """The public landing. Signed-in users go straight to their day: the
+    journal is The Cauldron's home (#102)."""
+    if request.user.is_authenticated:
+        return redirect('the_cauldron:journal')
     return render(request, 'the_cauldron/landing.html', {
         **public_seo(request, 'landing'),
         'showcase_tree': showcase_tree(),
@@ -242,7 +246,7 @@ def _safe_next(request):
         target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
     ):
         return target
-    return reverse('the_cauldron:landing')
+    return reverse('the_cauldron:journal')  # the app's home (#102)
 
 
 def _nutrition_context(request, page, **extra):

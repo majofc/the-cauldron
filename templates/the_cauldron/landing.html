@@ -33,18 +33,14 @@
 <li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link">{% trans "The Journal" %}</a></li>
 <li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">{% trans "The Cauldron" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
 <div class="nav-cta">
   {% include 'the_cauldron/_assistant_link.html' %}
-  {% if user.is_authenticated %}
-    <a href="{% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">{% trans "Enter the Forge →" %}</a>
-  {% else %}
-    <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">{% trans "Enter →" %}</a>
-  {% endif %}
+  {# Only anonymous visitors see the landing; signed-in users are sent to the journal (#102). #}
+  <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:journal' %}" class="btn-primary btn-sm">{% trans "Enter →" %}</a>
 </div>
 {% endblock %}
 
@@ -365,7 +361,7 @@
     </div>
 
     <div class="cauldron-hero-cta" style="justify-content:center; margin-top:2rem;">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Enter the Forge →" %}</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Take the Trial" %}</a>
     </div>
   </section>
 
@@ -515,11 +511,11 @@
   </section>
 
   <!-- Forge closing CTA -->
-  <section class="fshow-cta" aria-label="{% trans "Enter the Forge" %}">
+  <section class="fshow-cta" aria-label="{% trans "Take the Trial" %}">
     <h2 class="fshow-cta-title">{% trans "The anvil is hot" %}</h2>
     <p class="fshow-cta-sub">{% trans "Take the Trial. Find your rung. Start climbing." %}</p>
     <div class="cauldron-hero-cta" style="justify-content:center;">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Enter the Forge →" %}</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Take the Trial" %}</a>
       <a href="#forge" class="btn-cauldron btn-cauldron--ghost">{% trans "See the skill tree" %}</a>
     </div>
   </section>

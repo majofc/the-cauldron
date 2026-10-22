@@ -192,7 +192,7 @@ class TestLegalGate:
         web = Client()
         web.force_login(alice)
         r = web.get("/cauldron/accept/?next=https://evil.example/")
-        assert r["Location"] == "/cauldron/"
+        assert r["Location"] == "/cauldron/journal/"
 
     def test_public_legal_pages_show_the_current_versions(self, db):
         web = Client()
