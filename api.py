@@ -4,6 +4,8 @@ import uuid as uuid_module
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -11,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 import posthog
+from the_cauldron.forge_i18n import day_name, localized
 from the_cauldron.models import (
     AssessmentSession,
     Equipment,
@@ -113,6 +116,7 @@ class CatalogView(APIView):
             e.key: {
                 "equipment_key": e.key,
                 "equipment_name": e.name,
+                "equipment_display_name": localized(e, "name"),
                 "owned": e.key in owned,
                 "exercises": [],
             }
@@ -151,6 +155,7 @@ class CatalogView(APIView):
                 {
                     "uuid": str(ex.uuid),
                     "name": ex.name,
+                    "display_name": localized(ex, "name"),
                     "pattern_key": ex.pattern.key,
                     "pattern_name": ex.pattern.name,
                     "difficulty_rank": ex.difficulty_rank,
@@ -158,7 +163,8 @@ class CatalogView(APIView):
                     "alternative_equipment": alt_keys,
                     "is_timed": ex.is_timed,
                     "muscles": [
-                        {"key": m.key, "name": m.name} for m in ex.muscles.all()
+                        {"key": m.key, "name": m.name, "display_name": localized(m, "name")}
+                        for m in ex.muscles.all()
                     ],
                     "eligible": forge.is_performable(ex, owned),
                     "is_blocked": is_blocked,
@@ -211,7 +217,7 @@ class AssessmentView(APIView):
     def get(self, request):
         active = AssessmentSession.objects.filter(user=request.user, is_active=True).first()
         if not active:
-            return Response({"detail": "No active assessment."}, status=404)
+            return Response({"detail": _("No active assessment.")}, status=404)
         return Response(AssessmentSessionSerializer(active).data)
 
     def post(self, request):
@@ -267,7 +273,7 @@ class ProgressionActionView(APIView):
             forge.deny_progression(request.user, presc)
             posthog.capture("progression_denied")
             return Response({"denied": True})
-        return Response({"detail": "unknown action"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": _("unknown action")}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RungOverviewView(APIView):
@@ -314,7 +320,7 @@ class SetRungView(APIView):
         target = _exercise_or_400(request.data.get("exercise"))
         if target is None:
             return Response(
-                {"detail": "exercise must be an exercise uuid."},
+                {"detail": _("exercise must be an exercise uuid.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         # Strictly a JSON true — a stray truthy string must not skip the warning.
@@ -350,17 +356,22 @@ class ProgramView(APIView):
         # rather than show a movement the user cannot do.
         program = forge.active_program(request.user)
         if not program:
-            return Response({"detail": "No active program."}, status=404)
+            return Response({"detail": _("No active program.")}, status=404)
         return Response(ProgramSerializer(program).data)
 
 
 # Body of the 409 that gates Today (and session creation) while an unfinished
 # past session awaits a Save/Delete. The client fetches it from
-# ``GET sessions/unfinished/``.
+# ``GET sessions/unfinished/``. ``code`` is machine-readable and stays English;
+# ``detail`` is translated per request (``unfinished_gate()``).
 UNFINISHED_GATE = {
-    "detail": "Finish or delete your last unfinished session first.",
+    "detail": gettext_noop("Finish or delete your last unfinished session first."),
     "code": "unfinished_session",
 }
+
+
+def unfinished_gate():
+    return {**UNFINISHED_GATE, "detail": _(UNFINISHED_GATE["detail"])}
 
 
 class TodayView(APIView):
@@ -383,11 +394,11 @@ class TodayView(APIView):
     def get(self, request):
         day = forge.active_day(request.user)
         if day is None:
-            return Response({"detail": "No active program."}, status=404)
+            return Response({"detail": _("No active program.")}, status=404)
         # A past session with logged values must be saved or deleted first, or
         # today's plan would be built from prescriptions it never progressed.
         if forge.has_unfinished_session(request.user):
-            return Response(UNFINISHED_GATE, status=status.HTTP_409_CONFLICT)
+            return Response(unfinished_gate(), status=status.HTTP_409_CONFLICT)
         existing = forge.resumable_session(request.user)
         if existing is not None:
             payload = WorkoutSessionSerializer(existing).data
@@ -396,7 +407,7 @@ class TodayView(APIView):
             payload = {
                 "uuid": None,
                 "day": str(day.uuid),
-                "day_name": day.name,
+                "day_name": day_name(day.name),
                 "scheduled_for": timezone.now().date().isoformat(),
                 "performed_at": None,
                 "status": WorkoutSession.Status.PLANNED,
@@ -518,9 +529,9 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         """
         day = forge.active_day(request.user)
         if day is None:
-            return Response({"detail": "No active program."}, status=404)
+            return Response({"detail": _("No active program.")}, status=404)
         if forge.has_unfinished_session(request.user):
-            return Response(UNFINISHED_GATE, status=status.HTTP_409_CONFLICT)
+            return Response(unfinished_gate(), status=status.HTTP_409_CONFLICT)
         # Two inputs racing the first keystroke must not create two sessions.
         existing = forge.resumable_session(request.user)
         if existing is not None:
@@ -561,7 +572,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         behind every edit after the first. Progression does not run here."""
         session = self.get_object()
         if session.status == WorkoutSession.Status.COMPLETED:
-            return Response({"detail": "Session already finalized."}, status=409)
+            return Response({"detail": _("Session already finalized.")}, status=409)
         forge.save_session_values(session, request.data.get("sets", {}))
         session.refresh_from_db()
         return Response(WorkoutSessionSerializer(session).data)
@@ -575,12 +586,12 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         """
         session = self.get_object()
         if session.status == WorkoutSession.Status.COMPLETED:
-            return Response({"detail": "Session already finalized."}, status=409)
+            return Response({"detail": _("Session already finalized.")}, status=409)
         from_exercise = _exercise_or_400(request.data.get("from_exercise"))
         to_exercise = _exercise_or_400(request.data.get("to_exercise"))
         if from_exercise is None or to_exercise is None:
             return Response(
-                {"detail": "from_exercise and to_exercise must be exercise uuids."},
+                {"detail": _("from_exercise and to_exercise must be exercise uuids.")},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         try:

@@ -107,6 +107,7 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 | `is_assessment_anchor` | the bilateral move tested per pattern in the Trial: Push-up, Australian Row, Pike Push-up, Squat, Plank, Glute Bridge — each has a peer norm. **Grip carries two**: Dead Hang, plus Towel Wring Hold as the no-equipment fallback. `forge._anchor_for` / `forge.js:renderTrial` take the highest-rank anchor the user can perform, so the fallback only shows when the hang is out of reach |
 | `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs — enforced for **every** pattern by `tests/test_grip_pattern.py::TestThresholdMonotonicity` (the lower ladder alone was covered by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
 | `regression` / `progression` | FK to self, adjacent rungs |
+| `name_es`, `cues_es` | Spanish display text (#87); `name` stays the English key — see the i18n notes under The Grimoire |
 | `video_url`, `cues`, `rest_seconds` | coaching metadata. `rest_seconds` comes from `seed_forge.rest_for`, which is pattern-aware: a grip hold rests 90s, every other timed hold 40s |
 
 ---
@@ -341,6 +342,54 @@ when the page language is Spanish, falling back to English per field. Run makeme
 (`-w /app/the_cauldron`), ignoring `tests/*` and `seed_data/*`. Unit labels are `pgettext("unit", …)`
 with `_plural` keys for spelled-out units (pieza/piezas, taza/tazas).
 
+**The Forge, landing and login (#87)** follow the same pattern:
+- Templates use `{% trans %}` / `{% blocktrans trimmed %}`. JS strings: `forge_i18n.forge_strings()` →
+  `#forge-i18n` → `t(key, vars)` in `forge.js` (also read by `forge-anatomy.js`). Counted strings ship as
+  `<key>_one` / `<key>_other` from `_plural(key, lambda n: ngettext("…", "…", n))` — keep the **literal**
+  `ngettext` call or makemessages misses it — and `tn(key, n)` picks the form. Never name a plain key
+  `…_one` / `…_other`. Dates/numbers go through `fmtDate` / `fmtNum` (`Intl`, page language).
+- Loader captions: `_loader_script.html` (`data-captions`). The landing's skill-tree showcase data lives in
+  `forge_i18n.showcase_tree()` → `#fshow-tree-data` (no longer hard-coded in `forge-skilltree.js`).
+- Earphones mode speaks/listens in `es-MX` under Spanish; voice commands accept English words always and
+  Spanish ones (`VOICE_WORDS`, accent-folded) when the page is Spanish.
+- **Catalog**: `name_es` on `MovementPattern` / `Equipment` / `Muscle` / `Exercise`, `cues_es` on `Exercise`,
+  seeded from `seed_forge.*_ES`. **`name` stays English** — it is the key norms, progress and `forge.js` match
+  on. The page embeds `forge_i18n.forge_catalog()` (`#forge-catalog-i18n`, English name → display text) and
+  `exName()` / `exCues()` / `patternName()` / `muscleName()` / `equipName()` translate at display time only.
+  The catalog API adds `name_es` + `display_name` (and `cues_es` + `display_cues`) via
+  `forge_i18n.localized(obj, field)` — Spanish when active and filled, else English, per field.
+- `ProgramDay.name` stays the English `THE_DAY_NAME` (`gettext_noop`); `forge_i18n.day_name()` translates it at
+  serialization. Norm labels are `gettext_noop` and translated per request. API `detail` messages are
+  gettext'd; `code` fields and PostHog properties stay English.
+
+**Switcher + memory** (`language.py`): arcano's base nav switcher posts to `set_language` (cookie). On every
+`cauldron_page` (and the landing / English legal pages) a signed-in user's language cookie is saved to
+`CauldronProfile.language` (the cookie always wins); a browser with no cookie gets the profile language
+activated and the cookie set — so the choice follows the user to another browser. A page view never creates a
+profile row unless there is a choice to save.
+**SEO**: `/cauldron/es/`, `/cauldron/es/terms/`, `/cauldron/es/privacy/` always render Spanish
+(`force_spanish`); every public page gets a self canonical + `hreflang` en/es/x-default (`_seo_head.html`,
+`language.public_seo`), and `lang_switch_next` (read by arcano's `base.html`) sends the switcher to the
+same page in the other language. No sitemap exists yet.
+
+### Spanish glossary (es-MX)
+
+| English | Español | | English | Español |
+|---|---|---|---|---|
+| The Cauldron | El Caldero | | set | serie |
+| The Forge | La Forja | | reps | reps (prose: repeticiones) |
+| The Trial | La Prueba | | hold (timed) | sostén |
+| Anvil | Yunque | | flames / fires 🔥 | llamas |
+| The Grimoire | El Grimorio | | Earphones mode | Modo audífonos |
+| The Journal | El Diario | | Rest ping | Aviso de descanso |
+| The Coven | El Aquelarre | | Claim it | Reclamarlo |
+| rung | peldaño | | skill tree | árbol de habilidades |
+| ladder | escalera | | AMRAP | AMRAP (kept) |
+| spell / reagent | hechizo / reactivo | | band (resistance) | liga |
+| dumbbell / kettlebell | mancuerna / pesa rusa | | push-up / pull-up | lagartija / dominada |
+
+The legal pages keep "The Cauldron" — their text is versioned as a whole (bump the version to change it).
+
 **Units**: amounts stay as authored; the per-line weight and the hover hint on non-mass units
 (`≈ weight · volume`) use the user's `unit_system` (g/ml/kg/l vs oz/lb/fl oz/cups). Volume is exact for
 volume units and `grams / reagent_density` for weighed/counted lines (`reagent_density` on each line).
@@ -392,7 +441,7 @@ Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules i
 | Model | Notes |
 |---|---|
 | `LegalAcceptance` | `user`, `document` terms/privacy/sensitive_consent, `version`, `accepted_at`, `withdrawn_at`. **Append-only**: `save()` on an existing row raises; the only change ever made is `withdrawn_at` via `legal.withdraw_consent` (queryset update). No IP/UA. Read-only admin (ARCO) |
-| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. Lazy (`nutrition.get_profile`) |
+| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. `language` ("" = never chosen; see "Switcher + memory", #87). Lazy (`nutrition.get_profile`) |
 | `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
 | `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
 | `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |

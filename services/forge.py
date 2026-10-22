@@ -15,6 +15,8 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
 
 from the_cauldron.models import (
     AssessmentResult,
@@ -36,7 +38,8 @@ from the_cauldron.services import loads, norms, progression
 # and each time it is opened it serves the least-trained subset of them (see
 # ``select_day_prescriptions``), so the rotation emerges from training history
 # rather than from a fixed A/B/C rota the user has to pick between.
-THE_DAY_NAME = "Today's Forge"
+# Stored in English on every ProgramDay; shown translated (forge_i18n.day_name).
+THE_DAY_NAME = gettext_noop("Today's Forge")
 
 # The day trains only this many patterns — the ones whose progression chains have
 # the fewest recent usage events — out of the seven it prescribes. The ones left
@@ -937,14 +940,14 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
             presc_uuid = _uuid_or_none(entry["prescription"])
             if presc_uuid is None:
                 # Don't silently demote a garbled prescription to a free swap.
-                raise ValueError("prescription is not on this day")
+                raise ValueError(_("prescription is not on this day"))
         key = (presc_uuid, exercise_uuid)
         if key in seen:
             continue
         seen.add(key)
         blocks.append(key)
     if not blocks:
-        raise ValueError("plan is empty")
+        raise ValueError(_("plan is empty"))
 
     prescriptions = {
         str(p.uuid): p
@@ -973,7 +976,7 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
         if presc_uuid:
             presc = prescriptions.get(str(presc_uuid))
             if presc is None:
-                raise ValueError("prescription is not on this day")
+                raise ValueError(_("prescription is not on this day"))
             # The only movement a prescription may be logged against is its own
             # rung — or a grip variant of it, which is the same ladder position
             # and what ``select_grip_variant`` puts on the plan. Anything else
@@ -987,11 +990,11 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
                 )
             )
             if not same_rung:
-                raise ValueError("that movement is not what this prescription trains")
+                raise ValueError(_("that movement is not what this prescription trains"))
         elif not is_performable(exercise, owned, blocked):
             # A block with no prescription is a ⇄ swap, and gets the same gate
             # the swap endpoint applies.
-            raise ValueError("you cannot perform that movement")
+            raise ValueError(_("you cannot perform that movement"))
         targets = _block_targets(profile, exercise, presc)
         for set_index in range(targets["sets"]):
             is_amrap = set_index == targets["sets"] - 1
@@ -1134,15 +1137,15 @@ def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -
     """
     rows = list(session.set_logs.filter(exercise=from_exercise))
     if not rows:
-        raise ValueError("that movement is not on this session")
+        raise ValueError(_("that movement is not on this session"))
     if any(r.actual_reps is not None or r.actual_load is not None for r in rows):
-        raise SetsAlreadyLogged("that movement already has logged sets")
+        raise SetsAlreadyLogged(_("that movement already has logged sets"))
     if session.set_logs.filter(exercise=to_exercise).exists():
-        raise ValueError("that movement is already on this session")
+        raise ValueError(_("that movement is already on this session"))
 
     owned = owned_equipment_keys_for(session.user)
     if not is_performable(to_exercise, owned, blocked_exercise_ids(session.user)):
-        raise ValueError("you cannot perform that movement")
+        raise ValueError(_("you cannot perform that movement"))
 
     profile = get_or_create_equipment_profile(session.user)
     targets = _block_targets(profile, to_exercise, None)
@@ -1170,7 +1173,7 @@ class UnreadyForRung(Exception):
     and they haven't confirmed. ``payload`` quantifies the gap for the client."""
 
     def __init__(self, payload):
-        super().__init__("your last Trial doesn't support that rung yet")
+        super().__init__(_("your last Trial doesn't support that rung yet"))
         self.payload = payload
 
 
@@ -1347,9 +1350,9 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
     chain_of = chain_map_for({pattern_id})
     chain = chain_of.get(presc.exercise_id)
     if chain is None or chain_of.get(target.pk) != chain:
-        raise ValueError("that rung is not on this ladder")
+        raise ValueError(_("that rung is not on this ladder"))
     if not is_performable(target, owned, blocked):
-        raise ValueError("you cannot perform that movement")
+        raise ValueError(_("you cannot perform that movement"))
 
     trial_score = latest_trial_score(user.pk, pattern_id)
     if not confirm_unready and _is_unready(presc.exercise, target, trial_score):
@@ -1359,6 +1362,7 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
                 "required": target.placement_threshold,
                 "your_trial": trial_score,
                 "pattern": target.pattern.name,
+                "pattern_key": target.pattern.key,
                 "exercise": target.name,
                 "anchor": anchor.name if anchor else None,
                 "is_timed": anchor.is_timed if anchor else False,
@@ -1382,7 +1386,7 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
         else []
     )
     if any(r.actual_reps is not None or r.actual_load is not None for r in open_rows):
-        raise SetsAlreadyLogged("that movement already has logged sets")
+        raise SetsAlreadyLogged(_("that movement already has logged sets"))
 
     for p in prescriptions:
         p.pending_progression = None
@@ -1727,7 +1731,7 @@ class SessionAlreadyCompleted(Exception):
 def discard_session(session: WorkoutSession) -> None:
     """Delete an unfinished session and its SetLogs. Prescriptions are untouched."""
     if session.status == WorkoutSession.Status.COMPLETED:
-        raise SessionAlreadyCompleted("A completed session can't be deleted.")
+        raise SessionAlreadyCompleted(_("A completed session can't be deleted."))
     session.delete()
 
 
@@ -1895,7 +1899,7 @@ def submit_assessment(user, results, *, channel=None):
     An unknown pattern or exercise is a 404; a bad score a ``TrialInputError``.
     """
     if not results:
-        raise TrialInputError("results required.")
+        raise TrialInputError(_("results required."))
     profile = get_or_create_equipment_profile(user)
     session = AssessmentSession.objects.filter(user=user, is_active=True, completed_at__isnull=True).first()
     if session is None:
@@ -1907,14 +1911,18 @@ def submit_assessment(user, results, *, channel=None):
         try:
             tested_uuid = uuid.UUID(str(item.get("tested_exercise")))
         except (TypeError, ValueError):
-            raise TrialInputError(f"tested_exercise for {pattern.key} must be an exercise id.") from None
+            raise TrialInputError(
+                _("tested_exercise for %(pattern)s must be an exercise id.") % {"pattern": pattern.key}
+            ) from None
         tested = get_object_or_404(Exercise, uuid=tested_uuid)
         try:
             score = int(item.get("reps_or_seconds"))
         except (TypeError, ValueError):
-            raise TrialInputError(f"reps_or_seconds for {pattern.key} must be a whole number.") from None
+            raise TrialInputError(
+                _("reps_or_seconds for %(pattern)s must be a whole number.") % {"pattern": pattern.key}
+            ) from None
         if score < 0:
-            raise TrialInputError(f"reps_or_seconds for {pattern.key} can't be negative.")
+            raise TrialInputError(_("reps_or_seconds for %(pattern)s can't be negative.") % {"pattern": pattern.key})
         ladder = eligible_exercises(pattern, profile, exclude_ids=blocked)
         placed = progression.place_from_assessment(ladder, score)
         session.results.update_or_create(
