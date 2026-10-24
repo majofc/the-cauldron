@@ -279,7 +279,7 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
 |---|---|
 | `Tag` | `slug`, `name`, `name_es`. Seeded (soup, salad, drink, breakfast, dessert, main, side, snack, sauce, bread, vegetarian, vegan) |
 | `Reagent` | `name`, `name_es`, `search_name` (normalized, see below), `category`, `source` usda/user/staff, `fdc_id` (unique, nullable), `created_by`, `status` private/pending/approved, `grams_per_unit` JSON (`cup`/`tbsp`/`tsp`/`piece` → grams), `density_g_per_ml` |
-| `ReagentNutrients` | 1:1 `reagent.nutrients`; 23 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero |
+| `ReagentNutrients` | 1:1 `reagent.nutrients`; 24 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero. `added_sugar_g` (#104, after `sugar_g`) stands in for WHO's free sugars minus fruit-juice sugars (sugar and honey count in full); `added_sugar_over_total` rejects it above a known `sugar_g` — reagent API (PATCH checks the stored sugars), model `clean()` (admin), quick entries, MCP |
 | `Spell` | `owner`, `title` (+ `search_title`, covers `title_es` too), `description`, `servings`, `prep/cook_minutes`, `steps` JSON list, `visibility` private/public, `forked_from` (SET_NULL), `tags` M2M. `title_es` / `description_es` / `steps_es`: Spanish text for **seeded starter spells only** (read-only in the API) |
 | `SpellReagent` | `spell.lines`: `reagent` (PROTECT), `quantity`, `unit`, `grams` (stored), `note` (+ `note_es`, starters only), `order` |
 | `GrimoirePreferences` | 1:1 `user.grimoire_preferences`, `unit_system` metric/us. Created lazily (view / `preferences/` GET) |
@@ -422,6 +422,14 @@ values not on the label stay null) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
 `the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
 reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
+**Added sugars** in that build: USDA nutrient 539 where listed (SR Legacy never lists it), else **0** for a food in
+`UNPROCESSED_CATEGORIES` whose description doesn't match `SWEETENED` (sweetened/syrup/honey/dressing/fruit
+yogurt/peanut butter…) or listed in `NO_ADDED_SUGAR` (water, plain oats, cocoa, baking powder); Sugar and Honey
+(`ALL_ADDED_SUGAR`) get added = total sugars; else unknown (Peanut butter, Vegetable broth, Vanilla extract). A nutrient added to the
+seed later is listed in `seed_grimoire.BACKFILL`: every run fills it on existing rows **where still null** (no
+`--refresh` needed; a staff value is never overwritten). User-created reagents: unknown unless entered.
+Intake entries logged before #104 were marked `added_sugar_g` missing (in `missing` and `basis.missing`) by
+migration 0033 — unknown, never 0.
 
 **Debugging**
 - A line won't save with "Can't convert…" → the reagent has no weight for that unit and no density;
@@ -470,7 +478,7 @@ never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. 
 Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
 days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
 average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
-and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 23), per-goal-nutrient
+and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 24), per-goal-nutrient
 `status`/`low`/`high` arrays, `summary` (time in range %), `daily` (share of each day in range). The page
 scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
 `adherence/` endpoint (#82) stays but no page uses it now.

@@ -27,7 +27,8 @@ ID = {"type": "string", "description": "The id returned by get_today / get_journ
 NUTRIENTS = {
     "type": "object",
     "description": "Known totals for what was eaten (the whole portion, not per 100 g). Leave out what you "
-                   "don't know — it's stored as unknown, never 0.",
+                   "don't know — it's stored as unknown, never 0. added_sugar_g = sugars added in "
+                   "processing (not those naturally in fruit, milk or juice); never more than sugar_g.",
     "properties": {name: {"type": "number", "minimum": 0} for name in nutrition.FIELDS},
     "additionalProperties": False,
 }
