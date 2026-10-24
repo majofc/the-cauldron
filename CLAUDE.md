@@ -484,8 +484,8 @@ cholesterol, EPA, DHA, total sugars) carries a note. Unknowns: every candidate (
 is computed and combined — largest minimum, smallest maximum; an emptied range is left out (`unresolved`);
 unknown activity = sedentary; no weight → `WEIGHT_BASED` goals left out (`needs_weight`); under 18 by the
 youngest age the birth year allows (year difference − 1) → `status: "minor"`, nothing. `GET goals/` adds `recommended` (`payload`); `body/` (GET/PATCH) edits the body
-data — birth year/sex need only a sign-in; adding weight/activity needs the consent (403 `consent_required`),
-clearing them never does. The Journal's gauges show my goals plus `WHO_HEADLINE` recommended ones (nutrition.js);
+data — birth year/sex need only a sign-in; adding weight/activity needs the consent (403 `consent_required`),
+clearing them never does. The Journal's gauges show my goals plus `WHO_HEADLINE` recommended ones (nutrition.js);
 every tracked nutrient stays in the chips.
 `legal.withdraw_consent(delete_data=True)` clears weight and activity (birth year/sex stay for the Forge).
 Every page showing them includes `_recommendation_notice.html` (not medical advice, adults only).
