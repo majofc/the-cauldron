@@ -42,6 +42,11 @@ api_urlpatterns = [
         name="forge-progression",
     ),
     path(
+        "prescription/<uuid:presc_uuid>/set-load/",
+        api.SetLoadView.as_view(),
+        name="forge-set-load",
+    ),
+    path(
         "prescription/<uuid:presc_uuid>/set-rung/",
         api.SetRungView.as_view(),
         name="forge-set-rung",

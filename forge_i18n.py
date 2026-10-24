@@ -222,6 +222,16 @@ def forge_strings():
         "sec_peer_score": _("Peer score"),
         "sec_substitute": _("Substitute"),
         "change_my_rung": _("⇅ Change my rung"),
+        # Set my load + weekly volume (#109)
+        "sec_set_load": _("Set my load"),
+        "set_load_save": _("Use this load"),
+        "set_load_help": _("Applies everywhere this movement is in your plan. A load you can't build rounds down to the nearest one you can."),
+        "band_level": _("Band %(n)s"),
+        "load_set": _("Load set to %(load)s."),
+        "load_snapped": _("%(asked)s can't be built — set to %(load)s."),
+        "err_set_load": _("Couldn't set that load."),
+        "volume_saved": _("Weekly volume set to %(n)s sets per pattern."),
+        "err_volume": _("Couldn't save the weekly volume."),
         "make_my_rung": _("Make this my rung"),
         "block_exercise": _("Block this exercise"),
         # Load recipe sheet

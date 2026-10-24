@@ -308,3 +308,29 @@ def get_trial(ctx):
             ]} for p in history
         ],
     }
+
+
+@tool(
+    "get_forge_rung_options",
+    title="Rungs the user can move to",
+    description=(
+        "Every movement chain of the active program with the rungs the user can perform on it: the current one "
+        "(is_current) and the others, flagged above_trial when the latest Trial doesn't support them yet. Use the "
+        "prescription_id and an exercise_id with set_forge_rung."
+    ),
+)
+def get_forge_rung_options(ctx):
+    overview = forge.rung_overview(ctx.user)
+    return {"chains": [{
+        "prescription_id": c["prescription"],
+        "pattern": c["pattern_key"],
+        "current": c["current_name"],
+        "options": [{
+            "exercise_id": o["exercise"],
+            "exercise": o["name"],
+            "rank": o["difficulty_rank"],
+            "mode": o["progression_mode"],
+            "is_current": o["is_current"],
+            "above_trial": o["unready"],
+        } for o in c["options"]],
+    } for c in overview["chains"]]}
