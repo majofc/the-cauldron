@@ -7,6 +7,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from the_cauldron.models import (
+    ADDED_SUGAR_ERROR,
     Casting,
     GrimoirePreferences,
     Reagent,
@@ -14,6 +15,7 @@ from the_cauldron.models import (
     Spell,
     SpellReagent,
     Tag,
+    added_sugar_over_total,
 )
 from the_cauldron.services import grimoire
 
@@ -113,6 +115,16 @@ class ReagentSerializer(serializers.ModelSerializer):
     def validate_density_g_per_ml(self, value):
         return _finite(value, _("Density"))
 
+    def validate(self, attrs):
+        nutrients = attrs.get("nutrients")
+        if nutrients:
+            # PATCH sends only what changes: check it against what's stored.
+            stored = getattr(self.instance, "nutrients", None) if self.partial else None
+            merged = {**{f: getattr(stored, f) for f in ReagentNutrients.FIELDS if stored}, **nutrients}
+            if added_sugar_over_total(merged.get("sugar_g"), merged.get("added_sugar_g")):
+                raise serializers.ValidationError({"nutrients": {"added_sugar_g": [ADDED_SUGAR_ERROR]}})
+        return attrs
+
     @transaction.atomic
     def create(self, validated_data):
         nutrients = validated_data.pop("nutrients", None) or {}
@@ -144,7 +156,9 @@ class ReagentSerializer(serializers.ModelSerializer):
             # (null), not "keep the old value"; PATCH changes only what it sends.
             if not self.partial:
                 nutrients = {field: nutrients.get(field) for field in ReagentNutrients.FIELDS}
-            ReagentNutrients.objects.update_or_create(reagent=instance, defaults=nutrients)
+            # The viewset select_related()s the profile: put the saved one back
+            # on the instance, or the response renders the old cached values (#86).
+            instance.nutrients, _ = ReagentNutrients.objects.update_or_create(reagent=instance, defaults=nutrients)
         if units_changed:
             grimoire.regrams_lines(instance)
         return instance

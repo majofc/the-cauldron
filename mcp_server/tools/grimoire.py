@@ -222,7 +222,7 @@ def search_reagents(ctx, q, limit=10):
     "get_reagent",
     title="Reagent (ingredient) details",
     description=(
-        "One ingredient: all 23 nutrients per 100 g (null = unknown, never assume 0), weights of household "
+        "One ingredient: all 24 nutrients per 100 g (null = unknown, never assume 0), weights of household "
         "measures (cup, tbsp, piece, glass…), density, and whether the user may still edit it."
     ),
     schema={"type": "object", "properties": {"id": ID}, "required": ["id"], "additionalProperties": False},

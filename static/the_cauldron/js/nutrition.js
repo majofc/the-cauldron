@@ -25,8 +25,8 @@
 
   // Mirrors ReagentNutrients.FIELDS (field → display unit) and grimoire.js's groups.
   const NUTRIENTS = [
-    ["kcal", "kcal"], ["protein_g", "g"], ["carbs_g", "g"], ["sugar_g", "g"], ["fiber_g", "g"],
-    ["fat_g", "g"], ["sat_fat_g", "g"], ["mono_fat_g", "g"], ["poly_fat_g", "g"],
+    ["kcal", "kcal"], ["protein_g", "g"], ["carbs_g", "g"], ["sugar_g", "g"], ["added_sugar_g", "g"],
+    ["fiber_g", "g"], ["fat_g", "g"], ["sat_fat_g", "g"], ["mono_fat_g", "g"], ["poly_fat_g", "g"],
     ["trans_fat_g", "g"], ["omega3_ala_g", "g"], ["omega3_epa_g", "g"], ["omega3_dha_g", "g"],
     ["omega6_la_g", "g"], ["cholesterol_mg", "mg"], ["sodium_mg", "mg"], ["potassium_mg", "mg"],
     ["calcium_mg", "mg"], ["iron_mg", "mg"], ["vit_a_ug", "µg"], ["vit_c_mg", "mg"],
@@ -34,7 +34,7 @@
   ];
   const UNIT_OF = Object.fromEntries(NUTRIENTS);
   const NUTRIENT_GROUPS = [
-    ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "fiber_g"]],
+    ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "added_sugar_g", "fiber_g"]],
     ["grp_fats", ["fat_g", "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g",
       "omega3_ala_g", "omega3_epa_g", "omega3_dha_g", "omega6_la_g"]],
     ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg"]],
@@ -138,6 +138,14 @@
     return t("target_between", { min: fmtAmount(g.min_value), max: fmtAmount(g.max_value), unit });
   }
 
+  // The bare range ("≥ 60 g"), for where a label ("My goal", "Recommended") already precedes it.
+  function rangeText(g) {
+    const unit = UNIT_OF[g.nutrient];
+    if (g.kind === "at_least") return `≥ ${fmtAmount(g.min_value)} ${unit}`;
+    if (g.kind === "at_most") return `≤ ${fmtAmount(g.max_value)} ${unit}`;
+    return `${fmtAmount(g.min_value)}–${fmtAmount(g.max_value)} ${unit}`;
+  }
+
   function fmtDate(iso, opts = { day: "numeric", month: "short", year: "numeric" }) {
     if (!iso) return "";
     return new Date(`${iso}T00:00:00`).toLocaleDateString(IS_ES ? "es-MX" : "en-US", opts);
@@ -196,7 +204,26 @@
   // Profile: goals (#80), settings
   // ════════════════════════════════════════════════════════════════════════
 
-  function goalRowHtml(key, goal) {
+  // The read-only recommended goal (#105) beside each of the user's own.
+  function recCellHtml(key, rec) {
+    if (!rec || rec.status !== "adult") return "";
+    const goal = rec.byKey[key];
+    let body;
+    if (goal) {
+      body = `${esc(rangeText(goal))} <span class="nut-rec-source"${goal.note ? ` title="${esc(goal.note)}"` : ""}>${esc(goal.source)}</span>`;
+    } else if (rec.none[key]) {
+      body = `<span class="grim-help">${esc(rec.none[key])}</span>`;
+    } else if (rec.needs_weight.includes(key)) {
+      body = `<span class="grim-help">${esc(t("rec_needs_weight"))}</span>`;
+    } else {
+      // Left out because the fallbacks for missing sex/age disagree: ask for those.
+      const fields = rec.assumed.filter((f) => f !== "activity").map((f) => t(`rec_field_${f}`)).join(", ");
+      body = `<span class="grim-help">${esc(t("rec_unresolved", { fields }))}</span>`;
+    }
+    return `<span class="nut-goal-rec"><span class="nut-goal-rec-label">${esc(t("rec_label"))}</span> ${body}</span>`;
+  }
+
+  function goalRowHtml(key, goal, rec) {
     const kind = goal ? goal.kind : "none";
     const low = goal && goal.min_value != null ? goal.min_value : "";
     const high = goal && goal.max_value != null ? goal.max_value : "";
@@ -209,6 +236,7 @@
       <input type="number" class="nut-goal-max" min="0" step="any" inputmode="decimal" value="${esc(high)}"
              aria-label="${esc(t("goal_max_for", { nutrient: t(`n_${key}`) }))}">
       <span class="nut-goal-unit">${esc(UNIT_OF[key])}</span>
+      ${recCellHtml(key, rec)}
     </div>`;
   }
 
@@ -225,11 +253,63 @@
     try {
       const d = await api("goals/");
       const byKey = Object.fromEntries(d.goals.map((g) => [g.nutrient, g]));
+      const rec = {
+        ...d.recommended,
+        byKey: Object.fromEntries(d.recommended.goals.map((g) => [g.nutrient, g])),
+        none: Object.fromEntries(d.recommended.none.map((x) => [x.nutrient, x.note])),
+      };
+      renderRecStatus(d.recommended);
       box.innerHTML = NUTRIENT_GROUPS.map(([group, keys]) => `<fieldset class="nut-goal-group">
-          <legend>${esc(t(group))}</legend>${keys.map((k) => goalRowHtml(k, byKey[k])).join("")}</fieldset>`).join("");
+          <legend>${esc(t(group))}</legend>${keys.map((k) => goalRowHtml(k, byKey[k], rec)).join("")}</fieldset>`).join("");
       $$(".nut-goal", box).forEach(syncGoalRow);
     } catch (err) {
       box.innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+    }
+  }
+
+  // Why the recommendations are missing or rough: under 18, data not given.
+  function renderRecStatus(rec) {
+    const el = $("#nut-rec-status");
+    if (!el) return;
+    let text = "";
+    if (rec.status === "minor") text = t("rec_minor");
+    else if (rec.assumed.length) text = t("rec_assumed", { fields: rec.assumed.map((f) => t(`rec_field_${f}`)).join(", ") });
+    el.textContent = text;
+    el.hidden = !text;
+  }
+
+  // ── About you (#105): body data. Birth year and sex need no consent. ──
+  async function loadBody() {
+    try {
+      const b = await api("body/");
+      $("#nut-birth-year").value = b.birth_year ?? "";
+      $("#nut-sex").value = b.sex || "undisclosed";
+      $("#nut-weight").value = b.weight_kg ?? "";
+      $("#nut-activity").value = b.activity_level || "";
+      // Without the consent they can only be cleared, not added or changed.
+      $("#nut-weight").disabled = !b.has_consent && b.weight_kg == null;
+      $("#nut-activity").disabled = !b.has_consent && !b.activity_level;
+      $("#nut-body-consent").hidden = b.has_consent;
+    } catch (err) { /* the fields just stay empty */ }
+  }
+
+  async function saveBody(e) {
+    e.preventDefault();
+    const errEl = $("#nut-body-error");
+    showError(errEl, null);
+    const year = $("#nut-birth-year").value;
+    const body = { birth_year: year === "" ? null : Number(year), sex: $("#nut-sex").value };
+    if (!$("#nut-weight").disabled) {
+      const weight = $("#nut-weight").value;
+      body.weight_kg = weight === "" ? null : Number(weight);
+      body.activity_level = $("#nut-activity").value;
+    }
+    try {
+      await api("body/", { method: "PATCH", body });
+      toast(t("toast_body_saved"));
+      if (hasConsent()) loadGoals();
+    } catch (err) {
+      showError(errEl, err);
     }
   }
 
@@ -334,7 +414,9 @@
   function initProfile() {
     initConsent();
     loadConnections();
+    loadBody();
     $("#nut-mcp-list").addEventListener("click", onConnectionsClick);
+    $("#nut-body-form").addEventListener("submit", saveBody);
     if (!hasConsent()) return;
     loadGoals();
     loadSettings();
@@ -483,13 +565,25 @@
     return 10 * p;
   }
 
-  function goalOf(n, i) {
-    const d = roll.data;
-    const low = d.low[n] ? d.low[n][i] : null;
-    const high = d.high[n] ? d.high[n][i] : null;
+  // Two goal sets judged over the same window (#105): "mine" and "who" (recommended).
+  const SETS = ["mine", "who"];
+  // Recommended-only nutrients get a gauge only from this list; the rest are in
+  // the chips and "Show every nutrient", so the gauges stay focused.
+  const WHO_HEADLINE = ["kcal", "protein_g", "carbs_g", "added_sugar_g", "fiber_g", "fat_g", "sat_fat_g", "sodium_mg"];
+  const statusOf = (n, i, set) => {
+    const st = roll.data.sets[set].status[n];
+    return st ? st[i] : null;
+  };
+
+  function goalOf(n, i, set = "mine") {
+    const s = roll.data.sets[set];
+    const low = s.low[n] ? s.low[n][i] : null;
+    const high = s.high[n] ? s.high[n][i] : null;
     if (low == null && high == null) return null;
     return { nutrient: n, kind: low != null && high != null ? "between" : low != null ? "at_least" : "at_most", min_value: low, max_value: high };
   }
+
+  const summaryOf = (n, set) => roll.data.sets[set].summary.find((x) => x.nutrient === n) || null;
 
   function initialIndex(d) {
     const last = d.ticks.length - 1;
@@ -508,8 +602,8 @@
       const found = kept ? d.ticks.indexOf(kept) : -1;
       roll.index = found >= 0 ? found : (roll.follow ? lastIndex() : initialIndex(d));
       roll.follow = roll.index === lastIndex();
-      const tracked = d.summary.map((s) => s.nutrient);
-      if (!tracked.includes(roll.nutrient)) roll.nutrient = tracked[0] || null;
+      if (!d.tracked.includes(roll.nutrient)) roll.nutrient = d.tracked[0] || null;
+      $("#nut-who-minor").hidden = d.sets.who.status_reason !== "minor";
       const scrub = $("#nut-scrub");
       scrub.max = String(lastIndex());
       scrub.value = String(roll.index);
@@ -542,7 +636,8 @@
     $("#nut-scrub").setAttribute("aria-valuetext", range);
     placeWindow();
     $("#nut-now-btn").hidden = roll.follow;
-    const goals = d.summary.map((s) => s.nutrient).filter((n) => d.status[n][i] != null);
+    const goals = d.tracked.filter((n) => statusOf(n, i, "mine") != null
+      || (WHO_HEADLINE.includes(n) && statusOf(n, i, "who") != null));
     const note = roll.span === "7d" ? `<p class="grim-help">${esc(t("avg_note"))}</p>` : "";
     $("#nut-gauges").innerHTML = goals.length
       ? `${note}${goals.map((n) => gaugeHtml(n, i)).join("")}`
@@ -577,36 +672,51 @@
       + `<span class="is-now" style="left:100%">${esc(t("today_now"))}</span>`;
   }
 
+  // One gauge, both ranges: my goal filled, the recommended one dashed. The
+  // headline status and delta follow my goal, or the recommended one without it.
   function gaugeHtml(n, i) {
     const d = roll.data;
     const value = d.values[n][i];
     const missing = d.missing[n][i];
-    const status = d.status[n][i];
-    const goal = goalOf(n, i);
+    const mine = goalOf(n, i, "mine");
+    const who = goalOf(n, i, "who");
+    const lead = mine ? "mine" : "who";
+    const status = statusOf(n, i, lead);
+    const goal = mine || who;
     const low = goal.min_value;
     const high = goal.max_value;
     const unit = UNIT_OF[n];
-    const top = Math.max(value, high || 0, (low || 0) * 1.25, 1) * 1.1;
+    const bound = (g) => Math.max((g && g.max_value) || 0, ((g && g.min_value) || 0) * 1.25);
+    const top = Math.max(value, bound(mine), bound(who), 1) * 1.1;
     const at = (x) => Math.min(100, (x / top) * 100);
-    const from = low != null ? at(low) : 0;
-    const to = high != null ? at(high) : 100;
+    const band = (g, cls) => {
+      if (!g) return "";
+      const from = g.min_value != null ? at(g.min_value) : 0;
+      const to = g.max_value != null ? at(g.max_value) : 100;
+      return `<span class="${cls}" style="left:${from}%;width:${Math.max(0, to - from)}%"></span>`;
+    };
+    const target = (set, g) => `<span class="nut-gauge-target nut-gauge-target--${set}">
+        <span class="nut-dot nut-dot--${esc(statusOf(n, i, set))}" aria-hidden="true"></span>
+        ${esc(t(`set_${set}`))}: ${esc(rangeText(g))} · ${esc(t(`status_${statusOf(n, i, set)}`))}</span>`;
     let delta;
     if (status === "not_logged") delta = t("gauge_nothing");
     else if (high != null && value > high) delta = t("gauge_over", { n: fmtAmount(value - high), unit });
     else if (low != null && value < low) delta = t(missing ? "gauge_short_maybe" : "gauge_short", { n: fmtAmount(low - value), unit });
     else delta = t("gauge_in");
     const name = t(`n_${n}`);
-    const label = `${name}: ${valueText(n, value, missing)}, ${targetText(goal)}, ${t(`status_${status}`)}`;
+    const targets = SETS.map((set) => [set, goalOf(n, i, set)]).filter(([, g]) => g);
+    const label = `${name}: ${valueText(n, value, missing)}, ${targets.map(([set, g]) =>
+      `${t(`set_${set}`)} ${rangeText(g)} ${t(`status_${statusOf(n, i, set)}`)}`).join(", ")}`;
     return `<button type="button" class="nut-gauge nut-gauge--${esc(status)}${n === roll.nutrient ? " is-selected" : ""}"
         data-nutrient="${n}" aria-pressed="${n === roll.nutrient}" aria-label="${esc(label)}">
       <span class="nut-gauge-head"><span class="nut-gauge-name">${esc(name)}</span>
         <span class="nut-gauge-value">${esc(valueText(n, value, missing))}</span></span>
       <span class="nut-gauge-track" aria-hidden="true">
-        <span class="nut-gauge-band" style="left:${from}%;width:${Math.max(0, to - from)}%"></span>
+        ${band(mine, "nut-gauge-band")}${band(who, "nut-gauge-band nut-gauge-band--who")}
         <span class="nut-gauge-fill" style="width:${at(value)}%"></span>
       </span>
-      <span class="nut-gauge-foot"><span class="grim-help">${esc(targetText(goal))}</span>
-        <span class="nut-gauge-delta">${esc(delta)}</span>${statusBadge(status)}</span>
+      <span class="nut-gauge-foot"><span class="nut-gauge-delta">${esc(delta)}</span>${statusBadge(status)}</span>
+      <span class="nut-gauge-targets">${targets.map(([set, g]) => target(set, g)).join("")}</span>
     </button>`;
   }
 
@@ -620,9 +730,16 @@
 
   function renderChips() {
     const d = roll.data;
-    $("#nut-hist-chips").innerHTML = d.summary.map((s) => `<button type="button" class="grim-scope-btn${s.nutrient === roll.nutrient ? " is-on" : ""}"
-        data-chip="${s.nutrient}" aria-pressed="${s.nutrient === roll.nutrient}">${esc(t(`n_${s.nutrient}`))}
-        <span class="nut-chip-pct">${s.pct == null ? "—" : `${s.pct}%`}</span></button>`).join("");
+    const pct = (n, set) => {
+      const s = summaryOf(n, set);
+      return s ? `${s.pct == null ? "—" : `${s.pct}%`}` : null;
+    };
+    $("#nut-hist-chips").innerHTML = d.tracked.map((n) => {
+      const parts = SETS.map((set) => [set, pct(n, set)]).filter(([, v]) => v != null);
+      return `<button type="button" class="grim-scope-btn${n === roll.nutrient ? " is-on" : ""}"
+        data-chip="${n}" aria-pressed="${n === roll.nutrient}">${esc(t(`n_${n}`))}
+        <span class="nut-chip-pct">${parts.map(([set, v]) => `<span class="nut-chip-set nut-chip-set--${set}" title="${esc(t(`set_${set}`))}">${esc(v)}</span>`).join(" · ")}</span></button>`;
+    }).join("");
   }
 
   function selectNutrient(n) {
@@ -647,13 +764,18 @@
       roll.geom = null;
       return;
     }
-    const s = d.summary.find((x) => x.nutrient === n);
-    const share = (k) => (s.judged ? `${Math.round((k / s.judged) * 100)}%` : "—");
-    const stat = s.judged
-      ? `<p class="nut-tir"><strong class="nut-tir-pct">${s.pct}%</strong> <span>${esc(t("tir_of_time"))}</span></p>
-         <p class="grim-help">${esc(t("tir_breakdown", { out: share(s.out_of_range), unc: share(s.uncertain), hours: s.not_logged * d.step_hours }))}</p>`
-      : `<p class="grim-help">${esc(t("tir_none"))}</p>`;
-    box.innerHTML = `${stat}
+    // Time in range against each set the nutrient has: "My goal X %", "Recommended Y %".
+    const stat = SETS.map((set) => {
+      const s = summaryOf(n, set);
+      if (!s) return "";
+      const share = (k) => (s.judged ? `${Math.round((k / s.judged) * 100)}%` : "—");
+      return s.judged
+        ? `<div class="nut-tir-set nut-tir-set--${set}"><p class="nut-tir"><strong class="nut-tir-pct">${s.pct}%</strong>
+            <span>${esc(t(`tir_of_time_${set}`))}</span></p>
+           <p class="grim-help">${esc(t("tir_breakdown", { out: share(s.out_of_range), unc: share(s.uncertain), hours: s.not_logged * d.step_hours }))}</p></div>`
+        : `<p class="grim-help">${esc(t(`set_${set}`))}: ${esc(t("tir_none"))}</p>`;
+    }).join("");
+    box.innerHTML = `<div class="nut-tir-sets">${stat}</div>
       <div class="nut-chart" id="nut-chart"><div class="nut-tip" id="nut-tip" hidden></div></div>
       <ol class="nut-strip" id="nut-strip" aria-label="${esc(t("strip_label"))}"></ol>
       <details class="nut-table"><summary>${esc(t("table_show"))}</summary><div id="nut-table"></div></details>`;
@@ -674,7 +796,10 @@
     let peak = 0;
     for (let i = 0; i < N; i += 1) {
       if (d.logged[i]) peak = Math.max(peak, vals[i]);
-      peak = Math.max(peak, d.high[n][i] || 0, (d.low[n][i] || 0) * 1.25);
+      for (const set of SETS) {
+        const s = d.sets[set];
+        if (s.low[n]) peak = Math.max(peak, s.high[n][i] || 0, (s.low[n][i] || 0) * 1.25);
+      }
     }
     const yMax = niceMax(peak * 1.05);
     const x = (i) => m.l + (N > 1 ? (i / (N - 1)) * pw : pw);
@@ -701,23 +826,28 @@
       label.textContent = fmtDate(tickDay(iso), { day: "numeric", month: "short" });
       svg.appendChild(label);
     });
-    // Goal band: the range that counts as met, segment by segment as goals change.
-    let band = [];
-    const flushBand = () => {
-      if (band.length > 1) {
-        const top = band.map(([i, lo, hi]) => `${x(i)},${y(hi == null ? yMax : hi)}`);
-        const bottom = band.slice().reverse().map(([i, lo]) => `${x(i)},${y(lo == null ? 0 : lo)}`);
-        svg.appendChild(svgEl("polygon", { points: [...top, ...bottom].join(" "), class: "nut-band" }));
+    // Goal bands: the range that counts as met, segment by segment as goals
+    // change — mine filled, the recommended one (#105) dashed on top.
+    for (const set of SETS) {
+      const s = d.sets[set];
+      if (!s.low[n]) continue;
+      let band = [];
+      const flushBand = () => {
+        if (band.length > 1) {
+          const top = band.map(([i, lo, hi]) => `${x(i)},${y(hi == null ? yMax : hi)}`);
+          const bottom = band.slice().reverse().map(([i, lo]) => `${x(i)},${y(lo == null ? 0 : lo)}`);
+          svg.appendChild(svgEl("polygon", { points: [...top, ...bottom].join(" "), class: set === "who" ? "nut-band nut-band--who" : "nut-band" }));
+        }
+        band = [];
+      };
+      for (let i = 0; i < N; i += 1) {
+        const lo = s.low[n][i];
+        const hi = s.high[n][i];
+        if (lo == null && hi == null) flushBand();
+        else band.push([i, lo, hi]);
       }
-      band = [];
-    };
-    for (let i = 0; i < N; i += 1) {
-      const lo = d.low[n][i];
-      const hi = d.high[n][i];
-      if (lo == null && hi == null) flushBand();
-      else band.push([i, lo, hi]);
+      flushBand();
     }
-    flushBand();
     // The line: the window's value, broken where nothing was logged.
     let path = "";
     let pen = false;
@@ -780,12 +910,13 @@
     hover.setAttribute("x1", g.x(i));
     hover.setAttribute("x2", g.x(i));
     hover.setAttribute("visibility", "visible");
-    const status = d.status[n][i];
-    const goal = goalOf(n, i);
     tip.innerHTML = `<strong>${esc(fmtTick(d.ticks[i]))}</strong>
       <span>${esc(d.logged[i] ? valueText(n, d.values[n][i], d.missing[n][i]) : t("status_not_logged"))}</span>
-      ${goal ? `<span class="grim-help">${esc(targetText(goal))}</span>` : ""}
-      ${status ? statusBadge(status) : ""}`;
+      ${SETS.map((set) => {
+        const goal = goalOf(n, i, set);
+        const status = statusOf(n, i, set);
+        return goal ? `<span class="grim-help">${esc(t(`set_${set}`))}: ${esc(rangeText(goal))}</span>${status ? statusBadge(status) : ""}` : "";
+      }).join("")}`;
     tip.hidden = false;
     const wrapW = $("#nut-chart").clientWidth;
     const px = (g.x(i) / g.W) * wrapW;
@@ -801,7 +932,9 @@
 
   function drawStrip(n) {
     const d = roll.data;
-    const byDay = Object.fromEntries((d.daily[n] || []).map((x) => [x.date, x]));
+    // The day strip follows my goal, or the recommended one without it.
+    const set = d.sets.mine.daily[n] ? "mine" : "who";
+    const byDay = Object.fromEntries((d.sets[set].daily[n] || []).map((x) => [x.date, x]));
     const days = [...new Set(d.ticks.map(tickDay))];
     $("#nut-strip").innerHTML = days.map((day) => {
       const cell = byDay[day];
@@ -837,7 +970,12 @@
     const chip = e.target.closest("[data-chip]");
     if (chip) { selectNutrient(chip.dataset.chip); return true; }
     const gauge = e.target.closest(".nut-gauge");
-    if (gauge) { selectNutrient(gauge.dataset.nutrient); return true; }
+    if (gauge) {
+      // Selects it for the history chart and opens its cauldron (#107).
+      selectNutrient(gauge.dataset.nutrient);
+      openCauldron(gauge.dataset.nutrient);
+      return true;
+    }
     const day = e.target.closest("[data-day]");
     if (day) {
       const ticks = roll.data.ticks;
@@ -856,12 +994,219 @@
     return false;
   }
 
+  // ── The goal cauldron (#107): what a card's number is made of ──
+  // GET rolling/breakdown/ for the card's nutrient, window and tick. The potion
+  // (seen from above) is a pie of the top spells/reagents; what's unknown rises
+  // as fog, and each fog item can be filled (POST rolling/fill/).
+  const cauldron = { nutrient: null, data: null, seq: 0 };
+  const POT = { cx: 160, cy: 118, r: 112, squash: 0.34 };
+
+  function slicePath(r, a0, a1) {
+    if (a1 - a0 >= Math.PI * 2 - 1e-6) return `M${-r},0a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+    const p = (a) => `${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`;
+    return `M0,0L${p(a0)}A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0},1 ${p(a1)}Z`;
+  }
+
+  const rowName = (row) => (row.kind === "others" ? t("cauldron_others", { n: row.groups }) : row.label);
+  const reagentLink = (uuid) => `${CFG.grimoireRoot}reagent/${encodeURIComponent(uuid)}/`;
+  const rowLink = (row) => (row.spell ? spellLink(row.spell) : row.reagent ? reagentLink(row.reagent) : null);
+  const nutAmount = (n, v) => `${fmtAmount(v)} ${UNIT_OF[n]}`;
+
+  function cauldronStatus(n) {
+    const i = roll.index;
+    return statusOf(n, i, "mine") || statusOf(n, i, "who") || "none";
+  }
+
+  async function openCauldron(n) {
+    const dlg = $("#nut-cauldron");
+    if (!dlg || !roll.data) return;
+    cauldron.nutrient = n;
+    $("#nut-cauldron-title").textContent = t(`n_${n}`);
+    const iso = roll.data.ticks[roll.index];
+    $("#nut-cauldron-sub").textContent = t("window_range", { from: fmtTick(shiftIso(iso, spanHours())), to: fmtTick(iso) })
+      + (roll.span === "7d" ? ` · ${t("cauldron_avg")}` : "");
+    dlg.dataset.status = cauldronStatus(n);
+    if (!dlg.open) dlg.showModal();
+    await loadCauldron(true);
+  }
+
+  async function loadCauldron(animate) {
+    const my = ++cauldron.seq;
+    const n = cauldron.nutrient;
+    const iso = roll.data.ticks[roll.index];
+    try {
+      const d = await api(`rolling/breakdown/?span=${roll.span}&nutrient=${encodeURIComponent(n)}&end=${encodeURIComponent(iso)}`);
+      if (my !== cauldron.seq) return;
+      cauldron.data = d;
+      renderCauldron(d, animate);
+    } catch (err) {
+      if (my !== cauldron.seq) return;
+      $("#nut-cauldron-body").innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+    }
+  }
+
+  function potSvg(d) {
+    const n = d.nutrient;
+    const sized = d.pie.filter((row) => row.amount > 0);
+    const sum = sized.reduce((a, row) => a + row.amount, 0);
+    let a = -Math.PI / 2;
+    const slices = sized.map((row, k) => {
+      const a0 = a;
+      a += (row.amount / sum) * Math.PI * 2;
+      const mid = (a0 + a) / 2;
+      const href = rowLink(row);
+      const label = `${rowName(row)}: ${nutAmount(n, row.amount)}${row.pct != null ? ` (${row.pct}%)` : ""}`;
+      const shape = `<path class="nut-slice nut-slice--${row.kind === "others" ? "others" : k}" d="${slicePath(POT.r, a0, a)}"
+          style="--i:${k};--dx:${(Math.cos(mid) * 10).toFixed(1)}px;--dy:${(Math.sin(mid) * 10).toFixed(1)}px"/>`;
+      return href
+        ? `<a href="${esc(href)}" class="nut-slice-link" data-label="${esc(label)}" aria-label="${esc(label)}">${shape}</a>`
+        : `<g class="nut-slice-link" tabindex="0" role="img" data-label="${esc(label)}" aria-label="${esc(label)}">${shape}</g>`;
+    }).join("");
+    const fogCount = d.fog.length ? Math.min(7, 2 + d.fog.length * 2) : 0;
+    const full = d.fog.length && !sized.length;
+    const fog = Array.from({ length: full ? 9 : fogCount }, (_, k) =>
+      `<ellipse class="nut-fog" cx="${POT.cx - 90 + ((k * 47) % 180)}" cy="${POT.cy - 6 - (k % 3) * 14}" rx="${46 + (k % 2) * 18}" ry="${14 + (k % 3) * 5}" style="--i:${k}"/>`).join("");
+    const embers = Array.from({ length: 7 }, (_, k) =>
+      `<circle class="nut-ember" cx="${92 + k * 23}" cy="${276 - (k % 2) * 5}" r="${5 + (k % 3) * 2}" style="--i:${k}"/>`).join("");
+    const bubbles = sized.length || full ? Array.from({ length: 5 }, (_, k) =>
+      `<circle class="nut-bubble" cx="${POT.cx - 70 + k * 34}" cy="${POT.cy + (k % 2 ? 8 : -6)}" r="${3 + (k % 3)}" style="--i:${k}"/>`).join("") : "";
+    return `<svg viewBox="0 0 320 300" role="img" aria-labelledby="nut-cauldron-title nut-cauldron-total">
+      <defs><filter id="nut-fog-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>
+      <g class="nut-embers" aria-hidden="true">${embers}</g>
+      <path class="nut-pot-leg" d="M78 250 L66 284 M242 250 L254 284" aria-hidden="true"/>
+      <path class="nut-pot" d="M36 ${POT.cy} Q36 262 160 262 Q284 262 284 ${POT.cy} Z" aria-hidden="true"/>
+      <ellipse class="nut-pot-rim" cx="${POT.cx}" cy="${POT.cy}" rx="${POT.r + 12}" ry="${(POT.r + 12) * POT.squash}" aria-hidden="true"/>
+      <g transform="translate(${POT.cx} ${POT.cy}) scale(1 ${POT.squash})">
+        <circle class="nut-potion" r="${POT.r}" aria-hidden="true"/>
+        <g class="nut-swirl">${slices}</g>
+      </g>
+      <g aria-hidden="true">${bubbles}</g>
+      <g class="nut-fogs${full ? " is-full" : ""}" filter="url(#nut-fog-blur)" aria-hidden="true">${fog}</g>
+      <text class="nut-steam" x="${POT.cx}" y="44" text-anchor="middle" aria-hidden="true">${esc(t(`n_${n}`))}</text>
+    </svg>`;
+  }
+
+  function fillFormHtml(n, target) {
+    const name = (IS_ES && target.name_es) || target.name;
+    const hint = target.editable ? t("fill_own") : t("fill_copy");
+    return `<form class="nut-fill" data-reagent="${esc(target.reagent)}">
+      <label class="grim-field"><span>${esc(t("fill_reagent_label", { name, unit: UNIT_OF[n] }))}</span>
+        <input type="number" name="value" min="0" step="any" inputmode="decimal" required></label>
+      <button type="submit" class="btn-cauldron btn-cauldron--ghost">${esc(t("fill_save"))}</button>
+      <p class="grim-help">${esc(hint)}</p>
+    </form>`;
+  }
+
+  function fogItemHtml(n, item) {
+    const href = rowLink(item);
+    const name = href ? `<a href="${esc(href)}">${esc(item.label)}</a>` : esc(item.label);
+    let forms;
+    if (!item.fill) forms = `<p class="grim-help">${esc(t("fill_gone"))}</p>`;
+    else if (item.fill.not_owner) forms = `<p class="grim-help">${esc(t("fill_not_owner"))}</p>`;
+    else if (item.fill.quick) {
+      forms = item.fill.quick.map((q) => `<form class="nut-fill" data-entry="${esc(q.entry)}">
+          <label class="grim-field"><span>${esc(t("fill_quick_label", { time: fmtTick(q.eaten_at), unit: UNIT_OF[n] }))}</span>
+            <input type="number" name="value" min="0" step="any" inputmode="decimal" required></label>
+          <button type="submit" class="btn-cauldron btn-cauldron--ghost">${esc(t("fill_save"))}</button>
+        </form>`).join("");
+    } else if (item.fill.reagents.length) forms = item.fill.reagents.map((r) => fillFormHtml(n, r)).join("");
+    else forms = `<p class="grim-help">${esc(t("fill_none"))}</p>`;
+    const partly = item.amount > 0 ? ` · ${esc(t("fog_partly", { amount: nutAmount(n, item.amount) }))}` : "";
+    return `<li class="nut-fog-item"><p><strong>${name}</strong>
+        <span class="grim-help">${esc(t(item.entries === 1 ? "cauldron_entries_one" : "cauldron_entries_other", { n: item.entries }))}${partly}</span></p>${forms}</li>`;
+  }
+
+  function renderCauldron(d, animate) {
+    const n = d.nutrient;
+    const dlg = $("#nut-cauldron");
+    dlg.dataset.status = cauldronStatus(n);
+    $("#nut-cauldron-total").textContent = d.entries
+      ? `${d.lower_bound ? "≥ " : ""}${nutAmount(n, d.total)}${d.span === "7d" ? ` ${t("cauldron_per_day")}` : ""}`
+      : "";
+    const pot = $("#nut-cauldron-pot");
+    pot.classList.toggle("is-pouring", Boolean(animate));
+    pot.classList.toggle("is-empty", !d.entries);
+    pot.innerHTML = potSvg(d);
+    $("#nut-cauldron-caption").textContent = "";
+    if (!d.entries) {
+      $("#nut-cauldron-body").innerHTML = `<p class="grim-help nut-cauldron-empty">${esc(t("cauldron_empty"))}</p>`;
+      return;
+    }
+    const list = d.pie.length
+      ? `<ol class="nut-cauldron-list">${d.pie.map((row, k) => {
+        const href = rowLink(row);
+        const name = href ? `<a href="${esc(href)}">${esc(rowName(row))}</a>` : esc(rowName(row));
+        return `<li><span class="nut-swatch nut-slice--${row.kind === "others" ? "others" : k}" aria-hidden="true"></span>
+          <span class="nut-cauldron-name">${name}${row.estimated ? ` <span class="grim-badge is-warn">${esc(t("badge_estimated_short"))}</span>` : ""}</span>
+          <span class="nut-cauldron-amount">${esc(nutAmount(n, row.amount))}</span>
+          <span class="nut-cauldron-pct">${row.pct != null ? `${row.pct}%` : ""}</span></li>`;
+      }).join("")}</ol>`
+      : `<p class="grim-help">${esc(t("cauldron_all_fog"))}</p>`;
+    const fog = d.fog.length
+      ? `<section class="nut-cauldron-fog" aria-labelledby="nut-fog-title">
+          <h3 class="grim-section-title" id="nut-fog-title">${esc(t("fog_title"))}</h3>
+          <p class="grim-help">${esc(t("fog_help"))}</p>
+          <ul class="nut-fog-list">${d.fog.map((item) => fogItemHtml(n, item)).join("")}</ul></section>`
+      : "";
+    $("#nut-cauldron-body").innerHTML = list + fog;
+  }
+
+  async function fillGap(form) {
+    const input = form.elements.value;
+    const body = { nutrient: cauldron.nutrient, value: input.value };
+    if (form.dataset.reagent) body.reagent = form.dataset.reagent;
+    else body.entry = form.dataset.entry;
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    try {
+      const res = await api("rolling/fill/", { method: "POST", body });
+      toast(t(res.entries_refreshed ? "fill_saved" : "fill_saved_only"));
+      await loadCauldron(false);
+      loadRolling();
+    } catch (err) {
+      toast(errorText(err));
+      btn.disabled = false;
+    }
+  }
+
+  function showSliceCaption(el) {
+    const link = el && el.closest(".nut-slice-link");
+    $$(".nut-slice-link.is-lifted", $("#nut-cauldron-pot")).forEach((x) => { if (x !== link) x.classList.remove("is-lifted"); });
+    if (link) link.classList.add("is-lifted");
+    $("#nut-cauldron-caption").textContent = link ? link.dataset.label : "";
+  }
+
+  function initCauldron() {
+    const dlg = $("#nut-cauldron");
+    if (!dlg) return;
+    $("#nut-cauldron-close").addEventListener("click", () => dlg.close());
+    // A click on the backdrop (outside the panel) closes it too.
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => {
+      cauldron.seq += 1;
+      const card = $(`.nut-gauge[data-nutrient="${cauldron.nutrient}"]`);
+      if (card) card.focus();
+    });
+    dlg.addEventListener("submit", (e) => {
+      const form = e.target.closest(".nut-fill");
+      if (!form) return;
+      e.preventDefault();
+      fillGap(form);
+    });
+    const pot = $("#nut-cauldron-pot");
+    pot.addEventListener("mouseover", (e) => showSliceCaption(e.target));
+    pot.addEventListener("mouseleave", () => showSliceCaption(null));
+    pot.addEventListener("focusin", (e) => showSliceCaption(e.target));
+    pot.addEventListener("focusout", () => showSliceCaption(null));
+  }
+
   function initRolling() {
     $("#nut-scrub").addEventListener("input", (e) => setIndex(Number(e.target.value)));
     window.addEventListener("resize", debounce(() => { if (roll.data) { renderTimelineDays(); renderHistory(); } }, 200));
     // The window moves with the clock: refresh while it's following "now".
     setInterval(() => { if (roll.follow && !document.hidden) loadRolling(); }, 5 * 60 * 1000);
     loadRolling();
+    initCauldron();
   }
 
   // ── Entry form ──

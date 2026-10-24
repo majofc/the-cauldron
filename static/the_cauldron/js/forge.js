@@ -586,8 +586,10 @@
       setImplementMode("dumbbell", profile.dumbbell_mode || "fixed");
       setImplementMode("kettlebell", profile.kettlebell_mode || "fixed");
       renderOrphans(profile.orphan_plates);
-      $("#forge-birth-year").value = profile.birth_year || "";
-      setSexValue(profile.sex || "undisclosed");
+      api("program/").then((program) => {
+        $("#forge-volume-input").value = program.weekly_volume_target;
+        $("#forge-volume").hidden = false;
+      }).catch(() => { $("#forge-volume").hidden = true; });
     } catch (e) {
       notify(t("err_load_equipment"));
     } finally {
@@ -641,24 +643,23 @@
     return EXERCISE_ICON_MAP[name.toLowerCase()] || null;
   }
 
-  // Sex button group helpers.
-  function sexValue() {
-    const on = $(".forge-sex-btn.is-on", $("#forge-sex"));
-    return on ? on.dataset.sex : "undisclosed";
-  }
-
-  function setSexValue(val) {
-    $$(".forge-sex-btn", $("#forge-sex")).forEach((btn) => {
-      const active = btn.dataset.sex === val;
-      btn.classList.toggle("is-on", active);
-      btn.setAttribute("aria-pressed", String(active));
-    });
-  }
-
-  // Wire sex button group clicks (runs once).
-  (function wireSexBtns() {
-    $$(".forge-sex-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setSexValue(btn.dataset.sex));
+  // Weekly volume (#109): sets per pattern per week; sets per session follow.
+  (function wireVolume() {
+    const btn = $("#forge-volume-save");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const program = await api("program/", {
+          method: "PATCH", body: { weekly_volume_target: Number($("#forge-volume-input").value) },
+        });
+        notify(t("volume_saved", { n: program.weekly_volume_target }));
+      } catch (err) {
+        const { data } = apiErrorPayload(err);
+        notify((data && data.detail) || t("err_volume"));
+      } finally {
+        btn.disabled = false;
+      }
     });
   }());
 
@@ -883,7 +884,6 @@
     let body;
     try {
       showEquipError("");
-      const birthYear = parseInt($("#forge-birth-year").value, 10);
       body = {
         equipment: selectedEquipment(),
         load_unit: loadUnit,
@@ -899,8 +899,6 @@
         kettlebell_weights: parseWeights($("#forge-kettlebells").value, t("lbl_kettlebell_weights")),
         kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, t("lbl_kettlebell_plates")),
         kettlebell_handle_weight: num("#forge-kettlebell-handle", 0),
-        birth_year: isNaN(birthYear) ? null : birthYear,
-        sex: sexValue(),
       };
     } catch (err) {
       // A parse failure is the user's typo, not a server problem — show exactly
@@ -2465,6 +2463,10 @@
         : `<div class="forge-ex-modal-value">${esc(fmtLoad(presc.target_load, presc.load_unit))}</div>`;
       addSection(esc(t("sec_prescribed_load")), body);
     }
+    if (presc && presc.load_options && presc.load_options.length && state !== "blocked") {
+      addSection(esc(t("sec_set_load")), loadControlHtml(presc));
+      $("#forge-set-load-btn", exModalBody).addEventListener("click", () => submitLoad(presc));
+    }
     if (ex.muscles && ex.muscles.length) {
       const chips = ex.muscles
         .map((m) => `<span class="forge-muscle-chip">${esc(muscleName(m.key, m.name))}</span>`)
@@ -2615,6 +2617,45 @@
   if (exModalCloseBtn) exModalCloseBtn.addEventListener("click", closeExerciseModal);
   if (exModal) {
     exModal.addEventListener("click", (e) => { if (e.target === exModal) closeExerciseModal(); });
+  }
+
+  // ── Set my load (#109) ────────────────────────────────────────────────────
+  // Program-wide for the exercise; the server snaps DOWN to a buildable load.
+  // Bands pick one of the owned levels (an index; on assisted rungs a lower
+  // level is more help).
+  function loadControlHtml(presc) {
+    const field = presc.is_band_load
+      ? `<select class="forge-set-load-input" id="forge-set-load-value" aria-label="${esc(t("sec_set_load"))}">${
+        presc.load_options.map((v) => `<option value="${v}"${v === presc.target_load ? " selected" : ""}>${
+          esc(t("band_level", { n: fmtNum(v) }))}</option>`).join("")}</select>`
+      : `<input type="number" class="forge-set-load-input" id="forge-set-load-value" min="0" step="any" inputmode="decimal" ` +
+        `value="${presc.target_load ?? ""}" aria-label="${esc(t("sec_set_load"))}">` +
+        `<span class="forge-load-unit">${esc(unitLabel(presc.load_unit))}</span>`;
+    return `<div class="forge-set-load">${field}` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-set-load-btn">${esc(t("set_load_save"))}</button></div>` +
+      `<p class="forge-help">${esc(t("set_load_help"))}</p>`;
+  }
+
+  async function submitLoad(presc) {
+    const btn = $("#forge-set-load-btn", exModalBody);
+    const value = Number($("#forge-set-load-value", exModalBody).value);
+    btn.disabled = true;
+    try {
+      const res = await api(`prescription/${presc.uuid}/set-load/`, { method: "POST", body: { load: value } });
+      const shown = presc.is_band_load ? t("band_level", { n: fmtNum(res.load) }) : fmtLoad(res.load, presc.load_unit);
+      notify(res.snapped_from != null
+        ? t("load_snapped", { asked: fmtLoad(res.snapped_from, presc.load_unit), load: shown })
+        : t("load_set", { load: shown }));
+      closeExerciseModal();
+      // Today's untouched sets were rewritten server-side: refresh them like a rung move.
+      const panel = $(".forge-panel.is-active");
+      if (panel && panel.dataset.panel === "today") refreshTodayAfterRungChange(presc.uuid);
+      else loadCatalogTree();
+    } catch (err) {
+      const { data } = apiErrorPayload(err);
+      notify((data && data.detail) || t("err_set_load"));
+      btn.disabled = false;
+    }
   }
 
   // ── ⇅ Set my rung ─────────────────────────────────────────────────────────

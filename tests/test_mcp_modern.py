@@ -61,7 +61,7 @@ def test_discover(alice):
 def test_tools_list_without_handshake(alice):
     res = _modern(_token(alice), "tools/list").json()["result"]
     assert res["resultType"] == "complete"
-    assert len(res["tools"]) == 38
+    assert len(res["tools"]) == 43
     assert res["cacheScope"] == "private" and res["ttlMs"] > 0
     assert "io.modelcontextprotocol/serverInfo" in res["_meta"]
 
@@ -96,7 +96,7 @@ def test_missing_headers_and_meta_are_tolerated(alice):
     mirrored headers or the _meta version out still gets served."""
     body = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
     r = _post(body, _token(alice), version=V)
-    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 43
 
 
 def test_every_post_is_logged_without_secrets(alice):
@@ -133,7 +133,7 @@ def test_legacy_clients_unchanged(alice):
                  token, version=None).json()["result"]
     assert init["protocolVersion"] == "2025-11-25" and "resultType" not in init
     res = _post({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}, token).json()["result"]
-    assert len(res["tools"]) == 38 and "resultType" not in res and "_meta" not in res
+    assert len(res["tools"]) == 43 and "resultType" not in res and "_meta" not in res
 
 
 def test_rejections_before_the_view_and_crashes_are_logged(alice, monkeypatch):
@@ -171,7 +171,7 @@ def test_url_without_trailing_slash_is_served_not_redirected(alice):
     r = Client().post("/cauldron/mcp", data=json.dumps(body), content_type="application/json",
                       HTTP_AUTHORIZATION=f"Bearer {_token(alice)}", HTTP_MCP_PROTOCOL_VERSION=V,
                       HTTP_MCP_METHOD="tools/list")
-    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 43
     r = Client().post("/cauldron/mcp", data=json.dumps(body), content_type="application/json")
     assert r.status_code == 401 and "resource_metadata=" in r["WWW-Authenticate"]
 
@@ -179,4 +179,4 @@ def test_url_without_trailing_slash_is_served_not_redirected(alice):
 @pytest.mark.parametrize("origin", ["https://claude.ai", "https://gemini.google.com"])
 def test_assistant_origins_are_allowed(alice, origin):
     r = _modern(_token(alice), "tools/list", headers={"HTTP_ORIGIN": origin})
-    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 38
+    assert r.status_code == 200 and len(r.json()["result"]["tools"]) == 43

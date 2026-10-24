@@ -302,11 +302,6 @@ class UserEquipmentProfile(ForgeBaseModel):
     """What the user owns. Drives which exercises are eligible and the smallest
     load increment available for load-mode progression."""
 
-    class Sex(models.TextChoices):
-        MALE = "male", "Male"
-        FEMALE = "female", "Female"
-        UNDISCLOSED = "undisclosed", "Prefer not to say"
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -317,12 +312,7 @@ class UserEquipmentProfile(ForgeBaseModel):
     # created on the Forge's first API read, so its existence says nothing about
     # whether the user has actually chosen their gear — this does.
     configured_at = models.DateTimeField(null=True, blank=True)
-    # Optional demographics — used only for the peer-comparison ("flames") score,
-    # which needs age + sex to look up published normative percentiles.
-    birth_year = models.PositiveIntegerField(null=True, blank=True)
-    sex = models.CharField(
-        max_length=12, choices=Sex.choices, default=Sex.UNDISCLOSED
-    )
+    # Birth year and sex for the peer score live on ``CauldronProfile`` (#105).
     # Concrete loadable details.
     #
     # Each implement is either FIXED (a list of whole weights the user owns) or
@@ -454,7 +444,7 @@ class Program(ForgeBaseModel):
         max_length=24, choices=Split.choices, default=Split.FULL_BODY_3X
     )
     weekly_volume_target = models.PositiveIntegerField(
-        default=8, help_text="Target working sets per pattern per week."
+        default=16, help_text="Target working sets per pattern per week (4–40); sets per session follow (#109)."
     )
 
     class Meta:

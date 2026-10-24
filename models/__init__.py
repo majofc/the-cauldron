@@ -26,6 +26,7 @@ from .forge import (  # noqa: F401
     WorkoutSession,
 )
 from .grimoire import (  # noqa: F401
+    ADDED_SUGAR_ERROR,
     Casting,
     GrimoirePreferences,
     Reagent,
@@ -33,6 +34,7 @@ from .grimoire import (  # noqa: F401
     Spell,
     SpellReagent,
     Tag,
+    added_sugar_over_total,
     normalize_search,
 )
 from .nutrition import (  # noqa: F401

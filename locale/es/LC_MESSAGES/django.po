@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 05:28+0000\n"
+"POT-Creation-Date: 2026-10-24 22:43+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,19 +29,23 @@ msgstr "acción desconocida"
 msgid "exercise must be an exercise uuid."
 msgstr "exercise debe ser el uuid de un ejercicio."
 
-#: api.py:359 api.py:397 api.py:532
+#: api.py:389 api.py:395 api.py:443 api.py:578
 msgid "No active program."
 msgstr "No hay un programa activo."
 
-#: api.py:368
+#: api.py:397
+msgid "Send weekly_volume_target."
+msgstr "Envía weekly_volume_target."
+
+#: api.py:414
 msgid "Finish or delete your last unfinished session first."
 msgstr "Primero termina o borra tu última sesión sin terminar."
 
-#: api.py:575 api.py:589
+#: api.py:621 api.py:635
 msgid "Session already finalized."
 msgstr "La sesión ya se cerró."
 
-#: api.py:594
+#: api.py:640
 msgid "from_exercise and to_exercise must be exercise uuids."
 msgstr "from_exercise y to_exercise deben ser uuids de ejercicios."
 
@@ -73,19 +77,19 @@ msgstr "No se pudo cargar la Prueba."
 msgid "Equipment saved. Now take the Trial."
 msgstr "Equipo guardado. Ahora haz la Prueba."
 
-#: forge_i18n.py:41 templates/the_cauldron/forge.html:221
+#: forge_i18n.py:41 templates/the_cauldron/forge.html:207
 msgid "Cauldron Chime"
 msgstr "Campanilla del Caldero"
 
-#: forge_i18n.py:42 templates/the_cauldron/forge.html:222
+#: forge_i18n.py:42 templates/the_cauldron/forge.html:208
 msgid "Ember Bell"
 msgstr "Campana de brasa"
 
-#: forge_i18n.py:43 templates/the_cauldron/forge.html:223
+#: forge_i18n.py:43 templates/the_cauldron/forge.html:209
 msgid "Deep Gong"
 msgstr "Gong profundo"
 
-#: forge_i18n.py:44 templates/the_cauldron/forge.html:224
+#: forge_i18n.py:44 templates/the_cauldron/forge.html:210
 msgid "Arcane Triad"
 msgstr "Tríada arcana"
 
@@ -454,7 +458,7 @@ msgstr "Serie %(n)s"
 msgid "target %(n)s %(unit)s"
 msgstr "meta %(n)s %(unit)s"
 
-#: forge_i18n.py:142 templates/the_cauldron/forge.html:336
+#: forge_i18n.py:142 templates/the_cauldron/forge.html:322
 msgid "Delete it"
 msgstr "Borrarla"
 
@@ -478,7 +482,9 @@ msgstr "No se pudo borrar esa sesión."
 msgid "Time to retest."
 msgstr "Hora de volver a probarte."
 
-#: forge_i18n.py:148 templates/the_cauldron/landing.html:364 templates/the_cauldron/landing.html:514 templates/the_cauldron/landing.html:518
+#: forge_i18n.py:148 templates/the_cauldron/landing.html:364
+#: templates/the_cauldron/landing.html:514
+#: templates/the_cauldron/landing.html:518
 msgid "Take the Trial"
 msgstr "Hacer la Prueba"
 
@@ -683,7 +689,7 @@ msgstr "Isquiotibiales · Glúteos · Espalda baja"
 msgid "Forearms · Hands"
 msgstr "Antebrazos · Manos"
 
-#: forge_i18n.py:202 forge_i18n.py:462
+#: forge_i18n.py:202 forge_i18n.py:472
 msgid "Cleared"
 msgstr "Superado"
 
@@ -776,836 +782,881 @@ msgstr "Sustituto"
 msgid "⇅ Change my rung"
 msgstr "⇅ Cambiar mi peldaño"
 
-#: forge_i18n.py:225
+#: forge_i18n.py:226
+msgid "Set my load"
+msgstr "Fijar mi peso"
+
+#: forge_i18n.py:227
+msgid "Use this load"
+msgstr "Usar este peso"
+
+#: forge_i18n.py:228
+msgid "Applies everywhere this movement is in your plan. A load you can't build rounds down to the nearest one you can."
+msgstr "Se aplica en todo tu plan donde esté este movimiento. Un peso que no puedes armar baja al más cercano que sí puedes."
+
+#: forge_i18n.py:229
+#, python-format
+msgid "Band %(n)s"
+msgstr "Liga %(n)s"
+
+#: forge_i18n.py:230
+#, python-format
+msgid "Load set to %(load)s."
+msgstr "Peso fijado en %(load)s."
+
+#: forge_i18n.py:231
+#, python-format
+msgid "%(asked)s can't be built — set to %(load)s."
+msgstr "%(asked)s no se puede armar — quedó en %(load)s."
+
+#: forge_i18n.py:232
+msgid "Couldn't set that load."
+msgstr "No se pudo fijar ese peso."
+
+#: forge_i18n.py:233
+#, python-format
+msgid "Weekly volume set to %(n)s sets per pattern."
+msgstr "Volumen semanal: %(n)s series por patrón."
+
+#: forge_i18n.py:234
+msgid "Couldn't save the weekly volume."
+msgstr "No se pudo guardar el volumen semanal."
+
+#: forge_i18n.py:235
 msgid "Make this my rung"
 msgstr "Hacer este mi peldaño"
 
-#: forge_i18n.py:226
+#: forge_i18n.py:236
 msgid "Block this exercise"
 msgstr "Bloquear este ejercicio"
 
-#: forge_i18n.py:228
+#: forge_i18n.py:238
 msgid "How to build it"
 msgstr "Cómo armarlo"
 
-#: forge_i18n.py:229
+#: forge_i18n.py:239
 msgid "Bare bar / empty handle — no plates."
 msgstr "Barra / maneral vacío — sin discos."
 
-#: forge_i18n.py:230
+#: forge_i18n.py:240
 msgid "Load into the bell"
 msgstr "Carga dentro de la pesa"
 
-#: forge_i18n.py:231
+#: forge_i18n.py:241
 msgid "Load per side"
 msgstr "Carga por lado"
 
-#: forge_i18n.py:232
+#: forge_i18n.py:242
 msgid "Still in the box"
 msgstr "Lo que queda en la caja"
 
-#: forge_i18n.py:234
+#: forge_i18n.py:244
 msgid "Couldn't load your ladder."
 msgstr "No se pudo cargar tu escalera."
 
-#: forge_i18n.py:235
+#: forge_i18n.py:245
 msgid "Change your rung"
 msgstr "Cambia tu peldaño"
 
-#: forge_i18n.py:237
+#: forge_i18n.py:247
 msgid "Jump to any rung you can do, up or down. Every day that trains this ladder moves with it, and progress carries on from there."
 msgstr "Salta a cualquier peldaño que puedas hacer, hacia arriba o hacia abajo. Cada día que entrena esta escalera se mueve con él, y el progreso sigue desde ahí."
 
-#: forge_i18n.py:240
+#: forge_i18n.py:250
 #, python-format
 msgid "Rungs marked %(mark)s ask you to confirm first."
 msgstr "Los peldaños marcados %(mark)s te piden confirmar primero."
 
-#: forge_i18n.py:241
+#: forge_i18n.py:251
 msgid "above your Trial"
 msgstr "arriba de tu Prueba"
 
-#: forge_i18n.py:242
+#: forge_i18n.py:252
 msgid "Above your Trial"
 msgstr "Arriba de tu Prueba"
 
-#: forge_i18n.py:243
+#: forge_i18n.py:253
 msgid "Current"
 msgstr "Actual"
 
-#: forge_i18n.py:245
+#: forge_i18n.py:255
 #, python-format
 msgid "This rung is placed at %(required)s on the %(anchor)s; your last Trial was %(yours)s. You can still take it — if the sets don't land, the Forge will ease you back down."
 msgstr "Este peldaño se asigna con %(required)s en %(anchor)s; tu última Prueba fue %(yours)s. Aun así puedes tomarlo — si las series no salen, la Forja te bajará con calma."
 
-#: forge_i18n.py:249
+#: forge_i18n.py:259
 #, python-format
 msgid "This rung is placed at %(required)s; your last Trial was %(yours)s. You can still take it — if the sets don't land, the Forge will ease you back down."
 msgstr "Este peldaño se asigna con %(required)s; tu última Prueba fue %(yours)s. Aun así puedes tomarlo — si las series no salen, la Forja te bajará con calma."
 
-#: forge_i18n.py:252 templates/the_cauldron/grimoire.html:111 templates/the_cauldron/grimoire.html:159 templates/the_cauldron/grimoire.html:225 templates/the_cauldron/nutrition.html:271 templates/the_cauldron/oauth_authorize.html:84
+#: forge_i18n.py:262 templates/the_cauldron/grimoire.html:111
+#: templates/the_cauldron/grimoire.html:159
+#: templates/the_cauldron/grimoire.html:225
+#: templates/the_cauldron/nutrition.html:279
+#: templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: forge_i18n.py:253
+#: forge_i18n.py:263
 msgid "Move anyway"
 msgstr "Cambiar de todos modos"
 
-#: forge_i18n.py:254
+#: forge_i18n.py:264
 msgid "Couldn't change your rung."
 msgstr "No se pudo cambiar tu peldaño."
 
-#: forge_i18n.py:255
+#: forge_i18n.py:265
 #, python-format
 msgid "Now training %(name)s."
 msgstr "Ahora entrenas %(name)s."
 
-#: forge_i18n.py:257
+#: forge_i18n.py:267
 msgid "No saved sessions yet."
 msgstr "Todavía no hay sesiones guardadas."
 
-#: forge_i18n.py:258
+#: forge_i18n.py:268
 msgid "Session"
 msgstr "Sesión"
 
-#: forge_i18n.py:259
+#: forge_i18n.py:269
 #, python-format
 msgid "%(name)s · set %(n)s"
 msgstr "%(name)s · serie %(n)s"
 
-#: forge_i18n.py:260
+#: forge_i18n.py:270
 #, python-format
 msgid "%(actual)s / %(expected)s %(unit)s"
 msgstr "%(actual)s / %(expected)s %(unit)s"
 
-#: forge_i18n.py:261
+#: forge_i18n.py:271
 msgid "Couldn't load history."
 msgstr "No se pudo cargar el historial."
 
-#: forge_i18n.py:262
+#: forge_i18n.py:272
 msgid "Log a session to see your progression."
 msgstr "Registra una sesión para ver tu progresión."
 
-#: forge_i18n.py:263
+#: forge_i18n.py:273
 #, python-format
 msgid "Dashed lines = peer deciles for %(name)s (your age & sex)."
 msgstr "Líneas punteadas = deciles de %(name)s (tu edad y sexo)."
 
-#: forge_i18n.py:264
+#: forge_i18n.py:274
 #, python-format
 msgctxt "decile, chart label"
 msgid "D%(d)s"
 msgstr "D%(d)s"
 
-#: forge_i18n.py:265
+#: forge_i18n.py:275
 msgid "Progression chart"
 msgstr "Gráfica de progresión"
 
-#: forge_i18n.py:266
+#: forge_i18n.py:276
 #, python-format
 msgctxt "chart bucket"
 msgid "Wk %(n)s"
 msgstr "Sem %(n)s"
 
-#: forge_i18n.py:267
+#: forge_i18n.py:277
 msgid "Couldn't start the session."
 msgstr "No se pudo iniciar la sesión."
 
-#: forge_i18n.py:269 templates/the_cauldron/forge.html:246 templates/the_cauldron/forge.html:415 templates/the_cauldron/forge.html:436
+#: forge_i18n.py:279 templates/the_cauldron/forge.html:232
+#: templates/the_cauldron/forge.html:401 templates/the_cauldron/forge.html:422
 msgid "Earphones mode"
 msgstr "Modo audífonos"
 
-#: forge_i18n.py:270 templates/the_cauldron/forge.html:437
+#: forge_i18n.py:280 templates/the_cauldron/forge.html:423
 msgid "Getting ready…"
 msgstr "Preparando…"
 
-#: forge_i18n.py:271
+#: forge_i18n.py:281
 msgid "Earphones mode on. Let's forge."
 msgstr "Modo audífonos activado. A forjar."
 
-#: forge_i18n.py:272
+#: forge_i18n.py:282
 msgid "Log"
 msgstr "Registrar"
 
-#: forge_i18n.py:273
+#: forge_i18n.py:283
 msgid "Skip"
 msgstr "Saltar"
 
-#: forge_i18n.py:274
+#: forge_i18n.py:284
 msgid "Exit"
 msgstr "Salir"
 
-#: forge_i18n.py:275
+#: forge_i18n.py:285
 msgid "■ Stop"
 msgstr "■ Detener"
 
-#: forge_i18n.py:276
+#: forge_i18n.py:286
 msgid "⏭ Skip rest"
 msgstr "⏭ Saltar descanso"
 
-#: forge_i18n.py:277
+#: forge_i18n.py:287
 msgid "one"
 msgstr "uno"
 
-#: forge_i18n.py:278
+#: forge_i18n.py:288
 msgid "two"
 msgstr "dos"
 
-#: forge_i18n.py:279
+#: forge_i18n.py:289
 msgid "three"
 msgstr "tres"
 
-#: forge_i18n.py:280
+#: forge_i18n.py:290
 msgid "Go."
 msgstr "Ya."
 
-#: forge_i18n.py:281
+#: forge_i18n.py:291
 msgid "Microphone blocked — use the on-screen buttons (allow the mic and reopen for voice)."
 msgstr "Micrófono bloqueado — usa los botones en pantalla (permite el micrófono y vuelve a abrir para usar la voz)."
 
-#: forge_i18n.py:282
+#: forge_i18n.py:292
 msgid "Mic permission denied — voice off. Use the buttons."
 msgstr "Permiso de micrófono denegado — voz desactivada. Usa los botones."
 
-#: forge_i18n.py:283
+#: forge_i18n.py:293
 #, python-format
 msgid "Set %(n)s of %(total)s"
 msgstr "Serie %(n)s de %(total)s"
 
-#: forge_i18n.py:284
+#: forge_i18n.py:294
 #, python-format
 msgid "at %(load)s"
 msgstr "con %(load)s"
 
-#: forge_i18n.py:285
+#: forge_i18n.py:295
 msgid "Hold as long as you can"
 msgstr "Sostén todo lo que puedas"
 
-#: forge_i18n.py:286
+#: forge_i18n.py:296
 #, python-format
 msgid "Target hold %(n)s seconds"
 msgstr "Sostén meta de %(n)s segundos"
 
-#: forge_i18n.py:287
+#: forge_i18n.py:297
 #, python-format
 msgid "Target hold, %(n)s seconds."
 msgstr "Sostén meta, %(n)s segundos."
 
-#: forge_i18n.py:288
+#: forge_i18n.py:298
 #, python-format
 msgid "As many reps as possible (target %(n)s+)"
 msgstr "Tantas reps como puedas (meta %(n)s+)"
 
-#: forge_i18n.py:289
+#: forge_i18n.py:299
 msgid "As many reps as you can"
 msgstr "Tantas reps como puedas"
 
-#: forge_i18n.py:290
+#: forge_i18n.py:300
 #, python-format
 msgid "Target %(n)s reps"
 msgstr "Meta de %(n)s reps"
 
-#: forge_i18n.py:291
+#: forge_i18n.py:301
 msgid "Say start when you're ready."
 msgstr "Di “empieza” cuando estés listo."
 
-#: forge_i18n.py:292
+#: forge_i18n.py:302
 msgid "Tap start when you're ready."
 msgstr "Toca Iniciar cuando estés listo."
 
-#: forge_i18n.py:293
+#: forge_i18n.py:303
 msgid "Say your reps when you're done."
 msgstr "Di tus reps cuando termines."
 
-#: forge_i18n.py:294
+#: forge_i18n.py:304
 msgid "Tap your reps when you're done."
 msgstr "Toca tus reps cuando termines."
 
-#: forge_i18n.py:295
+#: forge_i18n.py:305
 msgid "Say “start” to begin the hold."
 msgstr "Di “empieza” para comenzar el sostén."
 
-#: forge_i18n.py:296
+#: forge_i18n.py:306
 msgid "Tap Start to begin the hold."
 msgstr "Toca Iniciar para comenzar el sostén."
 
-#: forge_i18n.py:297
+#: forge_i18n.py:307
 msgid "Holding… say “stop” when you're done."
 msgstr "Sosteniendo… di “alto” cuando termines."
 
-#: forge_i18n.py:298
+#: forge_i18n.py:308
 msgid "Holding… tap Stop when you're done."
 msgstr "Sosteniendo… toca Detener cuando termines."
 
-#: forge_i18n.py:299
+#: forge_i18n.py:309
 msgid "Do your set, then say your reps (a number)."
 msgstr "Haz tu serie y luego di tus reps (un número)."
 
-#: forge_i18n.py:300
+#: forge_i18n.py:310
 msgid "Do your set, then tap your reps below."
 msgstr "Haz tu serie y luego toca tus reps abajo."
 
-#: forge_i18n.py:301
+#: forge_i18n.py:311
 msgid "Resting — say “skip” to go now."
 msgstr "Descansando — di “salta” para seguir ya."
 
-#: forge_i18n.py:302
+#: forge_i18n.py:312
 msgid "Resting — tap Skip to go now."
 msgstr "Descansando — toca Saltar para seguir ya."
 
-#: forge_i18n.py:303
+#: forge_i18n.py:313
 msgid "Still resting. Say skip to go now."
 msgstr "Sigues descansando. Di “salta” para seguir ya."
 
-#: forge_i18n.py:304
+#: forge_i18n.py:314
 #, python-format
 msgid "Next: %(name)s, %(detail)s."
 msgstr "Sigue: %(name)s, %(detail)s."
 
-#: forge_i18n.py:305
+#: forge_i18n.py:315
 msgid "hold as long as you can"
 msgstr "sostén todo lo que puedas"
 
-#: forge_i18n.py:306
+#: forge_i18n.py:316
 #, python-format
 msgid "hold %(n)s seconds"
 msgstr "sostén %(n)s segundos"
 
-#: forge_i18n.py:307
+#: forge_i18n.py:317
 msgid "as many reps as you can"
 msgstr "tantas reps como puedas"
 
-#: forge_i18n.py:308
+#: forge_i18n.py:318
 #, python-format
 msgid "target %(n)s reps"
 msgstr "meta de %(n)s reps"
 
-#: forge_i18n.py:309
+#: forge_i18n.py:319
 msgid "Recover"
 msgstr "Recupérate"
 
-#: forge_i18n.py:310
+#: forge_i18n.py:320
 msgid "Rest"
 msgstr "Descanso"
 
-#: forge_i18n.py:311
+#: forge_i18n.py:321
 #, python-format
 msgid "Rest %(rest)s — say “skip” to go now."
 msgstr "Descansa %(rest)s — di “salta” para seguir ya."
 
-#: forge_i18n.py:312
+#: forge_i18n.py:322
 #, python-format
 msgid "Rest %(rest)s — tap Skip to go now."
 msgstr "Descansa %(rest)s — toca Saltar para seguir ya."
 
-#: forge_i18n.py:313
+#: forge_i18n.py:323
 msgid "Rest over."
 msgstr "Se acabó el descanso."
 
-#: forge_i18n.py:314
+#: forge_i18n.py:324
 msgid "Done"
 msgstr "Listo"
 
-#: forge_i18n.py:315
+#: forge_i18n.py:325
 msgid "Workout complete"
 msgstr "Entrenamiento completo"
 
-#: forge_i18n.py:316
+#: forge_i18n.py:326
 msgid "No sets logged."
 msgstr "No se registraron series."
 
-#: forge_i18n.py:317
+#: forge_i18n.py:327
 msgid "No sets were logged. Exiting earphones mode."
 msgstr "No se registraron series. Saliendo del modo audífonos."
 
-#: forge_i18n.py:318
+#: forge_i18n.py:328
 msgid "Saving your session…"
 msgstr "Guardando tu sesión…"
 
-#: forge_i18n.py:319
+#: forge_i18n.py:329
 msgid "Workout complete. Saving your session."
 msgstr "Entrenamiento completo. Guardando tu sesión."
 
-#: forge_i18n.py:320
+#: forge_i18n.py:330
 msgid "Couldn't save — your reps are still on the Today screen."
 msgstr "No se pudo guardar — tus reps siguen en la pantalla de Hoy."
 
-#: forge_i18n.py:321
+#: forge_i18n.py:331
 msgid "Exiting earphones mode."
 msgstr "Saliendo del modo audífonos."
 
-#: forge_i18n.py:323
+#: forge_i18n.py:333
 msgid "Earphones mode closed. Your logged reps are on the Today screen — tap Save session to keep them."
 msgstr "Modo audífonos cerrado. Tus reps registradas están en la pantalla de Hoy — toca Guardar sesión para conservarlas."
 
-#: forge_i18n.py:325
+#: forge_i18n.py:335
 msgid "Earphones mode needs Chrome or Edge."
 msgstr "El modo audífonos necesita Chrome o Edge."
 
-#: forge_i18n.py:326
+#: forge_i18n.py:336
 msgid "Open a day first."
 msgstr "Primero abre un día."
 
-#: forge_i18n.py:327
+#: forge_i18n.py:337
 msgid "Nothing scheduled today."
 msgstr "No hay nada programado hoy."
 
-#: forge_i18n.py:328
+#: forge_i18n.py:338
 msgid "All sets are already filled — nothing left for earphones mode."
 msgstr "Todas las series ya están llenas — no queda nada para el modo audífonos."
 
-#: forge_i18n.py:329
+#: forge_i18n.py:339
 msgid "Voice input on — tap to mute (stops the listening beep)"
 msgstr "Entrada de voz activada — toca para silenciar (quita el pitido de escucha)"
 
-#: forge_i18n.py:330 templates/the_cauldron/forge.html:422
+#: forge_i18n.py:340 templates/the_cauldron/forge.html:408
 msgid "Voice input off — tap to enable hands-free commands (your browser beeps while listening)"
 msgstr "Entrada de voz desactivada — toca para activar los comandos manos libres (tu navegador pita mientras escucha)"
 
-#: forge_i18n.py:332
+#: forge_i18n.py:342
 msgid "Front muscle map"
 msgstr "Mapa muscular frontal"
 
-#: forge_i18n.py:333
+#: forge_i18n.py:343
 msgid "Back muscle map"
 msgstr "Mapa muscular posterior"
 
-#: forge_i18n.py:334
+#: forge_i18n.py:344
 msgctxt "body side"
 msgid "Front"
 msgstr "Frente"
 
-#: forge_i18n.py:335
+#: forge_i18n.py:345
 msgctxt "body side"
 msgid "Back"
 msgstr "Espalda"
 
-#: forge_i18n.py:338
+#: forge_i18n.py:348
 #, python-format
 msgid "Holding. %(n)s second so far. Say stop when done."
 msgid_plural "Holding. %(n)s seconds so far. Say stop when done."
 msgstr[0] "Sosteniendo. Llevas %(n)s segundo. Di “alto” al terminar."
 msgstr[1] "Sosteniendo. Llevas %(n)s segundos. Di “alto” al terminar."
 
-#: forge_i18n.py:343
+#: forge_i18n.py:353
 #, python-format
 msgid "Recorded %(n)s second."
 msgid_plural "Recorded %(n)s seconds."
 msgstr[0] "Registré %(n)s segundo."
 msgstr[1] "Registré %(n)s segundos."
 
-#: forge_i18n.py:348
+#: forge_i18n.py:358
 #, python-format
 msgid "Logged %(n)s rep."
 msgid_plural "Logged %(n)s reps."
 msgstr[0] "Registré %(n)s rep."
 msgstr[1] "Registré %(n)s reps."
 
-#: forge_i18n.py:353
+#: forge_i18n.py:363
 #, python-format
 msgid "Rest for %(n)s second."
 msgid_plural "Rest for %(n)s seconds."
 msgstr[0] "Descansa %(n)s segundo."
 msgstr[1] "Descansa %(n)s segundos."
 
-#: forge_i18n.py:358
+#: forge_i18n.py:368
 #, python-format
 msgid "Swapped in %(n)s live prescription."
 msgid_plural "Swapped in %(n)s live prescriptions."
 msgstr[0] "Se cambió en %(n)s prescripción activa."
 msgstr[1] "Se cambió en %(n)s prescripciones activas."
 
-#: forge_i18n.py:363
+#: forge_i18n.py:373
 #, python-format
 msgid "Your last Trial was %(n)s day ago — retake it to re-place yourself and see how your strength has moved."
 msgid_plural "Your last Trial was %(n)s days ago — retake it to re-place yourself and see how your strength has moved."
 msgstr[0] "Tu última Prueba fue hace %(n)s día — repítela para volver a ubicarte y ver cómo se movió tu fuerza."
 msgstr[1] "Tu última Prueba fue hace %(n)s días — repítela para volver a ubicarte y ver cómo se movió tu fuerza."
 
-#: forge_i18n.py:368
+#: forge_i18n.py:378
 #, python-format
 msgid "%(n)s session"
 msgid_plural "%(n)s sessions"
 msgstr[0] "%(n)s sesión"
 msgstr[1] "%(n)s sesiones"
 
-#: forge_i18n.py:373
+#: forge_i18n.py:383
 #, python-format
 msgid "%(n)s set"
 msgid_plural "%(n)s sets"
 msgstr[0] "%(n)s serie"
 msgstr[1] "%(n)s series"
 
-#: forge_i18n.py:378
+#: forge_i18n.py:388
 #, python-format
 msgid "%(n)s flame"
 msgid_plural "%(n)s flames"
 msgstr[0] "%(n)s llama"
 msgstr[1] "%(n)s llamas"
 
-#: forge_i18n.py:383
+#: forge_i18n.py:393
 #, python-format
 msgid "%(n)s Trial"
 msgid_plural "%(n)s Trials"
 msgstr[0] "%(n)s Prueba"
 msgstr[1] "%(n)s Pruebas"
 
-#: forge_i18n.py:388
+#: forge_i18n.py:398
 #, python-format
 msgid "%(n)s rep"
 msgid_plural "%(n)s reps"
 msgstr[0] "%(n)s rep"
 msgstr[1] "%(n)s reps"
 
-#: forge_i18n.py:393
+#: forge_i18n.py:403
 #, python-format
 msgid "%(n)s second"
 msgid_plural "%(n)s seconds"
 msgstr[0] "%(n)s segundo"
 msgstr[1] "%(n)s segundos"
 
-#: forge_i18n.py:459
+#: forge_i18n.py:469
 msgid "Evolve"
 msgstr "Evolucionar"
 
-#: forge_i18n.py:460
+#: forge_i18n.py:470
 #, python-format
 msgid "Watch %(name)s evolve"
 msgstr "Ver evolucionar %(name)s"
 
-#: forge_i18n.py:461
+#: forge_i18n.py:471
 msgid "Loaded variant"
 msgstr "Variante con peso"
 
-#: forge_i18n.py:463
+#: forge_i18n.py:473
 msgid "Your rung"
 msgstr "Tu peldaño"
 
-#: forge_i18n.py:464
+#: forge_i18n.py:474
 msgid "Unlocked — ready"
 msgstr "Desbloqueado — listo"
 
-#: forge_i18n.py:465
+#: forge_i18n.py:475
 msgid "Locked"
 msgstr "Bloqueado"
 
-#: forge_i18n.py:466
+#: forge_i18n.py:476
 msgid "Requires"
 msgstr "Requiere"
 
-#: forge_i18n.py:467
+#: forge_i18n.py:477
 msgid "Hover or tap any node to read its cue."
 msgstr "Pasa el cursor o toca cualquier nodo para leer su clave."
 
-#: forge_i18n.py:470
+#: forge_i18n.py:480
 msgid "Horizontal Push"
 msgstr "Empuje horizontal"
 
-#: forge_i18n.py:471
+#: forge_i18n.py:481
 msgid "Wall Push-up"
 msgstr "Lagartija en pared"
 
-#: forge_i18n.py:472
+#: forge_i18n.py:482
 msgid "Stand an arm’s length from a wall, body in one line. Bend the elbows to bring your chest near, then press away."
 msgstr "Párate a un brazo de distancia de la pared, cuerpo en línea. Dobla los codos para acercar el pecho y empuja."
 
-#: forge_i18n.py:474
+#: forge_i18n.py:484
 msgid "Incline Push-up"
 msgstr "Lagartija inclinada"
 
-#: forge_i18n.py:475
+#: forge_i18n.py:485
 msgid "Hands on a raised edge — the higher the surface, the lighter the load. Lower the surface as you get stronger."
 msgstr "Manos en una orilla elevada — entre más alta la superficie, más ligera la carga. Bájala conforme te hagas más fuerte."
 
-#: forge_i18n.py:477 templates/the_cauldron/landing.html:301
+#: forge_i18n.py:487 templates/the_cauldron/landing.html:301
 msgid "Knee Push-up"
 msgstr "Lagartija de rodillas"
 
-#: forge_i18n.py:478
+#: forge_i18n.py:488
 msgid "From the knees, keep a straight line hip-to-head. A clean half-step before the full push-up."
 msgstr "Desde las rodillas, mantén una línea recta de la cadera a la cabeza. Un medio paso limpio antes de la lagartija completa."
 
-#: forge_i18n.py:479
+#: forge_i18n.py:489
 msgid "Banded Knee Push-up"
 msgstr "Lagartija de rodillas con liga"
 
-#: forge_i18n.py:479 forge_i18n.py:500
+#: forge_i18n.py:489 forge_i18n.py:510
 msgid "Resistance band"
 msgstr "Liga de resistencia"
 
-#: forge_i18n.py:480
+#: forge_i18n.py:490
 msgid "Loop a band across the upper back for accommodating resistance — hardest at lockout."
 msgstr "Pasa una liga por la espalda alta para una resistencia variable — más dura al extender por completo."
 
-#: forge_i18n.py:481
+#: forge_i18n.py:491
 msgid "Full Push-up"
 msgstr "Lagartija completa"
 
-#: forge_i18n.py:482
+#: forge_i18n.py:492
 msgid "Plank-tight, elbows tracking ~45°, chest to the floor and back. The benchmark of horizontal pressing."
 msgstr "Firme como plancha, codos a ~45°, pecho al piso y de vuelta. La referencia del empuje horizontal."
 
-#: forge_i18n.py:484
+#: forge_i18n.py:494
 msgid "Weighted Push-up"
 msgstr "Lagartija con peso"
 
-#: forge_i18n.py:484
+#: forge_i18n.py:494
 msgid "Plate / pack"
 msgstr "Disco / mochila"
 
-#: forge_i18n.py:485
+#: forge_i18n.py:495
 msgid "Rest a plate or loaded pack on the upper back once bodyweight reps feel easy."
 msgstr "Apoya un disco o una mochila cargada en la espalda alta cuando las reps con tu peso se sientan fáciles."
 
-#: forge_i18n.py:486 templates/the_cauldron/landing.html:303
+#: forge_i18n.py:496 templates/the_cauldron/landing.html:303
 msgid "Diamond Push-up"
 msgstr "Lagartija diamante"
 
-#: forge_i18n.py:487
+#: forge_i18n.py:497
 msgid "Hands together under the chest forming a diamond. Shifts the load onto the triceps and inner chest."
 msgstr "Manos juntas bajo el pecho formando un diamante. Pasa la carga a los tríceps y al pecho interno."
 
-#: forge_i18n.py:489
+#: forge_i18n.py:499
 msgid "Archer Push-up"
 msgstr "Lagartija arquero"
 
-#: forge_i18n.py:490
+#: forge_i18n.py:500
 msgid "Shift your weight over one arm while the other stays straight. The doorway to the one-arm push-up."
 msgstr "Pasa tu peso sobre un brazo mientras el otro se queda estirado. La puerta a la lagartija a un brazo."
 
-#: forge_i18n.py:493
+#: forge_i18n.py:503
 msgid "Vertical Pull"
 msgstr "Jalón vertical"
 
-#: forge_i18n.py:494
+#: forge_i18n.py:504
 msgid "Australian Row"
 msgstr "Remo australiano"
 
-#: forge_i18n.py:495
+#: forge_i18n.py:505
 msgid "Hang under a waist-high bar, body straight, and row your chest to it. Walk the feet forward to ease it."
 msgstr "Cuélgate bajo una barra a la altura de la cintura, cuerpo recto, y lleva el pecho hacia ella. Adelanta los pies para hacerlo más fácil."
 
-#: forge_i18n.py:497
+#: forge_i18n.py:507
 msgid "Negative Pull-up"
 msgstr "Dominada negativa"
 
-#: forge_i18n.py:498
+#: forge_i18n.py:508
 msgid "Jump or step to the top, then lower yourself as slowly as you can. Builds the strength to pull up."
 msgstr "Salta o súbete hasta arriba y baja lo más lento que puedas. Construye la fuerza para subir."
 
-#: forge_i18n.py:500
+#: forge_i18n.py:510
 msgid "Banded Pull-up"
 msgstr "Dominada con liga"
 
-#: forge_i18n.py:501
+#: forge_i18n.py:511
 msgid "Stand in a band looped over the bar — it gives the most help at the bottom where you’re weakest."
 msgstr "Párate en una liga amarrada a la barra — ayuda más abajo, donde eres más débil."
 
-#: forge_i18n.py:503
+#: forge_i18n.py:513
 msgid "Pull-up"
 msgstr "Dominada"
 
-#: forge_i18n.py:504
+#: forge_i18n.py:514
 msgid "Dead hang to chin-over-bar, no kip. The gold standard of vertical pulling strength."
 msgstr "Desde colgado por completo hasta la barbilla sobre la barra, sin impulso. El estándar de oro del jalón vertical."
 
-#: forge_i18n.py:505
+#: forge_i18n.py:515
 msgid "Weighted Pull-up"
 msgstr "Dominada con peso"
 
-#: forge_i18n.py:505
+#: forge_i18n.py:515
 msgid "Belt / pack"
 msgstr "Cinturón / mochila"
 
-#: forge_i18n.py:506
+#: forge_i18n.py:516
 msgid "Add load on a dip belt once you clear clean reps. The fastest route to raw pulling power."
 msgstr "Agrega peso con un cinturón de lastre cuando salgan reps limpias. La ruta más rápida a la fuerza de jalón pura."
 
-#: forge_i18n.py:508
+#: forge_i18n.py:518
 msgid "Archer Pull-up"
 msgstr "Dominada arquero"
 
-#: forge_i18n.py:509
+#: forge_i18n.py:519
 msgid "Pull to one hand while the other arm stays straight along the bar. The bridge to a one-arm pull-up."
 msgstr "Jala hacia una mano mientras el otro brazo se queda estirado sobre la barra. El puente a la dominada a un brazo."
 
-#: forge_i18n.py:512
+#: forge_i18n.py:522
 msgid "Vertical Push"
 msgstr "Empuje vertical"
 
-#: forge_i18n.py:513
+#: forge_i18n.py:523
 msgid "Incline Pike Push-up"
 msgstr "Lagartija pike inclinada"
 
-#: forge_i18n.py:514
+#: forge_i18n.py:524
 msgid "Feet raised, hips high in a pike. Press the crown of your head toward the floor and back up."
 msgstr "Pies elevados, cadera alta en pike. Lleva la coronilla hacia el piso y vuelve a subir."
 
-#: forge_i18n.py:515
+#: forge_i18n.py:525
 msgid "Pike Push-up"
 msgstr "Lagartija pike"
 
-#: forge_i18n.py:516
+#: forge_i18n.py:526
 msgid "Floor pike, hips stacked over the shoulders. Deepen the range until the head taps the ground."
 msgstr "Pike en el piso, cadera sobre los hombros. Profundiza el rango hasta que la cabeza toque el piso."
 
-#: forge_i18n.py:517
+#: forge_i18n.py:527
 msgid "Wall Handstand Push-up"
 msgstr "Flexión en parada de manos en pared"
 
-#: forge_i18n.py:518
+#: forge_i18n.py:528
 msgid "Kick to the wall and press. Chest-to-wall is the honest version; lower under control."
 msgstr "Sube a la pared con impulso de pierna y empuja. Pecho a la pared es la versión honesta; baja con control."
 
-#: forge_i18n.py:519
+#: forge_i18n.py:529
 msgid "Handstand Push-up"
 msgstr "Flexión en parada de manos"
 
-#: forge_i18n.py:520
+#: forge_i18n.py:530
 msgid "Free-balanced, full range. Overhead pressing strength meets total-body control."
 msgstr "En equilibrio libre, rango completo. La fuerza de empuje sobre la cabeza se une al control de todo el cuerpo."
 
-#: forge_i18n.py:522
+#: forge_i18n.py:532
 msgid "Lower Unilateral"
 msgstr "Pierna unilateral"
 
-#: forge_i18n.py:523
+#: forge_i18n.py:533
 msgid "Assisted Split Squat"
 msgstr "Sentadilla dividida asistida"
 
-#: forge_i18n.py:524
+#: forge_i18n.py:534
 msgid "Split stance, one hand on a rail for balance. Drop the back knee toward the floor and drive up."
 msgstr "Postura dividida, una mano en un barandal para equilibrarte. Baja la rodilla de atrás hacia el piso y empuja hacia arriba."
 
-#: forge_i18n.py:525
+#: forge_i18n.py:535
 msgid "Split Squat"
 msgstr "Sentadilla dividida"
 
-#: forge_i18n.py:526
+#: forge_i18n.py:536
 msgid "Unsupported split stance. Vertical torso, front heel planted, full depth each rep."
 msgstr "Postura dividida sin apoyo. Torso vertical, talón de adelante plantado, profundidad completa en cada rep."
 
-#: forge_i18n.py:527
+#: forge_i18n.py:537
 msgid "Goblet Split Squat"
 msgstr "Sentadilla dividida goblet"
 
-#: forge_i18n.py:527
+#: forge_i18n.py:537
 msgid "Dumbbell / KB"
 msgstr "Mancuerna / pesa rusa"
 
-#: forge_i18n.py:528
+#: forge_i18n.py:538
 msgid "Hold a weight at the chest. The cleanest way to overload the legs without a barbell."
 msgstr "Sostén un peso al pecho. La forma más limpia de sobrecargar las piernas sin barra."
 
-#: forge_i18n.py:529
+#: forge_i18n.py:539
 msgid "Bulgarian Split Squat"
 msgstr "Sentadilla búlgara"
 
-#: forge_i18n.py:530
+#: forge_i18n.py:540
 msgid "Rear foot on a bench. Brutal single-leg range and balance — the legs’ true test."
 msgstr "Pie de atrás en un banco. Rango y equilibrio brutales a una pierna — la verdadera prueba de las piernas."
 
-#: forge_i18n.py:531
+#: forge_i18n.py:541
 msgid "Loaded Bulgarian"
 msgstr "Búlgara con peso"
 
-#: forge_i18n.py:531 templates/the_cauldron/forge.html:86
+#: forge_i18n.py:541 templates/the_cauldron/forge.html:86
 msgid "Dumbbells"
 msgstr "Mancuernas"
 
-#: forge_i18n.py:532
+#: forge_i18n.py:542
 msgid "A dumbbell in each hand. Among the highest-yield lower-body movements there is."
 msgstr "Una mancuerna en cada mano. De los movimientos de pierna que más rinden."
 
-#: forge_i18n.py:533
+#: forge_i18n.py:543
 msgid "Pistol Squat"
 msgstr "Sentadilla pistola"
 
-#: forge_i18n.py:534
+#: forge_i18n.py:544
 msgid "Full one-leg squat, other leg extended. Strength, mobility and control in a single feat."
 msgstr "Sentadilla completa a una pierna, la otra extendida. Fuerza, movilidad y control en una sola hazaña."
 
-#: forge_i18n.py:537
+#: forge_i18n.py:547
 msgid "Core · Anti-Extension"
 msgstr "Core · Antiextensión"
 
-#: forge_i18n.py:538
+#: forge_i18n.py:548
 msgid "Knee Plank"
 msgstr "Plancha de rodillas"
 
-#: forge_i18n.py:539
+#: forge_i18n.py:549
 msgid "Forearms down, knees on the floor, hips tucked. Brace as if bracing for a punch."
 msgstr "Antebrazos abajo, rodillas en el piso, cadera metida. Aprieta como si fueras a recibir un golpe."
 
-#: forge_i18n.py:540
+#: forge_i18n.py:550
 msgid "Forearm Plank"
 msgstr "Plancha de antebrazos"
 
-#: forge_i18n.py:541
+#: forge_i18n.py:551
 msgid "Full plank, straight line heel-to-head. Squeeze glutes and ribs-down — no sagging hips."
 msgstr "Plancha completa, línea recta del talón a la cabeza. Aprieta glúteos y baja las costillas — sin hundir la cadera."
 
-#: forge_i18n.py:542
+#: forge_i18n.py:552
 msgid "RKC Plank"
 msgstr "Plancha RKC"
 
-#: forge_i18n.py:543
+#: forge_i18n.py:553
 msgid "A plank turned to maximum tension — everything clenched. Ten brutal seconds beats a lazy minute."
 msgstr "Una plancha a máxima tensión — todo apretado. Diez segundos brutales le ganan a un minuto flojo."
 
-#: forge_i18n.py:544
+#: forge_i18n.py:554
 msgid "Hollow Body Hold"
 msgstr "Posición hollow"
 
-#: forge_i18n.py:545
+#: forge_i18n.py:555
 msgid "On your back, lower back pressed flat, arms and legs lifted. The gymnastic core foundation."
 msgstr "Boca arriba, espalda baja pegada al piso, brazos y piernas elevados. La base gimnástica del core."
 
-#: forge_i18n.py:548
+#: forge_i18n.py:558
 msgid "Hinge"
 msgstr "Bisagra"
 
-#: forge_i18n.py:549
+#: forge_i18n.py:559
 msgid "Glute Bridge"
 msgstr "Puente de glúteo"
 
-#: forge_i18n.py:550
+#: forge_i18n.py:560
 msgid "On your back, knees bent, drive the hips up and squeeze. Learn to fire the glutes, not the back."
 msgstr "Boca arriba, rodillas dobladas, empuja la cadera hacia arriba y aprieta. Aprende a activar los glúteos, no la espalda."
 
-#: forge_i18n.py:551
+#: forge_i18n.py:561
 msgid "Single-leg Glute Bridge"
 msgstr "Puente de glúteo a una pierna"
 
-#: forge_i18n.py:552
+#: forge_i18n.py:562
 msgid "One leg extended, bridge with the other. Exposes and fixes side-to-side imbalances."
 msgstr "Una pierna extendida, haz el puente con la otra. Expone y corrige desbalances entre lados."
 
-#: forge_i18n.py:553
+#: forge_i18n.py:563
 msgid "Hip Thrust"
 msgstr "Hip thrust"
 
-#: forge_i18n.py:554
+#: forge_i18n.py:564
 msgid "Shoulders on a bench for a deeper range. The most direct glute builder you can do."
 msgstr "Hombros en un banco para un rango más profundo. El constructor de glúteos más directo que puedes hacer."
 
-#: forge_i18n.py:555
+#: forge_i18n.py:565
 msgid "Barbell Hip Thrust"
 msgstr "Hip thrust con barra"
 
-#: forge_i18n.py:555 templates/the_cauldron/forge.html:111
+#: forge_i18n.py:565 templates/the_cauldron/forge.html:111
 msgid "Barbell"
 msgstr "Barra"
 
-#: forge_i18n.py:556
+#: forge_i18n.py:566
 msgid "Load the lap across the hips. Scales near-endlessly — the answer to overloading the hips."
 msgstr "Carga la barra sobre la cadera. Escala casi sin fin — la respuesta para sobrecargar la cadera."
 
-#: forge_i18n.py:557
+#: forge_i18n.py:567
 msgid "Nordic Curl"
 msgstr "Curl nórdico"
 
-#: forge_i18n.py:558
+#: forge_i18n.py:568
 msgid "Ankles anchored, lower your straight body under control. The ultimate hamstring strength feat."
 msgstr "Tobillos anclados, baja tu cuerpo recto con control. La hazaña máxima de fuerza de isquiotibiales."
 
@@ -1629,7 +1680,7 @@ msgstr "Esas cantidades no se pueden convertir a gramos — usa g."
 msgid "Send a JSON object."
 msgstr "Envía un objeto JSON."
 
-#: grimoire_api.py:348 services/nutrition.py:266
+#: grimoire_api.py:348 services/nutrition.py:268
 msgid "This spell has no weighed ingredients."
 msgstr "Este hechizo no tiene ingredientes con peso."
 
@@ -1803,7 +1854,9 @@ msgstr "Nada coincide con esa búsqueda o etiqueta."
 msgid "The coven hasn't shared a spell yet."
 msgstr "El aquelarre aún no ha compartido ningún hechizo."
 
-#: grimoire_i18n.py:59 grimoire_i18n.py:71 templates/the_cauldron/grimoire.html:73 templates/the_cauldron/grimoire.html:253
+#: grimoire_i18n.py:59 grimoire_i18n.py:71
+#: templates/the_cauldron/grimoire.html:73
+#: templates/the_cauldron/grimoire.html:253
 msgid "Write a spell"
 msgstr "Escribir un hechizo"
 
@@ -1896,7 +1949,8 @@ msgstr "No hay ingredientes con ese nombre"
 msgid "Add it — it stays visible only to you until approved."
 msgstr "Agrégalo — solo tú lo verás hasta que se apruebe."
 
-#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:190 templates/the_cauldron/grimoire.html:271
+#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:190
+#: templates/the_cauldron/grimoire.html:271
 msgid "Add a reagent"
 msgstr "Agregar un reactivo"
 
@@ -2181,7 +2235,8 @@ msgstr "El hechizo se eliminó; solo quedan los cambios que guardaste."
 msgid "Scale"
 msgstr "Escalar"
 
-#: grimoire_i18n.py:157 services/grimoire_scaling.py:106 templates/the_cauldron/grimoire.html:79
+#: grimoire_i18n.py:157 services/grimoire_scaling.py:106
+#: templates/the_cauldron/grimoire.html:79
 msgid "Servings"
 msgstr "Porciones"
 
@@ -2330,7 +2385,7 @@ msgstr "Prueba una porción"
 msgid "day total"
 msgstr "total del día"
 
-#: grimoire_i18n.py:192 nutrition_i18n.py:110
+#: grimoire_i18n.py:192 nutrition_i18n.py:144
 msgid "I ate this"
 msgstr "Me lo comí"
 
@@ -2350,11 +2405,11 @@ msgstr "como máximo"
 msgid "between"
 msgstr "entre"
 
-#: grimoire_i18n.py:197 nutrition_i18n.py:41
+#: grimoire_i18n.py:197 nutrition_i18n.py:74
 msgid "met"
 msgstr "cumplida"
 
-#: grimoire_i18n.py:198 nutrition_i18n.py:42
+#: grimoire_i18n.py:198 nutrition_i18n.py:75
 msgid "missed"
 msgstr "no cumplida"
 
@@ -2466,7 +2521,8 @@ msgstr "1 pieza"
 msgid "1 glass"
 msgstr "1 vaso"
 
-#: grimoire_i18n.py:225 grimoire_serializers.py:114 templates/the_cauldron/grimoire.html:211
+#: grimoire_i18n.py:225 grimoire_serializers.py:116
+#: templates/the_cauldron/grimoire.html:211
 msgid "Density"
 msgstr "Densidad"
 
@@ -2503,180 +2559,185 @@ msgid "Sugars"
 msgstr "Azúcares"
 
 #: grimoire_i18n.py:236
+msgid "Added sugars"
+msgstr "Azúcares añadidos"
+
+#: grimoire_i18n.py:237
 msgid "Fiber"
 msgstr "Fibra"
 
-#: grimoire_i18n.py:237
+#: grimoire_i18n.py:238
 msgid "Fat"
 msgstr "Grasa"
 
-#: grimoire_i18n.py:238
+#: grimoire_i18n.py:239
 msgid "Saturated fat"
 msgstr "Grasa saturada"
 
-#: grimoire_i18n.py:239
+#: grimoire_i18n.py:240
 msgid "Monounsaturated fat"
 msgstr "Grasa monoinsaturada"
 
-#: grimoire_i18n.py:240
+#: grimoire_i18n.py:241
 msgid "Polyunsaturated fat"
 msgstr "Grasa poliinsaturada"
 
-#: grimoire_i18n.py:241
+#: grimoire_i18n.py:242
 msgid "Trans fat"
 msgstr "Grasa trans"
 
-#: grimoire_i18n.py:242
+#: grimoire_i18n.py:243
 msgid "Omega-3 ALA"
 msgstr "Omega-3 ALA"
 
-#: grimoire_i18n.py:243
+#: grimoire_i18n.py:244
 msgid "Omega-3 EPA"
 msgstr "Omega-3 EPA"
 
-#: grimoire_i18n.py:244
+#: grimoire_i18n.py:245
 msgid "Omega-3 DHA"
 msgstr "Omega-3 DHA"
 
-#: grimoire_i18n.py:245
+#: grimoire_i18n.py:246
 msgid "Omega-6 LA"
 msgstr "Omega-6 LA"
 
-#: grimoire_i18n.py:246
+#: grimoire_i18n.py:247
 msgid "Cholesterol"
 msgstr "Colesterol"
 
-#: grimoire_i18n.py:247
+#: grimoire_i18n.py:248
 msgid "Sodium"
 msgstr "Sodio"
 
-#: grimoire_i18n.py:248
+#: grimoire_i18n.py:249
 msgid "Potassium"
 msgstr "Potasio"
 
-#: grimoire_i18n.py:249
+#: grimoire_i18n.py:250
 msgid "Calcium"
 msgstr "Calcio"
 
-#: grimoire_i18n.py:250
+#: grimoire_i18n.py:251
 msgid "Iron"
 msgstr "Hierro"
 
-#: grimoire_i18n.py:251
+#: grimoire_i18n.py:252
 msgid "Vitamin A"
 msgstr "Vitamina A"
 
-#: grimoire_i18n.py:252
+#: grimoire_i18n.py:253
 msgid "Vitamin C"
 msgstr "Vitamina C"
 
-#: grimoire_i18n.py:253
+#: grimoire_i18n.py:254
 msgid "Vitamin D"
 msgstr "Vitamina D"
 
-#: grimoire_i18n.py:254
+#: grimoire_i18n.py:255
 msgid "Vitamin B12"
 msgstr "Vitamina B12"
 
-#: grimoire_serializers.py:26
+#: grimoire_serializers.py:28 services/breakdown.py:219 services/forge.py:1559
+#: services/forge.py:1561
 msgid "Enter a number."
 msgstr "Escribe un número."
 
-#: grimoire_serializers.py:39
+#: grimoire_serializers.py:41
 #, python-format
 msgid "%(label)s must be a real number."
 msgstr "%(label)s debe ser un número real."
 
-#: grimoire_serializers.py:92
+#: grimoire_serializers.py:94
 msgid "An ingredient needs a name."
 msgstr "El ingrediente necesita un nombre."
 
-#: grimoire_serializers.py:97
+#: grimoire_serializers.py:99
 msgid "Expected an object like {\"cup\": 240}."
 msgstr "Se esperaba un objeto como {\"cup\": 240}."
 
-#: grimoire_serializers.py:101
+#: grimoire_serializers.py:103
 #, python-format
 msgid "Unknown unit '%(unit)s'."
 msgstr "Unidad desconocida '%(unit)s'."
 
-#: grimoire_serializers.py:107
+#: grimoire_serializers.py:109
 #, python-format
 msgid "Weight per %(unit)s must be a number."
 msgstr "El peso por %(unit)s debe ser un número."
 
-#: grimoire_serializers.py:109
+#: grimoire_serializers.py:111
 #, python-format
 msgid "Weight per %(unit)s must be above 0."
 msgstr "El peso por %(unit)s debe ser mayor que 0."
 
-#: grimoire_serializers.py:248
+#: grimoire_serializers.py:262
 msgid "A recipe needs a name."
 msgstr "La receta necesita un nombre."
 
-#: grimoire_serializers.py:254
+#: grimoire_serializers.py:268
 #, python-format
 msgid "Keep the description under %(n)s characters."
 msgstr "La descripción debe tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:260
+#: grimoire_serializers.py:274
 msgid "Steps must be a list of text."
 msgstr "Los pasos deben ser una lista de textos."
 
-#: grimoire_serializers.py:263
+#: grimoire_serializers.py:277
 #, python-format
 msgid "At most %(n)s steps."
 msgstr "Como máximo %(n)s pasos."
 
-#: grimoire_serializers.py:265
+#: grimoire_serializers.py:279
 #, python-format
 msgid "A step can be at most %(n)s characters."
 msgstr "Un paso puede tener como máximo %(n)s caracteres."
 
-#: grimoire_serializers.py:270 grimoire_serializers.py:416
+#: grimoire_serializers.py:284 grimoire_serializers.py:430
 #, python-format
 msgid "At most %(n)s ingredients."
 msgstr "Como máximo %(n)s ingredientes."
 
-#: grimoire_serializers.py:282
+#: grimoire_serializers.py:296
 msgid "Unknown ingredient."
 msgstr "Ingrediente desconocido."
 
-#: grimoire_serializers.py:287 grimoire_serializers.py:469
+#: grimoire_serializers.py:301 grimoire_serializers.py:483
 msgid "Enter an amount above 0."
 msgstr "Escribe una cantidad mayor que 0."
 
-#: grimoire_serializers.py:398
+#: grimoire_serializers.py:412
 #, python-format
 msgid "Keep the notes under %(n)s characters."
 msgstr "Las notas deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:404
+#: grimoire_serializers.py:418
 #, python-format
 msgid "Keep the substitutions under %(n)s characters."
 msgstr "Las sustituciones deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:414
+#: grimoire_serializers.py:428
 msgid "Adjustments must be a list."
 msgstr "Los ajustes deben ser una lista."
 
-#: grimoire_serializers.py:421
+#: grimoire_serializers.py:435
 msgid "Each adjustment must be an object."
 msgstr "Cada ajuste debe ser un objeto."
 
-#: grimoire_serializers.py:426 grimoire_serializers.py:429
+#: grimoire_serializers.py:440 grimoire_serializers.py:443
 msgid "Each adjustment needs an ingredient and a unit."
 msgstr "Cada ajuste necesita un ingrediente y una unidad."
 
-#: grimoire_serializers.py:437 grimoire_serializers.py:441
+#: grimoire_serializers.py:451 grimoire_serializers.py:455
 msgid "Amounts must be numbers."
 msgstr "Las cantidades deben ser números."
 
-#: grimoire_serializers.py:443
+#: grimoire_serializers.py:457
 msgid "Amounts must be 0 or more."
 msgstr "Las cantidades deben ser 0 o más."
 
-#: grimoire_serializers.py:446
+#: grimoire_serializers.py:460
 msgid "Enter the amount you used."
 msgstr "Escribe la cantidad que usaste."
 
@@ -2696,7 +2757,8 @@ msgstr "Esa confirmación expiró, ya se usó o era para otros cambios. Vuelve a
 msgid "Some values are not valid."
 msgstr "Algunos valores no son válidos."
 
-#: mcp_server/registry.py:280
+#: mcp_server/registry.py:280 nutrition_api.py:357 nutrition_api.py:364
+#: nutrition_api.py:371
 msgid "Not found."
 msgstr "No se encontró."
 
@@ -2704,19 +2766,40 @@ msgstr "No se encontró."
 msgid "Something went wrong. Try again."
 msgstr "Algo salió mal. Inténtalo de nuevo."
 
-#: nutrition_api.py:54
+#: models/grimoire.py:173 services/breakdown.py:228
+msgid "Added sugars can't be more than the total sugars."
+msgstr "Los azúcares añadidos no pueden ser más que los azúcares totales."
+
+#: nutrition_api.py:61
 msgid "Accept the sensitive-data consent to use goals and the meal log."
 msgstr "Acepta el consentimiento para datos sensibles para usar las metas y el diario de comidas."
 
-#: nutrition_api.py:260
+#: nutrition_api.py:176
+msgid "Give your consent first."
+msgstr "Primero da tu consentimiento."
+
+#: nutrition_api.py:299
 msgid "Use 7 or 30 days."
 msgstr "Usa 7 o 30 días."
 
-#: nutrition_api.py:278
+#: nutrition_api.py:317
 msgid "Use span 24h or 7d and 7, 30 or 90 days."
 msgstr "Usa una ventana de 24h o 7d y 7, 30 o 90 días."
 
-#: nutrition_api.py:326
+#: nutrition_api.py:348
+msgid "Send an object."
+msgstr "Envía un objeto."
+
+#: nutrition_api.py:352 services/breakdown.py:62 services/nutrition.py:141
+#: services/nutrition.py:332
+msgid "Unknown nutrient."
+msgstr "Nutriente desconocido."
+
+#: nutrition_api.py:367
+msgid "Choose an ingredient or an entry."
+msgstr "Elige un ingrediente o un registro."
+
+#: nutrition_api.py:423
 msgid "This meal is already logged as eaten. Edit the log entry instead."
 msgstr "Ya registraste esta comida; edita su registro en el diario."
 
@@ -2728,7 +2811,8 @@ msgstr "Quitar"
 msgid "Change"
 msgstr "Cambiar"
 
-#: nutrition_i18n.py:23 templates/the_cauldron/forge.html:54 templates/the_cauldron/nutrition.html:96
+#: nutrition_i18n.py:23 templates/the_cauldron/forge.html:54
+#: templates/the_cauldron/nutrition.html:97
 msgid "Today"
 msgstr "Hoy"
 
@@ -2770,321 +2854,454 @@ msgstr "meta %(min)s–%(max)s %(unit)s"
 msgid "Goals saved."
 msgstr "Metas guardadas."
 
-#: nutrition_i18n.py:33 templates/the_cauldron/nutrition.html:138
+#: nutrition_i18n.py:33
+msgid "Saved."
+msgstr "Guardado."
+
+#: nutrition_i18n.py:35 nutrition_i18n.py:65
+#: templates/the_cauldron/nutrition.html:212
+msgid "Recommended"
+msgstr "Recomendada"
+
+#: nutrition_i18n.py:36
+msgid "Add your weight to see it."
+msgstr "Agrega tu peso para verla."
+
+#: nutrition_i18n.py:37
+#, python-format
+msgid "Add your %(fields)s to see it."
+msgstr "Agrega tu %(fields)s para verla."
+
+#: nutrition_i18n.py:38 templates/the_cauldron/nutrition.html:213
+msgid "Recommended goals are for adults only, so none are shown."
+msgstr "Las metas recomendadas son solo para personas adultas, así que no se muestra ninguna."
+
+#: nutrition_i18n.py:39
+#, python-format
+msgid "Not given yet: %(fields)s. The most cautious value is used until you add it in “About you”."
+msgstr "Aún no lo indicas: %(fields)s. Usamos el valor más prudente hasta que lo agregues en “Sobre ti”."
+
+#: nutrition_i18n.py:40
+msgid "sex"
+msgstr "sexo"
+
+#: nutrition_i18n.py:41
+msgid "birth year"
+msgstr "año de nacimiento"
+
+#: nutrition_i18n.py:42
+msgid "activity level"
+msgstr "nivel de actividad"
+
+#: nutrition_i18n.py:44
+#, python-format
+msgid "Others (%(n)s)"
+msgstr "Otros (%(n)s)"
+
+#: nutrition_i18n.py:45
+msgid "daily average"
+msgstr "promedio diario"
+
+#: nutrition_i18n.py:46
+msgid "a day"
+msgstr "al día"
+
+#: nutrition_i18n.py:47
+msgid "The cauldron is empty: nothing was logged in this window."
+msgstr "El caldero está vacío: no se registró nada en esta ventana."
+
+#: nutrition_i18n.py:48
+msgid "Nothing here has a known value yet — it's all fog."
+msgstr "Aquí nada tiene un valor conocido todavía: todo es niebla."
+
+#: nutrition_i18n.py:49
+msgid "1 entry"
+msgstr "1 registro"
+
+#: nutrition_i18n.py:50
+#, python-format
+msgid "%(n)s entries"
+msgstr "%(n)s registros"
+
+#: nutrition_i18n.py:51
+msgid "The fog: what isn't known"
+msgstr "La niebla: lo que no se sabe"
+
+#: nutrition_i18n.py:52
+msgid "These have no value for this nutrient, so the total is a minimum. They are never counted as 0. Fill one in and the card updates."
+msgstr "Estos no tienen valor para este nutriente, así que el total es un mínimo. Nunca cuentan como 0. Completa uno y la tarjeta se actualiza."
+
+#: nutrition_i18n.py:53
+#, python-format
+msgid "%(amount)s known"
+msgstr "%(amount)s conocidos"
+
+#: nutrition_i18n.py:54
+#, python-format
+msgid "%(name)s — %(unit)s per 100 g"
+msgstr "%(name)s — %(unit)s por 100 g"
+
+#: nutrition_i18n.py:55
+#, python-format
+msgid "Logged %(time)s — total %(unit)s"
+msgstr "Registrado %(time)s — total en %(unit)s"
+
+#: nutrition_i18n.py:56 templates/the_cauldron/nutrition.html:172
+#: templates/the_cauldron/nutrition.html:385
+msgid "Save"
+msgstr "Guardar"
+
+#: nutrition_i18n.py:57
+msgid "Saved on your ingredient, marked estimated."
+msgstr "Se guarda en tu ingrediente, marcado como estimado."
+
+#: nutrition_i18n.py:58
+msgid "This one is from the shared catalog: you get your own private copy with this value, marked estimated, and your spells use it."
+msgstr "Este es del catálogo compartido: recibes tu propia copia privada con este valor, marcada como estimada, y tus hechizos la usan."
+
+#: nutrition_i18n.py:59
+msgid "That spell or ingredient no longer exists, so there's nothing to fill."
+msgstr "Ese hechizo o ingrediente ya no existe, así que no hay nada que completar."
+
+#: nutrition_i18n.py:60
+msgid "Its ingredients have this value now. New entries will count it."
+msgstr "Sus ingredientes ya tienen este valor. Los registros nuevos lo contarán."
+
+#: nutrition_i18n.py:61
+msgid "Value saved. Your entries from the last 7 days were updated."
+msgstr "Valor guardado. Se actualizaron tus registros de los últimos 7 días."
+
+#: nutrition_i18n.py:62
+msgid "Value saved. New entries will count it."
+msgstr "Valor guardado. Los registros nuevos lo contarán."
+
+#: nutrition_i18n.py:63
+msgid "This spell is someone else's. Use “Make it mine” on it, then fill its ingredients in your copy."
+msgstr "Este hechizo es de otra persona. Usa “Hacerlo mío” y luego completa sus ingredientes en tu copia."
+
+#: nutrition_i18n.py:64 templates/the_cauldron/nutrition.html:211
+msgid "My goal"
+msgstr "Mi meta"
+
+#: nutrition_i18n.py:66 templates/the_cauldron/nutrition.html:142
 msgid "Show goal history"
 msgstr "Ver historial de metas"
 
-#: nutrition_i18n.py:34
+#: nutrition_i18n.py:67
 msgid "Hide goal history"
 msgstr "Ocultar historial de metas"
 
-#: nutrition_i18n.py:35
+#: nutrition_i18n.py:68
 msgid "No goals yet."
 msgstr "Aún no hay metas."
 
-#: nutrition_i18n.py:36
+#: nutrition_i18n.py:69
 #, python-format
 msgid "since %(from)s"
 msgstr "desde el %(from)s"
 
-#: nutrition_i18n.py:37
+#: nutrition_i18n.py:70
 #, python-format
 msgid "%(from)s – %(to)s"
 msgstr "%(from)s – %(to)s"
 
-#: nutrition_i18n.py:38
+#: nutrition_i18n.py:71
 msgid "You haven't set daily goals yet."
 msgstr "Aún no tienes metas diarias."
 
-#: nutrition_i18n.py:39
+#: nutrition_i18n.py:72
 msgid "Set your goals"
 msgstr "Define tus metas"
 
-#: nutrition_i18n.py:43
+#: nutrition_i18n.py:76
 msgid "uncertain"
 msgstr "incierta"
 
-#: nutrition_i18n.py:44
+#: nutrition_i18n.py:77
 msgid "not yet"
 msgstr "aún no"
 
-#: nutrition_i18n.py:45
+#: nutrition_i18n.py:78
 msgid "not logged"
 msgstr "sin registro"
 
-#: nutrition_i18n.py:46
+#: nutrition_i18n.py:79
 msgid "“≥” means some of what you ate has no data for that nutrient, so the real amount may be higher."
 msgstr "“≥” significa que algo de lo que comiste no tiene datos de ese nutriente, así que la cantidad real puede ser mayor."
 
-#: nutrition_i18n.py:48
+#: nutrition_i18n.py:81
 msgid "Set a daily goal to see how often you meet it."
 msgstr "Define una meta diaria para ver qué tan seguido la cumples."
 
-#: nutrition_i18n.py:49
+#: nutrition_i18n.py:82
 msgid "24 hours"
 msgstr "24 horas"
 
-#: nutrition_i18n.py:50 templates/the_cauldron/nutrition.html:221
+#: nutrition_i18n.py:83 templates/the_cauldron/nutrition.html:229
 msgid "7 days"
 msgstr "7 días"
 
-#: nutrition_i18n.py:51
+#: nutrition_i18n.py:84
 #, python-format
 msgid "%(from)s → %(to)s"
 msgstr "%(from)s → %(to)s"
 
-#: nutrition_i18n.py:52
+#: nutrition_i18n.py:85
 msgid "Live: the window ends now and moves with the clock. Drag the timeline to see an earlier moment."
 msgstr "En vivo: la ventana termina ahora y avanza con el reloj. Arrastra la línea de tiempo para ver un momento anterior."
 
-#: nutrition_i18n.py:53
+#: nutrition_i18n.py:86
 msgid "An earlier moment. Drag the timeline, or go back to now."
 msgstr "Un momento anterior. Arrastra la línea de tiempo o vuelve a ahora."
 
-#: nutrition_i18n.py:54
+#: nutrition_i18n.py:87
 msgid "now"
 msgstr "ahora"
 
-#: nutrition_i18n.py:55
+#: nutrition_i18n.py:88
 msgid "Daily average over the last 7 days, against your daily goals."
 msgstr "Promedio diario de los últimos 7 días, contra tus metas diarias."
 
-#: nutrition_i18n.py:56
+#: nutrition_i18n.py:89
 msgid "nothing logged in this window"
 msgstr "nada registrado en esta ventana"
 
-#: nutrition_i18n.py:57
+#: nutrition_i18n.py:90
 #, python-format
 msgid "%(n)s %(unit)s over"
 msgstr "%(n)s %(unit)s de más"
 
-#: nutrition_i18n.py:58
+#: nutrition_i18n.py:91
 #, python-format
 msgid "%(n)s %(unit)s to go"
 msgstr "faltan %(n)s %(unit)s"
 
-#: nutrition_i18n.py:59
+#: nutrition_i18n.py:92
 #, python-format
 msgid "up to %(n)s %(unit)s to go"
 msgstr "faltan hasta %(n)s %(unit)s"
 
-#: nutrition_i18n.py:60
+#: nutrition_i18n.py:93
 msgid "in range"
 msgstr "en rango"
 
-#: nutrition_i18n.py:61 templates/the_cauldron/nutrition.html:208
+#: nutrition_i18n.py:94 templates/the_cauldron/nutrition.html:216
 msgid "Show every nutrient"
 msgstr "Ver todos los nutrientes"
 
-#: nutrition_i18n.py:62
+#: nutrition_i18n.py:95
 msgid "Hide the other nutrients"
 msgstr "Ocultar los demás nutrientes"
 
-#: nutrition_i18n.py:63
-msgid "of the time in range"
-msgstr "del tiempo en rango"
+#: nutrition_i18n.py:96
+msgid "of the time within my goal"
+msgstr "del tiempo dentro de mi meta"
 
-#: nutrition_i18n.py:64
+#: nutrition_i18n.py:97
+msgid "of the time within the recommended goal"
+msgstr "del tiempo dentro de la meta recomendada"
+
+#: nutrition_i18n.py:98
 #, python-format
 msgid "Out of range %(out)s · uncertain %(unc)s · %(hours)s h with nothing logged (not counted)"
 msgstr "Fuera de rango %(out)s · incierto %(unc)s · %(hours)s h sin registro (no cuentan)"
 
-#: nutrition_i18n.py:65
+#: nutrition_i18n.py:99
 msgid "Nothing logged in this period yet."
 msgstr "Aún no hay nada registrado en este periodo."
 
-#: nutrition_i18n.py:66
+#: nutrition_i18n.py:100
 #, python-format
 msgid "%(nutrient)s over a moving %(span)s window, last %(days)s days, against the goal range"
 msgstr "%(nutrient)s en una ventana móvil de %(span)s, últimos %(days)s días, contra el rango de la meta"
 
-#: nutrition_i18n.py:67
+#: nutrition_i18n.py:101
 msgid "Share of each day in range"
 msgstr "Parte de cada día en rango"
 
-#: nutrition_i18n.py:68
+#: nutrition_i18n.py:102
 #, python-format
 msgid "%(date)s: %(pct)s in range (%(hours)s h judged)"
 msgstr "%(date)s: %(pct)s en rango (%(hours)s h evaluadas)"
 
-#: nutrition_i18n.py:69
+#: nutrition_i18n.py:103
 #, python-format
 msgid "%(date)s: nothing logged"
 msgstr "%(date)s: nada registrado"
 
-#: nutrition_i18n.py:70
+#: nutrition_i18n.py:104
 msgid "Show as a table"
 msgstr "Ver como tabla"
 
-#: nutrition_i18n.py:71 templates/the_cauldron/forge.html:368
+#: nutrition_i18n.py:105 templates/the_cauldron/forge.html:354
 msgid "Day"
 msgstr "Día"
 
-#: nutrition_i18n.py:72
+#: nutrition_i18n.py:106
 msgid "In range"
 msgstr "En rango"
 
-#: nutrition_i18n.py:73
+#: nutrition_i18n.py:107
 msgid "Hours judged"
 msgstr "Horas evaluadas"
 
-#: nutrition_i18n.py:75
+#: nutrition_i18n.py:109
 msgid "Timezone saved."
 msgstr "Zona horaria guardada."
 
-#: nutrition_i18n.py:76
+#: nutrition_i18n.py:110
 #, python-format
 msgid "You gave your consent on %(date)s (version %(version)s)."
 msgstr "Diste tu consentimiento el %(date)s (versión %(version)s)."
 
-#: nutrition_i18n.py:77
+#: nutrition_i18n.py:111
 msgid "Really withdraw?"
 msgstr "¿Seguro que quieres retirarlo?"
 
-#: nutrition_i18n.py:79
+#: nutrition_i18n.py:113
 msgid "Nothing found."
 msgstr "No se encontró nada."
 
-#: nutrition_i18n.py:80
+#: nutrition_i18n.py:114
 msgid "Choose a spell first."
 msgstr "Primero elige un hechizo."
 
-#: nutrition_i18n.py:81
+#: nutrition_i18n.py:115
 msgid "Search for what you had, or type it in by hand."
 msgstr "Busca qué comiste o bebiste, o escríbelo a mano."
 
-#: nutrition_i18n.py:82
+#: nutrition_i18n.py:116
 msgid "dish"
 msgstr "platillo"
 
-#: nutrition_i18n.py:83
+#: nutrition_i18n.py:117
 msgid "ingredient"
 msgstr "ingrediente"
 
-#: nutrition_i18n.py:84
+#: nutrition_i18n.py:118
 #, python-format
 msgid "Not here? Type “%(q)s” in by hand"
 msgstr "¿No está? Escribe «%(q)s» a mano"
 
-#: nutrition_i18n.py:85
+#: nutrition_i18n.py:119
 msgid "An assistant"
 msgstr "Un asistente"
 
-#: nutrition_i18n.py:86
+#: nutrition_i18n.py:120
 msgid "estimated"
 msgstr "estimado"
 
-#: nutrition_i18n.py:87
+#: nutrition_i18n.py:121
 #, python-format
 msgid "connected %(date)s"
 msgstr "conectado el %(date)s"
 
-#: nutrition_i18n.py:88
+#: nutrition_i18n.py:122
 #, python-format
 msgid "last used %(date)s"
 msgstr "último uso el %(date)s"
 
-#: nutrition_i18n.py:89
+#: nutrition_i18n.py:123
 msgid "Disconnect"
 msgstr "Desconectar"
 
-#: nutrition_i18n.py:90
+#: nutrition_i18n.py:124
 msgid "Disconnect? Click again"
 msgstr "¿Desconectar? Haz clic otra vez"
 
-#: nutrition_i18n.py:91
+#: nutrition_i18n.py:125
 msgid "No assistant is connected."
 msgstr "No hay ningún asistente conectado."
 
-#: nutrition_i18n.py:92
+#: nutrition_i18n.py:126
 msgid "Disconnected. It can't use your account anymore."
 msgstr "Desconectado. Ya no puede usar tu cuenta."
 
-#: nutrition_i18n.py:93 templates/the_cauldron/nutrition.html:239
+#: nutrition_i18n.py:127 templates/the_cauldron/nutrition.html:247
 msgid "Log something"
 msgstr "Registrar algo"
 
-#: nutrition_i18n.py:94 templates/the_cauldron/nutrition.html:272
+#: nutrition_i18n.py:128 templates/the_cauldron/nutrition.html:280
 msgid "Log it"
 msgstr "Registrar"
 
-#: nutrition_i18n.py:95
+#: nutrition_i18n.py:129
 msgid "Edit entry"
 msgstr "Editar registro"
 
-#: nutrition_i18n.py:96
+#: nutrition_i18n.py:130
 msgid "Save entry"
 msgstr "Guardar registro"
 
-#: nutrition_i18n.py:97
+#: nutrition_i18n.py:131
 msgid "Nothing logged on this day."
 msgstr "No hay nada registrado este día."
 
-#: nutrition_i18n.py:98
+#: nutrition_i18n.py:132
 msgid "Nothing logged yet today."
 msgstr "Aún no registras nada hoy."
 
-#: nutrition_i18n.py:99
+#: nutrition_i18n.py:133
 msgid "planned"
 msgstr "planeado"
 
-#: nutrition_i18n.py:100
+#: nutrition_i18n.py:134
 msgid "Logged."
 msgstr "Registrado."
 
-#: nutrition_i18n.py:101
+#: nutrition_i18n.py:135
 msgid "Entry saved."
 msgstr "Registro guardado."
 
-#: nutrition_i18n.py:102
+#: nutrition_i18n.py:136
 msgid "serving"
 msgstr "porción"
 
-#: nutrition_i18n.py:103 templates/the_cauldron/nutrition.html:307
+#: nutrition_i18n.py:137 templates/the_cauldron/nutrition.html:315
 msgid "servings"
 msgstr "porciones"
 
-#: nutrition_i18n.py:105 templates/the_cauldron/nutrition.html:298
+#: nutrition_i18n.py:139 templates/the_cauldron/nutrition.html:306
 msgid "Breakfast"
 msgstr "Desayuno"
 
-#: nutrition_i18n.py:106 templates/the_cauldron/nutrition.html:299
+#: nutrition_i18n.py:140 templates/the_cauldron/nutrition.html:307
 msgid "Lunch"
 msgstr "Comida"
 
-#: nutrition_i18n.py:107 templates/the_cauldron/nutrition.html:300
+#: nutrition_i18n.py:141 templates/the_cauldron/nutrition.html:308
 msgid "Dinner"
 msgstr "Cena"
 
-#: nutrition_i18n.py:108 templates/the_cauldron/nutrition.html:301
+#: nutrition_i18n.py:142 templates/the_cauldron/nutrition.html:309
 msgid "Snack"
 msgstr "Colación"
 
-#: nutrition_i18n.py:109
+#: nutrition_i18n.py:143
 msgid "Nothing planned."
 msgstr "Nada planeado."
 
-#: nutrition_i18n.py:111
+#: nutrition_i18n.py:145
 msgid "eaten"
 msgstr "comido"
 
-#: nutrition_i18n.py:112
+#: nutrition_i18n.py:146
 msgid "This spell is no longer available."
 msgstr "Este hechizo ya no está disponible."
 
-#: nutrition_i18n.py:113
+#: nutrition_i18n.py:147
 msgid "If you eat what's planned"
 msgstr "Si comes lo planeado"
 
-#: nutrition_i18n.py:114
+#: nutrition_i18n.py:148
 msgid "Added to the ritual."
 msgstr "Agregado al ritual."
 
-#: nutrition_i18n.py:115
+#: nutrition_i18n.py:149
 msgid "Logged as eaten."
 msgstr "Registrado como comido."
 
-#: nutrition_payloads.py:60
+#: nutrition_payloads.py:62
 #, python-format
 msgid "Ask for at most %(n)s days."
 msgstr "Pide como máximo %(n)s días."
@@ -3101,7 +3318,7 @@ msgstr "Ese hechizo es privado o ya no existe."
 msgid "Choose a spell."
 msgstr "Elige un hechizo."
 
-#: nutrition_writes.py:55 services/nutrition.py:299
+#: nutrition_writes.py:55 services/nutrition.py:301
 msgid "Use grams or servings for a spell."
 msgstr "Para un hechizo usa gramos o porciones."
 
@@ -3125,7 +3342,7 @@ msgstr "Para un ingrediente usa un peso, un volumen o piezas."
 msgid "Name what you ate."
 msgstr "Escribe qué comiste."
 
-#: nutrition_writes.py:102 services/nutrition.py:335
+#: nutrition_writes.py:102 services/nutrition.py:337
 msgid "Enter at least one value, e.g. the calories."
 msgstr "Escribe al menos un valor, por ejemplo las calorías."
 
@@ -3219,65 +3436,114 @@ msgstr "Peso de la pesa rusa vacía"
 msgid "Barbell increment must be greater than zero."
 msgstr "El incremento de la barra debe ser mayor que cero."
 
-#: services/forge.py:42
+#: services/breakdown.py:60
+msgid "Use span 24h or 7d."
+msgstr "Usa una ventana de 24h o 7d."
+
+#: services/breakdown.py:69
+msgid "Use a date and time like 2026-10-15T18:00."
+msgstr "Usa una fecha y hora como 2026-10-15T18:00."
+
+#: services/breakdown.py:77
+msgid "Pick a time within the last year."
+msgstr "Elige un momento dentro del último año."
+
+#: services/breakdown.py:221
+msgid "Enter a number of 0 or more."
+msgstr "Escribe un número de 0 o más."
+
+#: services/breakdown.py:337
+msgid "Only a typed-in entry takes a value directly."
+msgstr "Solo un registro escrito a mano acepta un valor directo."
+
+#: services/breakdown.py:339
+msgid "That value is already known."
+msgstr "Ese valor ya se conoce."
+
+#: services/forge.py:43
 msgid "Today's Forge"
 msgstr "La Forja de hoy"
 
-#: services/forge.py:943 services/forge.py:979
+#: services/forge.py:687 services/forge.py:691 services/forge.py:693
+msgid "Weekly volume must be a whole number of sets."
+msgstr "El volumen semanal debe ser un número entero de series."
+
+#: services/forge.py:696
+#, python-format
+msgid "Weekly volume must be between %(min)s and %(max)s sets."
+msgstr "El volumen semanal debe estar entre %(min)s y %(max)s series."
+
+#: services/forge.py:1076 services/forge.py:1112
 msgid "prescription is not on this day"
 msgstr "esa prescripción no está en este día"
 
-#: services/forge.py:950
+#: services/forge.py:1083
 msgid "plan is empty"
 msgstr "el plan está vacío"
 
-#: services/forge.py:993
+#: services/forge.py:1126
 msgid "that movement is not what this prescription trains"
 msgstr "ese movimiento no es el que entrena esta prescripción"
 
-#: services/forge.py:997 services/forge.py:1148 services/forge.py:1355
+#: services/forge.py:1130 services/forge.py:1281 services/forge.py:1489
 msgid "you cannot perform that movement"
 msgstr "no puedes hacer ese movimiento con tu equipo"
 
-#: services/forge.py:1140
+#: services/forge.py:1273
 msgid "that movement is not on this session"
 msgstr "ese movimiento no está en esta sesión"
 
-#: services/forge.py:1142 services/forge.py:1389
+#: services/forge.py:1275 services/forge.py:1523 services/forge.py:1582
 msgid "that movement already has logged sets"
 msgstr "ese movimiento ya tiene series registradas"
 
-#: services/forge.py:1144
+#: services/forge.py:1277
 msgid "that movement is already on this session"
 msgstr "ese movimiento ya está en esta sesión"
 
-#: services/forge.py:1176
+#: services/forge.py:1309
 msgid "your last Trial doesn't support that rung yet"
 msgstr "tu última Prueba todavía no respalda ese peldaño"
 
-#: services/forge.py:1353
+#: services/forge.py:1487
 msgid "that rung is not on this ladder"
 msgstr "ese peldaño no está en esta escalera"
 
-#: services/forge.py:1734
+#: services/forge.py:1551
+msgid "This movement progresses by difficulty, not by load."
+msgstr "Este movimiento progresa por dificultad, no por peso."
+
+#: services/forge.py:1555
+msgid "You have no equipment that loads this movement."
+msgstr "No tienes equipo para cargar este movimiento."
+
+#: services/forge.py:1564
+msgid "That isn't a band level you own."
+msgstr "Ese no es un nivel de liga que tengas."
+
+#: services/forge.py:1568
+msgid "Enter a load above 0."
+msgstr "Escribe un peso mayor que 0."
+
+#: services/forge.py:1923
 msgid "A completed session can't be deleted."
 msgstr "Una sesión terminada no se puede borrar."
 
-#: services/forge.py:1902
+#: services/forge.py:2091
 msgid "results required."
 msgstr "faltan los resultados."
 
-#: services/forge.py:1915
+#: services/forge.py:2104
 #, python-format
 msgid "tested_exercise for %(pattern)s must be an exercise id."
 msgstr "tested_exercise de %(pattern)s debe ser el id de un ejercicio."
 
-#: services/forge.py:1922
+#: services/forge.py:2111
 #, python-format
 msgid "reps_or_seconds for %(pattern)s must be a whole number."
 msgstr "reps_or_seconds de %(pattern)s debe ser un número entero."
 
-#: services/forge.py:1925
+#: services/forge.py:2114
 #, python-format
 msgid "reps_or_seconds for %(pattern)s can't be negative."
 msgstr "reps_or_seconds de %(pattern)s no puede ser negativo."
@@ -3286,7 +3552,7 @@ msgstr "reps_or_seconds de %(pattern)s no puede ser negativo."
 msgid "Quantity can't be negative."
 msgstr "La cantidad no puede ser negativa."
 
-#: services/grimoire_scaling.py:55 services/nutrition.py:122
+#: services/grimoire_scaling.py:55 services/nutrition.py:124
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s debe ser un número."
@@ -3401,62 +3667,108 @@ msgstr "Todavía no hay datos de %(label)s para tu grupo de edad."
 msgid "Estimated benchmark — not yet from published data."
 msgstr "Referencia estimada — todavía no viene de datos publicados."
 
-#: services/nutrition.py:81
+#: services/nutrition.py:83
 msgid "Use a date like 2026-10-15."
 msgstr "Usa una fecha como 2026-10-15."
 
-#: services/nutrition.py:124
+#: services/nutrition.py:126
 #, python-format
 msgid "%(label)s must be 0 or more."
 msgstr "%(label)s debe ser 0 o más."
 
-#: services/nutrition.py:132 services/nutrition.py:136
+#: services/nutrition.py:134 services/nutrition.py:138
 msgid "Send a list of goals."
 msgstr "Envía una lista de metas."
 
-#: services/nutrition.py:139 services/nutrition.py:330
-msgid "Unknown nutrient."
-msgstr "Nutriente desconocido."
-
-#: services/nutrition.py:141
+#: services/nutrition.py:143
 msgid "Only one goal per nutrient."
 msgstr "Solo una meta por nutriente."
 
-#: services/nutrition.py:147
+#: services/nutrition.py:149
 msgid "Unknown goal type."
 msgstr "Tipo de meta desconocido."
 
-#: services/nutrition.py:148
+#: services/nutrition.py:150
 msgid "The minimum"
 msgstr "El mínimo"
 
-#: services/nutrition.py:149
+#: services/nutrition.py:151
 msgid "The maximum"
 msgstr "El máximo"
 
-#: services/nutrition.py:152
+#: services/nutrition.py:154
 msgid "An “at least” goal needs a minimum."
 msgstr "Una meta “al menos” necesita un mínimo."
 
-#: services/nutrition.py:156
+#: services/nutrition.py:158
 msgid "An “at most” goal needs a maximum."
 msgstr "Una meta “como máximo” necesita un máximo."
 
-#: services/nutrition.py:160
+#: services/nutrition.py:162
 msgid "A “between” goal needs a minimum and a maximum."
 msgstr "Una meta “entre” necesita un mínimo y un máximo."
 
-#: services/nutrition.py:162
+#: services/nutrition.py:164
 msgid "A goal's minimum can't be above its maximum."
 msgstr "El mínimo de una meta no puede ser mayor que su máximo."
 
-#: services/nutrition.py:310
+#: services/nutrition.py:312
 msgid "That ingredient is gone — use a weight."
 msgstr "Ese ingrediente ya no existe; usa un peso."
 
-#: services/nutrition.py:326
+#: services/nutrition.py:328
 msgid "Send the values as an object."
 msgstr "Envía los valores como un objeto."
+
+#: services/recommendations.py:83
+msgid "Energy requirement ±10 % (the ±10 % is our choice)."
+msgstr "Requerimiento de energía ±10 % (el ±10 % es elección nuestra)."
+
+#: services/recommendations.py:84
+#, python-format
+msgid "20–30 % of the energy requirement."
+msgstr "20–30 % del requerimiento de energía."
+
+#: services/recommendations.py:85
+#, python-format
+msgid "Under 10 % of the energy requirement."
+msgstr "Menos del 10 % del requerimiento de energía."
+
+#: services/recommendations.py:86
+#, python-format
+msgid "Under 1 % of the energy requirement."
+msgstr "Menos del 1 % del requerimiento de energía."
+
+#: services/recommendations.py:87
+#, python-format
+msgid "45–65 % of the energy requirement."
+msgstr "45–65 % del requerimiento de energía."
+
+#: services/recommendations.py:88
+#, python-format
+msgid "Under 10 % of the energy requirement (WHO free sugars, approximated)."
+msgstr "Menos del 10 % del requerimiento de energía (azúcares libres de la OMS, aproximados)."
+
+#: services/recommendations.py:89
+msgid "0.83 g per kg of body weight."
+msgstr "0.83 g por kg de peso corporal."
+
+#: services/recommendations.py:92
+msgid "No limit on total sugars — only on added (free) sugars."
+msgstr "No hay límite para los azúcares totales, solo para los añadidos (libres)."
+
+#: services/recommendations.py:93 services/recommendations.py:94
+#: services/recommendations.py:97
+msgid "No recommendation."
+msgstr "Sin recomendación."
+
+#: services/recommendations.py:95
+msgid "No recommendation for EPA on its own."
+msgstr "Sin recomendación para el EPA por separado."
+
+#: services/recommendations.py:96
+msgid "No recommendation for DHA on its own."
+msgstr "Sin recomendación para el DHA por separado."
 
 #: templates/the_cauldron/_assistant_link.html:5
 msgid "Use with your AI assistant"
@@ -3470,7 +3782,8 @@ msgstr "Términos"
 msgid "AI assistants"
 msgstr "Asistentes de IA"
 
-#: templates/the_cauldron/_footer_links.html:6 templates/the_cauldron/mcp_info.html:165
+#: templates/the_cauldron/_footer_links.html:6
+#: templates/the_cauldron/mcp_info.html:165
 msgid "Privacy"
 msgstr "Privacidad"
 
@@ -3498,6 +3811,14 @@ msgstr "Consultando recetas antiguas…"
 msgid "Profile"
 msgstr "Perfil"
 
+#: templates/the_cauldron/_recommendation_notice.html:3
+msgid "Recommended goals combine references calculated for your weight, age, sex and activity level: the WHO and FAO (energy, protein, fats, carbohydrates, added sugars, sodium, potassium and fiber) and, where the WHO sets none, the US National Academies' Dietary Reference Intakes (vitamins, minerals, omega-3 and omega-6)."
+msgstr "Las metas recomendadas combinan referencias calculadas para tu peso, edad, sexo y nivel de actividad: la OMS y la FAO (energía, proteína, grasas, carbohidratos, azúcares añadidos, sodio, potasio y fibra) y, donde la OMS no fija una, las Ingestas Dietéticas de Referencia de las Academias Nacionales de EE. UU. (vitaminas, minerales, omega-3 y omega-6)."
+
+#: templates/the_cauldron/_recommendation_notice.html:4
+msgid "Recommended goals are general references for healthy adults, not medical advice. They don't apply to pregnancy, breastfeeding or conditions that affect nutrition. You use them at your own responsibility — ask a health professional for advice about you."
+msgstr "Las metas recomendadas son referencias generales para personas adultas sanas, no consejo médico. No aplican durante el embarazo, la lactancia ni con condiciones que afecten tu nutrición. Las usas bajo tu propia responsabilidad; pide a un profesional de la salud un consejo para tu caso."
+
 #: templates/the_cauldron/forge.html:4
 msgid "The Forge — Adaptive Calisthenics"
 msgstr "La Forja — Calistenia adaptativa"
@@ -3506,23 +3827,64 @@ msgstr "La Forja — Calistenia adaptativa"
 msgid "Take the Trial and forge a calisthenics program that adapts to you and your equipment."
 msgstr "Haz la Prueba y forja un programa de calistenia que se adapta a ti y a tu equipo."
 
-#: templates/the_cauldron/forge.html:16 templates/the_cauldron/grimoire.html:18 templates/the_cauldron/landing.html:17 templates/the_cauldron/mcp_info.html:25 templates/the_cauldron/nutrition.html:26 templates/the_cauldron/oauth_authorize.html:24
+#: templates/the_cauldron/forge.html:16 templates/the_cauldron/grimoire.html:18
+#: templates/the_cauldron/landing.html:17
+#: templates/the_cauldron/mcp_info.html:25
+#: templates/the_cauldron/nutrition.html:27
+#: templates/the_cauldron/oauth_authorize.html:24
 msgid "The Cauldron home"
 msgstr "Inicio de El Caldero"
 
-#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29 templates/the_cauldron/grimoire.html:26 templates/the_cauldron/grimoire.html:31 templates/the_cauldron/landing.html:28 templates/the_cauldron/landing.html:36 templates/the_cauldron/landing.html:106 templates/the_cauldron/landing.html:131 templates/the_cauldron/landing.html:570 templates/the_cauldron/landing.html:581 templates/the_cauldron/landing.html:594 templates/the_cauldron/legal/_base.html:18 templates/the_cauldron/legal/_base.html:26 templates/the_cauldron/legal/_base.html:31 templates/the_cauldron/login.html:18 templates/the_cauldron/mcp_info.html:33 templates/the_cauldron/mcp_info.html:39 templates/the_cauldron/nutrition.html:11 templates/the_cauldron/nutrition.html:34 templates/the_cauldron/nutrition.html:39 templates/the_cauldron/nutrition.html:90 templates/the_cauldron/oauth_authorize.html:32
+#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29
+#: templates/the_cauldron/grimoire.html:26
+#: templates/the_cauldron/grimoire.html:31
+#: templates/the_cauldron/landing.html:28
+#: templates/the_cauldron/landing.html:36
+#: templates/the_cauldron/landing.html:106
+#: templates/the_cauldron/landing.html:131
+#: templates/the_cauldron/landing.html:570
+#: templates/the_cauldron/landing.html:581
+#: templates/the_cauldron/landing.html:594
+#: templates/the_cauldron/legal/_base.html:18
+#: templates/the_cauldron/legal/_base.html:26
+#: templates/the_cauldron/legal/_base.html:31
+#: templates/the_cauldron/login.html:18 templates/the_cauldron/mcp_info.html:33
+#: templates/the_cauldron/mcp_info.html:39
+#: templates/the_cauldron/nutrition.html:12
+#: templates/the_cauldron/nutrition.html:35
+#: templates/the_cauldron/nutrition.html:40
+#: templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/oauth_authorize.html:32
 msgid "The Cauldron"
 msgstr "El Caldero"
 
-#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:49 templates/the_cauldron/grimoire.html:32 templates/the_cauldron/landing.html:34 templates/the_cauldron/landing.html:231 templates/the_cauldron/landing.html:593 templates/the_cauldron/legal/_base.html:32 templates/the_cauldron/login.html:17 templates/the_cauldron/mcp_info.html:40 templates/the_cauldron/nutrition.html:40
+#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:49
+#: templates/the_cauldron/grimoire.html:32
+#: templates/the_cauldron/landing.html:34
+#: templates/the_cauldron/landing.html:231
+#: templates/the_cauldron/landing.html:593
+#: templates/the_cauldron/legal/_base.html:32
+#: templates/the_cauldron/login.html:17 templates/the_cauldron/mcp_info.html:40
+#: templates/the_cauldron/nutrition.html:41
 msgid "The Forge"
 msgstr "La Forja"
 
-#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4 templates/the_cauldron/grimoire.html:33 templates/the_cauldron/grimoire.html:234 templates/the_cauldron/landing.html:35 templates/the_cauldron/landing.html:595 templates/the_cauldron/legal/_base.html:33 templates/the_cauldron/mcp_info.html:41 templates/the_cauldron/nutrition.html:41
+#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4
+#: templates/the_cauldron/grimoire.html:33
+#: templates/the_cauldron/grimoire.html:234
+#: templates/the_cauldron/landing.html:35
+#: templates/the_cauldron/landing.html:595
+#: templates/the_cauldron/legal/_base.html:33
+#: templates/the_cauldron/mcp_info.html:41
+#: templates/the_cauldron/nutrition.html:42
 msgid "The Grimoire"
 msgstr "El Grimorio"
 
-#: templates/the_cauldron/forge.html:38 templates/the_cauldron/grimoire.html:40 templates/the_cauldron/mcp_info.html:49 templates/the_cauldron/nutrition.html:48 templates/the_cauldron/nutrition.html:78 templates/the_cauldron/oauth_authorize.html:40
+#: templates/the_cauldron/forge.html:38 templates/the_cauldron/grimoire.html:40
+#: templates/the_cauldron/mcp_info.html:49
+#: templates/the_cauldron/nutrition.html:49
+#: templates/the_cauldron/nutrition.html:79
+#: templates/the_cauldron/oauth_authorize.html:40
 msgid "Sign out"
 msgstr "Cerrar sesión"
 
@@ -3538,11 +3900,12 @@ msgstr "Un programa de calistenia que se adapta a ti — y a lo que tienes."
 msgid "Forge sections"
 msgstr "Secciones de la Forja"
 
-#: templates/the_cauldron/forge.html:53 templates/the_cauldron/forge.html:200 templates/the_cauldron/landing.html:249
+#: templates/the_cauldron/forge.html:53 templates/the_cauldron/forge.html:186
+#: templates/the_cauldron/landing.html:249
 msgid "The Trial"
 msgstr "La Prueba"
 
-#: templates/the_cauldron/forge.html:55 templates/the_cauldron/forge.html:259
+#: templates/the_cauldron/forge.html:55 templates/the_cauldron/forge.html:245
 msgid "Exercises"
 msgstr "Ejercicios"
 
@@ -3590,7 +3953,8 @@ msgstr "Discos que tienes — <code>peso x cuántos</code>"
 msgid "Weight of one empty handle (<span class=\"forge-unit-tag\">kg</span>)"
 msgstr "Peso de un maneral vacío (<span class=\"forge-unit-tag\">kg</span>)"
 
-#: templates/the_cauldron/forge.html:103 templates/the_cauldron/forge.html:118 templates/the_cauldron/forge.html:145
+#: templates/the_cauldron/forge.html:103 templates/the_cauldron/forge.html:118
+#: templates/the_cauldron/forge.html:145
 msgid "weight — 0 if weightless"
 msgstr "peso — 0 si no pesa"
 
@@ -3638,248 +4002,248 @@ msgstr "Tus datos"
 msgid "— optional, for the peer score"
 msgstr "— opcional, para la comparación con tus pares"
 
-#: templates/the_cauldron/forge.html:161
-msgid "We compare your results against published norms for your age &amp; sex to award your <span class=\"forge-flame-inline\">🔥</span> rating. Leave blank to skip — everything else still works."
-msgstr "Comparamos tus resultados con normas publicadas para tu edad y sexo para darte tu calificación <span class=\"forge-flame-inline\">🔥</span>. Déjalo en blanco para omitirlo — todo lo demás sigue funcionando."
+#: templates/the_cauldron/forge.html:162
+#, python-format
+msgid "We compare your results against published norms for your age &amp; sex to award your <span class=\"forge-flame-inline\">🔥</span> rating. Set your birth year and sex in <a href=\"%(url)s\">your profile</a> — everything else works without them."
+msgstr "Comparamos tus resultados con normas publicadas para tu edad y sexo para darte tu calificación <span class=\"forge-flame-inline\">🔥</span>. Indica tu año de nacimiento y sexo en <a href=\"%(url)s\">tu perfil</a>; todo lo demás funciona sin ellos."
 
-#: templates/the_cauldron/forge.html:165
-msgid "Birth year"
-msgstr "Año de nacimiento"
-
-#: templates/the_cauldron/forge.html:169
-msgid "Sex (for norms)"
-msgstr "Sexo (para las normas)"
-
-#: templates/the_cauldron/forge.html:175
-msgid "Female"
-msgstr "Mujer"
-
-#: templates/the_cauldron/forge.html:181
-msgid "Male"
-msgstr "Hombre"
-
-#: templates/the_cauldron/forge.html:184
-msgid "Prefer not to say"
-msgstr "Prefiero no decirlo"
-
-#: templates/the_cauldron/forge.html:191
+#: templates/the_cauldron/forge.html:166
 msgid "Save equipment"
 msgstr "Guardar equipo"
 
-#: templates/the_cauldron/forge.html:201
+#: templates/the_cauldron/forge.html:169
+msgid "Weekly volume"
+msgstr "Volumen semanal"
+
+#: templates/the_cauldron/forge.html:170
+msgid "Working sets per movement pattern per week. Each session's sets follow from it — between 2 and 5 per movement — and change as soon as you save."
+msgstr "Series efectivas por patrón de movimiento a la semana. Las series de cada sesión salen de aquí —entre 2 y 5 por movimiento— y cambian en cuanto guardas."
+
+#: templates/the_cauldron/forge.html:173
+msgid "Sets per pattern per week"
+msgstr "Series por patrón a la semana"
+
+#: templates/the_cauldron/forge.html:175
+msgid "Save volume"
+msgstr "Guardar volumen"
+
+#: templates/the_cauldron/forge.html:187
 msgid "For each pattern, do <strong>one set to honest technical failure</strong> on the suggested move and record the reps (or seconds for holds). We place you objectively — no guessing your level."
 msgstr "En cada patrón, haz <strong>una serie hasta el fallo técnico honesto</strong> con el movimiento sugerido y anota las reps (o los segundos en los sostenes). Te ubicamos de forma objetiva — sin adivinar tu nivel."
 
-#: templates/the_cauldron/forge.html:205
+#: templates/the_cauldron/forge.html:191
 msgid "Forge my program"
 msgstr "Forjar mi programa"
 
-#: templates/the_cauldron/forge.html:206
+#: templates/the_cauldron/forge.html:192
 msgid "Retake the Trial"
 msgstr "Repetir la Prueba"
 
-#: templates/the_cauldron/forge.html:217
+#: templates/the_cauldron/forge.html:203
 msgid "Today's session"
 msgstr "La sesión de hoy"
 
-#: templates/the_cauldron/forge.html:219
+#: templates/the_cauldron/forge.html:205
 msgid "Rest ping"
 msgstr "Aviso de descanso"
 
-#: templates/the_cauldron/forge.html:227
+#: templates/the_cauldron/forge.html:213
 msgid "Preview sound"
 msgstr "Escuchar sonido"
 
-#: templates/the_cauldron/forge.html:227
+#: templates/the_cauldron/forge.html:213
 msgid "Preview rest ping"
 msgstr "Escuchar el aviso de descanso"
 
-#: templates/the_cauldron/forge.html:235
+#: templates/the_cauldron/forge.html:221
 msgid "Muscles forged today"
 msgstr "Músculos forjados hoy"
 
-#: templates/the_cauldron/forge.html:239
+#: templates/the_cauldron/forge.html:225
 msgid "Every set logged — here's the map of what you trained."
 msgstr "Todas las series registradas — este es el mapa de lo que entrenaste."
 
-#: templates/the_cauldron/forge.html:245
+#: templates/the_cauldron/forge.html:231
 msgid "Hands-free guided workout — listen on your earphones and speak your reps"
 msgstr "Entrenamiento guiado manos libres — escucha en tus audífonos y di tus reps"
 
-#: templates/the_cauldron/forge.html:248 templates/the_cauldron/forge.html:337
+#: templates/the_cauldron/forge.html:234 templates/the_cauldron/forge.html:323
 msgid "Save session"
 msgstr "Guardar sesión"
 
-#: templates/the_cauldron/forge.html:260
+#: templates/the_cauldron/forge.html:246
 msgid "Exercise display"
 msgstr "Vista de ejercicios"
 
-#: templates/the_cauldron/forge.html:261
+#: templates/the_cauldron/forge.html:247
 msgid "Tree"
 msgstr "Árbol"
 
-#: templates/the_cauldron/forge.html:262
+#: templates/the_cauldron/forge.html:248
 msgid "Cards"
 msgstr "Tarjetas"
 
-#: templates/the_cauldron/forge.html:265
+#: templates/the_cauldron/forge.html:251
 msgid "Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong> anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from the Trial and your program, and we swap in the closest equal-or-easier alternative for the same pattern. Unblock any time. Groups for gear you don't own are dimmed."
 msgstr "Todos los movimientos de la Forja, agrupados por el equipo que necesitan. <strong>Bloquea</strong> lo que no puedas o no quieras hacer — una lesión, una limitación, algo que no te guste. Los movimientos bloqueados salen de la Prueba y de tu programa, y ponemos la alternativa igual o más fácil más cercana del mismo patrón. Desbloquéalos cuando quieras. Los grupos de equipo que no tienes se ven atenuados."
 
-#: templates/the_cauldron/forge.html:271
+#: templates/the_cauldron/forge.html:257
 msgid "Search exercises…"
 msgstr "Buscar ejercicios…"
 
-#: templates/the_cauldron/forge.html:271
+#: templates/the_cauldron/forge.html:257
 msgid "Search exercises by name"
 msgstr "Buscar ejercicios por nombre"
 
-#: templates/the_cauldron/forge.html:272 templates/the_cauldron/forge.html:355
+#: templates/the_cauldron/forge.html:258 templates/the_cauldron/forge.html:341
 msgid "Muscle"
 msgstr "Músculo"
 
-#: templates/the_cauldron/forge.html:274 templates/the_cauldron/forge.html:357
+#: templates/the_cauldron/forge.html:260 templates/the_cauldron/forge.html:343
 msgid "All muscles"
 msgstr "Todos los músculos"
 
-#: templates/the_cauldron/forge.html:279
+#: templates/the_cauldron/forge.html:265
 msgid "Only show what I can do"
 msgstr "Mostrar solo lo que puedo hacer"
 
-#: templates/the_cauldron/forge.html:289
+#: templates/the_cauldron/forge.html:275
 msgid "Exercise details"
 msgstr "Detalles del ejercicio"
 
-#: templates/the_cauldron/forge.html:295 templates/the_cauldron/forge.html:313
+#: templates/the_cauldron/forge.html:281 templates/the_cauldron/forge.html:299
+#: templates/the_cauldron/nutrition.html:338
 msgid "Close"
 msgstr "Cerrar"
 
-#: templates/the_cauldron/forge.html:312
+#: templates/the_cauldron/forge.html:298
 msgid "Change exercise"
 msgstr "Cambiar ejercicio"
 
-#: templates/the_cauldron/forge.html:331
+#: templates/the_cauldron/forge.html:317
 msgid "Unfinished session"
 msgstr "Sesión sin terminar"
 
-#: templates/the_cauldron/forge.html:348
+#: templates/the_cauldron/forge.html:334
 msgid "Progression"
 msgstr "Progresión"
 
-#: templates/the_cauldron/forge.html:350
+#: templates/the_cauldron/forge.html:336
 msgid "Exercise"
 msgstr "Ejercicio"
 
-#: templates/the_cauldron/forge.html:352
+#: templates/the_cauldron/forge.html:338
 msgid "All (total)"
 msgstr "Todos (total)"
 
-#: templates/the_cauldron/forge.html:360
+#: templates/the_cauldron/forge.html:346
 msgctxt "chart"
 msgid "Metric"
 msgstr "Métrica"
 
-#: templates/the_cauldron/forge.html:362
+#: templates/the_cauldron/forge.html:348
 msgid "Total volume"
 msgstr "Volumen total"
 
-#: templates/the_cauldron/forge.html:363
+#: templates/the_cauldron/forge.html:349
 msgid "Total reps"
 msgstr "Reps totales"
 
-#: templates/the_cauldron/forge.html:364
+#: templates/the_cauldron/forge.html:350
 msgid "Best AMRAP set"
 msgstr "Mejor serie AMRAP"
 
-#: templates/the_cauldron/forge.html:367
+#: templates/the_cauldron/forge.html:353
 msgid "Group by"
 msgstr "Agrupar por"
 
-#: templates/the_cauldron/forge.html:369
+#: templates/the_cauldron/forge.html:355
 msgid "Week"
 msgstr "Semana"
 
-#: templates/the_cauldron/forge.html:370
+#: templates/the_cauldron/forge.html:356
 msgid "Month"
 msgstr "Mes"
 
-#: templates/the_cauldron/forge.html:380
+#: templates/the_cauldron/forge.html:366
 msgid "Saved sessions"
 msgstr "Sesiones guardadas"
 
-#: templates/the_cauldron/forge.html:381
+#: templates/the_cauldron/forge.html:367
 msgid "Planned vs. real for every set you've logged."
 msgstr "Lo planeado contra lo real en cada serie que registraste."
 
-#: templates/the_cauldron/forge.html:423
+#: templates/the_cauldron/forge.html:409
 msgid "Voice input off — tap to enable hands-free voice commands"
 msgstr "Entrada de voz desactivada — toca para activar los comandos de voz manos libres"
 
-#: templates/the_cauldron/forge.html:434
+#: templates/the_cauldron/forge.html:420
 msgid "Exit earphones mode"
 msgstr "Salir del modo audífonos"
 
-#: templates/the_cauldron/forge.html:446
+#: templates/the_cauldron/forge.html:432
 msgid "Listening…"
 msgstr "Escuchando…"
 
-#: templates/the_cauldron/forge.html:453
+#: templates/the_cauldron/forge.html:439
 msgid "Guidance is spoken through your earphones — tap the buttons to log each set. Tap the mic (top-left) for hands-free voice commands; your browser beeps while listening."
 msgstr "Las indicaciones suenan en tus audífonos — toca los botones para registrar cada serie. Toca el micrófono (arriba a la izquierda) para los comandos de voz manos libres; tu navegador pita mientras escucha."
 
-#: templates/the_cauldron/forge.html:464
+#: templates/the_cauldron/forge.html:450
 msgid "How the Forge works — and why"
 msgstr "Cómo funciona la Forja — y por qué"
 
-#: templates/the_cauldron/forge.html:465
+#: templates/the_cauldron/forge.html:451
 msgid "The Forge isn't a fixed routine. It measures where you are, prescribes the next honest step, and adjusts after every session. Each design choice below is anchored to the strength-science evidence — the citations are real and linked."
 msgstr "La Forja no es una rutina fija. Mide dónde estás, prescribe el siguiente paso honesto y se ajusta después de cada sesión. Cada decisión de diseño de abajo se apoya en la evidencia de la ciencia de la fuerza — las citas son reales y tienen enlace."
 
-#: templates/the_cauldron/forge.html:469
+#: templates/the_cauldron/forge.html:455
 msgid "1 · We test, we don't guess"
 msgstr "1 · Medimos, no adivinamos"
 
-#: templates/the_cauldron/forge.html:470
+#: templates/the_cauldron/forge.html:456
 msgid "Most apps ask how hard a set felt — your \"reps in reserve\" (RIR). The problem: novices are unreliable at judging how close to failure they are, and tend to stop well short while believing they were near the limit. Accuracy improves with training experience, but for a beginner it's a shaky foundation.<sup><a href=\"#ref-1\">1</a></sup> Trained lifters estimate effort far more accurately than novices.<sup><a href=\"#ref-2\">2</a></sup> So the Forge places you with an <strong>objective AMRAP</strong> (as-many-reps-as-possible) test set per movement pattern, not a feeling — the number puts you on the right rung automatically."
 msgstr "La mayoría de las apps preguntan qué tan pesada se sintió una serie — tus \"reps en reserva\" (RIR). El problema: quien empieza no calcula bien qué tan cerca está del fallo, y suele parar mucho antes creyendo que estaba al límite. La precisión mejora con la experiencia, pero para un principiante es una base inestable.<sup><a href=\"#ref-1\">1</a></sup> Quien entrena calcula el esfuerzo con mucha más precisión que quien empieza.<sup><a href=\"#ref-2\">2</a></sup> Por eso la Forja te ubica con una serie de prueba <strong>AMRAP objetiva</strong> (tantas reps como puedas) por patrón de movimiento, no con una sensación — el número te pone en el peldaño correcto automáticamente."
 
-#: templates/the_cauldron/forge.html:478
+#: templates/the_cauldron/forge.html:464
 msgid "2 · Autoregulated double progression"
 msgstr "2 · Doble progresión autorregulada"
 
-#: templates/the_cauldron/forge.html:479
+#: templates/the_cauldron/forge.html:465
 msgid "Your last working set each session is an AMRAP \"test set.\" Beat the top of the rep range and you move up; fall short and you back off — the program <em>autoregulates</em> to your daily readiness instead of forcing a fixed weekly jump. Autoregulated progressive resistance exercise (APRE) out-performed traditional linear periodization for strength gains in a controlled trial.<sup><a href=\"#ref-3\">3</a></sup>"
 msgstr "Tu última serie de trabajo de cada sesión es una \"serie de prueba\" AMRAP. Supera el tope del rango de reps y subes; quédate corto y bajas — el programa se <em>autorregula</em> a cómo llegas ese día en vez de forzar un salto fijo cada semana. El ejercicio de resistencia progresiva autorregulado (APRE) superó a la periodización lineal tradicional en ganancias de fuerza en un ensayo controlado.<sup><a href=\"#ref-3\">3</a></sup>"
 
-#: templates/the_cauldron/forge.html:484
+#: templates/the_cauldron/forge.html:470
 msgid "3 · Two ways to get stronger"
 msgstr "3 · Dos formas de hacerte más fuerte"
 
-#: templates/the_cauldron/forge.html:485
+#: templates/the_cauldron/forge.html:471
 msgid "When you only have bodyweight, the Forge progresses by <strong>difficulty</strong> — climbing a ladder of harder variations (wall push-up → push-up → archer push-up). When you own loadable gear, it progresses by <strong>load</strong>, adding the smallest available increment. Load mode also fixes a well-known problem: it's hard to keep overloading the lower body with bodyweight alone."
 msgstr "Cuando solo tienes tu peso corporal, la Forja progresa por <strong>dificultad</strong> — subiendo una escalera de variantes más difíciles (lagartija en pared → lagartija → lagartija arquero). Cuando tienes equipo con carga, progresa por <strong>peso</strong>, agregando el incremento más chico disponible. El modo de peso también resuelve un problema conocido: es difícil seguir sobrecargando las piernas solo con tu peso."
 
-#: templates/the_cauldron/forge.html:490
+#: templates/the_cauldron/forge.html:476
 msgid "4 · Rest like you mean it"
 msgstr "4 · Descansa en serio"
 
-#: templates/the_cauldron/forge.html:491
+#: templates/the_cauldron/forge.html:477
 msgid "Each exercise carries an evidence-based rest target — roughly 2–3 minutes for heavy compounds, less for accessory and isometric work. Longer inter-set rest produced greater gains in both strength and muscle size than short rest in resistance-trained men.<sup><a href=\"#ref-4\">4</a></sup>"
 msgstr "Cada ejercicio trae un descanso meta basado en evidencia — unos 2–3 minutos para los compuestos pesados, menos para el trabajo accesorio e isométrico. Descansar más entre series dio mayores ganancias de fuerza y de tamaño muscular que descansar poco en hombres entrenados.<sup><a href=\"#ref-4\">4</a></sup>"
 
-#: templates/the_cauldron/forge.html:495
+#: templates/the_cauldron/forge.html:481
 msgid "5 · Train each pattern often"
 msgstr "5 · Entrena cada patrón seguido"
 
-#: templates/the_cauldron/forge.html:496
+#: templates/the_cauldron/forge.html:482
 msgid "The default Full-Body ×3 split hits every movement pattern multiple times a week. When volume is equated, higher weekly frequency tends to favour hypertrophy — and frequent practice also accelerates skill on the calisthenics movements themselves.<sup><a href=\"#ref-5\">5</a></sup>"
 msgstr "La división predeterminada de cuerpo completo ×3 trabaja cada patrón varias veces por semana. Con el mismo volumen, más frecuencia semanal tiende a favorecer la hipertrofia — y practicar seguido también acelera la técnica de los movimientos de calistenia.<sup><a href=\"#ref-5\">5</a></sup>"
 
-#: templates/the_cauldron/forge.html:500
+#: templates/the_cauldron/forge.html:486
 msgid "References"
 msgstr "Referencias"
 
-#: templates/the_cauldron/forge.html:504 templates/the_cauldron/forge.html:507 templates/the_cauldron/forge.html:510 templates/the_cauldron/forge.html:513 templates/the_cauldron/forge.html:516
+#: templates/the_cauldron/forge.html:490 templates/the_cauldron/forge.html:493
+#: templates/the_cauldron/forge.html:496 templates/the_cauldron/forge.html:499
+#: templates/the_cauldron/forge.html:502
 msgid "Read ↗"
 msgstr "Leer ↗"
 
@@ -3891,11 +4255,13 @@ msgstr "El Grimorio — El Caldero"
 msgid "Keep, share and fork your spells — the recipe book of The Cauldron."
 msgstr "Guarda, comparte y adapta tus hechizos — el recetario de El Caldero."
 
-#: templates/the_cauldron/grimoire.html:50 templates/the_cauldron/grimoire.html:67
+#: templates/the_cauldron/grimoire.html:50
+#: templates/the_cauldron/grimoire.html:67
 msgid "Back to the Grimoire"
 msgstr "Volver al Grimorio"
 
-#: templates/the_cauldron/grimoire.html:67 templates/the_cauldron/grimoire.html:120
+#: templates/the_cauldron/grimoire.html:67
+#: templates/the_cauldron/grimoire.html:120
 msgid "Back to the spell"
 msgstr "Volver al hechizo"
 
@@ -4016,7 +4382,8 @@ msgstr "Pesa el platillo terminado sin la olla. Con eso se calcula la nutrición
 msgid "Save casting"
 msgstr "Guardar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:168 templates/the_cauldron/grimoire.html:183
+#: templates/the_cauldron/grimoire.html:168
+#: templates/the_cauldron/grimoire.html:183
 msgid "Back to the reagents"
 msgstr "Volver a los reactivos"
 
@@ -4149,7 +4516,9 @@ msgstr "Entrar →"
 msgid "Hero"
 msgstr "Portada"
 
-#: templates/the_cauldron/landing.html:104 templates/the_cauldron/landing.html:528 templates/the_cauldron/landing.html:585
+#: templates/the_cauldron/landing.html:104
+#: templates/the_cauldron/landing.html:528
+#: templates/the_cauldron/landing.html:585
 msgid "The Third Arcana"
 msgstr "El tercer Arcano"
 
@@ -4157,7 +4526,8 @@ msgstr "El tercer Arcano"
 msgid "Where secret recipes are sealed in silence,<br> ancient wisdom passes from hand to hand,<br> and every ingredient reveals its hidden magic."
 msgstr "Donde las recetas secretas se sellan en silencio,<br> la sabiduría antigua pasa de mano en mano,<br> y cada ingrediente revela su magia oculta."
 
-#: templates/the_cauldron/landing.html:117 templates/the_cauldron/landing.html:557
+#: templates/the_cauldron/landing.html:117
+#: templates/the_cauldron/landing.html:557
 msgid "Begin Your Practice"
 msgstr "Comienza tu práctica"
 
@@ -4173,7 +4543,8 @@ msgstr "✦ Úsalo desde Claude: registra comidas con una foto, planea y entrena
 msgid "The Arcana"
 msgstr "Los Arcanos"
 
-#: templates/the_cauldron/landing.html:137 templates/the_cauldron/landing.html:138
+#: templates/the_cauldron/landing.html:137
+#: templates/the_cauldron/landing.html:138
 msgid "The Ancient Arts"
 msgstr "Las artes antiguas"
 
@@ -4545,11 +4916,15 @@ msgstr "Conectar"
 msgid "This is the address of The Cauldron for your assistant:"
 msgstr "Esta es la dirección de El Caldero para tu asistente:"
 
-#: templates/the_cauldron/mcp_info.html:81 templates/the_cauldron/mcp_info.html:102 templates/the_cauldron/mcp_info.html:110 templates/the_cauldron/mcp_info.html:122
+#: templates/the_cauldron/mcp_info.html:81
+#: templates/the_cauldron/mcp_info.html:102
+#: templates/the_cauldron/mcp_info.html:110
+#: templates/the_cauldron/mcp_info.html:122
 msgid "Copied"
 msgstr "Copiado"
 
-#: templates/the_cauldron/mcp_info.html:81 templates/the_cauldron/mcp_info.html:110
+#: templates/the_cauldron/mcp_info.html:81
+#: templates/the_cauldron/mcp_info.html:110
 msgid "Copy"
 msgstr "Copiar"
 
@@ -4589,7 +4964,8 @@ msgstr "Elige “Agregar conector personalizado” y pega la dirección de arrib
 msgid "Press Connect, sign in and allow access."
 msgstr "Presiona Conectar, inicia sesión y permite el acceso."
 
-#: templates/the_cauldron/mcp_info.html:102 templates/the_cauldron/mcp_info.html:122
+#: templates/the_cauldron/mcp_info.html:102
+#: templates/the_cauldron/mcp_info.html:122
 msgid "Copy the address"
 msgstr "Copiar la dirección"
 
@@ -4722,282 +5098,341 @@ msgstr "Puede leer pero no registrar"
 msgid "You allowed read-only access. Disconnect it in your profile and connect again, allowing it to log."
 msgstr "Le diste acceso solo de lectura. Desconéctalo en tu perfil y vuelve a conectarlo permitiéndole registrar."
 
-#: templates/the_cauldron/nutrition.html:11
+#: templates/the_cauldron/nutrition.html:12
 msgid "Your profile — The Cauldron"
 msgstr "Tu perfil — El Caldero"
 
-#: templates/the_cauldron/nutrition.html:11
+#: templates/the_cauldron/nutrition.html:12
 msgid "Terms update — The Cauldron"
 msgstr "Actualización de términos — El Caldero"
 
-#: templates/the_cauldron/nutrition.html:12
+#: templates/the_cauldron/nutrition.html:13
 msgid "Daily nutrient goals, a meal log and a meal planner — The Cauldron."
 msgstr "Metas diarias de nutrientes, diario de comidas y planeador de comidas — El Caldero."
 
-#: templates/the_cauldron/nutrition.html:61
+#: templates/the_cauldron/nutrition.html:62
 msgid "Our terms have changed"
 msgstr "Actualizamos nuestros términos"
 
-#: templates/the_cauldron/nutrition.html:62
+#: templates/the_cauldron/nutrition.html:63
 msgid "The Cauldron now has daily goals, a meal log and a meal planner. Please read the updated documents and accept them to continue."
 msgstr "El Caldero ahora tiene metas diarias, un diario de comidas y un planeador de comidas. Lee los documentos actualizados y acéptalos para continuar."
 
-#: templates/the_cauldron/nutrition.html:67
+#: templates/the_cauldron/nutrition.html:68
 #, python-format
 msgid "I have read and accept the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Terms &amp; Conditions</a> (version %(version)s)."
 msgstr "He leído y acepto los <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Términos y Condiciones</a> (versión %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:73
+#: templates/the_cauldron/nutrition.html:74
 #, python-format
 msgid "I have read the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a> (version %(version)s)."
 msgstr "He leído el <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a> (versión %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:79
+#: templates/the_cauldron/nutrition.html:80
 msgid "Accept and continue"
 msgstr "Aceptar y continuar"
 
-#: templates/the_cauldron/nutrition.html:87
+#: templates/the_cauldron/nutrition.html:88
 msgid "Your profile"
 msgstr "Tu perfil"
 
-#: templates/the_cauldron/nutrition.html:88
+#: templates/the_cauldron/nutrition.html:89
 msgid "Your daily goals, and how often you meet them."
 msgstr "Tus metas diarias y qué tan seguido las cumples."
 
-#: templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/nutrition.html:92
 msgid "What you ate, what's planned, and how the day adds up."
 msgstr "Lo que comiste, lo que está planeado y cómo va el día."
 
-#: templates/the_cauldron/nutrition.html:92
+#: templates/the_cauldron/nutrition.html:93
 msgid "Choose a day"
 msgstr "Elige un día"
 
-#: templates/the_cauldron/nutrition.html:93
+#: templates/the_cauldron/nutrition.html:94
 msgid "Previous day"
 msgstr "Día anterior"
 
-#: templates/the_cauldron/nutrition.html:95
+#: templates/the_cauldron/nutrition.html:96
 msgid "Next day"
 msgstr "Día siguiente"
 
-#: templates/the_cauldron/nutrition.html:106
+#: templates/the_cauldron/nutrition.html:107
 msgid "Your food data is sensitive"
 msgstr "Tus datos de alimentación son sensibles"
 
-#: templates/the_cauldron/nutrition.html:107
-msgid "Your nutrient goals, what you eat and your meal plans can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent."
-msgstr "Tus metas de nutrientes, lo que comes y tus planes de comida pueden revelar cosas sobre tu salud. Según la ley mexicana de protección de datos (LFPDPPP), eso los vuelve datos personales sensibles, así que solo los tratamos con tu consentimiento expreso."
-
-#: templates/the_cauldron/nutrition.html:109
-msgid "We use them only to show you your totals, goals, plans and how often you meet them."
-msgstr "Los usamos solo para mostrarte tus totales, metas, planes y qué tan seguido cumples tus metas."
+#: templates/the_cauldron/nutrition.html:108
+msgid "Your nutrient goals, what you eat, your meal plans, your weight and your activity level can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent."
+msgstr "Tus metas de nutrientes, lo que comes, tus planes de comida, tu peso y tu nivel de actividad pueden revelar cosas sobre tu salud. Según la ley mexicana de protección de datos (LFPDPPP), eso los vuelve datos personales sensibles, así que solo los tratamos con tu consentimiento expreso."
 
 #: templates/the_cauldron/nutrition.html:110
+msgid "We use them only to show you your totals, your goals and the recommended ones, your plans and how often you meet them."
+msgstr "Los usamos solo para mostrarte tus totales, tus metas y las recomendadas, tus planes y qué tan seguido cumples tus metas."
+
+#: templates/the_cauldron/nutrition.html:111
 msgid "Only you see them. They are never sent to our analytics provider."
 msgstr "Solo tú los ves. Nunca se envían a nuestro proveedor de analítica."
 
-#: templates/the_cauldron/nutrition.html:111
+#: templates/the_cauldron/nutrition.html:112
 msgid "Nutrient values are estimates, not medical advice."
 msgstr "Los valores de nutrientes son estimaciones, no consejo médico."
 
-#: templates/the_cauldron/nutrition.html:112
+#: templates/the_cauldron/nutrition.html:113
 msgid "You can withdraw your consent at any time from your profile, and delete what you logged."
 msgstr "Puedes retirar tu consentimiento cuando quieras desde tu perfil y borrar lo que registraste."
 
-#: templates/the_cauldron/nutrition.html:117
+#: templates/the_cauldron/nutrition.html:118
 #, python-format
-msgid "I consent to The Cauldron processing my nutrient goals, meal log and meal plans — sensitive personal data — as described in the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a> (consent version %(version)s)."
-msgstr "Doy mi consentimiento para que El Caldero trate mis metas de nutrientes, mi diario de comidas y mis planes de comida —datos personales sensibles— como se describe en el <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a> (versión del consentimiento %(version)s)."
+msgid "I consent to The Cauldron processing my nutrient goals, meal log, meal plans, weight and activity level — sensitive personal data — and using them with my age and sex to calculate recommended goals, as described in the <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a> (consent version %(version)s)."
+msgstr "Doy mi consentimiento para que El Caldero trate mis metas de nutrientes, mi diario de comidas, mis planes de comida, mi peso y mi nivel de actividad —datos personales sensibles— y los use junto con mi edad y sexo para calcular metas recomendadas, como se describe en el <a href=\"%(url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a> (versión del consentimiento %(version)s)."
 
-#: templates/the_cauldron/nutrition.html:121
+#: templates/the_cauldron/nutrition.html:122
 msgid "Give my consent"
 msgstr "Dar mi consentimiento"
 
-#: templates/the_cauldron/nutrition.html:133
+#: templates/the_cauldron/nutrition.html:134
 msgid "Daily goals"
 msgstr "Metas diarias"
 
-#: templates/the_cauldron/nutrition.html:134
+#: templates/the_cauldron/nutrition.html:135
 msgid "Per day, midnight to midnight in your timezone. “No goal” still shows the nutrient in your totals, it just isn't judged. Changing a goal keeps the old one for the days it was active."
 msgstr "Por día, de medianoche a medianoche en tu zona horaria. “Sin meta” sigue mostrando el nutriente en tus totales, solo que no se evalúa. Si cambias una meta, la anterior se conserva para los días en que estuvo activa."
 
-#: templates/the_cauldron/nutrition.html:139
+#: templates/the_cauldron/nutrition.html:136
+msgid "Beside each of your goals: the recommended one, from your body data — WHO/FAO first, US National Academies (DRI) where WHO sets none. It is read-only and follows your weight, age, sex and activity."
+msgstr "Junto a cada una de tus metas, la recomendada según tus datos: primero OMS/FAO y, donde la OMS no fija una, las Academias Nacionales de EE. UU. (DRI). Es de solo lectura y cambia con tu peso, edad, sexo y actividad."
+
+#: templates/the_cauldron/nutrition.html:143
 msgid "Save goals"
 msgstr "Guardar metas"
 
-#: templates/the_cauldron/nutrition.html:151 templates/the_cauldron/nutrition.html:186
+#: templates/the_cauldron/nutrition.html:155
+#: templates/the_cauldron/nutrition.html:190
 msgid "How you're doing"
 msgstr "Cómo voy"
 
-#: templates/the_cauldron/nutrition.html:152
+#: templates/the_cauldron/nutrition.html:156
 msgid "Your last 24 hours or 7 days against these goals, and how often you're in range, live in The Cauldron."
 msgstr "Tus últimas 24 horas o 7 días contra estas metas, y qué tan seguido estás en rango, están en El Caldero."
 
-#: templates/the_cauldron/nutrition.html:154
+#: templates/the_cauldron/nutrition.html:158
 msgid "Open The Cauldron"
 msgstr "Abrir El Caldero"
 
-#: templates/the_cauldron/nutrition.html:163
+#: templates/the_cauldron/nutrition.html:167
 msgid "Settings"
 msgstr "Configuración"
 
-#: templates/the_cauldron/nutrition.html:165
+#: templates/the_cauldron/nutrition.html:169
 msgid "Timezone — where your day starts and ends"
 msgstr "Zona horaria: dónde empieza y termina tu día"
 
-#: templates/the_cauldron/nutrition.html:168
-msgid "Save"
-msgstr "Guardar"
-
-#: templates/the_cauldron/nutrition.html:170
+#: templates/the_cauldron/nutrition.html:174
 msgid "Sensitive-data consent"
 msgstr "Consentimiento para datos sensibles"
 
-#: templates/the_cauldron/nutrition.html:172
-msgid "Also delete my goals, meal log and meal plans"
-msgstr "Borrar también mis metas, mi diario de comidas y mis planes"
+#: templates/the_cauldron/nutrition.html:176
+msgid "Also delete my goals, meal log and meal plans, and clear my weight and activity level"
+msgstr "Borrar también mis metas, mi diario de comidas y mis planes, y mi peso y nivel de actividad"
 
-#: templates/the_cauldron/nutrition.html:174
+#: templates/the_cauldron/nutrition.html:178
 msgid "Withdraw my consent"
 msgstr "Retirar mi consentimiento"
 
-#: templates/the_cauldron/nutrition.html:187
+#: templates/the_cauldron/nutrition.html:191
 msgid "Window"
 msgstr "Ventana"
 
-#: templates/the_cauldron/nutrition.html:188
+#: templates/the_cauldron/nutrition.html:192
 msgid "Last 24 hours"
 msgstr "Últimas 24 horas"
 
-#: templates/the_cauldron/nutrition.html:189
+#: templates/the_cauldron/nutrition.html:193
 msgid "Last 7 days"
 msgstr "Últimos 7 días"
 
-#: templates/the_cauldron/nutrition.html:199
+#: templates/the_cauldron/nutrition.html:203
 msgid "Move the window back in time"
 msgstr "Mover la ventana hacia atrás en el tiempo"
 
-#: templates/the_cauldron/nutrition.html:204
+#: templates/the_cauldron/nutrition.html:208
 msgid "Back to now"
 msgstr "Volver a ahora"
 
-#: templates/the_cauldron/nutrition.html:219
+#: templates/the_cauldron/nutrition.html:227
 msgid "How often you're in range"
 msgstr "Qué tan seguido estoy en rango"
 
-#: templates/the_cauldron/nutrition.html:220
+#: templates/the_cauldron/nutrition.html:228
 msgid "Period"
 msgstr "Periodo"
 
-#: templates/the_cauldron/nutrition.html:222
+#: templates/the_cauldron/nutrition.html:230
 msgid "30 days"
 msgstr "30 días"
 
-#: templates/the_cauldron/nutrition.html:223
+#: templates/the_cauldron/nutrition.html:231
 msgid "90 days"
 msgstr "90 días"
 
-#: templates/the_cauldron/nutrition.html:226
+#: templates/the_cauldron/nutrition.html:234
 msgid "Nutrient"
 msgstr "Nutriente"
 
-#: templates/the_cauldron/nutrition.html:236
+#: templates/the_cauldron/nutrition.html:244
 msgid "What you ate"
 msgstr "Lo que comiste"
 
-#: templates/the_cauldron/nutrition.html:243
+#: templates/the_cauldron/nutrition.html:251
 msgid "What did you eat or drink?"
 msgstr "¿Qué comiste o bebiste?"
 
-#: templates/the_cauldron/nutrition.html:245
+#: templates/the_cauldron/nutrition.html:253
 msgid "A dish, an ingredient, a drink…"
 msgstr "Un platillo, un ingrediente, una bebida…"
 
-#: templates/the_cauldron/nutrition.html:249
+#: templates/the_cauldron/nutrition.html:257
 msgid "← Search instead"
 msgstr "← Mejor buscarlo"
 
-#: templates/the_cauldron/nutrition.html:251
+#: templates/the_cauldron/nutrition.html:259
 msgid "What was it?"
 msgstr "¿Qué era?"
 
-#: templates/the_cauldron/nutrition.html:252
+#: templates/the_cauldron/nutrition.html:260
 msgid "e.g. Tacos al pastor at the stand"
 msgstr "p. ej. Tacos al pastor del puesto"
 
-#: templates/the_cauldron/nutrition.html:255
+#: templates/the_cauldron/nutrition.html:263
 msgid "Calories (kcal)"
 msgstr "Calorías (kcal)"
 
-#: templates/the_cauldron/nutrition.html:256
+#: templates/the_cauldron/nutrition.html:264
 msgid "Protein (g)"
 msgstr "Proteína (g)"
 
-#: templates/the_cauldron/nutrition.html:257
+#: templates/the_cauldron/nutrition.html:265
 msgid "Carbs (g)"
 msgstr "Carbohidratos (g)"
 
-#: templates/the_cauldron/nutrition.html:258
+#: templates/the_cauldron/nutrition.html:266
 msgid "Fat (g)"
 msgstr "Grasa (g)"
 
-#: templates/the_cauldron/nutrition.html:260
+#: templates/the_cauldron/nutrition.html:268
 msgid "Leave blank what you don't know — it's counted as unknown, never as zero."
 msgstr "Deja en blanco lo que no sepas: cuenta como desconocido, nunca como cero."
 
-#: templates/the_cauldron/nutrition.html:262 templates/the_cauldron/nutrition.html:303
+#: templates/the_cauldron/nutrition.html:270
+#: templates/the_cauldron/nutrition.html:311
 msgid "How much"
 msgstr "Cuánto"
 
-#: templates/the_cauldron/nutrition.html:264 templates/the_cauldron/nutrition.html:305
+#: templates/the_cauldron/nutrition.html:272
+#: templates/the_cauldron/nutrition.html:313
 msgid "Unit"
 msgstr "Unidad"
 
-#: templates/the_cauldron/nutrition.html:266
+#: templates/the_cauldron/nutrition.html:274
 msgid "At"
 msgstr "A las"
 
-#: templates/the_cauldron/nutrition.html:283
+#: templates/the_cauldron/nutrition.html:291
 msgid "The ritual"
 msgstr "El ritual"
 
-#: templates/the_cauldron/nutrition.html:284
+#: templates/the_cauldron/nutrition.html:292
 msgid "Plan spells for this day and see how it would add up before you eat."
 msgstr "Planea hechizos para este día y mira cómo quedaría antes de comer."
 
-#: templates/the_cauldron/nutrition.html:288
+#: templates/the_cauldron/nutrition.html:296
 msgid "Plan a spell"
 msgstr "Planear un hechizo"
 
-#: templates/the_cauldron/nutrition.html:291
+#: templates/the_cauldron/nutrition.html:299
 msgid "Find a spell"
 msgstr "Busca un hechizo"
 
-#: templates/the_cauldron/nutrition.html:291
+#: templates/the_cauldron/nutrition.html:299
 msgid "Find a spell…"
 msgstr "Busca un hechizo…"
 
-#: templates/the_cauldron/nutrition.html:296
+#: templates/the_cauldron/nutrition.html:304
 msgid "Meal"
 msgstr "Comida del día"
 
-#: templates/the_cauldron/nutrition.html:313
+#: templates/the_cauldron/nutrition.html:321
 msgid "Add to the ritual"
 msgstr "Agregar al ritual"
 
-#: templates/the_cauldron/nutrition.html:321
+#: templates/the_cauldron/nutrition.html:348
 msgid "Log a meal"
 msgstr "Registrar comida"
 
-#: templates/the_cauldron/nutrition.html:333
+#: templates/the_cauldron/nutrition.html:360
+msgid "About you"
+msgstr "Sobre ti"
+
+#: templates/the_cauldron/nutrition.html:361
+msgid "All optional. Birth year and sex compare your Forge results with people like you; with your weight and activity level they also set your recommended daily goals."
+msgstr "Todo es opcional. El año de nacimiento y el sexo comparan tus resultados de La Forja con personas como tú; con tu peso y nivel de actividad también fijan tus metas diarias recomendadas."
+
+#: templates/the_cauldron/nutrition.html:363
+msgid "Birth year"
+msgstr "Año de nacimiento"
+
+#: templates/the_cauldron/nutrition.html:365
+msgid "Sex"
+msgstr "Sexo"
+
+#: templates/the_cauldron/nutrition.html:367
+msgid "Prefer not to say"
+msgstr "Prefiero no decirlo"
+
+#: templates/the_cauldron/nutrition.html:368
+msgid "Female"
+msgstr "Mujer"
+
+#: templates/the_cauldron/nutrition.html:369
+msgid "Male"
+msgstr "Hombre"
+
+#: templates/the_cauldron/nutrition.html:371
+msgid "Weight (kg)"
+msgstr "Peso (kg)"
+
+#: templates/the_cauldron/nutrition.html:373
+msgid "Activity level"
+msgstr "Nivel de actividad"
+
+#: templates/the_cauldron/nutrition.html:375
+msgid "Not set"
+msgstr "Sin indicar"
+
+#: templates/the_cauldron/nutrition.html:376
+msgid "Sedentary or light — desk work, little exercise"
+msgstr "Sedentario o ligero: trabajo de escritorio, poco ejercicio"
+
+#: templates/the_cauldron/nutrition.html:377
+msgid "Active — on your feet or exercising about an hour a day"
+msgstr "Activo: de pie buena parte del día o haciendo ejercicio cerca de una hora diaria"
+
+#: templates/the_cauldron/nutrition.html:378
+msgid "Vigorous — hard physical work or long daily training"
+msgstr "Vigoroso: trabajo físico pesado o entrenamiento largo todos los días"
+
+#: templates/the_cauldron/nutrition.html:381
+msgid "Weight and activity level are health data: give the sensitive-data consent above to add them."
+msgstr "El peso y el nivel de actividad son datos de salud: da arriba el consentimiento para datos sensibles para agregarlos."
+
+#: templates/the_cauldron/nutrition.html:396
 msgid "Your AI assistants"
 msgstr "Tus asistentes de IA"
 
-#: templates/the_cauldron/nutrition.html:334
+#: templates/the_cauldron/nutrition.html:397
 msgid "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once."
 msgstr "Los asistentes que conectaste (Claude y otros) pueden leer y registrar por ti. Si desconectas uno, pierde el acceso de inmediato."
 
-#: templates/the_cauldron/nutrition.html:336
+#: templates/the_cauldron/nutrition.html:399
 msgid "How to connect an assistant →"
 msgstr "Cómo conectar un asistente →"
 
@@ -5087,11 +5522,14 @@ msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta con
 #~ msgid "Open the Journal"
 #~ msgstr "Abrir El Diario"
 
+#~ msgid "Add your sex and birth year to see it."
+#~ msgstr "Agrega tu sexo y año de nacimiento para verla."
+
+#~ msgid "Sex (for norms)"
+#~ msgstr "Sexo (para las normas)"
+
 #~ msgid "Find an ingredient…"
 #~ msgstr "Busca un ingrediente…"
-
-#~ msgid "Choose an ingredient first."
-#~ msgstr "Primero elige un ingrediente."
 
 #~ msgid "A spell"
 #~ msgstr "Un hechizo"

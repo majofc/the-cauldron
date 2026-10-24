@@ -3,7 +3,7 @@ from django.utils.translation import gettext as _
 from rest_framework import serializers
 
 from the_cauldron.forge_i18n import day_name, localized
-from the_cauldron.services import loads
+from the_cauldron.services import loads, progression
 
 from the_cauldron.models import (
     AssessmentResult,
@@ -129,7 +129,7 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
             "barbell_min_increment", "barbell_plates", "bar_weight",
             "kettlebell_mode", "kettlebell_weights", "kettlebell_plates",
             "kettlebell_handle_weight",
-            "birth_year", "sex", "orphan_plates",
+            "orphan_plates",
         ]
         read_only_fields = ["uuid", "orphan_plates"]
 
@@ -288,13 +288,17 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
     )
     target_load_recipe = serializers.SerializerMethodField()
     load_unit = serializers.SerializerMethodField()
+    # #109: the loads "set my load" can land on (band level indices for bands),
+    # null for a difficulty-mode movement.
+    load_options = serializers.SerializerMethodField()
+    is_band_load = serializers.SerializerMethodField()
 
     class Meta:
         model = PrescribedExercise
         fields = [
             "uuid", "pattern_key", "exercise_name", "is_timed", "video_url", "cues",
             "target_sets", "target_reps_min", "target_reps_max", "target_load",
-            "target_load_recipe", "load_unit",
+            "target_load_recipe", "load_unit", "load_options", "is_band_load",
             "target_rest_seconds", "order",
             "pending_progression", "pending_progression_name",
         ]
@@ -304,6 +308,16 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
 
     def get_load_unit(self, obj):
         return self._load_unit_for(obj.day.program.user)
+
+    def get_load_options(self, obj):
+        if obj.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
+            return None
+        profile = self._profile_for(obj.day.program.user)
+        return progression.available_loads(profile, obj.exercise) if profile else []
+
+    def get_is_band_load(self, obj):
+        profile = self._profile_for(obj.day.program.user)
+        return bool(profile) and loads.implement_for(profile, obj.exercise) == "bands"
 
 
 class ProgramDaySerializer(serializers.ModelSerializer):

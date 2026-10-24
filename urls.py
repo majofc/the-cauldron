@@ -42,6 +42,11 @@ api_urlpatterns = [
         name="forge-progression",
     ),
     path(
+        "prescription/<uuid:presc_uuid>/set-load/",
+        api.SetLoadView.as_view(),
+        name="forge-set-load",
+    ),
+    path(
         "prescription/<uuid:presc_uuid>/set-rung/",
         api.SetRungView.as_view(),
         name="forge-set-rung",
@@ -65,10 +70,13 @@ api_urlpatterns = [
     path("legal/accept/", nutrition_api.LegalAcceptView.as_view(), name="legal-accept"),
     path("legal/withdraw/", nutrition_api.LegalWithdrawView.as_view(), name="legal-withdraw"),
     path("me/", nutrition_api.MeView.as_view(), name="nutrition-me"),
+    path("body/", nutrition_api.BodyView.as_view(), name="nutrition-body"),
     path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
+    path("rolling/breakdown/", nutrition_api.BreakdownView.as_view(), name="nutrition-breakdown"),
+    path("rolling/fill/", nutrition_api.FillView.as_view(), name="nutrition-fill"),
     path("mcp/connections/", oauth_views.McpConnectionsView.as_view(), name="mcp-connections"),
     path("mcp/connect-clicked/", oauth_views.McpConnectClickView.as_view(), name="mcp-connect-clicked"),
     path(

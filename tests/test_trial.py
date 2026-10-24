@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from the_cauldron.models import (
     AssessmentResult,
     AssessmentSession,
+    CauldronProfile,
     Equipment,
     Exercise,
     MovementPattern,
@@ -182,9 +183,7 @@ def test_trial_takes_one_value_per_pattern_and_returns_no_asymmetry(seeded, clie
 
 def test_every_trial_row_gets_a_peer_score(seeded, client, user):
     _own(user, "bodyweight", "pullup_bar")
-    profile = forge.get_or_create_equipment_profile(user)
-    profile.birth_year, profile.sex = timezone.now().year - 30, "female"
-    profile.save()
+    CauldronProfile.objects.create(user=user, birth_year=timezone.now().year - 30, sex="female")
     resp = client.post("/cauldron/api/assessment/", _trial_payload(user), format="json")
     peer = resp.json()["peer"]
     assert len(peer) == len(EXPECTED_ANCHORS)

@@ -334,8 +334,9 @@ class SetRungView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         posthog.capture(
-            "rung_changed",
-            properties={"applied_to": result["applied_to"], "confirmed_unready": confirm},
+            "forge_rung_set",
+            properties={"pattern_key": presc.exercise.pattern.key, "direction": result["direction"],
+                        "source": "web"},
         )
         return Response(
             {
@@ -345,8 +346,37 @@ class SetRungView(APIView):
         )
 
 
+class SetLoadView(SetRungView):
+    """``POST /prescription/<presc_uuid>/set-load/ {"load": 22.5}`` (#109).
+
+    - 200 ``{"load", "snapped_from", "applied_to"}`` — every live prescription of
+      that exercise, snapped DOWN to a buildable load (``snapped_from`` = the
+      asked value when it moved).
+    - 400 — difficulty-mode movement, load ≤ 0, a band level not owned.
+    - 409 ``{"detail"}`` — the movement already has logged sets today.
+    """
+
+    http_method_names = ["post", "options"]  # shares only _prescription with SetRungView
+
+    def post(self, request, presc_uuid):
+        presc = self._prescription(request, presc_uuid)
+        try:
+            result = forge.set_load(request.user, presc, request.data.get("load"))
+        except forge.SetsAlreadyLogged as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture(
+            "forge_load_set",
+            properties={"pattern_key": presc.exercise.pattern.key, "direction": result["direction"],
+                        "source": "web"},
+        )
+        return Response({k: result[k] for k in ("load", "snapped_from", "applied_to")})
+
+
 class ProgramView(APIView):
-    """GET the user's active program."""
+    """GET the user's active program; ``PATCH {"weekly_volume_target": 16}``
+    (4–40, #109) sets the weekly volume and regenerates every pattern's sets."""
 
     permission_classes = [IsAuthenticated]
 
@@ -358,6 +388,22 @@ class ProgramView(APIView):
         if not program:
             return Response({"detail": _("No active program.")}, status=404)
         return Response(ProgramSerializer(program).data)
+
+    def patch(self, request):
+        program = forge.active_program(request.user)
+        if not program:
+            return Response({"detail": _("No active program.")}, status=404)
+        if "weekly_volume_target" not in request.data:
+            return Response({"detail": _("Send weekly_volume_target.")}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = forge.set_weekly_volume(request.user, program, request.data["weekly_volume_target"])
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        posthog.capture(
+            "forge_volume_set",
+            properties={"pattern_key": None, "direction": result["direction"], "source": "web"},
+        )
+        return Response(ProgramSerializer(forge.active_program(request.user)).data)
 
 
 # Body of the 409 that gates Today (and session creation) while an unfinished

@@ -158,37 +158,23 @@
 
       <div class="forge-demographics">
         <h3 class="forge-about-h3">{% trans "Your stats" %} <span class="forge-demo-opt">{% trans "— optional, for the peer score" %}</span></h3>
-        <p class="forge-help">{% blocktrans trimmed %}We compare your results against published norms for your age &amp; sex to award
-          your <span class="forge-flame-inline">🔥</span> rating. Leave blank to skip — everything else still works.{% endblocktrans %}</p>
-        <div class="forge-demo-row">
-          <label class="forge-field">
-            <span>{% trans "Birth year" %}</span>
-            <input type="number" id="forge-birth-year" min="1920" max="2020" placeholder="1995">
-          </label>
-          <div class="forge-field">
-            <span>{% trans "Sex (for norms)" %}</span>
-            <div class="forge-sex-btns" id="forge-sex">
-              <button type="button" class="forge-sex-btn" data-sex="female" aria-pressed="false">
-                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="32" cy="24" r="12"/><line x1="32" y1="36" x2="32" y2="54"/><line x1="24" y1="46" x2="40" y2="46"/>
-                </svg>
-                {% trans "Female" %}
-              </button>
-              <button type="button" class="forge-sex-btn" data-sex="male" aria-pressed="false">
-                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="26" cy="38" r="12"/><line x1="35" y1="29" x2="50" y2="14"/><path d="M41 14 L50 14 L50 23"/>
-                </svg>
-                {% trans "Male" %}
-              </button>
-              <button type="button" class="forge-sex-btn is-on" data-sex="undisclosed" aria-pressed="true">
-                {% trans "Prefer not to say" %}
-              </button>
-            </div>
-          </div>
-        </div>
+        {% url 'the_cauldron:profile' as profile_url %}
+        <p class="forge-help">{% blocktrans trimmed with url=profile_url %}We compare your results against published norms for your age &amp; sex to award
+          your <span class="forge-flame-inline">🔥</span> rating. Set your birth year and sex in <a href="{{ url }}">your profile</a> — everything else works without them.{% endblocktrans %}</p>
       </div>
 
       <button class="btn-cauldron btn-cauldron--primary" id="forge-save-equipment">{% trans "Save equipment" %}</button>
+
+      <div class="forge-demographics forge-volume" id="forge-volume" hidden>
+        <h3 class="forge-about-h3">{% trans "Weekly volume" %}</h3>
+        <p class="forge-help">{% blocktrans trimmed %}Working sets per movement pattern per week. Each session's sets
+          follow from it — between 2 and 5 per movement — and change as soon as you save.{% endblocktrans %}</p>
+        <div class="forge-volume-row">
+          <label class="forge-field"><span>{% trans "Sets per pattern per week" %}</span>
+            <input type="number" id="forge-volume-input" min="4" max="40" step="1" inputmode="numeric"></label>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-volume-save">{% trans "Save volume" %}</button>
+        </div>
+      </div>
     </div>
   </section>
 

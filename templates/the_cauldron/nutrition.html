@@ -3,7 +3,8 @@
 {% comment %}
 Daily nutrition pages (#80–#84), one template switched by ``page``:
 - accept  — accept the current terms + privacy notice (the legal gate)
-- profile — timezone, sensitive-data consent, daily goals, adherence
+- profile — body data (#105), timezone, sensitive-data consent, my goals beside
+  the recommended ones
 - journal — one day: what you ate, the ritual (meal plan), totals vs goals
 Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 {% endcomment %}
@@ -104,9 +105,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
     <div class="grim-spell-page-body">
       <h2 class="grim-h2" id="nut-consent-title">{% trans "Your food data is sensitive" %}</h2>
-      <p>{% trans "Your nutrient goals, what you eat and your meal plans can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent." %}</p>
+      <p>{% trans "Your nutrient goals, what you eat, your meal plans, your weight and your activity level can reveal things about your health. Under Mexico's data-protection law (LFPDPPP) that makes them sensitive personal data, so we only process them with your express consent." %}</p>
       <ul class="nut-list">
-        <li>{% trans "We use them only to show you your totals, goals, plans and how often you meet them." %}</li>
+        <li>{% trans "We use them only to show you your totals, your goals and the recommended ones, your plans and how often you meet them." %}</li>
         <li>{% trans "Only you see them. They are never sent to our analytics provider." %}</li>
         <li>{% trans "Nutrient values are estimates, not medical advice." %}</li>
         <li>{% trans "You can withdraw your consent at any time from your profile, and delete what you logged." %}</li>
@@ -114,7 +115,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       {% url 'the_cauldron:privacy' as privacy_url %}
       <label class="nut-check">
         <input type="checkbox" id="nut-consent-check">
-        <span>{% blocktrans with url=privacy_url version=legal_versions.sensitive_consent %}I consent to The Cauldron processing my nutrient goals, meal log and meal plans — sensitive personal data — as described in the <a href="{{ url }}" target="_blank" rel="noopener">Privacy Notice</a> (consent version {{ version }}).{% endblocktrans %}</span>
+        <span>{% blocktrans with url=privacy_url version=legal_versions.sensitive_consent %}I consent to The Cauldron processing my nutrient goals, meal log, meal plans, weight and activity level — sensitive personal data — and using them with my age and sex to calculate recommended goals, as described in the <a href="{{ url }}" target="_blank" rel="noopener">Privacy Notice</a> (consent version {{ version }}).{% endblocktrans %}</span>
       </label>
       <p class="grim-error" id="nut-consent-error" role="alert" hidden></p>
       <div class="grim-actions">
@@ -132,6 +133,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       <form class="grim-spell-page-body grim-form" id="nut-goal-form" novalidate>
         <h2 class="grim-h2" id="nut-goals-title">{% trans "Daily goals" %}</h2>
         <p class="grim-help">{% trans "Per day, midnight to midnight in your timezone. “No goal” still shows the nutrient in your totals, it just isn't judged. Changing a goal keeps the old one for the days it was active." %}</p>
+        <p class="grim-help">{% trans "Beside each of your goals: the recommended one, from your body data — WHO/FAO first, US National Academies (DRI) where WHO sets none. It is read-only and follows your weight, age, sex and activity." %}</p>
+        {% include "the_cauldron/_recommendation_notice.html" %}
+        <p class="grim-help nut-rec-status" id="nut-rec-status" hidden></p>
         <div id="nut-goal-rows" class="nut-goal-groups"></div>
         <p class="grim-error" id="nut-goal-error" role="alert" hidden></p>
         <div class="grim-actions">
@@ -169,7 +173,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
         </form>
         <h3 class="grim-section-title">{% trans "Sensitive-data consent" %}</h3>
         <p class="grim-help" id="nut-consent-state"></p>
-        <label class="nut-check"><input type="checkbox" id="nut-withdraw-delete"> <span>{% trans "Also delete my goals, meal log and meal plans" %}</span></label>
+        <label class="nut-check"><input type="checkbox" id="nut-withdraw-delete"> <span>{% trans "Also delete my goals, meal log and meal plans, and clear my weight and activity level" %}</span></label>
         <div class="grim-actions">
           <button type="button" class="btn-cauldron btn-cauldron--ghost grim-danger" id="nut-withdraw-btn">{% trans "Withdraw my consent" %}</button>
         </div>
@@ -204,7 +208,11 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
             <button type="button" class="grim-link-btn" id="nut-now-btn" hidden>{% trans "Back to now" %}</button>
           </div>
         </div>
+        <p class="nut-legend" aria-hidden="true"><span class="nut-legend-mine">{% trans "My goal" %}</span>
+          <span class="nut-legend-who">{% trans "Recommended" %}</span></p>
+        <p class="grim-help" id="nut-who-minor" hidden>{% trans "Recommended goals are for adults only, so none are shown." %}</p>
         <div id="nut-gauges" class="nut-gauges" aria-live="polite"></div>
+        {% include "the_cauldron/_recommendation_notice.html" %}
         <button type="button" class="grim-link-btn" id="nut-all-toggle" aria-expanded="false" aria-controls="nut-all">{% trans "Show every nutrient" %}</button>
         <div id="nut-all" class="nut-all" hidden></div>
       </div>
@@ -316,6 +324,25 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       </div>
     </section>
 
+    <!-- ── The goal cauldron (#107): a card's number broken into what was eaten,
+         and the unknowns as fog. Opened from a gauge; nutrition.js fills it. ── -->
+    <dialog class="nut-cauldron" id="nut-cauldron" aria-labelledby="nut-cauldron-title">
+      <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+      <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <div class="nut-cauldron-head">
+        <div>
+          <h2 class="grim-h2" id="nut-cauldron-title"></h2>
+          <p class="grim-help" id="nut-cauldron-sub"></p>
+        </div>
+        <button type="button" class="grim-link-btn nut-cauldron-close" id="nut-cauldron-close"
+                aria-label="{% trans 'Close' %}">✕</button>
+      </div>
+      <p class="nut-cauldron-total" id="nut-cauldron-total" aria-live="polite"></p>
+      <div class="nut-cauldron-pot" id="nut-cauldron-pot"></div>
+      <p class="nut-cauldron-caption" id="nut-cauldron-caption" aria-live="polite"></p>
+      <div id="nut-cauldron-body"></div>
+    </dialog>
+
     <!-- The most frequent action, always one tap away; hidden while the form is on screen -->
     <button type="button" class="btn-cauldron btn-cauldron--primary nut-fab" id="nut-fab" aria-controls="nut-entry-form">
       <span aria-hidden="true">+</span> {% trans "Log a meal" %}
@@ -324,6 +351,42 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
   </div>
 
   {% if page == "profile" %}
+  <!-- ── About you (#105) — outside #nut-app: birth year and sex (the Forge's
+       peer score) need no consent; weight and activity level do ── -->
+  <section class="grim-spell-page" aria-labelledby="nut-body-title">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="nut-body-form" novalidate>
+      <h2 class="grim-h2" id="nut-body-title">{% trans "About you" %}</h2>
+      <p class="grim-help">{% trans "All optional. Birth year and sex compare your Forge results with people like you; with your weight and activity level they also set your recommended daily goals." %}</p>
+      <div class="nut-body-grid">
+        <label class="grim-field"><span>{% trans "Birth year" %}</span>
+          <input type="number" name="birth_year" id="nut-birth-year" min="1900" max="2100" inputmode="numeric" placeholder="1995"></label>
+        <label class="grim-field"><span>{% trans "Sex" %}</span>
+          <select name="sex" id="nut-sex">
+            <option value="undisclosed">{% trans "Prefer not to say" %}</option>
+            <option value="female">{% trans "Female" %}</option>
+            <option value="male">{% trans "Male" %}</option>
+          </select></label>
+        <label class="grim-field"><span>{% trans "Weight (kg)" %}</span>
+          <input type="number" name="weight_kg" id="nut-weight" min="20" max="400" step="0.1" inputmode="decimal"></label>
+        <label class="grim-field"><span>{% trans "Activity level" %}</span>
+          <select name="activity_level" id="nut-activity">
+            <option value="">{% trans "Not set" %}</option>
+            <option value="sedentary">{% trans "Sedentary or light — desk work, little exercise" %}</option>
+            <option value="moderate">{% trans "Active — on your feet or exercising about an hour a day" %}</option>
+            <option value="vigorous">{% trans "Vigorous — hard physical work or long daily training" %}</option>
+          </select></label>
+      </div>
+      <p class="grim-help" id="nut-body-consent" hidden>{% trans "Weight and activity level are health data: give the sensitive-data consent above to add them." %}</p>
+      {% if not has_consent %}{% include "the_cauldron/_recommendation_notice.html" %}{% endif %}
+      <p class="grim-error" id="nut-body-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save" %}</button>
+      </div>
+    </form>
+  </section>
+
   <!-- ── Connected AI assistants (MCP, #89) — outside #nut-app: managing a
        connection needs no nutrition consent ── -->
   <section class="grim-spell-page" aria-labelledby="nut-mcp-title">
