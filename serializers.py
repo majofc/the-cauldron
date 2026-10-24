@@ -1,6 +1,9 @@
+from django.utils.text import capfirst
+from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from the_cauldron.services import loads
+from the_cauldron.forge_i18n import day_name, localized
+from the_cauldron.services import loads, progression
 
 from the_cauldron.models import (
     AssessmentResult,
@@ -46,25 +49,35 @@ class _LoadRecipeMixin:
         return profile.load_unit if profile else None
 
 
-class MuscleSerializer(serializers.ModelSerializer):
+class _DisplayNameMixin(serializers.Serializer):
+    """``display_name``: ``name_es`` under Spanish, else ``name``. ``name`` stays
+    English — it is the key the rest of the API matches on."""
+
+    display_name = serializers.SerializerMethodField()
+
+    def get_display_name(self, obj):
+        return localized(obj, "name")
+
+
+class MuscleSerializer(_DisplayNameMixin, serializers.ModelSerializer):
     class Meta:
         model = Muscle
-        fields = ["key", "name", "region"]
+        fields = ["key", "name", "name_es", "display_name", "region"]
 
 
-class MovementPatternSerializer(serializers.ModelSerializer):
+class MovementPatternSerializer(_DisplayNameMixin, serializers.ModelSerializer):
     class Meta:
         model = MovementPattern
-        fields = ["uuid", "key", "name", "primary_muscles", "is_lower_body"]
+        fields = ["uuid", "key", "name", "name_es", "display_name", "primary_muscles", "is_lower_body"]
 
 
-class EquipmentSerializer(serializers.ModelSerializer):
+class EquipmentSerializer(_DisplayNameMixin, serializers.ModelSerializer):
     class Meta:
         model = Equipment
-        fields = ["uuid", "key", "name", "is_loadable", "load_unit"]
+        fields = ["uuid", "key", "name", "name_es", "display_name", "is_loadable", "load_unit"]
 
 
-class ExerciseSerializer(serializers.ModelSerializer):
+class ExerciseSerializer(_DisplayNameMixin, serializers.ModelSerializer):
     pattern_key = serializers.CharField(source="pattern.key", read_only=True)
     required_equipment = serializers.SlugRelatedField(
         slug_field="key", many=True, read_only=True
@@ -75,16 +88,20 @@ class ExerciseSerializer(serializers.ModelSerializer):
     )
     muscles = MuscleSerializer(many=True, read_only=True)
     is_unilateral = serializers.SerializerMethodField()
+    display_cues = serializers.SerializerMethodField()
 
     class Meta:
         model = Exercise
         fields = [
-            "uuid", "pattern_key", "name", "difficulty_rank", "progression_mode",
+            "uuid", "pattern_key", "name", "name_es", "display_name", "difficulty_rank", "progression_mode",
             "rep_range_min", "rep_range_max", "is_timed", "placement_threshold",
             "required_equipment", "alternative_equipment", "muscles", "video_url",
-            "cues", "rest_seconds",
+            "cues", "cues_es", "display_cues", "rest_seconds",
             "is_assessment_anchor", "is_unilateral",
         ]
+
+    def get_display_cues(self, obj):
+        return localized(obj, "cues")
 
     def get_is_unilateral(self, obj):
         # Per-side movements are tested/logged one side at a time. Read from the
@@ -112,7 +129,7 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
             "barbell_min_increment", "barbell_plates", "bar_weight",
             "kettlebell_mode", "kettlebell_weights", "kettlebell_plates",
             "kettlebell_handle_weight",
-            "birth_year", "sex", "orphan_plates",
+            "orphan_plates",
         ]
         read_only_fields = ["uuid", "orphan_plates"]
 
@@ -129,85 +146,87 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
     # only blows up later inside the load engine.
 
     def _validate_plates(self, value, label):
+        label = capfirst(label)
         if not isinstance(value, list):
-            raise serializers.ValidationError(f"{label} must be a list of plates.")
+            raise serializers.ValidationError(_("%(label)s must be a list of plates.") % {"label": label})
         if len(value) > loads.MAX_DENOMINATIONS:
             raise serializers.ValidationError(
-                f"At most {loads.MAX_DENOMINATIONS} different {label} denominations."
+                _("At most %(n)s different %(label)s denominations.")
+                % {"n": loads.MAX_DENOMINATIONS, "label": label}
             )
         cleaned = []
         for entry in value:
             if not isinstance(entry, dict):
                 raise serializers.ValidationError(
-                    f'Each {label} entry must look like {{"weight": 2.5, "count": 4}}.'
+                    _('Each %(label)s entry must look like {"weight": 2.5, "count": 4}.') % {"label": label}
                 )
             try:
                 weight = float(entry["weight"])
                 count = int(entry["count"])
             except (KeyError, TypeError, ValueError):
                 raise serializers.ValidationError(
-                    f'Each {label} entry needs a numeric "weight" and a whole "count".'
+                    _('Each %(label)s entry needs a numeric "weight" and a whole "count".') % {"label": label}
                 )
             if weight <= 0:
-                raise serializers.ValidationError(f"{label} weights must be greater than zero.")
+                raise serializers.ValidationError(_("%(label)s weights must be greater than zero.") % {"label": label})
             if count <= 0:
-                raise serializers.ValidationError(f"{label} counts must be greater than zero.")
+                raise serializers.ValidationError(_("%(label)s counts must be greater than zero.") % {"label": label})
             cleaned.append({"weight": weight, "count": count})
         return cleaned
 
     def _validate_weights(self, value, label):
         if not isinstance(value, list):
-            raise serializers.ValidationError(f"{label} must be a list of numbers.")
+            raise serializers.ValidationError(_("%(label)s must be a list of numbers.") % {"label": label})
         cleaned = []
         for entry in value:
             try:
                 weight = float(entry)
             except (TypeError, ValueError):
-                raise serializers.ValidationError(f"{label} must all be numbers.")
+                raise serializers.ValidationError(_("%(label)s must all be numbers.") % {"label": label})
             if weight <= 0:
-                raise serializers.ValidationError(f"{label} must all be greater than zero.")
+                raise serializers.ValidationError(_("%(label)s must all be greater than zero.") % {"label": label})
             cleaned.append(weight)
         return cleaned
 
     def validate_dumbbell_plates(self, value):
-        return self._validate_plates(value, "dumbbell plate")
+        return self._validate_plates(value, _("dumbbell plate"))
 
     def validate_barbell_plates(self, value):
-        return self._validate_plates(value, "barbell plate")
+        return self._validate_plates(value, _("barbell plate"))
 
     def validate_kettlebell_plates(self, value):
-        return self._validate_plates(value, "kettlebell plate")
+        return self._validate_plates(value, _("kettlebell plate"))
 
     def validate_dumbbell_weights(self, value):
-        return self._validate_weights(value, "Dumbbell weights")
+        return self._validate_weights(value, _("Dumbbell weights"))
 
     def validate_kettlebell_weights(self, value):
-        return self._validate_weights(value, "Kettlebell weights")
+        return self._validate_weights(value, _("Kettlebell weights"))
 
     def validate_band_levels(self, value):
         if not isinstance(value, list):
-            raise serializers.ValidationError("Band levels must be a list.")
+            raise serializers.ValidationError(_("Band levels must be a list."))
         return [str(v) for v in value]
 
     def _non_negative(self, value, label):
         if value is None:
             return value
         if value < 0:
-            raise serializers.ValidationError(f"{label} cannot be negative.")
+            raise serializers.ValidationError(_("%(label)s cannot be negative.") % {"label": label})
         return value
 
     def validate_bar_weight(self, value):
-        return self._non_negative(value, "Bar weight")
+        return self._non_negative(value, _("Bar weight"))
 
     def validate_dumbbell_handle_weight(self, value):
-        return self._non_negative(value, "Handle weight")
+        return self._non_negative(value, _("Handle weight"))
 
     def validate_kettlebell_handle_weight(self, value):
-        return self._non_negative(value, "Kettlebell shell weight")
+        return self._non_negative(value, _("Kettlebell shell weight"))
 
     def validate_barbell_min_increment(self, value):
         if value is not None and value <= 0:
-            raise serializers.ValidationError("Barbell increment must be greater than zero.")
+            raise serializers.ValidationError(_("Barbell increment must be greater than zero."))
         return value
 
     def validate(self, attrs):
@@ -269,13 +288,17 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
     )
     target_load_recipe = serializers.SerializerMethodField()
     load_unit = serializers.SerializerMethodField()
+    # #109: the loads "set my load" can land on (band level indices for bands),
+    # null for a difficulty-mode movement.
+    load_options = serializers.SerializerMethodField()
+    is_band_load = serializers.SerializerMethodField()
 
     class Meta:
         model = PrescribedExercise
         fields = [
             "uuid", "pattern_key", "exercise_name", "is_timed", "video_url", "cues",
             "target_sets", "target_reps_min", "target_reps_max", "target_load",
-            "target_load_recipe", "load_unit",
+            "target_load_recipe", "load_unit", "load_options", "is_band_load",
             "target_rest_seconds", "order",
             "pending_progression", "pending_progression_name",
         ]
@@ -286,13 +309,28 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
     def get_load_unit(self, obj):
         return self._load_unit_for(obj.day.program.user)
 
+    def get_load_options(self, obj):
+        if obj.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
+            return None
+        profile = self._profile_for(obj.day.program.user)
+        return progression.available_loads(profile, obj.exercise) if profile else []
+
+    def get_is_band_load(self, obj):
+        profile = self._profile_for(obj.day.program.user)
+        return bool(profile) and loads.implement_for(profile, obj.exercise) == "bands"
+
 
 class ProgramDaySerializer(serializers.ModelSerializer):
     prescriptions = PrescribedExerciseSerializer(many=True, read_only=True)
+    # Stored in English (THE_DAY_NAME); shown in the active language.
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = ProgramDay
         fields = ["uuid", "day_index", "name", "prescriptions"]
+
+    def get_name(self, obj):
+        return day_name(obj.name)
 
 
 class ProgramSerializer(serializers.ModelSerializer):
@@ -364,7 +402,7 @@ class PlannedSetLogSerializer(SetLogSerializer):
 
 class WorkoutSessionSerializer(serializers.ModelSerializer):
     set_logs = SetLogSerializer(many=True, read_only=True)
-    day_name = serializers.CharField(source="program_day.name", read_only=True)
+    day_name = serializers.SerializerMethodField()
     # The day this session belongs to — the client posts it back to persist a
     # plan, and it is the only day ever served.
     day = serializers.PrimaryKeyRelatedField(source="program_day", read_only=True)
@@ -378,6 +416,9 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
             "uuid", "day", "day_name", "scheduled_for", "performed_at", "status",
             "persisted", "set_logs",
         ]
+
+    def get_day_name(self, obj):
+        return day_name(obj.program_day.name) if obj.program_day_id else None
 
     def get_persisted(self, obj):
         return True

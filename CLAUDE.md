@@ -108,6 +108,7 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 | `is_assessment_anchor` | the bilateral move tested per pattern in the Trial: Push-up, Australian Row, Pike Push-up, Squat, Plank, Glute Bridge — each has a peer norm. **Grip carries two**: Dead Hang, plus Towel Wring Hold as the no-equipment fallback. `forge._anchor_for` / `forge.js:renderTrial` take the highest-rank anchor the user can perform, so the fallback only shows when the hang is out of reach |
 | `placement_threshold` | Trial **anchor** AMRAP score that places here. Must be non-decreasing by rank within a pattern, equal for same-rank rungs — enforced for **every** pattern by `tests/test_grip_pattern.py::TestThresholdMonotonicity` (the lower ladder alone was covered by `tests/test_lower_ladder.py`). Among same-rank rungs the user owns, placement still follows row order |
 | `regression` / `progression` | FK to self, adjacent rungs |
+| `name_es`, `cues_es` | Spanish display text (#87); `name` stays the English key — see the i18n notes under The Grimoire |
 | `video_url`, `cues`, `rest_seconds` | coaching metadata. `rest_seconds` comes from `seed_forge.rest_for`, which is pattern-aware: a grip hold rests 90s, every other timed hold 40s |
 
 ---
@@ -115,8 +116,11 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 ### Per-user data
 
 **UserEquipmentProfile** (OneToOne with User)
-What the user has available + their body stats.
-Fields: `equipment` M2M, `birth_year`, `sex`, `dumbbell_weights` JSON list, `band_levels`, `barbell_min_increment`, `barbell_plates`, `load_unit`.
+What the user has available.
+Fields: `equipment` M2M, `dumbbell_weights` JSON list, `band_levels`, `barbell_min_increment`, `barbell_plates`, `load_unit`.
+Birth year and sex moved to `CauldronProfile` (#105, migrations 0034–0036); the peer score reads them through
+`services.forge._demographics` (never creates the row). The Forge's equipment form and MCP `set_equipment` no
+longer take them — the Profile's "About you" does.
 
 **AssessmentSession** — one trial run
 Fields: `user`, `is_active` (only one active at a time), `completed_at`.
@@ -132,7 +136,16 @@ left/right capture anywhere (removed in #50; migration 0014 summed old per-side 
 re-placed them, capped at ±1 rung).
 
 **Program** — generated plan
-Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target` (default 8 sets/pattern/week).
+Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target`
+(sets/pattern/week, 4–40, default 16 since #109; migration 0038 set 16 on existing programs without regenerating).
+
+**Weekly volume (#109)** — `target_sets = clamp(round(weekly_volume_target / weekly_frequency), 2, 5)`
+(`forge.sets_for_volume`; half rounds up). `weekly_frequency` = the split's sessions/week (`SESSIONS_PER_WEEK`: 3 or
+4) × `min(DAILY_PATTERN_COUNT, patterns on the day) / patterns on the day`. `generate_program` uses it (no more
+hardcoded 3). `forge.regenerate_volume(program, pattern_ids)` runs for the touched patterns only after `set_rung`,
+`set_load` and `sync_program_equipment` (patterns whose prescription was swapped or re-snapped); editing the volume
+(`set_weekly_volume`) regenerates all. Today's untouched sets follow the new count (`_rewrite_open_sets`); a movement
+with logged values keeps today's sets. ⇄ swaps still use `DEFAULT_TARGET_SETS` (3).
 
 **ProgramDay**
 Fields: `program` FK, `day_index`, `name`.
@@ -225,6 +238,16 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
     Never writes `AssessmentResult` — the live prescription is the source of truth for "current rung"
     (`forge._current_rung_on_chain` prefers it over the Trial placement).
   - `GET /cauldron/api/rungs/` — `{chains: [...], by_exercise: {rung_uuid: presc_uuid}}` for the skill tree
+- **Set my load (#109):** `POST /cauldron/api/prescription/{presc_uuid}/set-load/ {"load": 22.5}` → 200
+  `{load, snapped_from, applied_to}` (`forge.set_load`). Program-wide for the exercise; snaps DOWN to a buildable load
+  (below the lightest → the lightest; `snapped_from` = the asked value when it moved). Bands take an owned level
+  index (assisted rungs keep the inverted meaning). Resets `sessions_at_top`, clears `pending_progression`, rewrites
+  today's untouched sets; 409 with logged sets; 400 for difficulty mode, ≤ 0, a band level not owned. The exercise
+  sheet's "Set my load" uses `load_options` / `is_band_load` from `PrescribedExerciseSerializer`.
+- **Weekly volume:** `PATCH /cauldron/api/program/ {"weekly_volume_target": 16}` (4–40, else 400) → the program;
+  edited in the Equipment tab ("Weekly volume").
+- **PostHog:** `forge_rung_set` (replaced `rung_changed`), `forge_load_set`, `forge_volume_set` —
+  `{pattern_key, direction: up|down|same, source: web|mcp}` (`pattern_key` null for volume).
 
 ---
 
@@ -279,7 +302,7 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
 |---|---|
 | `Tag` | `slug`, `name`, `name_es`. Seeded (soup, salad, drink, breakfast, dessert, main, side, snack, sauce, bread, vegetarian, vegan) |
 | `Reagent` | `name`, `name_es`, `search_name` (normalized, see below), `category`, `source` usda/user/staff, `fdc_id` (unique, nullable), `created_by`, `status` private/pending/approved, `grams_per_unit` JSON (`cup`/`tbsp`/`tsp`/`piece` → grams), `density_g_per_ml` |
-| `ReagentNutrients` | 1:1 `reagent.nutrients`; 23 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero |
+| `ReagentNutrients` | 1:1 `reagent.nutrients`; 24 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero. `added_sugar_g` (#104, after `sugar_g`) stands in for WHO's free sugars minus fruit-juice sugars (sugar and honey count in full); `added_sugar_over_total` rejects it above a known `sugar_g` — reagent API (PATCH checks the stored sugars), model `clean()` (admin), quick entries, MCP |
 | `Spell` | `owner`, `title` (+ `search_title`, covers `title_es` too), `description`, `servings`, `prep/cook_minutes`, `steps` JSON list, `visibility` private/public, `forked_from` (SET_NULL), `tags` M2M. `title_es` / `description_es` / `steps_es`: Spanish text for **seeded starter spells only** (read-only in the API) |
 | `SpellReagent` | `spell.lines`: `reagent` (PROTECT), `quantity`, `unit`, `grams` (stored), `note` (+ `note_es`, starters only), `order` |
 | `GrimoirePreferences` | 1:1 `user.grimoire_preferences`, `unit_system` metric/us. Created lazily (view / `preferences/` GET) |
@@ -342,6 +365,54 @@ when the page language is Spanish, falling back to English per field. Run makeme
 (`-w /app/the_cauldron`), ignoring `tests/*` and `seed_data/*`. Unit labels are `pgettext("unit", …)`
 with `_plural` keys for spelled-out units (pieza/piezas, taza/tazas).
 
+**The Forge, landing and login (#87)** follow the same pattern:
+- Templates use `{% trans %}` / `{% blocktrans trimmed %}`. JS strings: `forge_i18n.forge_strings()` →
+  `#forge-i18n` → `t(key, vars)` in `forge.js` (also read by `forge-anatomy.js`). Counted strings ship as
+  `<key>_one` / `<key>_other` from `_plural(key, lambda n: ngettext("…", "…", n))` — keep the **literal**
+  `ngettext` call or makemessages misses it — and `tn(key, n)` picks the form. Never name a plain key
+  `…_one` / `…_other`. Dates/numbers go through `fmtDate` / `fmtNum` (`Intl`, page language).
+- Loader captions: `_loader_script.html` (`data-captions`). The landing's skill-tree showcase data lives in
+  `forge_i18n.showcase_tree()` → `#fshow-tree-data` (no longer hard-coded in `forge-skilltree.js`).
+- Earphones mode speaks/listens in `es-MX` under Spanish; voice commands accept English words always and
+  Spanish ones (`VOICE_WORDS`, accent-folded) when the page is Spanish.
+- **Catalog**: `name_es` on `MovementPattern` / `Equipment` / `Muscle` / `Exercise`, `cues_es` on `Exercise`,
+  seeded from `seed_forge.*_ES`. **`name` stays English** — it is the key norms, progress and `forge.js` match
+  on. The page embeds `forge_i18n.forge_catalog()` (`#forge-catalog-i18n`, English name → display text) and
+  `exName()` / `exCues()` / `patternName()` / `muscleName()` / `equipName()` translate at display time only.
+  The catalog API adds `name_es` + `display_name` (and `cues_es` + `display_cues`) via
+  `forge_i18n.localized(obj, field)` — Spanish when active and filled, else English, per field.
+- `ProgramDay.name` stays the English `THE_DAY_NAME` (`gettext_noop`); `forge_i18n.day_name()` translates it at
+  serialization. Norm labels are `gettext_noop` and translated per request. API `detail` messages are
+  gettext'd; `code` fields and PostHog properties stay English.
+
+**Switcher + memory** (`language.py`): arcano's base nav switcher posts to `set_language` (cookie). On every
+`cauldron_page` (and the landing / English legal pages) a signed-in user's language cookie is saved to
+`CauldronProfile.language` (the cookie always wins); a browser with no cookie gets the profile language
+activated and the cookie set — so the choice follows the user to another browser. A page view never creates a
+profile row unless there is a choice to save.
+**SEO**: `/cauldron/es/`, `/cauldron/es/terms/`, `/cauldron/es/privacy/` always render Spanish
+(`force_spanish`); every public page gets a self canonical + `hreflang` en/es/x-default (`_seo_head.html`,
+`language.public_seo`), and `lang_switch_next` (read by arcano's `base.html`) sends the switcher to the
+same page in the other language. No sitemap exists yet.
+
+### Spanish glossary (es-MX)
+
+| English | Español | | English | Español |
+|---|---|---|---|---|
+| The Cauldron | El Caldero | | set | serie |
+| The Forge | La Forja | | reps | reps (prose: repeticiones) |
+| The Trial | La Prueba | | hold (timed) | sostén |
+| Anvil | Yunque | | flames / fires 🔥 | llamas |
+| The Grimoire | El Grimorio | | Earphones mode | Modo audífonos |
+| The Journal | El Diario | | Rest ping | Aviso de descanso |
+| The Coven | El Aquelarre | | Claim it | Reclamarlo |
+| rung | peldaño | | skill tree | árbol de habilidades |
+| ladder | escalera | | AMRAP | AMRAP (kept) |
+| spell / reagent | hechizo / reactivo | | band (resistance) | liga |
+| dumbbell / kettlebell | mancuerna / pesa rusa | | push-up / pull-up | lagartija / dominada |
+
+The legal pages keep "The Cauldron" — their text is versioned as a whole (bump the version to change it).
+
 **Units**: amounts stay as authored; the per-line weight and the hover hint on non-mass units
 (`≈ weight · volume`) use the user's `unit_system` (g/ml/kg/l vs oz/lb/fl oz/cups). Volume is exact for
 volume units and `grams / reagent_density` for weighed/counted lines (`reagent_density` on each line).
@@ -374,6 +445,14 @@ values not on the label stay null) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
 `the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
 reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
+**Added sugars** in that build: USDA nutrient 539 where listed (SR Legacy never lists it), else **0** for a food in
+`UNPROCESSED_CATEGORIES` whose description doesn't match `SWEETENED` (sweetened/syrup/honey/dressing/fruit
+yogurt/peanut butter…) or listed in `NO_ADDED_SUGAR` (water, plain oats, cocoa, baking powder); Sugar and Honey
+(`ALL_ADDED_SUGAR`) get added = total sugars; else unknown (Peanut butter, Vegetable broth, Vanilla extract). A nutrient added to the
+seed later is listed in `seed_grimoire.BACKFILL`: every run fills it on existing rows **where still null** (no
+`--refresh` needed; a staff value is never overwritten). User-created reagents: unknown unless entered.
+Intake entries logged before #104 were marked `added_sugar_g` missing (in `missing` and `basis.missing`) by
+migration 0033 — unknown, never 0.
 
 **Debugging**
 - A line won't save with "Can't convert…" → the reagent has no weight for that unit and no density;
@@ -455,13 +534,14 @@ Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules i
 | Model | Notes |
 |---|---|
 | `LegalAcceptance` | `user`, `document` terms/privacy/sensitive_consent, `version`, `accepted_at`, `withdrawn_at`. **Append-only**: `save()` on an existing row raises; the only change ever made is `withdrawn_at` via `legal.withdraw_consent` (queryset update). No IP/UA. Read-only admin (ARCO) |
-| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. Lazy (`nutrition.get_profile`) |
+| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. `language` ("" = never chosen; see "Switcher + memory", #87). Body data (#105): `birth_year`, `sex` (male/female/undisclosed), `weight_kg` (20–400), `activity_level` (sedentary/moderate/vigorous, "" = unknown); `age(today)` by birth year. Lazy (`nutrition.get_profile`) |
 | `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
 | `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
 | `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
 
-**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.1, privacy 1.2, consent 1.0); the
-legal pages state the same versions. (Now terms 1.2 / privacy 1.4 — 1.4 is #72.) `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
+**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.3, privacy 1.5, consent 1.1; privacy 1.5
+joins #105's body data and #72's sign-up / Google); the
+legal pages state the same versions. `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
 whose latest terms/privacy version isn't current goes to `the_cauldron:legal-accept` (`/cauldron/accept/?next=`,
 `next` checked with `url_has_allowed_host_and_scheme`). The gate covers **pages only** — Forge/Grimoire APIs
 are not gated. Goals/intake/plan/adherence APIs need `NutritionConsent` (current terms+privacy **and** a live
@@ -477,6 +557,40 @@ Tests that load Cauldron pages must `legal.accept(user, legal.GATED)` first.
   minimum the dish can't bring is `not_covered` (not a conflict); a used-up max the dish contains is `over`.
   `{"has_goals": false}` without goals or consent → the spell page hides the section.
 
+**Recommended goals (#105)** — `services/recommendations.py`, computed on read from `CauldronProfile`, never
+stored or versioned (a profile change re-judges the whole history). `Recommendation` is shaped like a
+`NutrientGoal` (`kind`/`min_value`/`max_value`) so `nutrition.bounds`/`judge` work on it, plus `source`/`note`.
+Energy = FAO/WHO/UNU 2004 BMR × PAL (1.53 / 1.76 / 2.25) ±10 %; protein 0.83 g/kg; fat 20–30 %, sat < 10 %,
+trans < 1 %, carbs 45–65 %, added sugars < 10 % of that energy; sodium < 2000 mg, potassium ≥ 3510 mg, fiber ≥ 25 g;
+`DRI` table (RDA/AI) for calcium, iron, vitamins A/C/D/B12, ALA, LA. `NO_RECOMMENDATION` (mono/poly fat,
+cholesterol, EPA, DHA, total sugars) carries a note. Unknowns: every candidate (both sexes × `CANDIDATE_AGES`)
+is computed and combined — largest minimum, smallest maximum; an emptied range is left out (`unresolved`);
+unknown activity = sedentary; no weight → `WEIGHT_BASED` goals left out (`needs_weight`); under 18 by the
+youngest age the birth year allows (year difference − 1) → `status: "minor"`, nothing. `GET goals/` adds `recommended` (`payload`); `body/` (GET/PATCH) edits the body
+data — birth year/sex need only a sign-in; adding weight/activity needs the consent (403 `consent_required`),
+clearing them never does. The Journal's gauges show my goals plus `WHO_HEADLINE` recommended ones (nutrition.js);
+every tracked nutrient stays in the chips.
+`legal.withdraw_consent(delete_data=True)` clears weight and activity (birth year/sex stay for the Forge).
+Every page showing them includes `_recommendation_notice.html` (not medical advice, adults only).
+PostHog: `profile_body_data_saved {fields_count}` only.
+
+**Goal cauldron (#107)** — clicking a Journal gauge selects it for the chart **and** opens `#nut-cauldron`
+(a `<dialog>`, nutrition.js `openCauldron`) for that nutrient, `roll.span` and the tick at `roll.index`.
+`GET rolling/breakdown/?span=&end=&nutrient=` (`services/breakdown.py`, consent) groups the window's entries
+(rolling's rule: `end - span < eaten_at <= end`) by spell / reagent / quick-entry name (label = latest snapshot),
+top `TOP` (5) by known amount + an "others" row (`pie`; amounts ÷ 7 for 7d, summing to the card's value) and
+`fog` (every group with an entry missing the nutrient — never sized, never 0; a partly known spell is in both).
+Each fog item says how to fill it: `fill.reagents` (the reagent, or the spell's reagents lacking it, each with
+`editable`) or `fill.quick` (its entries). `POST rolling/fill/ {nutrient, value, reagent|entry}`: an own editable
+reagent is saved; a catalog one gets the user's **private copy** (`Reagent.copy_of`, reused, `nutrients_estimated`)
+and the user's own spells' lines switch to it (others' spells untouched); a quick entry gets its own total. Then
+`refresh_entries` gap-fills **only that nutrient, only where it was missing**, in the user's entries of the last
+`REFRESH_DAYS` (7) that used the reagent (directly, or via a spell still containing it, recomputed from the spell's
+current recipe and the entry's grams; `basis.estimated = True`). Older entries and known values never change — a
+deliberate, narrow exception to "editing the spell later never rewrites history". The pot is inline SVG (pie on the
+potion, fog, embers, bubbles, steam text, status glow via `data-status`); all motion stops under reduced motion.
+PostHog: `goal_breakdown_opened {span}`, `missing_value_filled {source: reagent|reagent_copy|quick}` only.
+
 **Adherence (#82)** — computed on read, `?days=7|30`. % met = met / (met+missed+uncertain); not-logged days
 never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. Streaks look back 90 days.
 
@@ -484,8 +598,11 @@ never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. 
 Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
 days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
 average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
-and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 23), per-goal-nutrient
-`status`/`low`/`high` arrays, `summary` (time in range %), `daily` (share of each day in range). The page
+and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 24), `tracked` (union of both
+sets) and `sets: {mine, who}` (#105) — each with per-goal-nutrient `status`/`low`/`high` arrays, `summary` (time in
+range %) and `daily` (share of each day in range); `who` (the recommendations, the same at every tick) adds
+`status_reason` (`adult`/`minor`). The Journal draws my band filled and the recommended one dashed, both ranges
+and status dots on each gauge, and two percentages per nutrient. The page
 scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
 `adherence/` endpoint (#82) stays but no page uses it now.
 
@@ -556,7 +673,8 @@ API — never duplicate rules in a tool). Register with `@registry.tool(...)`; e
 `invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
 `/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
 Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
-Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
+Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_goal_breakdown`
+(#107, same payload as `rolling/breakdown/`), `get_meal_plan`,
 `search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
 Write (`cauldron:write`; ✱ = two-step): `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`,
 `update_planned_meal`✱, `delete_planned_meal`✱, `mark_planned_meal_eaten`, `set_goal`, `create_reagent`,
@@ -586,7 +704,9 @@ UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reage
 **Forge tools** (`tools/forge.py`, `tools/forge_writes.py`; no nutrition consent needed):
 read `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions` (≤ 62 days),
 `get_equipment`, `get_trial`; write `set_equipment`✱, `submit_trial_results`, `retake_trial`✱,
-`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱.
+`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱;
+#109: read `get_forge_rung_options`, write `set_forge_rung` (`set_rung(confirm_unready=True)`: no Trial warning),
+`set_forge_load` (same contract as set-load), `set_forge_weekly_volume` — none two-step.
 They call the same `services/forge.py` functions as the web, so placement, programs and progression match for the
 same inputs. Logic that lived in `api.py` views moved there: `submit_assessment` (+ `TrialInputError`),
 `progress_points`, `session_peer_scores`, `active_program`, `mark_equipment_configured`; new `trial_anchors` and

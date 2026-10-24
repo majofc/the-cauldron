@@ -107,7 +107,10 @@
     return wrap;
   }
 
-  var CAPTIONS = ['Tending the flame…', 'Stirring the pot…', 'The cauldron deliberates…', 'Consulting ancient recipes…'];
+  /* Captions come translated from _loader_script.html (data-captions, "|"-separated). */
+  var SCRIPT = document.currentScript;
+  var CAPTIONS = ((SCRIPT && SCRIPT.getAttribute('data-captions')) || '').split('|').filter(Boolean);
+  if (!CAPTIONS.length) CAPTIONS = ['Tending the flame…', 'Stirring the pot…', 'The cauldron deliberates…', 'Consulting ancient recipes…'];
   function randomCaption() { return CAPTIONS[Math.floor(Math.random() * CAPTIONS.length)]; }
 
   window.CauldronLoader = {

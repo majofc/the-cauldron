@@ -17,16 +17,16 @@ Acceptances are append-only (``LegalAcceptance``): accepting again adds a row.
 from django.db import transaction
 from django.utils import timezone
 
-from the_cauldron.models import IntakeEntry, LegalAcceptance, NutrientGoal, PlannedMeal
+from the_cauldron.models import CauldronProfile, IntakeEntry, LegalAcceptance, NutrientGoal, PlannedMeal
 
 TERMS = LegalAcceptance.Document.TERMS
 PRIVACY = LegalAcceptance.Document.PRIVACY
 SENSITIVE_CONSENT = LegalAcceptance.Document.SENSITIVE_CONSENT
 
 CURRENT_VERSIONS = {
-    TERMS: "1.2",
-    PRIVACY: "1.4",
-    SENSITIVE_CONSENT: "1.0",
+    TERMS: "1.3",
+    PRIVACY: "1.5",
+    SENSITIVE_CONSENT: "1.1",
 }
 # Accepting these is required to use any part of The Cauldron.
 GATED = (TERMS, PRIVACY)
@@ -74,7 +74,9 @@ def accept(user, documents):
 
 def withdraw_consent(user, *, delete_data=False):
     """Withdraw the sensitive-data consent: logging stops at once. With
-    ``delete_data`` the goals, meal log and plan are deleted too."""
+    ``delete_data`` the goals, meal log and plan are deleted too, and the
+    weight and activity level are cleared (#105; birth year and sex stay, the
+    Forge's peer score uses them without the consent)."""
     with transaction.atomic():
         # The one permitted change to an acceptance row: closing a consent.
         withdrawn = LegalAcceptance.objects.filter(
@@ -84,6 +86,9 @@ def withdraw_consent(user, *, delete_data=False):
             PlannedMeal.objects.filter(user=user).delete()
             IntakeEntry.objects.filter(user=user).delete()
             NutrientGoal.objects.filter(user=user).delete()
+            CauldronProfile.objects.filter(user=user).update(
+                weight_kg=None, activity_level="", updated_at=timezone.now()
+            )
     return withdrawn
 
 

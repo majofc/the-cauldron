@@ -8,12 +8,16 @@ The unfinished-session rule holds: while a past session with logged sets was
 never finished, today's workout can't start — ``finish_forge_session`` or
 ``delete_forge_session`` it first. Changing equipment, retaking the Trial,
 editing a logged set and deleting a session are two-step (``confirm=True``).
+Setting the rung, the load and the weekly volume (#109) are not: they are the
+user's explicit choice and reversible the same way.
 """
+
+import posthog
 
 from the_cauldron.mcp_server.errors import ToolError
 from the_cauldron.mcp_server.registry import WRITE, tool
 from the_cauldron.mcp_server.tools.forge import NEXT_STEP, session_out, today_state
-from the_cauldron.models import Channel, SetLog, WorkoutSession
+from the_cauldron.models import Channel, Exercise, PrescribedExercise, SetLog, WorkoutSession
 from the_cauldron.serializers import AssessmentSessionSerializer, UserEquipmentProfileSerializer
 from the_cauldron.services import forge
 
@@ -36,8 +40,6 @@ EQUIPMENT_FIELDS = {
     "kettlebell_weights": NUMBERS,
     "kettlebell_plates": NUMBERS,
     "kettlebell_handle_weight": {"type": "number", "minimum": 0},
-    "birth_year": {"type": "integer", "minimum": 1900, "maximum": 2100},
-    "sex": {"type": "string", "enum": ["male", "female", "undisclosed"]},
 }
 SET_VALUES = {
     "set_id": {"type": "string", "description": "A set id from get_forge_today / start_forge_session."},
@@ -56,7 +58,8 @@ SESSION_ID = {"type": "string", "description": "A session id from get_forge_toda
     confirm=True,
     description=(
         "Change what the user trains with (only the fields sent change; equipment replaces the owned list). "
-        "This can change future prescriptions. Two-step: preview, then confirm_token after the user agrees."
+        "This can change future prescriptions. Two-step: preview, then confirm_token after the user agrees. "
+        "Birth year and sex (for the peer score) are set by the user on their Profile page, not here."
     ),
     schema={"type": "object", "properties": EQUIPMENT_FIELDS, "minProperties": 1, "additionalProperties": False},
 )
@@ -296,3 +299,92 @@ def delete_forge_session(ctx, session_id, apply):
         return {"target": session.uuid, "preview": {"delete": session_out(session)}}
     forge.discard_session(session)
     return {"deleted": session_id}
+
+
+PRESCRIPTION_ID = {"type": "string", "description": "A prescription_id from get_forge_program or get_forge_rung_options."}
+
+
+def _prescription(ctx, prescription_id):
+    return PrescribedExercise.objects.select_related("exercise__pattern", "day__program").get(
+        uuid=prescription_id, day__program__user=ctx.user, day__program__is_active=True,
+    )
+
+
+def _capture(event, pattern_key, direction):
+    posthog.capture(event, properties={"pattern_key": pattern_key, "direction": direction, "source": "mcp"})
+
+
+@tool(
+    "set_forge_rung",
+    title="Set the current rung",
+    scope=WRITE,
+    description=(
+        "Move a movement to any rung of its ladder the user can perform (get_forge_rung_options), up or down, "
+        "program-wide. Rep targets, load and rest are re-derived and the climb restarts from there; today's "
+        "untouched sets follow. Climbing past what the latest Trial supports is allowed (the user asked for it)."
+    ),
+    schema={"type": "object", "properties": {"prescription_id": PRESCRIPTION_ID,
+            "exercise_id": {"type": "string", "description": "The rung's exercise_id."}},
+            "required": ["prescription_id", "exercise_id"], "additionalProperties": False},
+)
+def set_forge_rung(ctx, prescription_id, exercise_id):
+    presc = _prescription(ctx, prescription_id)
+    target = Exercise.objects.get(uuid=exercise_id)
+    try:
+        result = forge.set_rung(ctx.user, presc, target, confirm_unready=True)
+    except forge.SetsAlreadyLogged as exc:
+        raise ToolError("conflict", str(exc)) from None
+    except ValueError as exc:
+        raise ToolError("invalid_input", str(exc)) from None
+    _capture("forge_rung_set", presc.exercise.pattern.key, result["direction"])
+    return {"exercise": result["exercise"].name, "applied_to": result["applied_to"]}
+
+
+@tool(
+    "set_forge_load",
+    title="Set the training load",
+    scope=WRITE,
+    description=(
+        "Set the load a load-mode movement trains with, program-wide. The value snaps DOWN to the nearest load "
+        "the user can build (below the lightest → the lightest); snapped_from says when it moved. Bands take a "
+        "band level index the user owns. Today's untouched sets follow."
+    ),
+    schema={"type": "object", "properties": {"prescription_id": PRESCRIPTION_ID,
+            "load": {"type": "number", "description": "kg or lb per the profile's load_unit, or a band level."}},
+            "required": ["prescription_id", "load"], "additionalProperties": False},
+)
+def set_forge_load(ctx, prescription_id, load):
+    presc = _prescription(ctx, prescription_id)
+    try:
+        result = forge.set_load(ctx.user, presc, load)
+    except forge.SetsAlreadyLogged as exc:
+        raise ToolError("conflict", str(exc)) from None
+    except ValueError as exc:
+        raise ToolError("invalid_input", str(exc)) from None
+    _capture("forge_load_set", presc.exercise.pattern.key, result["direction"])
+    return {k: result[k] for k in ("load", "snapped_from", "applied_to")}
+
+
+@tool(
+    "set_forge_weekly_volume",
+    title="Set the weekly volume",
+    scope=WRITE,
+    description=(
+        f"Working sets per movement pattern per week ({forge.VOLUME_MIN}-{forge.VOLUME_MAX}, default "
+        f"{forge.DEFAULT_WEEKLY_VOLUME}). Sets per session follow for every pattern "
+        f"(clamped {forge.SETS_MIN}-{forge.SETS_MAX}); today's untouched sets too."
+    ),
+    schema={"type": "object", "properties": {"sets_per_week": {
+            "type": "integer", "minimum": forge.VOLUME_MIN, "maximum": forge.VOLUME_MAX}},
+            "required": ["sets_per_week"], "additionalProperties": False},
+)
+def set_forge_weekly_volume(ctx, sets_per_week):
+    program = forge.active_program(ctx.user)
+    if program is None:
+        raise ToolError("not_found", "There is no active program yet: submit the Trial first.")
+    try:
+        result = forge.set_weekly_volume(ctx.user, program, sets_per_week)
+    except ValueError as exc:
+        raise ToolError("invalid_input", str(exc)) from None
+    _capture("forge_volume_set", None, result["direction"])
+    return {"weekly_volume_target": result["weekly_volume_target"], "prescriptions_changed": result["changed"]}

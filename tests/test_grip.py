@@ -16,6 +16,7 @@ from django.contrib.auth import get_user_model
 
 from the_cauldron.models import (
     BlockedExercise,
+    CauldronProfile,
     Equipment,
     Exercise,
     Program,
@@ -50,6 +51,10 @@ def _equip(user, keys=("bodyweight", "pullup_bar"), **profile_fields):
     bar pull-ups are eligible)."""
     profile = forge.get_or_create_equipment_profile(user)
     profile.equipment.set(Equipment.objects.filter(key__in=keys))
+    # Birth year and sex live on the Cauldron profile (#105).
+    body = {f: profile_fields.pop(f) for f in ("birth_year", "sex") if f in profile_fields}
+    if body:
+        CauldronProfile.objects.update_or_create(user=user, defaults=body)
     for field, value in profile_fields.items():
         setattr(profile, field, value)
     if profile_fields:

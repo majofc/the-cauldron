@@ -42,7 +42,7 @@ def eat(user, when, **values):
 
 
 def protein_at(result, i=-1):
-    return result["values"]["protein_g"][i], result["status"]["protein_g"][i]
+    return result["values"]["protein_g"][i], result["sets"]["mine"]["status"]["protein_g"][i]
 
 
 class TestTicks:
@@ -83,7 +83,7 @@ class TestWindowNow:
         eat(alice, at(15, 12), protein_g=120, sodium_mg=800)
         eat(alice, at(15, 13), protein_g=10)  # no sodium data
         result = rolling.rolling(alice, "24h", 7, now=NOW)
-        assert result["status"]["sodium_mg"][-1] == "uncertain"
+        assert result["sets"]["mine"]["status"]["sodium_mg"][-1] == "uncertain"
         assert result["missing"]["sodium_mg"][-1] == 1
 
     def test_an_empty_window_is_not_logged(self, alice):
@@ -98,14 +98,14 @@ class TestTimeInRange:
         return alice
 
     def test_share_of_the_time_in_range(self, two_meals):
-        summary = {s["nutrient"]: s for s in rolling.rolling(two_meals, "24h", 7, now=NOW)["summary"]}
+        summary = {s["nutrient"]: s for s in rolling.rolling(two_meals, "24h", 7, now=NOW)["sets"]["mine"]["summary"]}
         protein = summary["protein_g"]
         assert (protein["in_range"], protein["out_of_range"], protein["uncertain"]) == (24, 24, 0)
         assert protein["pct"] == 50
         assert protein["not_logged"] == 7 * 24 + 1 - 48  # never counted against you
 
     def test_daily_strip(self, two_meals):
-        daily = rolling.rolling(two_meals, "24h", 7, now=NOW)["daily"]["protein_g"]
+        daily = rolling.rolling(two_meals, "24h", 7, now=NOW)["sets"]["mine"]["daily"]["protein_g"]
         by_day = {d["date"]: (d["pct"], d["judged"]) for d in daily}
         assert by_day[date(2026, 10, 12)] == (100, 16)  # 08:00–23:00
         assert by_day[date(2026, 10, 13)] == (40, 20)  # 8 in range, then 12 out from noon
@@ -118,11 +118,11 @@ class TestTimeInRange:
         NutrientGoal.objects.create(user=two_meals, nutrient="protein_g", kind="at_least", min_value=40,
                                     valid_from=date(2026, 10, 13))
         result = rolling.rolling(two_meals, "24h", 7, now=NOW)
-        protein = {s["nutrient"]: s for s in result["summary"]}["protein_g"]
+        protein = {s["nutrient"]: s for s in result["sets"]["mine"]["summary"]}["protein_g"]
         assert (protein["in_range"], protein["out_of_range"]) == (48, 0)
         i = result["ticks"].index(at(12, 10))
-        assert result["low"]["protein_g"][i] == 100
-        assert result["low"]["protein_g"][result["ticks"].index(at(13, 10))] == 40
+        assert result["sets"]["mine"]["low"]["protein_g"][i] == 100
+        assert result["sets"]["mine"]["low"]["protein_g"][result["ticks"].index(at(13, 10))] == 40
 
 
 class TestApi:
@@ -133,7 +133,7 @@ class TestApi:
         assert r.status_code == 200
         assert len(r.data["ticks"]) in (30 * 24, 30 * 24 + 1)
         assert set(r.data["values"]) == set(nutrition.FIELDS)
-        assert [s["nutrient"] for s in r.data["summary"]] == ["protein_g"]
+        assert [s["nutrient"] for s in r.data["sets"]["mine"]["summary"]] == ["protein_g"]
         assert c.get("/cauldron/api/rolling/?span=3h&days=7").status_code == 400
         assert c.get("/cauldron/api/rolling/?span=24h&days=12").status_code == 400
 

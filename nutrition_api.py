@@ -3,6 +3,11 @@
 - ``legal/`` (+ ``accept/``, ``withdraw/``) — current document versions and
   what the user accepted (#84). Open to any signed-in user.
 - ``me/`` — the user's timezone (a day runs midnight to midnight there).
+- ``body/`` — birth year, sex, weight, activity level (#105). Birth year and sex
+  (also the Forge's peer score) need only a sign-in; weight and activity level
+  are sensitive data and need the consent.
+- ``rolling/breakdown/`` + ``rolling/fill/`` — the goal cauldron (#107): what a
+  card's number is made of, and filling the values it doesn't know.
 - ``goals/`` (+ ``history/``), ``intake/`` (+ ``day/``), ``adherence/``,
   ``plan/`` (+ ``day/``, ``{uuid}/eat/``) — need the current terms and privacy
   notice **and** the sensitive-data consent; otherwise 403
@@ -14,6 +19,7 @@ goal (CLAUDE.md "PostHog never receives PII").
 """
 
 import posthog
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
@@ -27,6 +33,7 @@ from the_cauldron.models import IntakeEntry, PlannedMeal
 from the_cauldron import nutrition_payloads as payloads
 from the_cauldron import nutrition_writes as writes
 from the_cauldron.nutrition_serializers import (
+    BodySerializer,
     GoalSetSerializer,
     IntakeEntrySerializer,
     IntakeInputSerializer,
@@ -37,7 +44,7 @@ from the_cauldron.nutrition_serializers import (
     PlannedMealInputSerializer,
     PlannedMealSerializer,
 )
-from the_cauldron.services import adherence, legal, nutrition, rolling
+from the_cauldron.services import adherence, breakdown, grimoire, legal, nutrition, rolling
 from the_cauldron.services.nutrition import NutritionInputError
 
 
@@ -146,11 +153,43 @@ class MeView(APIView):
         return Response(self._payload(request.user))
 
 
+class BodyView(APIView):
+    """``GET`` / ``PATCH`` ``{birth_year, sex, weight_kg, activity_level}`` (#105).
+    Adding a weight or activity level needs the sensitive-data consent (403
+    ``consent_required`` otherwise); clearing them, birth year and sex don't."""
+
+    permission_classes = [IsAuthenticated]
+    SENSITIVE = ("weight_kg", "activity_level")
+
+    def _payload(self, user):
+        profile = nutrition.get_profile(user)
+        return {**BodySerializer(profile).data, "age": profile.age(nutrition.today_for(user)),
+                "has_consent": legal.has_sensitive_consent(user)}
+
+    def get(self, request):
+        return Response(self._payload(request.user))
+
+    def patch(self, request):
+        # Adding health data needs the consent; clearing it (null / "") never does.
+        adding = any(request.data.get(f) not in (None, "") for f in self.SENSITIVE if f in request.data)
+        if adding and not legal.has_sensitive_consent(request.user):
+            return Response({"code": "consent_required", "detail": _("Give your consent first.")},
+                            status=status.HTTP_403_FORBIDDEN)
+        serializer = BodySerializer(nutrition.get_profile(request.user), data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        profile = serializer.save()
+        filled = [profile.birth_year, profile.sex != profile.Sex.UNDISCLOSED, profile.weight_kg,
+                  profile.activity_level]
+        posthog.capture("profile_body_data_saved", properties={"fields_count": sum(bool(f) for f in filled)})
+        return Response(self._payload(request.user))
+
+
 # ── Goals (#80) ─────────────────────────────────────────────────────────────
 
 
 class GoalsView(APIView):
-    """``GET`` the active goal set; ``PUT {"goals": [{nutrient, kind,
+    """``GET`` the active goal set plus the recommended one (``recommended``,
+    #105, read-only); ``PUT {"goals": [{nutrient, kind,
     min_value, max_value}]}`` replaces it (a nutrient left out, or with kind
     ``none``, has no goal). Changes are versioned, never overwritten."""
 
@@ -278,6 +317,64 @@ class RollingView(UserTimezoneMixin, APIView):
             return Response({"detail": _("Use span 24h or 7d and 7, 30 or 90 days.")},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response(rolling.rolling(request.user, span, days))
+
+
+class BreakdownView(UserTimezoneMixin, APIView):
+    """``?span=24h|7d&end=<tick iso>&nutrient=<key>`` — the goal cauldron
+    (``services.breakdown``): top spells/reagents, "others" and the fog."""
+
+    permission_classes = [IsAuthenticated, NutritionConsent]
+
+    def get(self, request):
+        try:
+            span, end, nutrient = breakdown.window_args(request.user, request.query_params)
+        except NutritionInputError as exc:
+            return _bad(exc)
+        posthog.capture("goal_breakdown_opened", properties={"span": span})
+        return Response(breakdown.breakdown(request.user, span, end, nutrient))
+
+
+class FillView(UserTimezoneMixin, APIView):
+    """``POST {nutrient, value, reagent | entry}`` — fill one gap (#107).
+    ``reagent``: per 100 g, saved on the user's own reagent or on their private
+    copy of a catalog one; ``entry``: a quick entry's own total. Marked estimated;
+    recent entries are gap-filled (``services.breakdown``)."""
+
+    permission_classes = [IsAuthenticated, NutritionConsent]
+
+    def post(self, request):
+        data = request.data
+        if not isinstance(data, dict):
+            return _bad(NutritionInputError(_("Send an object.")))
+        nutrient = data.get("nutrient")
+        try:
+            if nutrient not in nutrition.FIELDS:
+                raise NutritionInputError(_("Unknown nutrient."))
+            value = breakdown.clean_value(data.get("value"))
+            if data.get("entry"):
+                entry = IntakeEntry.objects.filter(user=request.user, uuid=data["entry"]).first()
+                if entry is None:
+                    return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+                breakdown.fill_quick(request.user, entry, nutrient, value)
+                source, refreshed, reagent = "quick", 1, None
+            elif data.get("reagent"):
+                target = (grimoire.visible_reagents(request.user).select_related("nutrients")
+                          .filter(uuid=data["reagent"]).first())
+                if target is None:
+                    return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+                source, reagent, refreshed = breakdown.fill_reagent(request.user, target, nutrient, value)
+            else:
+                raise NutritionInputError(_("Choose an ingredient or an entry."))
+        except NutritionInputError as exc:
+            return _bad(exc)
+        except ValidationError:  # a malformed uuid
+            return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+        posthog.capture("missing_value_filled", properties={"source": source})
+        return Response({
+            "source": source,
+            "reagent": str(reagent.uuid) if reagent else None,
+            "entries_refreshed": refreshed,
+        })
 
 
 # ── Ritual planner (#83) ────────────────────────────────────────────────────

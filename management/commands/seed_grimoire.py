@@ -12,6 +12,10 @@ nutrients, spell content). Even then a reagent's ``status`` and a starter
 spell's ``visibility`` are never changed — moderation always wins.
 User data is never touched.
 
+A nutrient added to the seed files later (``BACKFILL``) is still filled in on
+existing rows without ``--refresh`` — but only where it's unknown, so a staff
+value is never overwritten.
+
 Data lives in ``the_cauldron/seed_data/`` (committed, so no USDA API key is
 needed at deploy). Rebuild the reagents with ``build_grimoire_reagents``.
 ``grimoire_staff_reagents.json`` holds staff-entered products USDA doesn't
@@ -26,7 +30,14 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from the_cauldron.models import Reagent, ReagentNutrients, Spell, SpellReagent, Tag
+from the_cauldron.models import (
+    Reagent,
+    ReagentNutrients,
+    Spell,
+    SpellReagent,
+    Tag,
+    added_sugar_over_total,
+)
 from the_cauldron.services import grimoire
 
 SEED_DIR = Path(__file__).resolve().parents[2] / "seed_data"
@@ -49,6 +60,23 @@ TAGS = [
     ("vegetarian", "Vegetarian", "Vegetariano"),
     ("vegan", "Vegan", "Vegano"),
 ]
+
+
+# Nutrients added after the catalog was first seeded (#104).
+BACKFILL = ("added_sugar_g",)
+
+
+def _backfill(profile, seeded):
+    """Fill BACKFILL nutrients still unknown on an existing row."""
+    changed = [f for f in BACKFILL if getattr(profile, f) is None and seeded.get(f) is not None]
+    for field in changed:
+        setattr(profile, field, seeded[field])
+    # Staff may have edited the total sugars since: never store added > total.
+    if added_sugar_over_total(profile.sugar_g, profile.added_sugar_g):
+        profile.added_sugar_g = None
+        changed.remove("added_sugar_g")
+    if changed:
+        profile.save(update_fields=[*changed, "updated_at"])
 
 
 def _load(name):
@@ -91,6 +119,8 @@ class Command(BaseCommand):
                 reagent.save()
             if created or refresh or not hasattr(reagent, "nutrients"):
                 ReagentNutrients.objects.update_or_create(reagent=reagent, defaults=row["nutrients"])
+            else:
+                _backfill(reagent.nutrients, row["nutrients"])
             reagents[row["fdc_id"]] = reagent
 
         owner = self._system_user()
@@ -116,6 +146,8 @@ class Command(BaseCommand):
                 reagent.save()
             if created or refresh or not hasattr(reagent, "nutrients"):
                 ReagentNutrients.objects.update_or_create(reagent=reagent, defaults=row["nutrients"])
+            else:
+                _backfill(reagent.nutrients, row["nutrients"])
             n_staff += 1
         n_spells = 0
         for data in _load("grimoire_spells.json")["spells"]:

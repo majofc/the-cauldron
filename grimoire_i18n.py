@@ -233,6 +233,7 @@ def grimoire_strings():
         "n_protein_g": _("Protein"),
         "n_carbs_g": _("Carbohydrate"),
         "n_sugar_g": _("Sugars"),
+        "n_added_sugar_g": _("Added sugars"),
         "n_fiber_g": _("Fiber"),
         "n_fat_g": _("Fat"),
         "n_sat_fat_g": _("Saturated fat"),

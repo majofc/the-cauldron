@@ -1,6 +1,5 @@
 from allauth.account import views as allauth_views
 from django.contrib.auth import views as auth_views
-from django.views.generic import TemplateView
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
@@ -44,6 +43,11 @@ api_urlpatterns = [
         name="forge-progression",
     ),
     path(
+        "prescription/<uuid:presc_uuid>/set-load/",
+        api.SetLoadView.as_view(),
+        name="forge-set-load",
+    ),
+    path(
         "prescription/<uuid:presc_uuid>/set-rung/",
         api.SetRungView.as_view(),
         name="forge-set-rung",
@@ -67,10 +71,13 @@ api_urlpatterns = [
     path("legal/accept/", nutrition_api.LegalAcceptView.as_view(), name="legal-accept"),
     path("legal/withdraw/", nutrition_api.LegalWithdrawView.as_view(), name="legal-withdraw"),
     path("me/", nutrition_api.MeView.as_view(), name="nutrition-me"),
+    path("body/", nutrition_api.BodyView.as_view(), name="nutrition-body"),
     path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
+    path("rolling/breakdown/", nutrition_api.BreakdownView.as_view(), name="nutrition-breakdown"),
+    path("rolling/fill/", nutrition_api.FillView.as_view(), name="nutrition-fill"),
     path("mcp/connections/", oauth_views.McpConnectionsView.as_view(), name="mcp-connections"),
     path("mcp/connect-clicked/", oauth_views.McpConnectClickView.as_view(), name="mcp-connect-clicked"),
     path(
@@ -83,8 +90,12 @@ api_urlpatterns = [
 
 urlpatterns = [
     path('', views.landing_view, name='landing'),
-    path('terms/', TemplateView.as_view(template_name='the_cauldron/legal/terms.html'), name='terms'),
-    path('privacy/', TemplateView.as_view(template_name='the_cauldron/legal/privacy.html'), name='privacy'),
+    path('terms/', views.legal_page_view, {'page': 'terms'}, name='terms'),
+    path('privacy/', views.legal_page_view, {'page': 'privacy'}, name='privacy'),
+    # Spanish URLs of the public pages, for search engines (hreflang alternates).
+    path('es/', views.landing_es_view, name='landing-es'),
+    path('es/terms/', views.legal_page_es_view, {'page': 'terms'}, name='terms-es'),
+    path('es/privacy/', views.legal_page_es_view, {'page': 'privacy'}, name='privacy-es'),
     path('accept/', views.legal_accept_view, name='legal-accept'),
     path('profile/', views.profile_view, name='profile'),
     path('journal/', views.journal_view, name='journal'),
