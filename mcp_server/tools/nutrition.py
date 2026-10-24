@@ -93,7 +93,8 @@ def get_journal(ctx, **args):
     description=(
         "How often the user meets their daily goals over the last 7, 30 or 90 days. "
         "time_in_range: share of hours the rolling 24-hour window was within each goal (hours with "
-        "nothing logged don't count). For 7 and 30 days also by_day_goal: days met / missed / "
+        "nothing logged don't count); time_in_range_recommended: the same against the recommended goals "
+        "(see get_goals). For 7 and 30 days also by_day_goal: days met / missed / "
         "uncertain per nutrient, % met and current/best streaks."
     ),
     schema={
@@ -104,7 +105,8 @@ def get_journal(ctx, **args):
 )
 def get_adherence(ctx, days=7):
     roll = rolling.rolling(ctx.user, "24h", days)
-    out = {"days": days, "time_in_range": roll["summary"]}
+    out = {"days": days, "time_in_range": roll["sets"]["mine"]["summary"],
+           "time_in_range_recommended": roll["sets"]["who"]["summary"]}
     if days in adherence.WINDOWS:
         out["by_day_goal"] = adherence.adherence(ctx.user, days)["nutrients"]
     return out
@@ -115,16 +117,31 @@ def get_adherence(ctx, days=7):
     title="Daily goals",
     consent=True,
     description=(
-        "The user's active daily nutrient goals (at_least / at_most / between, per 24 h) and every past "
-        "version with the dates it applied. No goal for a nutrient = not tracked."
+        "Two goal sets, per 24 h (at_least / at_most / between). mine: the user's own active goals, plus every "
+        "past version with the dates it applied (history); no goal for a nutrient = not tracked. recommended: "
+        "WHO/FAO and NASEM DRI references from the user's weight, age, sex and activity level (each with its "
+        "source), general references for healthy adults, not medical advice; status 'minor' = under 18, none "
+        "given. assumed lists body data the user hasn't given (the most conservative value was used); "
+        "needs_weight lists goals left out until a weight is set; unresolved, goals left out because the "
+        "cautious values for an unknown sex or age contradict each other (ask for the missing data)."
     ),
 )
 def get_goals(ctx):
     current = payloads.goals_payload(ctx.user)
+    rec = current["recommended"]
     return {
         "today": current["today"],
-        "goals": [fmt.goal(g) for g in current["goals"]],
+        "mine": [fmt.goal(g) for g in current["goals"]],
         "history": [fmt.goal(g) for g in payloads.goal_history(ctx.user)],
+        "recommended": {
+            "status": rec["status"],
+            "assumed": rec["assumed"],
+            "needs_weight": rec["needs_weight"],
+            "unresolved": rec["unresolved"],
+            "goals": [{"nutrient": g["nutrient"], "kind": g["kind"], "min": g["min_value"], "max": g["max_value"],
+                       "source": g["source"], "note": g["note"]} for g in rec["goals"]],
+            "no_recommendation": rec["none"],
+        },
     }
 
 

@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import get_language
 from rest_framework import serializers
 
-from the_cauldron.models import IntakeEntry, LegalAcceptance, PlannedMeal, SpellReagent
+from the_cauldron.models import CauldronProfile, IntakeEntry, LegalAcceptance, PlannedMeal, SpellReagent
 from the_cauldron.services import grimoire, nutrition
 
 MAX_QUANTITY = 100_000
@@ -42,6 +42,27 @@ class MeSerializer(serializers.Serializer):
         if value not in nutrition.timezone_names():
             raise serializers.ValidationError("Unknown timezone.")
         return value
+
+
+class BodySerializer(serializers.ModelSerializer):
+    """Body data on the Cauldron profile (#105). Every field optional; null clears."""
+
+    weight_kg = FiniteFloatField(required=False, allow_null=True, min_value=20, max_value=400)
+    activity_level = serializers.ChoiceField(
+        choices=CauldronProfile.Activity.choices, required=False, allow_blank=True, allow_null=True,
+    )
+
+    class Meta:
+        model = CauldronProfile
+        fields = ["birth_year", "sex", "weight_kg", "activity_level"]
+
+    def validate_birth_year(self, value):
+        if value is not None and not 1900 <= value <= timezone.localdate().year:
+            raise serializers.ValidationError("Enter a year between 1900 and this year.")
+        return value
+
+    def validate_activity_level(self, value):
+        return value or ""
 
 
 class GoalSetSerializer(serializers.Serializer):

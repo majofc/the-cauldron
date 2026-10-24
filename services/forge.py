@@ -22,6 +22,7 @@ from the_cauldron.models import (
     AssessmentResult,
     AssessmentSession,
     BlockedExercise,
+    CauldronProfile,
     Exercise,
     MovementPattern,
     Muscle,
@@ -86,12 +87,20 @@ def _peer_score_dict(score) -> dict:
     }
 
 
+def _demographics(user):
+    """``(sex, age)`` from the Cauldron profile (#105) for the peer norms.
+    Reading never creates the profile row."""
+    profile = CauldronProfile.objects.filter(user=user).first()
+    if profile is None:
+        return CauldronProfile.Sex.UNDISCLOSED, None
+    return profile.sex, profile.age()
+
+
 def peer_score(user, exercise_name, value) -> dict:
     """Peer "flames" score for a result, using the user's age+sex and published
     norms. Always returns a dict (``has_data`` False when not scoreable)."""
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
-    return _peer_score_dict(norms.score(exercise_name, value, profile.sex, age))
+    sex, age = _demographics(user)
+    return _peer_score_dict(norms.score(exercise_name, value, sex, age))
 
 
 def best_flames_by_exercise(user) -> dict:
@@ -103,8 +112,7 @@ def best_flames_by_exercise(user) -> dict:
     AMRAP working set and every Trial result. Only movements with a published
     peer norm and at least one recorded result that scores appear in the result.
     """
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
+    sex, age = _demographics(user)
 
     best_value = {}  # exercise name -> best AMRAP reps/seconds ever
 
@@ -126,7 +134,7 @@ def best_flames_by_exercise(user) -> dict:
 
     result = {}
     for name, value in best_value.items():
-        sc = norms.score(name, value, profile.sex, age)
+        sc = norms.score(name, value, sex, age)
         if sc.has_data:
             result[name] = {
                 "flames": sc.flames,
@@ -139,9 +147,8 @@ def best_flames_by_exercise(user) -> dict:
 def peer_decile_cutoffs(user, exercise_name) -> dict:
     """Decile reference values (P10..P90) for charting this exercise against
     peers. ``{has_data, cutoffs, label, source, url}``."""
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
-    cutoffs = norms.decile_cutoffs(exercise_name, profile.sex, age)
+    sex, age = _demographics(user)
+    cutoffs = norms.decile_cutoffs(exercise_name, sex, age)
     if cutoffs is None:
         return {"has_data": False}
     meta = norms.NORMS[norms.EXERCISE_NORMS[exercise_name]]

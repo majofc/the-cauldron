@@ -115,8 +115,11 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 ### Per-user data
 
 **UserEquipmentProfile** (OneToOne with User)
-What the user has available + their body stats.
-Fields: `equipment` M2M, `birth_year`, `sex`, `dumbbell_weights` JSON list, `band_levels`, `barbell_min_increment`, `barbell_plates`, `load_unit`.
+What the user has available.
+Fields: `equipment` M2M, `dumbbell_weights` JSON list, `band_levels`, `barbell_min_increment`, `barbell_plates`, `load_unit`.
+Birth year and sex moved to `CauldronProfile` (#105, migrations 0034–0036); the peer score reads them through
+`services.forge._demographics` (never creates the row). The Forge's equipment form and MCP `set_equipment` no
+longer take them — the Profile's "About you" does.
 
 **AssessmentSession** — one trial run
 Fields: `user`, `is_active` (only one active at a time), `completed_at`.
@@ -449,12 +452,12 @@ Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules i
 | Model | Notes |
 |---|---|
 | `LegalAcceptance` | `user`, `document` terms/privacy/sensitive_consent, `version`, `accepted_at`, `withdrawn_at`. **Append-only**: `save()` on an existing row raises; the only change ever made is `withdrawn_at` via `legal.withdraw_consent` (queryset update). No IP/UA. Read-only admin (ARCO) |
-| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. `language` ("" = never chosen; see "Switcher + memory", #87). Lazy (`nutrition.get_profile`) |
+| `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. `language` ("" = never chosen; see "Switcher + memory", #87). Body data (#105): `birth_year`, `sex` (male/female/undisclosed), `weight_kg` (20–400), `activity_level` (sedentary/moderate/vigorous, "" = unknown); `age(today)` by birth year. Lazy (`nutrition.get_profile`) |
 | `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
 | `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
 | `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
 
-**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.1, privacy 1.2, consent 1.0); the
+**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.3, privacy 1.4, consent 1.1 since #105); the
 legal pages state the same versions. `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
 whose latest terms/privacy version isn't current goes to `the_cauldron:legal-accept` (`/cauldron/accept/?next=`,
 `next` checked with `url_has_allowed_host_and_scheme`). The gate covers **pages only** — Forge/Grimoire APIs
@@ -471,6 +474,23 @@ Tests that load Cauldron pages must `legal.accept(user, legal.GATED)` first.
   minimum the dish can't bring is `not_covered` (not a conflict); a used-up max the dish contains is `over`.
   `{"has_goals": false}` without goals or consent → the spell page hides the section.
 
+**Recommended goals (#105)** — `services/recommendations.py`, computed on read from `CauldronProfile`, never
+stored or versioned (a profile change re-judges the whole history). `Recommendation` is shaped like a
+`NutrientGoal` (`kind`/`min_value`/`max_value`) so `nutrition.bounds`/`judge` work on it, plus `source`/`note`.
+Energy = FAO/WHO/UNU 2004 BMR × PAL (1.53 / 1.76 / 2.25) ±10 %; protein 0.83 g/kg; fat 20–30 %, sat < 10 %,
+trans < 1 %, carbs 45–65 %, added sugars < 10 % of that energy; sodium < 2000 mg, potassium ≥ 3510 mg, fiber ≥ 25 g;
+`DRI` table (RDA/AI) for calcium, iron, vitamins A/C/D/B12, ALA, LA. `NO_RECOMMENDATION` (mono/poly fat,
+cholesterol, EPA, DHA, total sugars) carries a note. Unknowns: every candidate (both sexes × `CANDIDATE_AGES`)
+is computed and combined — largest minimum, smallest maximum; an emptied range is left out (`unresolved`);
+unknown activity = sedentary; no weight → `WEIGHT_BASED` goals left out (`needs_weight`); under 18 by the
+youngest age the birth year allows (year difference − 1) → `status: "minor"`, nothing. `GET goals/` adds `recommended` (`payload`); `body/` (GET/PATCH) edits the body
+data — birth year/sex need only a sign-in; adding weight/activity needs the consent (403 `consent_required`),
+clearing them never does. The Journal's gauges show my goals plus `WHO_HEADLINE` recommended ones (nutrition.js);
+every tracked nutrient stays in the chips.
+`legal.withdraw_consent(delete_data=True)` clears weight and activity (birth year/sex stay for the Forge).
+Every page showing them includes `_recommendation_notice.html` (not medical advice, adults only).
+PostHog: `profile_body_data_saved {fields_count}` only.
+
 **Adherence (#82)** — computed on read, `?days=7|30`. % met = met / (met+missed+uncertain); not-logged days
 never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. Streaks look back 90 days.
 
@@ -478,8 +498,11 @@ never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. 
 Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
 days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
 average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
-and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 24), per-goal-nutrient
-`status`/`low`/`high` arrays, `summary` (time in range %), `daily` (share of each day in range). The page
+and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 24), `tracked` (union of both
+sets) and `sets: {mine, who}` (#105) — each with per-goal-nutrient `status`/`low`/`high` arrays, `summary` (time in
+range %) and `daily` (share of each day in range); `who` (the recommendations, the same at every tick) adds
+`status_reason` (`adult`/`minor`). The Journal draws my band filled and the recommended one dashed, both ranges
+and status dots on each gauge, and two percentages per nutrient. The page
 scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
 `adherence/` endpoint (#82) stays but no page uses it now.
 

@@ -13,16 +13,18 @@ from django.utils.translation import gettext as _
 
 from the_cauldron.models import IntakeEntry, NutrientGoal, PlannedMeal
 from the_cauldron.nutrition_serializers import IntakeEntrySerializer, PlannedMealSerializer
-from the_cauldron.services import nutrition
+from the_cauldron.services import nutrition, recommendations
 from the_cauldron.services.nutrition import NutritionInputError
 
 
 def goals_payload(user):
-    """The active goal set."""
+    """The active goal set, and the recommended one (#105) beside it."""
     goals = nutrition.current_goals(user)
+    today = nutrition.today_for(user)
     return {
-        "today": nutrition.today_for(user),
+        "today": today,
         "goals": [nutrition.goal_payload(goals[n]) for n in nutrition.FIELDS if n in goals],
+        "recommended": recommendations.payload(user, today),
     }
 
 

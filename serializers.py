@@ -129,7 +129,7 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
             "barbell_min_increment", "barbell_plates", "bar_weight",
             "kettlebell_mode", "kettlebell_weights", "kettlebell_plates",
             "kettlebell_handle_weight",
-            "birth_year", "sex", "orphan_plates",
+            "orphan_plates",
         ]
         read_only_fields = ["uuid", "orphan_plates"]
 

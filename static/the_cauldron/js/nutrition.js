@@ -138,6 +138,14 @@
     return t("target_between", { min: fmtAmount(g.min_value), max: fmtAmount(g.max_value), unit });
   }
 
+  // The bare range ("≥ 60 g"), for where a label ("My goal", "Recommended") already precedes it.
+  function rangeText(g) {
+    const unit = UNIT_OF[g.nutrient];
+    if (g.kind === "at_least") return `≥ ${fmtAmount(g.min_value)} ${unit}`;
+    if (g.kind === "at_most") return `≤ ${fmtAmount(g.max_value)} ${unit}`;
+    return `${fmtAmount(g.min_value)}–${fmtAmount(g.max_value)} ${unit}`;
+  }
+
   function fmtDate(iso, opts = { day: "numeric", month: "short", year: "numeric" }) {
     if (!iso) return "";
     return new Date(`${iso}T00:00:00`).toLocaleDateString(IS_ES ? "es-MX" : "en-US", opts);
@@ -196,7 +204,26 @@
   // Profile: goals (#80), settings
   // ════════════════════════════════════════════════════════════════════════
 
-  function goalRowHtml(key, goal) {
+  // The read-only recommended goal (#105) beside each of the user's own.
+  function recCellHtml(key, rec) {
+    if (!rec || rec.status !== "adult") return "";
+    const goal = rec.byKey[key];
+    let body;
+    if (goal) {
+      body = `${esc(rangeText(goal))} <span class="nut-rec-source"${goal.note ? ` title="${esc(goal.note)}"` : ""}>${esc(goal.source)}</span>`;
+    } else if (rec.none[key]) {
+      body = `<span class="grim-help">${esc(rec.none[key])}</span>`;
+    } else if (rec.needs_weight.includes(key)) {
+      body = `<span class="grim-help">${esc(t("rec_needs_weight"))}</span>`;
+    } else {
+      // Left out because the fallbacks for missing sex/age disagree: ask for those.
+      const fields = rec.assumed.filter((f) => f !== "activity").map((f) => t(`rec_field_${f}`)).join(", ");
+      body = `<span class="grim-help">${esc(t("rec_unresolved", { fields }))}</span>`;
+    }
+    return `<span class="nut-goal-rec"><span class="nut-goal-rec-label">${esc(t("rec_label"))}</span> ${body}</span>`;
+  }
+
+  function goalRowHtml(key, goal, rec) {
     const kind = goal ? goal.kind : "none";
     const low = goal && goal.min_value != null ? goal.min_value : "";
     const high = goal && goal.max_value != null ? goal.max_value : "";
@@ -209,6 +236,7 @@
       <input type="number" class="nut-goal-max" min="0" step="any" inputmode="decimal" value="${esc(high)}"
              aria-label="${esc(t("goal_max_for", { nutrient: t(`n_${key}`) }))}">
       <span class="nut-goal-unit">${esc(UNIT_OF[key])}</span>
+      ${recCellHtml(key, rec)}
     </div>`;
   }
 
@@ -225,11 +253,63 @@
     try {
       const d = await api("goals/");
       const byKey = Object.fromEntries(d.goals.map((g) => [g.nutrient, g]));
+      const rec = {
+        ...d.recommended,
+        byKey: Object.fromEntries(d.recommended.goals.map((g) => [g.nutrient, g])),
+        none: Object.fromEntries(d.recommended.none.map((x) => [x.nutrient, x.note])),
+      };
+      renderRecStatus(d.recommended);
       box.innerHTML = NUTRIENT_GROUPS.map(([group, keys]) => `<fieldset class="nut-goal-group">
-          <legend>${esc(t(group))}</legend>${keys.map((k) => goalRowHtml(k, byKey[k])).join("")}</fieldset>`).join("");
+          <legend>${esc(t(group))}</legend>${keys.map((k) => goalRowHtml(k, byKey[k], rec)).join("")}</fieldset>`).join("");
       $$(".nut-goal", box).forEach(syncGoalRow);
     } catch (err) {
       box.innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+    }
+  }
+
+  // Why the recommendations are missing or rough: under 18, data not given.
+  function renderRecStatus(rec) {
+    const el = $("#nut-rec-status");
+    if (!el) return;
+    let text = "";
+    if (rec.status === "minor") text = t("rec_minor");
+    else if (rec.assumed.length) text = t("rec_assumed", { fields: rec.assumed.map((f) => t(`rec_field_${f}`)).join(", ") });
+    el.textContent = text;
+    el.hidden = !text;
+  }
+
+  // ── About you (#105): body data. Birth year and sex need no consent. ──
+  async function loadBody() {
+    try {
+      const b = await api("body/");
+      $("#nut-birth-year").value = b.birth_year ?? "";
+      $("#nut-sex").value = b.sex || "undisclosed";
+      $("#nut-weight").value = b.weight_kg ?? "";
+      $("#nut-activity").value = b.activity_level || "";
+      // Without the consent they can only be cleared, not added or changed.
+      $("#nut-weight").disabled = !b.has_consent && b.weight_kg == null;
+      $("#nut-activity").disabled = !b.has_consent && !b.activity_level;
+      $("#nut-body-consent").hidden = b.has_consent;
+    } catch (err) { /* the fields just stay empty */ }
+  }
+
+  async function saveBody(e) {
+    e.preventDefault();
+    const errEl = $("#nut-body-error");
+    showError(errEl, null);
+    const year = $("#nut-birth-year").value;
+    const body = { birth_year: year === "" ? null : Number(year), sex: $("#nut-sex").value };
+    if (!$("#nut-weight").disabled) {
+      const weight = $("#nut-weight").value;
+      body.weight_kg = weight === "" ? null : Number(weight);
+      body.activity_level = $("#nut-activity").value;
+    }
+    try {
+      await api("body/", { method: "PATCH", body });
+      toast(t("toast_body_saved"));
+      if (hasConsent()) loadGoals();
+    } catch (err) {
+      showError(errEl, err);
     }
   }
 
@@ -334,7 +414,9 @@
   function initProfile() {
     initConsent();
     loadConnections();
+    loadBody();
     $("#nut-mcp-list").addEventListener("click", onConnectionsClick);
+    $("#nut-body-form").addEventListener("submit", saveBody);
     if (!hasConsent()) return;
     loadGoals();
     loadSettings();
@@ -483,13 +565,25 @@
     return 10 * p;
   }
 
-  function goalOf(n, i) {
-    const d = roll.data;
-    const low = d.low[n] ? d.low[n][i] : null;
-    const high = d.high[n] ? d.high[n][i] : null;
+  // Two goal sets judged over the same window (#105): "mine" and "who" (recommended).
+  const SETS = ["mine", "who"];
+  // Recommended-only nutrients get a gauge only from this list; the rest are in
+  // the chips and "Show every nutrient", so the gauges stay focused.
+  const WHO_HEADLINE = ["kcal", "protein_g", "carbs_g", "added_sugar_g", "fiber_g", "fat_g", "sat_fat_g", "sodium_mg"];
+  const statusOf = (n, i, set) => {
+    const st = roll.data.sets[set].status[n];
+    return st ? st[i] : null;
+  };
+
+  function goalOf(n, i, set = "mine") {
+    const s = roll.data.sets[set];
+    const low = s.low[n] ? s.low[n][i] : null;
+    const high = s.high[n] ? s.high[n][i] : null;
     if (low == null && high == null) return null;
     return { nutrient: n, kind: low != null && high != null ? "between" : low != null ? "at_least" : "at_most", min_value: low, max_value: high };
   }
+
+  const summaryOf = (n, set) => roll.data.sets[set].summary.find((x) => x.nutrient === n) || null;
 
   function initialIndex(d) {
     const last = d.ticks.length - 1;
@@ -508,8 +602,8 @@
       const found = kept ? d.ticks.indexOf(kept) : -1;
       roll.index = found >= 0 ? found : (roll.follow ? lastIndex() : initialIndex(d));
       roll.follow = roll.index === lastIndex();
-      const tracked = d.summary.map((s) => s.nutrient);
-      if (!tracked.includes(roll.nutrient)) roll.nutrient = tracked[0] || null;
+      if (!d.tracked.includes(roll.nutrient)) roll.nutrient = d.tracked[0] || null;
+      $("#nut-who-minor").hidden = d.sets.who.status_reason !== "minor";
       const scrub = $("#nut-scrub");
       scrub.max = String(lastIndex());
       scrub.value = String(roll.index);
@@ -542,7 +636,8 @@
     $("#nut-scrub").setAttribute("aria-valuetext", range);
     placeWindow();
     $("#nut-now-btn").hidden = roll.follow;
-    const goals = d.summary.map((s) => s.nutrient).filter((n) => d.status[n][i] != null);
+    const goals = d.tracked.filter((n) => statusOf(n, i, "mine") != null
+      || (WHO_HEADLINE.includes(n) && statusOf(n, i, "who") != null));
     const note = roll.span === "7d" ? `<p class="grim-help">${esc(t("avg_note"))}</p>` : "";
     $("#nut-gauges").innerHTML = goals.length
       ? `${note}${goals.map((n) => gaugeHtml(n, i)).join("")}`
@@ -577,36 +672,51 @@
       + `<span class="is-now" style="left:100%">${esc(t("today_now"))}</span>`;
   }
 
+  // One gauge, both ranges: my goal filled, the recommended one dashed. The
+  // headline status and delta follow my goal, or the recommended one without it.
   function gaugeHtml(n, i) {
     const d = roll.data;
     const value = d.values[n][i];
     const missing = d.missing[n][i];
-    const status = d.status[n][i];
-    const goal = goalOf(n, i);
+    const mine = goalOf(n, i, "mine");
+    const who = goalOf(n, i, "who");
+    const lead = mine ? "mine" : "who";
+    const status = statusOf(n, i, lead);
+    const goal = mine || who;
     const low = goal.min_value;
     const high = goal.max_value;
     const unit = UNIT_OF[n];
-    const top = Math.max(value, high || 0, (low || 0) * 1.25, 1) * 1.1;
+    const bound = (g) => Math.max((g && g.max_value) || 0, ((g && g.min_value) || 0) * 1.25);
+    const top = Math.max(value, bound(mine), bound(who), 1) * 1.1;
     const at = (x) => Math.min(100, (x / top) * 100);
-    const from = low != null ? at(low) : 0;
-    const to = high != null ? at(high) : 100;
+    const band = (g, cls) => {
+      if (!g) return "";
+      const from = g.min_value != null ? at(g.min_value) : 0;
+      const to = g.max_value != null ? at(g.max_value) : 100;
+      return `<span class="${cls}" style="left:${from}%;width:${Math.max(0, to - from)}%"></span>`;
+    };
+    const target = (set, g) => `<span class="nut-gauge-target nut-gauge-target--${set}">
+        <span class="nut-dot nut-dot--${esc(statusOf(n, i, set))}" aria-hidden="true"></span>
+        ${esc(t(`set_${set}`))}: ${esc(rangeText(g))} · ${esc(t(`status_${statusOf(n, i, set)}`))}</span>`;
     let delta;
     if (status === "not_logged") delta = t("gauge_nothing");
     else if (high != null && value > high) delta = t("gauge_over", { n: fmtAmount(value - high), unit });
     else if (low != null && value < low) delta = t(missing ? "gauge_short_maybe" : "gauge_short", { n: fmtAmount(low - value), unit });
     else delta = t("gauge_in");
     const name = t(`n_${n}`);
-    const label = `${name}: ${valueText(n, value, missing)}, ${targetText(goal)}, ${t(`status_${status}`)}`;
+    const targets = SETS.map((set) => [set, goalOf(n, i, set)]).filter(([, g]) => g);
+    const label = `${name}: ${valueText(n, value, missing)}, ${targets.map(([set, g]) =>
+      `${t(`set_${set}`)} ${rangeText(g)} ${t(`status_${statusOf(n, i, set)}`)}`).join(", ")}`;
     return `<button type="button" class="nut-gauge nut-gauge--${esc(status)}${n === roll.nutrient ? " is-selected" : ""}"
         data-nutrient="${n}" aria-pressed="${n === roll.nutrient}" aria-label="${esc(label)}">
       <span class="nut-gauge-head"><span class="nut-gauge-name">${esc(name)}</span>
         <span class="nut-gauge-value">${esc(valueText(n, value, missing))}</span></span>
       <span class="nut-gauge-track" aria-hidden="true">
-        <span class="nut-gauge-band" style="left:${from}%;width:${Math.max(0, to - from)}%"></span>
+        ${band(mine, "nut-gauge-band")}${band(who, "nut-gauge-band nut-gauge-band--who")}
         <span class="nut-gauge-fill" style="width:${at(value)}%"></span>
       </span>
-      <span class="nut-gauge-foot"><span class="grim-help">${esc(targetText(goal))}</span>
-        <span class="nut-gauge-delta">${esc(delta)}</span>${statusBadge(status)}</span>
+      <span class="nut-gauge-foot"><span class="nut-gauge-delta">${esc(delta)}</span>${statusBadge(status)}</span>
+      <span class="nut-gauge-targets">${targets.map(([set, g]) => target(set, g)).join("")}</span>
     </button>`;
   }
 
@@ -620,9 +730,16 @@
 
   function renderChips() {
     const d = roll.data;
-    $("#nut-hist-chips").innerHTML = d.summary.map((s) => `<button type="button" class="grim-scope-btn${s.nutrient === roll.nutrient ? " is-on" : ""}"
-        data-chip="${s.nutrient}" aria-pressed="${s.nutrient === roll.nutrient}">${esc(t(`n_${s.nutrient}`))}
-        <span class="nut-chip-pct">${s.pct == null ? "—" : `${s.pct}%`}</span></button>`).join("");
+    const pct = (n, set) => {
+      const s = summaryOf(n, set);
+      return s ? `${s.pct == null ? "—" : `${s.pct}%`}` : null;
+    };
+    $("#nut-hist-chips").innerHTML = d.tracked.map((n) => {
+      const parts = SETS.map((set) => [set, pct(n, set)]).filter(([, v]) => v != null);
+      return `<button type="button" class="grim-scope-btn${n === roll.nutrient ? " is-on" : ""}"
+        data-chip="${n}" aria-pressed="${n === roll.nutrient}">${esc(t(`n_${n}`))}
+        <span class="nut-chip-pct">${parts.map(([set, v]) => `<span class="nut-chip-set nut-chip-set--${set}" title="${esc(t(`set_${set}`))}">${esc(v)}</span>`).join(" · ")}</span></button>`;
+    }).join("");
   }
 
   function selectNutrient(n) {
@@ -647,13 +764,18 @@
       roll.geom = null;
       return;
     }
-    const s = d.summary.find((x) => x.nutrient === n);
-    const share = (k) => (s.judged ? `${Math.round((k / s.judged) * 100)}%` : "—");
-    const stat = s.judged
-      ? `<p class="nut-tir"><strong class="nut-tir-pct">${s.pct}%</strong> <span>${esc(t("tir_of_time"))}</span></p>
-         <p class="grim-help">${esc(t("tir_breakdown", { out: share(s.out_of_range), unc: share(s.uncertain), hours: s.not_logged * d.step_hours }))}</p>`
-      : `<p class="grim-help">${esc(t("tir_none"))}</p>`;
-    box.innerHTML = `${stat}
+    // Time in range against each set the nutrient has: "My goal X %", "Recommended Y %".
+    const stat = SETS.map((set) => {
+      const s = summaryOf(n, set);
+      if (!s) return "";
+      const share = (k) => (s.judged ? `${Math.round((k / s.judged) * 100)}%` : "—");
+      return s.judged
+        ? `<div class="nut-tir-set nut-tir-set--${set}"><p class="nut-tir"><strong class="nut-tir-pct">${s.pct}%</strong>
+            <span>${esc(t(`tir_of_time_${set}`))}</span></p>
+           <p class="grim-help">${esc(t("tir_breakdown", { out: share(s.out_of_range), unc: share(s.uncertain), hours: s.not_logged * d.step_hours }))}</p></div>`
+        : `<p class="grim-help">${esc(t(`set_${set}`))}: ${esc(t("tir_none"))}</p>`;
+    }).join("");
+    box.innerHTML = `<div class="nut-tir-sets">${stat}</div>
       <div class="nut-chart" id="nut-chart"><div class="nut-tip" id="nut-tip" hidden></div></div>
       <ol class="nut-strip" id="nut-strip" aria-label="${esc(t("strip_label"))}"></ol>
       <details class="nut-table"><summary>${esc(t("table_show"))}</summary><div id="nut-table"></div></details>`;
@@ -674,7 +796,10 @@
     let peak = 0;
     for (let i = 0; i < N; i += 1) {
       if (d.logged[i]) peak = Math.max(peak, vals[i]);
-      peak = Math.max(peak, d.high[n][i] || 0, (d.low[n][i] || 0) * 1.25);
+      for (const set of SETS) {
+        const s = d.sets[set];
+        if (s.low[n]) peak = Math.max(peak, s.high[n][i] || 0, (s.low[n][i] || 0) * 1.25);
+      }
     }
     const yMax = niceMax(peak * 1.05);
     const x = (i) => m.l + (N > 1 ? (i / (N - 1)) * pw : pw);
@@ -701,23 +826,28 @@
       label.textContent = fmtDate(tickDay(iso), { day: "numeric", month: "short" });
       svg.appendChild(label);
     });
-    // Goal band: the range that counts as met, segment by segment as goals change.
-    let band = [];
-    const flushBand = () => {
-      if (band.length > 1) {
-        const top = band.map(([i, lo, hi]) => `${x(i)},${y(hi == null ? yMax : hi)}`);
-        const bottom = band.slice().reverse().map(([i, lo]) => `${x(i)},${y(lo == null ? 0 : lo)}`);
-        svg.appendChild(svgEl("polygon", { points: [...top, ...bottom].join(" "), class: "nut-band" }));
+    // Goal bands: the range that counts as met, segment by segment as goals
+    // change — mine filled, the recommended one (#105) dashed on top.
+    for (const set of SETS) {
+      const s = d.sets[set];
+      if (!s.low[n]) continue;
+      let band = [];
+      const flushBand = () => {
+        if (band.length > 1) {
+          const top = band.map(([i, lo, hi]) => `${x(i)},${y(hi == null ? yMax : hi)}`);
+          const bottom = band.slice().reverse().map(([i, lo]) => `${x(i)},${y(lo == null ? 0 : lo)}`);
+          svg.appendChild(svgEl("polygon", { points: [...top, ...bottom].join(" "), class: set === "who" ? "nut-band nut-band--who" : "nut-band" }));
+        }
+        band = [];
+      };
+      for (let i = 0; i < N; i += 1) {
+        const lo = s.low[n][i];
+        const hi = s.high[n][i];
+        if (lo == null && hi == null) flushBand();
+        else band.push([i, lo, hi]);
       }
-      band = [];
-    };
-    for (let i = 0; i < N; i += 1) {
-      const lo = d.low[n][i];
-      const hi = d.high[n][i];
-      if (lo == null && hi == null) flushBand();
-      else band.push([i, lo, hi]);
+      flushBand();
     }
-    flushBand();
     // The line: the window's value, broken where nothing was logged.
     let path = "";
     let pen = false;
@@ -780,12 +910,13 @@
     hover.setAttribute("x1", g.x(i));
     hover.setAttribute("x2", g.x(i));
     hover.setAttribute("visibility", "visible");
-    const status = d.status[n][i];
-    const goal = goalOf(n, i);
     tip.innerHTML = `<strong>${esc(fmtTick(d.ticks[i]))}</strong>
       <span>${esc(d.logged[i] ? valueText(n, d.values[n][i], d.missing[n][i]) : t("status_not_logged"))}</span>
-      ${goal ? `<span class="grim-help">${esc(targetText(goal))}</span>` : ""}
-      ${status ? statusBadge(status) : ""}`;
+      ${SETS.map((set) => {
+        const goal = goalOf(n, i, set);
+        const status = statusOf(n, i, set);
+        return goal ? `<span class="grim-help">${esc(t(`set_${set}`))}: ${esc(rangeText(goal))}</span>${status ? statusBadge(status) : ""}` : "";
+      }).join("")}`;
     tip.hidden = false;
     const wrapW = $("#nut-chart").clientWidth;
     const px = (g.x(i) / g.W) * wrapW;
@@ -801,7 +932,9 @@
 
   function drawStrip(n) {
     const d = roll.data;
-    const byDay = Object.fromEntries((d.daily[n] || []).map((x) => [x.date, x]));
+    // The day strip follows my goal, or the recommended one without it.
+    const set = d.sets.mine.daily[n] ? "mine" : "who";
+    const byDay = Object.fromEntries((d.sets[set].daily[n] || []).map((x) => [x.date, x]));
     const days = [...new Set(d.ticks.map(tickDay))];
     $("#nut-strip").innerHTML = days.map((day) => {
       const cell = byDay[day];

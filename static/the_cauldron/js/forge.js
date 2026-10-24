@@ -586,8 +586,6 @@
       setImplementMode("dumbbell", profile.dumbbell_mode || "fixed");
       setImplementMode("kettlebell", profile.kettlebell_mode || "fixed");
       renderOrphans(profile.orphan_plates);
-      $("#forge-birth-year").value = profile.birth_year || "";
-      setSexValue(profile.sex || "undisclosed");
     } catch (e) {
       notify(t("err_load_equipment"));
     } finally {
@@ -640,27 +638,6 @@
   function exIconKey(name) {
     return EXERCISE_ICON_MAP[name.toLowerCase()] || null;
   }
-
-  // Sex button group helpers.
-  function sexValue() {
-    const on = $(".forge-sex-btn.is-on", $("#forge-sex"));
-    return on ? on.dataset.sex : "undisclosed";
-  }
-
-  function setSexValue(val) {
-    $$(".forge-sex-btn", $("#forge-sex")).forEach((btn) => {
-      const active = btn.dataset.sex === val;
-      btn.classList.toggle("is-on", active);
-      btn.setAttribute("aria-pressed", String(active));
-    });
-  }
-
-  // Wire sex button group clicks (runs once).
-  (function wireSexBtns() {
-    $$(".forge-sex-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setSexValue(btn.dataset.sex));
-    });
-  }());
 
   function fetchEquipmentList() {
     return [
@@ -883,7 +860,6 @@
     let body;
     try {
       showEquipError("");
-      const birthYear = parseInt($("#forge-birth-year").value, 10);
       body = {
         equipment: selectedEquipment(),
         load_unit: loadUnit,
@@ -899,8 +875,6 @@
         kettlebell_weights: parseWeights($("#forge-kettlebells").value, t("lbl_kettlebell_weights")),
         kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, t("lbl_kettlebell_plates")),
         kettlebell_handle_weight: num("#forge-kettlebell-handle", 0),
-        birth_year: isNaN(birthYear) ? null : birthYear,
-        sex: sexValue(),
       };
     } catch (err) {
       // A parse failure is the user's typo, not a server problem — show exactly

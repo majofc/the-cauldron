@@ -114,7 +114,6 @@
 /* Demographics (peer-score opt-in) */
 .forge-demographics { margin: 1.6rem 0 .4rem; border-top: 1px solid var(--cauldron-paprika-border); padding-top: 1.2rem; }
 .forge-demo-opt { font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 400; color: var(--cauldron-cream-muted); font-size: .9rem; }
-.forge-demo-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
 .forge-flame-inline { filter: drop-shadow(0 0 4px var(--cauldron-paprika)); }
 
 /* Fields */
@@ -541,27 +540,6 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-ex-icon .forge-glyph .ref { opacity: 0.34; }
 .forge-ex-icon .forge-glyph .mo { stroke: var(--cauldron-ember); }
 .forge-ex-icon .forge-glyph .slash { stroke: var(--cauldron-paprika-light); }
-
-/* Sex selection button group */
-.forge-sex-btns {
-  display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .4rem;
-}
-.forge-sex-btn {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .45rem .9rem;
-  background: transparent;
-  border: 1px solid var(--cauldron-paprika-border);
-  border-radius: 8px; color: var(--cauldron-cream-dim);
-  font-family: inherit; font-size: .9rem; cursor: pointer;
-  transition: border-color .2s, color .2s, background .2s;
-}
-.forge-sex-btn:hover { border-color: var(--cauldron-paprika); color: var(--cauldron-cream); }
-.forge-sex-btn.is-on {
-  background: var(--cauldron-paprika-dim);
-  border-color: var(--cauldron-paprika);
-  color: var(--cauldron-cream);
-}
-.forge-sex-icon { width: 1.25rem; height: 1.25rem; flex-shrink: 0; }
 
 /* ── ForgeAnvil overlay ────────────────────────────────────────────────────── */
 .forge-anvil-overlay {
