@@ -8,6 +8,7 @@ name and API messages, and norms still keyed on English names.
 
 import json
 import re
+from datetime import datetime, timezone as dt_timezone
 
 import pytest
 from django.conf import settings
@@ -40,7 +41,10 @@ def seeded(db):
 
 @pytest.fixture
 def user(db):
-    user = User.objects.create_user(username="bruja", password="pw12345!")
+    # Joined before open sign-up (#72): signs in without email verification.
+    user = User.objects.create_user(
+        username="bruja", password="pw12345!", date_joined=datetime(2026, 1, 1, tzinfo=dt_timezone.utc)
+    )
     legal.accept(user, legal.GATED)
     return user
 
@@ -232,7 +236,7 @@ class TestLanguagePreference:
         profile.language = "es"
         profile.save()
         other = Client()  # a fresh browser: no language cookie
-        other.post("/cauldron/login/", {"username": "bruja", "password": "pw12345!"})
+        other.post("/cauldron/login/", {"login": "bruja", "password": "pw12345!"})  # allauth form (#72)
         resp = _forge_page(other)
         assert "¿Qué tienes?" in resp.content.decode()
         assert resp.cookies[COOKIE].value == "es"
