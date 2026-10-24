@@ -36,8 +36,6 @@ EQUIPMENT_FIELDS = {
     "kettlebell_weights": NUMBERS,
     "kettlebell_plates": NUMBERS,
     "kettlebell_handle_weight": {"type": "number", "minimum": 0},
-    "birth_year": {"type": "integer", "minimum": 1900, "maximum": 2100},
-    "sex": {"type": "string", "enum": ["male", "female", "undisclosed"]},
 }
 SET_VALUES = {
     "set_id": {"type": "string", "description": "A set id from get_forge_today / start_forge_session."},
@@ -56,7 +54,8 @@ SESSION_ID = {"type": "string", "description": "A session id from get_forge_toda
     confirm=True,
     description=(
         "Change what the user trains with (only the fields sent change; equipment replaces the owned list). "
-        "This can change future prescriptions. Two-step: preview, then confirm_token after the user agrees."
+        "This can change future prescriptions. Two-step: preview, then confirm_token after the user agrees. "
+        "Birth year and sex (for the peer score) are set by the user on their Profile page, not here."
     ),
     schema={"type": "object", "properties": EQUIPMENT_FIELDS, "minProperties": 1, "additionalProperties": False},
 )

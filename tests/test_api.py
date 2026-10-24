@@ -787,11 +787,8 @@ def test_block_swaps_live_prescription_then_unblock(seeded, client, user):
 
 
 def _set_demographics(client, birth_year=1995, sex="male"):
-    return client.put(
-        "/cauldron/api/equipment/",
-        {"equipment": ["bodyweight"], "birth_year": birth_year, "sex": sex},
-        format="json",
-    )
+    # Body data lives on the Cauldron profile (#105), set from the Profile page.
+    return client.patch("/cauldron/api/body/", {"birth_year": birth_year, "sex": sex}, format="json")
 
 
 def test_assessment_returns_peer_flames_for_normed_move(seeded, client):

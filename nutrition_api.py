@@ -3,6 +3,9 @@
 - ``legal/`` (+ ``accept/``, ``withdraw/``) — current document versions and
   what the user accepted (#84). Open to any signed-in user.
 - ``me/`` — the user's timezone (a day runs midnight to midnight there).
+- ``body/`` — birth year, sex, weight, activity level (#105). Birth year and sex
+  (also the Forge's peer score) need only a sign-in; weight and activity level
+  are sensitive data and need the consent.
 - ``goals/`` (+ ``history/``), ``intake/`` (+ ``day/``), ``adherence/``,
   ``plan/`` (+ ``day/``, ``{uuid}/eat/``) — need the current terms and privacy
   notice **and** the sensitive-data consent; otherwise 403
@@ -27,6 +30,7 @@ from the_cauldron.models import IntakeEntry, PlannedMeal
 from the_cauldron import nutrition_payloads as payloads
 from the_cauldron import nutrition_writes as writes
 from the_cauldron.nutrition_serializers import (
+    BodySerializer,
     GoalSetSerializer,
     IntakeEntrySerializer,
     IntakeInputSerializer,
@@ -146,11 +150,43 @@ class MeView(APIView):
         return Response(self._payload(request.user))
 
 
+class BodyView(APIView):
+    """``GET`` / ``PATCH`` ``{birth_year, sex, weight_kg, activity_level}`` (#105).
+    Adding a weight or activity level needs the sensitive-data consent (403
+    ``consent_required`` otherwise); clearing them, birth year and sex don't."""
+
+    permission_classes = [IsAuthenticated]
+    SENSITIVE = ("weight_kg", "activity_level")
+
+    def _payload(self, user):
+        profile = nutrition.get_profile(user)
+        return {**BodySerializer(profile).data, "age": profile.age(nutrition.today_for(user)),
+                "has_consent": legal.has_sensitive_consent(user)}
+
+    def get(self, request):
+        return Response(self._payload(request.user))
+
+    def patch(self, request):
+        # Adding health data needs the consent; clearing it (null / "") never does.
+        adding = any(request.data.get(f) not in (None, "") for f in self.SENSITIVE if f in request.data)
+        if adding and not legal.has_sensitive_consent(request.user):
+            return Response({"code": "consent_required", "detail": _("Give your consent first.")},
+                            status=status.HTTP_403_FORBIDDEN)
+        serializer = BodySerializer(nutrition.get_profile(request.user), data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        profile = serializer.save()
+        filled = [profile.birth_year, profile.sex != profile.Sex.UNDISCLOSED, profile.weight_kg,
+                  profile.activity_level]
+        posthog.capture("profile_body_data_saved", properties={"fields_count": sum(bool(f) for f in filled)})
+        return Response(self._payload(request.user))
+
+
 # ── Goals (#80) ─────────────────────────────────────────────────────────────
 
 
 class GoalsView(APIView):
-    """``GET`` the active goal set; ``PUT {"goals": [{nutrient, kind,
+    """``GET`` the active goal set plus the recommended one (``recommended``,
+    #105, read-only); ``PUT {"goals": [{nutrient, kind,
     min_value, max_value}]}`` replaces it (a nutrient left out, or with kind
     ``none``, has no goal). Changes are versioned, never overwritten."""
 

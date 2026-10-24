@@ -65,6 +65,7 @@ api_urlpatterns = [
     path("legal/accept/", nutrition_api.LegalAcceptView.as_view(), name="legal-accept"),
     path("legal/withdraw/", nutrition_api.LegalWithdrawView.as_view(), name="legal-withdraw"),
     path("me/", nutrition_api.MeView.as_view(), name="nutrition-me"),
+    path("body/", nutrition_api.BodyView.as_view(), name="nutrition-body"),
     path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
