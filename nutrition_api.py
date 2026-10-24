@@ -6,6 +6,8 @@
 - ``body/`` — birth year, sex, weight, activity level (#105). Birth year and sex
   (also the Forge's peer score) need only a sign-in; weight and activity level
   are sensitive data and need the consent.
+- ``rolling/breakdown/`` + ``rolling/fill/`` — the goal cauldron (#107): what a
+  card's number is made of, and filling the values it doesn't know.
 - ``goals/`` (+ ``history/``), ``intake/`` (+ ``day/``), ``adherence/``,
   ``plan/`` (+ ``day/``, ``{uuid}/eat/``) — need the current terms and privacy
   notice **and** the sensitive-data consent; otherwise 403
@@ -17,6 +19,7 @@ goal (CLAUDE.md "PostHog never receives PII").
 """
 
 import posthog
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
@@ -41,7 +44,7 @@ from the_cauldron.nutrition_serializers import (
     PlannedMealInputSerializer,
     PlannedMealSerializer,
 )
-from the_cauldron.services import adherence, legal, nutrition, rolling
+from the_cauldron.services import adherence, breakdown, grimoire, legal, nutrition, rolling
 from the_cauldron.services.nutrition import NutritionInputError
 
 
@@ -314,6 +317,64 @@ class RollingView(UserTimezoneMixin, APIView):
             return Response({"detail": _("Use span 24h or 7d and 7, 30 or 90 days.")},
                             status=status.HTTP_400_BAD_REQUEST)
         return Response(rolling.rolling(request.user, span, days))
+
+
+class BreakdownView(UserTimezoneMixin, APIView):
+    """``?span=24h|7d&end=<tick iso>&nutrient=<key>`` — the goal cauldron
+    (``services.breakdown``): top spells/reagents, "others" and the fog."""
+
+    permission_classes = [IsAuthenticated, NutritionConsent]
+
+    def get(self, request):
+        try:
+            span, end, nutrient = breakdown.window_args(request.user, request.query_params)
+        except NutritionInputError as exc:
+            return _bad(exc)
+        posthog.capture("goal_breakdown_opened", properties={"span": span})
+        return Response(breakdown.breakdown(request.user, span, end, nutrient))
+
+
+class FillView(UserTimezoneMixin, APIView):
+    """``POST {nutrient, value, reagent | entry}`` — fill one gap (#107).
+    ``reagent``: per 100 g, saved on the user's own reagent or on their private
+    copy of a catalog one; ``entry``: a quick entry's own total. Marked estimated;
+    recent entries are gap-filled (``services.breakdown``)."""
+
+    permission_classes = [IsAuthenticated, NutritionConsent]
+
+    def post(self, request):
+        data = request.data
+        if not isinstance(data, dict):
+            return _bad(NutritionInputError(_("Send an object.")))
+        nutrient = data.get("nutrient")
+        try:
+            if nutrient not in nutrition.FIELDS:
+                raise NutritionInputError(_("Unknown nutrient."))
+            value = breakdown.clean_value(data.get("value"))
+            if data.get("entry"):
+                entry = IntakeEntry.objects.filter(user=request.user, uuid=data["entry"]).first()
+                if entry is None:
+                    return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+                breakdown.fill_quick(request.user, entry, nutrient, value)
+                source, refreshed, reagent = "quick", 1, None
+            elif data.get("reagent"):
+                target = (grimoire.visible_reagents(request.user).select_related("nutrients")
+                          .filter(uuid=data["reagent"]).first())
+                if target is None:
+                    return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+                source, reagent, refreshed = breakdown.fill_reagent(request.user, target, nutrient, value)
+            else:
+                raise NutritionInputError(_("Choose an ingredient or an entry."))
+        except NutritionInputError as exc:
+            return _bad(exc)
+        except ValidationError:  # a malformed uuid
+            return Response({"detail": _("Not found.")}, status=status.HTTP_404_NOT_FOUND)
+        posthog.capture("missing_value_filled", properties={"source": source})
+        return Response({
+            "source": source,
+            "reagent": str(reagent.uuid) if reagent else None,
+            "entries_refreshed": refreshed,
+        })
 
 
 # ── Ritual planner (#83) ────────────────────────────────────────────────────

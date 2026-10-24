@@ -970,7 +970,12 @@
     const chip = e.target.closest("[data-chip]");
     if (chip) { selectNutrient(chip.dataset.chip); return true; }
     const gauge = e.target.closest(".nut-gauge");
-    if (gauge) { selectNutrient(gauge.dataset.nutrient); return true; }
+    if (gauge) {
+      // Selects it for the history chart and opens its cauldron (#107).
+      selectNutrient(gauge.dataset.nutrient);
+      openCauldron(gauge.dataset.nutrient);
+      return true;
+    }
     const day = e.target.closest("[data-day]");
     if (day) {
       const ticks = roll.data.ticks;
@@ -989,12 +994,219 @@
     return false;
   }
 
+  // ── The goal cauldron (#107): what a card's number is made of ──
+  // GET rolling/breakdown/ for the card's nutrient, window and tick. The potion
+  // (seen from above) is a pie of the top spells/reagents; what's unknown rises
+  // as fog, and each fog item can be filled (POST rolling/fill/).
+  const cauldron = { nutrient: null, data: null, seq: 0 };
+  const POT = { cx: 160, cy: 118, r: 112, squash: 0.34 };
+
+  function slicePath(r, a0, a1) {
+    if (a1 - a0 >= Math.PI * 2 - 1e-6) return `M${-r},0a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+    const p = (a) => `${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`;
+    return `M0,0L${p(a0)}A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0},1 ${p(a1)}Z`;
+  }
+
+  const rowName = (row) => (row.kind === "others" ? t("cauldron_others", { n: row.groups }) : row.label);
+  const reagentLink = (uuid) => `${CFG.grimoireRoot}reagent/${encodeURIComponent(uuid)}/`;
+  const rowLink = (row) => (row.spell ? spellLink(row.spell) : row.reagent ? reagentLink(row.reagent) : null);
+  const nutAmount = (n, v) => `${fmtAmount(v)} ${UNIT_OF[n]}`;
+
+  function cauldronStatus(n) {
+    const i = roll.index;
+    return statusOf(n, i, "mine") || statusOf(n, i, "who") || "none";
+  }
+
+  async function openCauldron(n) {
+    const dlg = $("#nut-cauldron");
+    if (!dlg || !roll.data) return;
+    cauldron.nutrient = n;
+    $("#nut-cauldron-title").textContent = t(`n_${n}`);
+    const iso = roll.data.ticks[roll.index];
+    $("#nut-cauldron-sub").textContent = t("window_range", { from: fmtTick(shiftIso(iso, spanHours())), to: fmtTick(iso) })
+      + (roll.span === "7d" ? ` · ${t("cauldron_avg")}` : "");
+    dlg.dataset.status = cauldronStatus(n);
+    if (!dlg.open) dlg.showModal();
+    await loadCauldron(true);
+  }
+
+  async function loadCauldron(animate) {
+    const my = ++cauldron.seq;
+    const n = cauldron.nutrient;
+    const iso = roll.data.ticks[roll.index];
+    try {
+      const d = await api(`rolling/breakdown/?span=${roll.span}&nutrient=${encodeURIComponent(n)}&end=${encodeURIComponent(iso)}`);
+      if (my !== cauldron.seq) return;
+      cauldron.data = d;
+      renderCauldron(d, animate);
+    } catch (err) {
+      if (my !== cauldron.seq) return;
+      $("#nut-cauldron-body").innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
+    }
+  }
+
+  function potSvg(d) {
+    const n = d.nutrient;
+    const sized = d.pie.filter((row) => row.amount > 0);
+    const sum = sized.reduce((a, row) => a + row.amount, 0);
+    let a = -Math.PI / 2;
+    const slices = sized.map((row, k) => {
+      const a0 = a;
+      a += (row.amount / sum) * Math.PI * 2;
+      const mid = (a0 + a) / 2;
+      const href = rowLink(row);
+      const label = `${rowName(row)}: ${nutAmount(n, row.amount)}${row.pct != null ? ` (${row.pct}%)` : ""}`;
+      const shape = `<path class="nut-slice nut-slice--${row.kind === "others" ? "others" : k}" d="${slicePath(POT.r, a0, a)}"
+          style="--i:${k};--dx:${(Math.cos(mid) * 10).toFixed(1)}px;--dy:${(Math.sin(mid) * 10).toFixed(1)}px"/>`;
+      return href
+        ? `<a href="${esc(href)}" class="nut-slice-link" data-label="${esc(label)}" aria-label="${esc(label)}">${shape}</a>`
+        : `<g class="nut-slice-link" tabindex="0" role="img" data-label="${esc(label)}" aria-label="${esc(label)}">${shape}</g>`;
+    }).join("");
+    const fogCount = d.fog.length ? Math.min(7, 2 + d.fog.length * 2) : 0;
+    const full = d.fog.length && !sized.length;
+    const fog = Array.from({ length: full ? 9 : fogCount }, (_, k) =>
+      `<ellipse class="nut-fog" cx="${POT.cx - 90 + ((k * 47) % 180)}" cy="${POT.cy - 6 - (k % 3) * 14}" rx="${46 + (k % 2) * 18}" ry="${14 + (k % 3) * 5}" style="--i:${k}"/>`).join("");
+    const embers = Array.from({ length: 7 }, (_, k) =>
+      `<circle class="nut-ember" cx="${92 + k * 23}" cy="${276 - (k % 2) * 5}" r="${5 + (k % 3) * 2}" style="--i:${k}"/>`).join("");
+    const bubbles = sized.length || full ? Array.from({ length: 5 }, (_, k) =>
+      `<circle class="nut-bubble" cx="${POT.cx - 70 + k * 34}" cy="${POT.cy + (k % 2 ? 8 : -6)}" r="${3 + (k % 3)}" style="--i:${k}"/>`).join("") : "";
+    return `<svg viewBox="0 0 320 300" role="img" aria-labelledby="nut-cauldron-title nut-cauldron-total">
+      <defs><filter id="nut-fog-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>
+      <g class="nut-embers" aria-hidden="true">${embers}</g>
+      <path class="nut-pot-leg" d="M78 250 L66 284 M242 250 L254 284" aria-hidden="true"/>
+      <path class="nut-pot" d="M36 ${POT.cy} Q36 262 160 262 Q284 262 284 ${POT.cy} Z" aria-hidden="true"/>
+      <ellipse class="nut-pot-rim" cx="${POT.cx}" cy="${POT.cy}" rx="${POT.r + 12}" ry="${(POT.r + 12) * POT.squash}" aria-hidden="true"/>
+      <g transform="translate(${POT.cx} ${POT.cy}) scale(1 ${POT.squash})">
+        <circle class="nut-potion" r="${POT.r}" aria-hidden="true"/>
+        <g class="nut-swirl">${slices}</g>
+      </g>
+      <g aria-hidden="true">${bubbles}</g>
+      <g class="nut-fogs${full ? " is-full" : ""}" filter="url(#nut-fog-blur)" aria-hidden="true">${fog}</g>
+      <text class="nut-steam" x="${POT.cx}" y="44" text-anchor="middle" aria-hidden="true">${esc(t(`n_${n}`))}</text>
+    </svg>`;
+  }
+
+  function fillFormHtml(n, target) {
+    const name = (IS_ES && target.name_es) || target.name;
+    const hint = target.editable ? t("fill_own") : t("fill_copy");
+    return `<form class="nut-fill" data-reagent="${esc(target.reagent)}">
+      <label class="grim-field"><span>${esc(t("fill_reagent_label", { name, unit: UNIT_OF[n] }))}</span>
+        <input type="number" name="value" min="0" step="any" inputmode="decimal" required></label>
+      <button type="submit" class="btn-cauldron btn-cauldron--ghost">${esc(t("fill_save"))}</button>
+      <p class="grim-help">${esc(hint)}</p>
+    </form>`;
+  }
+
+  function fogItemHtml(n, item) {
+    const href = rowLink(item);
+    const name = href ? `<a href="${esc(href)}">${esc(item.label)}</a>` : esc(item.label);
+    let forms;
+    if (!item.fill) forms = `<p class="grim-help">${esc(t("fill_gone"))}</p>`;
+    else if (item.fill.not_owner) forms = `<p class="grim-help">${esc(t("fill_not_owner"))}</p>`;
+    else if (item.fill.quick) {
+      forms = item.fill.quick.map((q) => `<form class="nut-fill" data-entry="${esc(q.entry)}">
+          <label class="grim-field"><span>${esc(t("fill_quick_label", { time: fmtTick(q.eaten_at), unit: UNIT_OF[n] }))}</span>
+            <input type="number" name="value" min="0" step="any" inputmode="decimal" required></label>
+          <button type="submit" class="btn-cauldron btn-cauldron--ghost">${esc(t("fill_save"))}</button>
+        </form>`).join("");
+    } else if (item.fill.reagents.length) forms = item.fill.reagents.map((r) => fillFormHtml(n, r)).join("");
+    else forms = `<p class="grim-help">${esc(t("fill_none"))}</p>`;
+    const partly = item.amount > 0 ? ` · ${esc(t("fog_partly", { amount: nutAmount(n, item.amount) }))}` : "";
+    return `<li class="nut-fog-item"><p><strong>${name}</strong>
+        <span class="grim-help">${esc(t(item.entries === 1 ? "cauldron_entries_one" : "cauldron_entries_other", { n: item.entries }))}${partly}</span></p>${forms}</li>`;
+  }
+
+  function renderCauldron(d, animate) {
+    const n = d.nutrient;
+    const dlg = $("#nut-cauldron");
+    dlg.dataset.status = cauldronStatus(n);
+    $("#nut-cauldron-total").textContent = d.entries
+      ? `${d.lower_bound ? "≥ " : ""}${nutAmount(n, d.total)}${d.span === "7d" ? ` ${t("cauldron_per_day")}` : ""}`
+      : "";
+    const pot = $("#nut-cauldron-pot");
+    pot.classList.toggle("is-pouring", Boolean(animate));
+    pot.classList.toggle("is-empty", !d.entries);
+    pot.innerHTML = potSvg(d);
+    $("#nut-cauldron-caption").textContent = "";
+    if (!d.entries) {
+      $("#nut-cauldron-body").innerHTML = `<p class="grim-help nut-cauldron-empty">${esc(t("cauldron_empty"))}</p>`;
+      return;
+    }
+    const list = d.pie.length
+      ? `<ol class="nut-cauldron-list">${d.pie.map((row, k) => {
+        const href = rowLink(row);
+        const name = href ? `<a href="${esc(href)}">${esc(rowName(row))}</a>` : esc(rowName(row));
+        return `<li><span class="nut-swatch nut-slice--${row.kind === "others" ? "others" : k}" aria-hidden="true"></span>
+          <span class="nut-cauldron-name">${name}${row.estimated ? ` <span class="grim-badge is-warn">${esc(t("badge_estimated_short"))}</span>` : ""}</span>
+          <span class="nut-cauldron-amount">${esc(nutAmount(n, row.amount))}</span>
+          <span class="nut-cauldron-pct">${row.pct != null ? `${row.pct}%` : ""}</span></li>`;
+      }).join("")}</ol>`
+      : `<p class="grim-help">${esc(t("cauldron_all_fog"))}</p>`;
+    const fog = d.fog.length
+      ? `<section class="nut-cauldron-fog" aria-labelledby="nut-fog-title">
+          <h3 class="grim-section-title" id="nut-fog-title">${esc(t("fog_title"))}</h3>
+          <p class="grim-help">${esc(t("fog_help"))}</p>
+          <ul class="nut-fog-list">${d.fog.map((item) => fogItemHtml(n, item)).join("")}</ul></section>`
+      : "";
+    $("#nut-cauldron-body").innerHTML = list + fog;
+  }
+
+  async function fillGap(form) {
+    const input = form.elements.value;
+    const body = { nutrient: cauldron.nutrient, value: input.value };
+    if (form.dataset.reagent) body.reagent = form.dataset.reagent;
+    else body.entry = form.dataset.entry;
+    const btn = form.querySelector("button");
+    btn.disabled = true;
+    try {
+      const res = await api("rolling/fill/", { method: "POST", body });
+      toast(t(res.entries_refreshed ? "fill_saved" : "fill_saved_only"));
+      await loadCauldron(false);
+      loadRolling();
+    } catch (err) {
+      toast(errorText(err));
+      btn.disabled = false;
+    }
+  }
+
+  function showSliceCaption(el) {
+    const link = el && el.closest(".nut-slice-link");
+    $$(".nut-slice-link.is-lifted", $("#nut-cauldron-pot")).forEach((x) => { if (x !== link) x.classList.remove("is-lifted"); });
+    if (link) link.classList.add("is-lifted");
+    $("#nut-cauldron-caption").textContent = link ? link.dataset.label : "";
+  }
+
+  function initCauldron() {
+    const dlg = $("#nut-cauldron");
+    if (!dlg) return;
+    $("#nut-cauldron-close").addEventListener("click", () => dlg.close());
+    // A click on the backdrop (outside the panel) closes it too.
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => {
+      cauldron.seq += 1;
+      const card = $(`.nut-gauge[data-nutrient="${cauldron.nutrient}"]`);
+      if (card) card.focus();
+    });
+    dlg.addEventListener("submit", (e) => {
+      const form = e.target.closest(".nut-fill");
+      if (!form) return;
+      e.preventDefault();
+      fillGap(form);
+    });
+    const pot = $("#nut-cauldron-pot");
+    pot.addEventListener("mouseover", (e) => showSliceCaption(e.target));
+    pot.addEventListener("mouseleave", () => showSliceCaption(null));
+    pot.addEventListener("focusin", (e) => showSliceCaption(e.target));
+    pot.addEventListener("focusout", () => showSliceCaption(null));
+  }
+
   function initRolling() {
     $("#nut-scrub").addEventListener("input", (e) => setIndex(Number(e.target.value)));
     window.addEventListener("resize", debounce(() => { if (roll.data) { renderTimelineDays(); renderHistory(); } }, 200));
     // The window moves with the clock: refresh while it's following "now".
     setInterval(() => { if (roll.follow && !document.hidden) loadRolling(); }, 5 * 60 * 1000);
     loadRolling();
+    initCauldron();
   }
 
   // ── Entry form ──

@@ -200,7 +200,7 @@ class TestTotalsAndGoals:
                                       "values": {"sugar_g": 35, "added_sugar_g": 35}}, format="json")
         roll = client.get(f"{API}rolling/?span=24h&days=7").data
         assert roll["values"]["added_sugar_g"][-1] == pytest.approx(35)
-        assert roll["status"]["added_sugar_g"][-1] == "missed"
+        assert roll["sets"]["mine"]["status"]["added_sugar_g"][-1] == "missed"
 
 
 class TestMcp:
