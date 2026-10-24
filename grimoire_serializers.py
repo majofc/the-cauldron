@@ -156,7 +156,9 @@ class ReagentSerializer(serializers.ModelSerializer):
             # (null), not "keep the old value"; PATCH changes only what it sends.
             if not self.partial:
                 nutrients = {field: nutrients.get(field) for field in ReagentNutrients.FIELDS}
-            ReagentNutrients.objects.update_or_create(reagent=instance, defaults=nutrients)
+            # The viewset select_related()s the profile: put the saved one back
+            # on the instance, or the response renders the old cached values (#86).
+            instance.nutrients, _ = ReagentNutrients.objects.update_or_create(reagent=instance, defaults=nutrients)
         if units_changed:
             grimoire.regrams_lines(instance)
         return instance
