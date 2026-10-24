@@ -165,6 +165,17 @@
       </div>
 
       <button class="btn-cauldron btn-cauldron--primary" id="forge-save-equipment">{% trans "Save equipment" %}</button>
+
+      <div class="forge-demographics forge-volume" id="forge-volume" hidden>
+        <h3 class="forge-about-h3">{% trans "Weekly volume" %}</h3>
+        <p class="forge-help">{% blocktrans trimmed %}Working sets per movement pattern per week. Each session's sets
+          follow from it — between 2 and 5 per movement — and change as soon as you save.{% endblocktrans %}</p>
+        <div class="forge-volume-row">
+          <label class="forge-field"><span>{% trans "Sets per pattern per week" %}</span>
+            <input type="number" id="forge-volume-input" min="4" max="40" step="1" inputmode="numeric"></label>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-volume-save">{% trans "Save volume" %}</button>
+        </div>
+      </div>
     </div>
   </section>
 

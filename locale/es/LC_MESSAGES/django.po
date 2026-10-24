@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-24 18:05+0000\n"
+"POT-Creation-Date: 2026-10-24 21:08+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,19 +29,23 @@ msgstr "acción desconocida"
 msgid "exercise must be an exercise uuid."
 msgstr "exercise debe ser el uuid de un ejercicio."
 
-#: api.py:359 api.py:397 api.py:532
+#: api.py:389 api.py:395 api.py:443 api.py:578
 msgid "No active program."
 msgstr "No hay un programa activo."
 
-#: api.py:368
+#: api.py:397
+msgid "Send weekly_volume_target."
+msgstr "Envía weekly_volume_target."
+
+#: api.py:414
 msgid "Finish or delete your last unfinished session first."
 msgstr "Primero termina o borra tu última sesión sin terminar."
 
-#: api.py:575 api.py:589
+#: api.py:621 api.py:635
 msgid "Session already finalized."
 msgstr "La sesión ya se cerró."
 
-#: api.py:594
+#: api.py:640
 msgid "from_exercise and to_exercise must be exercise uuids."
 msgstr "from_exercise y to_exercise deben ser uuids de ejercicios."
 
@@ -73,19 +77,19 @@ msgstr "No se pudo cargar la Prueba."
 msgid "Equipment saved. Now take the Trial."
 msgstr "Equipo guardado. Ahora haz la Prueba."
 
-#: forge_i18n.py:41 templates/the_cauldron/forge.html:197
+#: forge_i18n.py:41 templates/the_cauldron/forge.html:208
 msgid "Cauldron Chime"
 msgstr "Campanilla del Caldero"
 
-#: forge_i18n.py:42 templates/the_cauldron/forge.html:198
+#: forge_i18n.py:42 templates/the_cauldron/forge.html:209
 msgid "Ember Bell"
 msgstr "Campana de brasa"
 
-#: forge_i18n.py:43 templates/the_cauldron/forge.html:199
+#: forge_i18n.py:43 templates/the_cauldron/forge.html:210
 msgid "Deep Gong"
 msgstr "Gong profundo"
 
-#: forge_i18n.py:44 templates/the_cauldron/forge.html:200
+#: forge_i18n.py:44 templates/the_cauldron/forge.html:211
 msgid "Arcane Triad"
 msgstr "Tríada arcana"
 
@@ -454,7 +458,7 @@ msgstr "Serie %(n)s"
 msgid "target %(n)s %(unit)s"
 msgstr "meta %(n)s %(unit)s"
 
-#: forge_i18n.py:142 templates/the_cauldron/forge.html:312
+#: forge_i18n.py:142 templates/the_cauldron/forge.html:323
 msgid "Delete it"
 msgstr "Borrarla"
 
@@ -683,7 +687,7 @@ msgstr "Isquiotibiales · Glúteos · Espalda baja"
 msgid "Forearms · Hands"
 msgstr "Antebrazos · Manos"
 
-#: forge_i18n.py:202 forge_i18n.py:462
+#: forge_i18n.py:202 forge_i18n.py:472
 msgid "Cleared"
 msgstr "Superado"
 
@@ -776,74 +780,114 @@ msgstr "Sustituto"
 msgid "⇅ Change my rung"
 msgstr "⇅ Cambiar mi peldaño"
 
-#: forge_i18n.py:225
+#: forge_i18n.py:226
+msgid "Set my load"
+msgstr "Fijar mi peso"
+
+#: forge_i18n.py:227
+msgid "Use this load"
+msgstr "Usar este peso"
+
+#: forge_i18n.py:228
+msgid "Applies everywhere this movement is in your plan. A load you can't build rounds down to the nearest one you can."
+msgstr "Se aplica en todo tu plan donde esté este movimiento. Un peso que no puedes armar baja al más cercano que sí puedes."
+
+#: forge_i18n.py:229
+#, python-format
+msgid "Band %(n)s"
+msgstr "Liga %(n)s"
+
+#: forge_i18n.py:230
+#, python-format
+msgid "Load set to %(load)s."
+msgstr "Peso fijado en %(load)s."
+
+#: forge_i18n.py:231
+#, python-format
+msgid "%(asked)s can't be built — set to %(load)s."
+msgstr "%(asked)s no se puede armar — quedó en %(load)s."
+
+#: forge_i18n.py:232
+msgid "Couldn't set that load."
+msgstr "No se pudo fijar ese peso."
+
+#: forge_i18n.py:233
+#, python-format
+msgid "Weekly volume set to %(n)s sets per pattern."
+msgstr "Volumen semanal: %(n)s series por patrón."
+
+#: forge_i18n.py:234
+msgid "Couldn't save the weekly volume."
+msgstr "No se pudo guardar el volumen semanal."
+
+#: forge_i18n.py:235
 msgid "Make this my rung"
 msgstr "Hacer este mi peldaño"
 
-#: forge_i18n.py:226
+#: forge_i18n.py:236
 msgid "Block this exercise"
 msgstr "Bloquear este ejercicio"
 
-#: forge_i18n.py:228
+#: forge_i18n.py:238
 msgid "How to build it"
 msgstr "Cómo armarlo"
 
-#: forge_i18n.py:229
+#: forge_i18n.py:239
 msgid "Bare bar / empty handle — no plates."
 msgstr "Barra / maneral vacío — sin discos."
 
-#: forge_i18n.py:230
+#: forge_i18n.py:240
 msgid "Load into the bell"
 msgstr "Carga dentro de la pesa"
 
-#: forge_i18n.py:231
+#: forge_i18n.py:241
 msgid "Load per side"
 msgstr "Carga por lado"
 
-#: forge_i18n.py:232
+#: forge_i18n.py:242
 msgid "Still in the box"
 msgstr "Lo que queda en la caja"
 
-#: forge_i18n.py:234
+#: forge_i18n.py:244
 msgid "Couldn't load your ladder."
 msgstr "No se pudo cargar tu escalera."
 
-#: forge_i18n.py:235
+#: forge_i18n.py:245
 msgid "Change your rung"
 msgstr "Cambia tu peldaño"
 
-#: forge_i18n.py:237
+#: forge_i18n.py:247
 msgid "Jump to any rung you can do, up or down. Every day that trains this ladder moves with it, and progress carries on from there."
 msgstr "Salta a cualquier peldaño que puedas hacer, hacia arriba o hacia abajo. Cada día que entrena esta escalera se mueve con él, y el progreso sigue desde ahí."
 
-#: forge_i18n.py:240
+#: forge_i18n.py:250
 #, python-format
 msgid "Rungs marked %(mark)s ask you to confirm first."
 msgstr "Los peldaños marcados %(mark)s te piden confirmar primero."
 
-#: forge_i18n.py:241
+#: forge_i18n.py:251
 msgid "above your Trial"
 msgstr "arriba de tu Prueba"
 
-#: forge_i18n.py:242
+#: forge_i18n.py:252
 msgid "Above your Trial"
 msgstr "Arriba de tu Prueba"
 
-#: forge_i18n.py:243
+#: forge_i18n.py:253
 msgid "Current"
 msgstr "Actual"
 
-#: forge_i18n.py:245
+#: forge_i18n.py:255
 #, python-format
 msgid "This rung is placed at %(required)s on the %(anchor)s; your last Trial was %(yours)s. You can still take it — if the sets don't land, the Forge will ease you back down."
 msgstr "Este peldaño se asigna con %(required)s en %(anchor)s; tu última Prueba fue %(yours)s. Aun así puedes tomarlo — si las series no salen, la Forja te bajará con calma."
 
-#: forge_i18n.py:249
+#: forge_i18n.py:259
 #, python-format
 msgid "This rung is placed at %(required)s; your last Trial was %(yours)s. You can still take it — if the sets don't land, the Forge will ease you back down."
 msgstr "Este peldaño se asigna con %(required)s; tu última Prueba fue %(yours)s. Aun así puedes tomarlo — si las series no salen, la Forja te bajará con calma."
 
-#: forge_i18n.py:252 templates/the_cauldron/grimoire.html:112
+#: forge_i18n.py:262 templates/the_cauldron/grimoire.html:112
 #: templates/the_cauldron/grimoire.html:160
 #: templates/the_cauldron/grimoire.html:226
 #: templates/the_cauldron/nutrition.html:280
@@ -851,766 +895,766 @@ msgstr "Este peldaño se asigna con %(required)s; tu última Prueba fue %(yours)
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: forge_i18n.py:253
+#: forge_i18n.py:263
 msgid "Move anyway"
 msgstr "Cambiar de todos modos"
 
-#: forge_i18n.py:254
+#: forge_i18n.py:264
 msgid "Couldn't change your rung."
 msgstr "No se pudo cambiar tu peldaño."
 
-#: forge_i18n.py:255
+#: forge_i18n.py:265
 #, python-format
 msgid "Now training %(name)s."
 msgstr "Ahora entrenas %(name)s."
 
-#: forge_i18n.py:257
+#: forge_i18n.py:267
 msgid "No saved sessions yet."
 msgstr "Todavía no hay sesiones guardadas."
 
-#: forge_i18n.py:258
+#: forge_i18n.py:268
 msgid "Session"
 msgstr "Sesión"
 
-#: forge_i18n.py:259
+#: forge_i18n.py:269
 #, python-format
 msgid "%(name)s · set %(n)s"
 msgstr "%(name)s · serie %(n)s"
 
-#: forge_i18n.py:260
+#: forge_i18n.py:270
 #, python-format
 msgid "%(actual)s / %(expected)s %(unit)s"
 msgstr "%(actual)s / %(expected)s %(unit)s"
 
-#: forge_i18n.py:261
+#: forge_i18n.py:271
 msgid "Couldn't load history."
 msgstr "No se pudo cargar el historial."
 
-#: forge_i18n.py:262
+#: forge_i18n.py:272
 msgid "Log a session to see your progression."
 msgstr "Registra una sesión para ver tu progresión."
 
-#: forge_i18n.py:263
+#: forge_i18n.py:273
 #, python-format
 msgid "Dashed lines = peer deciles for %(name)s (your age & sex)."
 msgstr "Líneas punteadas = deciles de %(name)s (tu edad y sexo)."
 
-#: forge_i18n.py:264
+#: forge_i18n.py:274
 #, python-format
 msgctxt "decile, chart label"
 msgid "D%(d)s"
 msgstr "D%(d)s"
 
-#: forge_i18n.py:265
+#: forge_i18n.py:275
 msgid "Progression chart"
 msgstr "Gráfica de progresión"
 
-#: forge_i18n.py:266
+#: forge_i18n.py:276
 #, python-format
 msgctxt "chart bucket"
 msgid "Wk %(n)s"
 msgstr "Sem %(n)s"
 
-#: forge_i18n.py:267
+#: forge_i18n.py:277
 msgid "Couldn't start the session."
 msgstr "No se pudo iniciar la sesión."
 
-#: forge_i18n.py:269 templates/the_cauldron/forge.html:222
-#: templates/the_cauldron/forge.html:391 templates/the_cauldron/forge.html:412
+#: forge_i18n.py:279 templates/the_cauldron/forge.html:233
+#: templates/the_cauldron/forge.html:402 templates/the_cauldron/forge.html:423
 msgid "Earphones mode"
 msgstr "Modo audífonos"
 
-#: forge_i18n.py:270 templates/the_cauldron/forge.html:413
+#: forge_i18n.py:280 templates/the_cauldron/forge.html:424
 msgid "Getting ready…"
 msgstr "Preparando…"
 
-#: forge_i18n.py:271
+#: forge_i18n.py:281
 msgid "Earphones mode on. Let's forge."
 msgstr "Modo audífonos activado. A forjar."
 
-#: forge_i18n.py:272
+#: forge_i18n.py:282
 msgid "Log"
 msgstr "Registrar"
 
-#: forge_i18n.py:273
+#: forge_i18n.py:283
 msgid "Skip"
 msgstr "Saltar"
 
-#: forge_i18n.py:274
+#: forge_i18n.py:284
 msgid "Exit"
 msgstr "Salir"
 
-#: forge_i18n.py:275
+#: forge_i18n.py:285
 msgid "■ Stop"
 msgstr "■ Detener"
 
-#: forge_i18n.py:276
+#: forge_i18n.py:286
 msgid "⏭ Skip rest"
 msgstr "⏭ Saltar descanso"
 
-#: forge_i18n.py:277
+#: forge_i18n.py:287
 msgid "one"
 msgstr "uno"
 
-#: forge_i18n.py:278
+#: forge_i18n.py:288
 msgid "two"
 msgstr "dos"
 
-#: forge_i18n.py:279
+#: forge_i18n.py:289
 msgid "three"
 msgstr "tres"
 
-#: forge_i18n.py:280
+#: forge_i18n.py:290
 msgid "Go."
 msgstr "Ya."
 
-#: forge_i18n.py:281
+#: forge_i18n.py:291
 msgid "Microphone blocked — use the on-screen buttons (allow the mic and reopen for voice)."
 msgstr "Micrófono bloqueado — usa los botones en pantalla (permite el micrófono y vuelve a abrir para usar la voz)."
 
-#: forge_i18n.py:282
+#: forge_i18n.py:292
 msgid "Mic permission denied — voice off. Use the buttons."
 msgstr "Permiso de micrófono denegado — voz desactivada. Usa los botones."
 
-#: forge_i18n.py:283
+#: forge_i18n.py:293
 #, python-format
 msgid "Set %(n)s of %(total)s"
 msgstr "Serie %(n)s de %(total)s"
 
-#: forge_i18n.py:284
+#: forge_i18n.py:294
 #, python-format
 msgid "at %(load)s"
 msgstr "con %(load)s"
 
-#: forge_i18n.py:285
+#: forge_i18n.py:295
 msgid "Hold as long as you can"
 msgstr "Sostén todo lo que puedas"
 
-#: forge_i18n.py:286
+#: forge_i18n.py:296
 #, python-format
 msgid "Target hold %(n)s seconds"
 msgstr "Sostén meta de %(n)s segundos"
 
-#: forge_i18n.py:287
+#: forge_i18n.py:297
 #, python-format
 msgid "Target hold, %(n)s seconds."
 msgstr "Sostén meta, %(n)s segundos."
 
-#: forge_i18n.py:288
+#: forge_i18n.py:298
 #, python-format
 msgid "As many reps as possible (target %(n)s+)"
 msgstr "Tantas reps como puedas (meta %(n)s+)"
 
-#: forge_i18n.py:289
+#: forge_i18n.py:299
 msgid "As many reps as you can"
 msgstr "Tantas reps como puedas"
 
-#: forge_i18n.py:290
+#: forge_i18n.py:300
 #, python-format
 msgid "Target %(n)s reps"
 msgstr "Meta de %(n)s reps"
 
-#: forge_i18n.py:291
+#: forge_i18n.py:301
 msgid "Say start when you're ready."
 msgstr "Di “empieza” cuando estés listo."
 
-#: forge_i18n.py:292
+#: forge_i18n.py:302
 msgid "Tap start when you're ready."
 msgstr "Toca Iniciar cuando estés listo."
 
-#: forge_i18n.py:293
+#: forge_i18n.py:303
 msgid "Say your reps when you're done."
 msgstr "Di tus reps cuando termines."
 
-#: forge_i18n.py:294
+#: forge_i18n.py:304
 msgid "Tap your reps when you're done."
 msgstr "Toca tus reps cuando termines."
 
-#: forge_i18n.py:295
+#: forge_i18n.py:305
 msgid "Say “start” to begin the hold."
 msgstr "Di “empieza” para comenzar el sostén."
 
-#: forge_i18n.py:296
+#: forge_i18n.py:306
 msgid "Tap Start to begin the hold."
 msgstr "Toca Iniciar para comenzar el sostén."
 
-#: forge_i18n.py:297
+#: forge_i18n.py:307
 msgid "Holding… say “stop” when you're done."
 msgstr "Sosteniendo… di “alto” cuando termines."
 
-#: forge_i18n.py:298
+#: forge_i18n.py:308
 msgid "Holding… tap Stop when you're done."
 msgstr "Sosteniendo… toca Detener cuando termines."
 
-#: forge_i18n.py:299
+#: forge_i18n.py:309
 msgid "Do your set, then say your reps (a number)."
 msgstr "Haz tu serie y luego di tus reps (un número)."
 
-#: forge_i18n.py:300
+#: forge_i18n.py:310
 msgid "Do your set, then tap your reps below."
 msgstr "Haz tu serie y luego toca tus reps abajo."
 
-#: forge_i18n.py:301
+#: forge_i18n.py:311
 msgid "Resting — say “skip” to go now."
 msgstr "Descansando — di “salta” para seguir ya."
 
-#: forge_i18n.py:302
+#: forge_i18n.py:312
 msgid "Resting — tap Skip to go now."
 msgstr "Descansando — toca Saltar para seguir ya."
 
-#: forge_i18n.py:303
+#: forge_i18n.py:313
 msgid "Still resting. Say skip to go now."
 msgstr "Sigues descansando. Di “salta” para seguir ya."
 
-#: forge_i18n.py:304
+#: forge_i18n.py:314
 #, python-format
 msgid "Next: %(name)s, %(detail)s."
 msgstr "Sigue: %(name)s, %(detail)s."
 
-#: forge_i18n.py:305
+#: forge_i18n.py:315
 msgid "hold as long as you can"
 msgstr "sostén todo lo que puedas"
 
-#: forge_i18n.py:306
+#: forge_i18n.py:316
 #, python-format
 msgid "hold %(n)s seconds"
 msgstr "sostén %(n)s segundos"
 
-#: forge_i18n.py:307
+#: forge_i18n.py:317
 msgid "as many reps as you can"
 msgstr "tantas reps como puedas"
 
-#: forge_i18n.py:308
+#: forge_i18n.py:318
 #, python-format
 msgid "target %(n)s reps"
 msgstr "meta de %(n)s reps"
 
-#: forge_i18n.py:309
+#: forge_i18n.py:319
 msgid "Recover"
 msgstr "Recupérate"
 
-#: forge_i18n.py:310
+#: forge_i18n.py:320
 msgid "Rest"
 msgstr "Descanso"
 
-#: forge_i18n.py:311
+#: forge_i18n.py:321
 #, python-format
 msgid "Rest %(rest)s — say “skip” to go now."
 msgstr "Descansa %(rest)s — di “salta” para seguir ya."
 
-#: forge_i18n.py:312
+#: forge_i18n.py:322
 #, python-format
 msgid "Rest %(rest)s — tap Skip to go now."
 msgstr "Descansa %(rest)s — toca Saltar para seguir ya."
 
-#: forge_i18n.py:313
+#: forge_i18n.py:323
 msgid "Rest over."
 msgstr "Se acabó el descanso."
 
-#: forge_i18n.py:314
+#: forge_i18n.py:324
 msgid "Done"
 msgstr "Listo"
 
-#: forge_i18n.py:315
+#: forge_i18n.py:325
 msgid "Workout complete"
 msgstr "Entrenamiento completo"
 
-#: forge_i18n.py:316
+#: forge_i18n.py:326
 msgid "No sets logged."
 msgstr "No se registraron series."
 
-#: forge_i18n.py:317
+#: forge_i18n.py:327
 msgid "No sets were logged. Exiting earphones mode."
 msgstr "No se registraron series. Saliendo del modo audífonos."
 
-#: forge_i18n.py:318
+#: forge_i18n.py:328
 msgid "Saving your session…"
 msgstr "Guardando tu sesión…"
 
-#: forge_i18n.py:319
+#: forge_i18n.py:329
 msgid "Workout complete. Saving your session."
 msgstr "Entrenamiento completo. Guardando tu sesión."
 
-#: forge_i18n.py:320
+#: forge_i18n.py:330
 msgid "Couldn't save — your reps are still on the Today screen."
 msgstr "No se pudo guardar — tus reps siguen en la pantalla de Hoy."
 
-#: forge_i18n.py:321
+#: forge_i18n.py:331
 msgid "Exiting earphones mode."
 msgstr "Saliendo del modo audífonos."
 
-#: forge_i18n.py:323
+#: forge_i18n.py:333
 msgid "Earphones mode closed. Your logged reps are on the Today screen — tap Save session to keep them."
 msgstr "Modo audífonos cerrado. Tus reps registradas están en la pantalla de Hoy — toca Guardar sesión para conservarlas."
 
-#: forge_i18n.py:325
+#: forge_i18n.py:335
 msgid "Earphones mode needs Chrome or Edge."
 msgstr "El modo audífonos necesita Chrome o Edge."
 
-#: forge_i18n.py:326
+#: forge_i18n.py:336
 msgid "Open a day first."
 msgstr "Primero abre un día."
 
-#: forge_i18n.py:327
+#: forge_i18n.py:337
 msgid "Nothing scheduled today."
 msgstr "No hay nada programado hoy."
 
-#: forge_i18n.py:328
+#: forge_i18n.py:338
 msgid "All sets are already filled — nothing left for earphones mode."
 msgstr "Todas las series ya están llenas — no queda nada para el modo audífonos."
 
-#: forge_i18n.py:329
+#: forge_i18n.py:339
 msgid "Voice input on — tap to mute (stops the listening beep)"
 msgstr "Entrada de voz activada — toca para silenciar (quita el pitido de escucha)"
 
-#: forge_i18n.py:330 templates/the_cauldron/forge.html:398
+#: forge_i18n.py:340 templates/the_cauldron/forge.html:409
 msgid "Voice input off — tap to enable hands-free commands (your browser beeps while listening)"
 msgstr "Entrada de voz desactivada — toca para activar los comandos manos libres (tu navegador pita mientras escucha)"
 
-#: forge_i18n.py:332
+#: forge_i18n.py:342
 msgid "Front muscle map"
 msgstr "Mapa muscular frontal"
 
-#: forge_i18n.py:333
+#: forge_i18n.py:343
 msgid "Back muscle map"
 msgstr "Mapa muscular posterior"
 
-#: forge_i18n.py:334
+#: forge_i18n.py:344
 msgctxt "body side"
 msgid "Front"
 msgstr "Frente"
 
-#: forge_i18n.py:335
+#: forge_i18n.py:345
 msgctxt "body side"
 msgid "Back"
 msgstr "Espalda"
 
-#: forge_i18n.py:338
+#: forge_i18n.py:348
 #, python-format
 msgid "Holding. %(n)s second so far. Say stop when done."
 msgid_plural "Holding. %(n)s seconds so far. Say stop when done."
 msgstr[0] "Sosteniendo. Llevas %(n)s segundo. Di “alto” al terminar."
 msgstr[1] "Sosteniendo. Llevas %(n)s segundos. Di “alto” al terminar."
 
-#: forge_i18n.py:343
+#: forge_i18n.py:353
 #, python-format
 msgid "Recorded %(n)s second."
 msgid_plural "Recorded %(n)s seconds."
 msgstr[0] "Registré %(n)s segundo."
 msgstr[1] "Registré %(n)s segundos."
 
-#: forge_i18n.py:348
+#: forge_i18n.py:358
 #, python-format
 msgid "Logged %(n)s rep."
 msgid_plural "Logged %(n)s reps."
 msgstr[0] "Registré %(n)s rep."
 msgstr[1] "Registré %(n)s reps."
 
-#: forge_i18n.py:353
+#: forge_i18n.py:363
 #, python-format
 msgid "Rest for %(n)s second."
 msgid_plural "Rest for %(n)s seconds."
 msgstr[0] "Descansa %(n)s segundo."
 msgstr[1] "Descansa %(n)s segundos."
 
-#: forge_i18n.py:358
+#: forge_i18n.py:368
 #, python-format
 msgid "Swapped in %(n)s live prescription."
 msgid_plural "Swapped in %(n)s live prescriptions."
 msgstr[0] "Se cambió en %(n)s prescripción activa."
 msgstr[1] "Se cambió en %(n)s prescripciones activas."
 
-#: forge_i18n.py:363
+#: forge_i18n.py:373
 #, python-format
 msgid "Your last Trial was %(n)s day ago — retake it to re-place yourself and see how your strength has moved."
 msgid_plural "Your last Trial was %(n)s days ago — retake it to re-place yourself and see how your strength has moved."
 msgstr[0] "Tu última Prueba fue hace %(n)s día — repítela para volver a ubicarte y ver cómo se movió tu fuerza."
 msgstr[1] "Tu última Prueba fue hace %(n)s días — repítela para volver a ubicarte y ver cómo se movió tu fuerza."
 
-#: forge_i18n.py:368
+#: forge_i18n.py:378
 #, python-format
 msgid "%(n)s session"
 msgid_plural "%(n)s sessions"
 msgstr[0] "%(n)s sesión"
 msgstr[1] "%(n)s sesiones"
 
-#: forge_i18n.py:373
+#: forge_i18n.py:383
 #, python-format
 msgid "%(n)s set"
 msgid_plural "%(n)s sets"
 msgstr[0] "%(n)s serie"
 msgstr[1] "%(n)s series"
 
-#: forge_i18n.py:378
+#: forge_i18n.py:388
 #, python-format
 msgid "%(n)s flame"
 msgid_plural "%(n)s flames"
 msgstr[0] "%(n)s llama"
 msgstr[1] "%(n)s llamas"
 
-#: forge_i18n.py:383
+#: forge_i18n.py:393
 #, python-format
 msgid "%(n)s Trial"
 msgid_plural "%(n)s Trials"
 msgstr[0] "%(n)s Prueba"
 msgstr[1] "%(n)s Pruebas"
 
-#: forge_i18n.py:388
+#: forge_i18n.py:398
 #, python-format
 msgid "%(n)s rep"
 msgid_plural "%(n)s reps"
 msgstr[0] "%(n)s rep"
 msgstr[1] "%(n)s reps"
 
-#: forge_i18n.py:393
+#: forge_i18n.py:403
 #, python-format
 msgid "%(n)s second"
 msgid_plural "%(n)s seconds"
 msgstr[0] "%(n)s segundo"
 msgstr[1] "%(n)s segundos"
 
-#: forge_i18n.py:459
+#: forge_i18n.py:469
 msgid "Evolve"
 msgstr "Evolucionar"
 
-#: forge_i18n.py:460
+#: forge_i18n.py:470
 #, python-format
 msgid "Watch %(name)s evolve"
 msgstr "Ver evolucionar %(name)s"
 
-#: forge_i18n.py:461
+#: forge_i18n.py:471
 msgid "Loaded variant"
 msgstr "Variante con peso"
 
-#: forge_i18n.py:463
+#: forge_i18n.py:473
 msgid "Your rung"
 msgstr "Tu peldaño"
 
-#: forge_i18n.py:464
+#: forge_i18n.py:474
 msgid "Unlocked — ready"
 msgstr "Desbloqueado — listo"
 
-#: forge_i18n.py:465
+#: forge_i18n.py:475
 msgid "Locked"
 msgstr "Bloqueado"
 
-#: forge_i18n.py:466
+#: forge_i18n.py:476
 msgid "Requires"
 msgstr "Requiere"
 
-#: forge_i18n.py:467
+#: forge_i18n.py:477
 msgid "Hover or tap any node to read its cue."
 msgstr "Pasa el cursor o toca cualquier nodo para leer su clave."
 
-#: forge_i18n.py:470
+#: forge_i18n.py:480
 msgid "Horizontal Push"
 msgstr "Empuje horizontal"
 
-#: forge_i18n.py:471
+#: forge_i18n.py:481
 msgid "Wall Push-up"
 msgstr "Lagartija en pared"
 
-#: forge_i18n.py:472
+#: forge_i18n.py:482
 msgid "Stand an arm’s length from a wall, body in one line. Bend the elbows to bring your chest near, then press away."
 msgstr "Párate a un brazo de distancia de la pared, cuerpo en línea. Dobla los codos para acercar el pecho y empuja."
 
-#: forge_i18n.py:474
+#: forge_i18n.py:484
 msgid "Incline Push-up"
 msgstr "Lagartija inclinada"
 
-#: forge_i18n.py:475
+#: forge_i18n.py:485
 msgid "Hands on a raised edge — the higher the surface, the lighter the load. Lower the surface as you get stronger."
 msgstr "Manos en una orilla elevada — entre más alta la superficie, más ligera la carga. Bájala conforme te hagas más fuerte."
 
-#: forge_i18n.py:477 templates/the_cauldron/landing.html:305
+#: forge_i18n.py:487 templates/the_cauldron/landing.html:305
 msgid "Knee Push-up"
 msgstr "Lagartija de rodillas"
 
-#: forge_i18n.py:478
+#: forge_i18n.py:488
 msgid "From the knees, keep a straight line hip-to-head. A clean half-step before the full push-up."
 msgstr "Desde las rodillas, mantén una línea recta de la cadera a la cabeza. Un medio paso limpio antes de la lagartija completa."
 
-#: forge_i18n.py:479
+#: forge_i18n.py:489
 msgid "Banded Knee Push-up"
 msgstr "Lagartija de rodillas con liga"
 
-#: forge_i18n.py:479 forge_i18n.py:500
+#: forge_i18n.py:489 forge_i18n.py:510
 msgid "Resistance band"
 msgstr "Liga de resistencia"
 
-#: forge_i18n.py:480
+#: forge_i18n.py:490
 msgid "Loop a band across the upper back for accommodating resistance — hardest at lockout."
 msgstr "Pasa una liga por la espalda alta para una resistencia variable — más dura al extender por completo."
 
-#: forge_i18n.py:481
+#: forge_i18n.py:491
 msgid "Full Push-up"
 msgstr "Lagartija completa"
 
-#: forge_i18n.py:482
+#: forge_i18n.py:492
 msgid "Plank-tight, elbows tracking ~45°, chest to the floor and back. The benchmark of horizontal pressing."
 msgstr "Firme como plancha, codos a ~45°, pecho al piso y de vuelta. La referencia del empuje horizontal."
 
-#: forge_i18n.py:484
+#: forge_i18n.py:494
 msgid "Weighted Push-up"
 msgstr "Lagartija con peso"
 
-#: forge_i18n.py:484
+#: forge_i18n.py:494
 msgid "Plate / pack"
 msgstr "Disco / mochila"
 
-#: forge_i18n.py:485
+#: forge_i18n.py:495
 msgid "Rest a plate or loaded pack on the upper back once bodyweight reps feel easy."
 msgstr "Apoya un disco o una mochila cargada en la espalda alta cuando las reps con tu peso se sientan fáciles."
 
-#: forge_i18n.py:486 templates/the_cauldron/landing.html:307
+#: forge_i18n.py:496 templates/the_cauldron/landing.html:307
 msgid "Diamond Push-up"
 msgstr "Lagartija diamante"
 
-#: forge_i18n.py:487
+#: forge_i18n.py:497
 msgid "Hands together under the chest forming a diamond. Shifts the load onto the triceps and inner chest."
 msgstr "Manos juntas bajo el pecho formando un diamante. Pasa la carga a los tríceps y al pecho interno."
 
-#: forge_i18n.py:489
+#: forge_i18n.py:499
 msgid "Archer Push-up"
 msgstr "Lagartija arquero"
 
-#: forge_i18n.py:490
+#: forge_i18n.py:500
 msgid "Shift your weight over one arm while the other stays straight. The doorway to the one-arm push-up."
 msgstr "Pasa tu peso sobre un brazo mientras el otro se queda estirado. La puerta a la lagartija a un brazo."
 
-#: forge_i18n.py:493
+#: forge_i18n.py:503
 msgid "Vertical Pull"
 msgstr "Jalón vertical"
 
-#: forge_i18n.py:494
+#: forge_i18n.py:504
 msgid "Australian Row"
 msgstr "Remo australiano"
 
-#: forge_i18n.py:495
+#: forge_i18n.py:505
 msgid "Hang under a waist-high bar, body straight, and row your chest to it. Walk the feet forward to ease it."
 msgstr "Cuélgate bajo una barra a la altura de la cintura, cuerpo recto, y lleva el pecho hacia ella. Adelanta los pies para hacerlo más fácil."
 
-#: forge_i18n.py:497
+#: forge_i18n.py:507
 msgid "Negative Pull-up"
 msgstr "Dominada negativa"
 
-#: forge_i18n.py:498
+#: forge_i18n.py:508
 msgid "Jump or step to the top, then lower yourself as slowly as you can. Builds the strength to pull up."
 msgstr "Salta o súbete hasta arriba y baja lo más lento que puedas. Construye la fuerza para subir."
 
-#: forge_i18n.py:500
+#: forge_i18n.py:510
 msgid "Banded Pull-up"
 msgstr "Dominada con liga"
 
-#: forge_i18n.py:501
+#: forge_i18n.py:511
 msgid "Stand in a band looped over the bar — it gives the most help at the bottom where you’re weakest."
 msgstr "Párate en una liga amarrada a la barra — ayuda más abajo, donde eres más débil."
 
-#: forge_i18n.py:503
+#: forge_i18n.py:513
 msgid "Pull-up"
 msgstr "Dominada"
 
-#: forge_i18n.py:504
+#: forge_i18n.py:514
 msgid "Dead hang to chin-over-bar, no kip. The gold standard of vertical pulling strength."
 msgstr "Desde colgado por completo hasta la barbilla sobre la barra, sin impulso. El estándar de oro del jalón vertical."
 
-#: forge_i18n.py:505
+#: forge_i18n.py:515
 msgid "Weighted Pull-up"
 msgstr "Dominada con peso"
 
-#: forge_i18n.py:505
+#: forge_i18n.py:515
 msgid "Belt / pack"
 msgstr "Cinturón / mochila"
 
-#: forge_i18n.py:506
+#: forge_i18n.py:516
 msgid "Add load on a dip belt once you clear clean reps. The fastest route to raw pulling power."
 msgstr "Agrega peso con un cinturón de lastre cuando salgan reps limpias. La ruta más rápida a la fuerza de jalón pura."
 
-#: forge_i18n.py:508
+#: forge_i18n.py:518
 msgid "Archer Pull-up"
 msgstr "Dominada arquero"
 
-#: forge_i18n.py:509
+#: forge_i18n.py:519
 msgid "Pull to one hand while the other arm stays straight along the bar. The bridge to a one-arm pull-up."
 msgstr "Jala hacia una mano mientras el otro brazo se queda estirado sobre la barra. El puente a la dominada a un brazo."
 
-#: forge_i18n.py:512
+#: forge_i18n.py:522
 msgid "Vertical Push"
 msgstr "Empuje vertical"
 
-#: forge_i18n.py:513
+#: forge_i18n.py:523
 msgid "Incline Pike Push-up"
 msgstr "Lagartija pike inclinada"
 
-#: forge_i18n.py:514
+#: forge_i18n.py:524
 msgid "Feet raised, hips high in a pike. Press the crown of your head toward the floor and back up."
 msgstr "Pies elevados, cadera alta en pike. Lleva la coronilla hacia el piso y vuelve a subir."
 
-#: forge_i18n.py:515
+#: forge_i18n.py:525
 msgid "Pike Push-up"
 msgstr "Lagartija pike"
 
-#: forge_i18n.py:516
+#: forge_i18n.py:526
 msgid "Floor pike, hips stacked over the shoulders. Deepen the range until the head taps the ground."
 msgstr "Pike en el piso, cadera sobre los hombros. Profundiza el rango hasta que la cabeza toque el piso."
 
-#: forge_i18n.py:517
+#: forge_i18n.py:527
 msgid "Wall Handstand Push-up"
 msgstr "Flexión en parada de manos en pared"
 
-#: forge_i18n.py:518
+#: forge_i18n.py:528
 msgid "Kick to the wall and press. Chest-to-wall is the honest version; lower under control."
 msgstr "Sube a la pared con impulso de pierna y empuja. Pecho a la pared es la versión honesta; baja con control."
 
-#: forge_i18n.py:519
+#: forge_i18n.py:529
 msgid "Handstand Push-up"
 msgstr "Flexión en parada de manos"
 
-#: forge_i18n.py:520
+#: forge_i18n.py:530
 msgid "Free-balanced, full range. Overhead pressing strength meets total-body control."
 msgstr "En equilibrio libre, rango completo. La fuerza de empuje sobre la cabeza se une al control de todo el cuerpo."
 
-#: forge_i18n.py:522
+#: forge_i18n.py:532
 msgid "Lower Unilateral"
 msgstr "Pierna unilateral"
 
-#: forge_i18n.py:523
+#: forge_i18n.py:533
 msgid "Assisted Split Squat"
 msgstr "Sentadilla dividida asistida"
 
-#: forge_i18n.py:524
+#: forge_i18n.py:534
 msgid "Split stance, one hand on a rail for balance. Drop the back knee toward the floor and drive up."
 msgstr "Postura dividida, una mano en un barandal para equilibrarte. Baja la rodilla de atrás hacia el piso y empuja hacia arriba."
 
-#: forge_i18n.py:525
+#: forge_i18n.py:535
 msgid "Split Squat"
 msgstr "Sentadilla dividida"
 
-#: forge_i18n.py:526
+#: forge_i18n.py:536
 msgid "Unsupported split stance. Vertical torso, front heel planted, full depth each rep."
 msgstr "Postura dividida sin apoyo. Torso vertical, talón de adelante plantado, profundidad completa en cada rep."
 
-#: forge_i18n.py:527
+#: forge_i18n.py:537
 msgid "Goblet Split Squat"
 msgstr "Sentadilla dividida goblet"
 
-#: forge_i18n.py:527
+#: forge_i18n.py:537
 msgid "Dumbbell / KB"
 msgstr "Mancuerna / pesa rusa"
 
-#: forge_i18n.py:528
+#: forge_i18n.py:538
 msgid "Hold a weight at the chest. The cleanest way to overload the legs without a barbell."
 msgstr "Sostén un peso al pecho. La forma más limpia de sobrecargar las piernas sin barra."
 
-#: forge_i18n.py:529
+#: forge_i18n.py:539
 msgid "Bulgarian Split Squat"
 msgstr "Sentadilla búlgara"
 
-#: forge_i18n.py:530
+#: forge_i18n.py:540
 msgid "Rear foot on a bench. Brutal single-leg range and balance — the legs’ true test."
 msgstr "Pie de atrás en un banco. Rango y equilibrio brutales a una pierna — la verdadera prueba de las piernas."
 
-#: forge_i18n.py:531
+#: forge_i18n.py:541
 msgid "Loaded Bulgarian"
 msgstr "Búlgara con peso"
 
-#: forge_i18n.py:531 templates/the_cauldron/forge.html:87
+#: forge_i18n.py:541 templates/the_cauldron/forge.html:87
 msgid "Dumbbells"
 msgstr "Mancuernas"
 
-#: forge_i18n.py:532
+#: forge_i18n.py:542
 msgid "A dumbbell in each hand. Among the highest-yield lower-body movements there is."
 msgstr "Una mancuerna en cada mano. De los movimientos de pierna que más rinden."
 
-#: forge_i18n.py:533
+#: forge_i18n.py:543
 msgid "Pistol Squat"
 msgstr "Sentadilla pistola"
 
-#: forge_i18n.py:534
+#: forge_i18n.py:544
 msgid "Full one-leg squat, other leg extended. Strength, mobility and control in a single feat."
 msgstr "Sentadilla completa a una pierna, la otra extendida. Fuerza, movilidad y control en una sola hazaña."
 
-#: forge_i18n.py:537
+#: forge_i18n.py:547
 msgid "Core · Anti-Extension"
 msgstr "Core · Antiextensión"
 
-#: forge_i18n.py:538
+#: forge_i18n.py:548
 msgid "Knee Plank"
 msgstr "Plancha de rodillas"
 
-#: forge_i18n.py:539
+#: forge_i18n.py:549
 msgid "Forearms down, knees on the floor, hips tucked. Brace as if bracing for a punch."
 msgstr "Antebrazos abajo, rodillas en el piso, cadera metida. Aprieta como si fueras a recibir un golpe."
 
-#: forge_i18n.py:540
+#: forge_i18n.py:550
 msgid "Forearm Plank"
 msgstr "Plancha de antebrazos"
 
-#: forge_i18n.py:541
+#: forge_i18n.py:551
 msgid "Full plank, straight line heel-to-head. Squeeze glutes and ribs-down — no sagging hips."
 msgstr "Plancha completa, línea recta del talón a la cabeza. Aprieta glúteos y baja las costillas — sin hundir la cadera."
 
-#: forge_i18n.py:542
+#: forge_i18n.py:552
 msgid "RKC Plank"
 msgstr "Plancha RKC"
 
-#: forge_i18n.py:543
+#: forge_i18n.py:553
 msgid "A plank turned to maximum tension — everything clenched. Ten brutal seconds beats a lazy minute."
 msgstr "Una plancha a máxima tensión — todo apretado. Diez segundos brutales le ganan a un minuto flojo."
 
-#: forge_i18n.py:544
+#: forge_i18n.py:554
 msgid "Hollow Body Hold"
 msgstr "Posición hollow"
 
-#: forge_i18n.py:545
+#: forge_i18n.py:555
 msgid "On your back, lower back pressed flat, arms and legs lifted. The gymnastic core foundation."
 msgstr "Boca arriba, espalda baja pegada al piso, brazos y piernas elevados. La base gimnástica del core."
 
-#: forge_i18n.py:548
+#: forge_i18n.py:558
 msgid "Hinge"
 msgstr "Bisagra"
 
-#: forge_i18n.py:549
+#: forge_i18n.py:559
 msgid "Glute Bridge"
 msgstr "Puente de glúteo"
 
-#: forge_i18n.py:550
+#: forge_i18n.py:560
 msgid "On your back, knees bent, drive the hips up and squeeze. Learn to fire the glutes, not the back."
 msgstr "Boca arriba, rodillas dobladas, empuja la cadera hacia arriba y aprieta. Aprende a activar los glúteos, no la espalda."
 
-#: forge_i18n.py:551
+#: forge_i18n.py:561
 msgid "Single-leg Glute Bridge"
 msgstr "Puente de glúteo a una pierna"
 
-#: forge_i18n.py:552
+#: forge_i18n.py:562
 msgid "One leg extended, bridge with the other. Exposes and fixes side-to-side imbalances."
 msgstr "Una pierna extendida, haz el puente con la otra. Expone y corrige desbalances entre lados."
 
-#: forge_i18n.py:553
+#: forge_i18n.py:563
 msgid "Hip Thrust"
 msgstr "Hip thrust"
 
-#: forge_i18n.py:554
+#: forge_i18n.py:564
 msgid "Shoulders on a bench for a deeper range. The most direct glute builder you can do."
 msgstr "Hombros en un banco para un rango más profundo. El constructor de glúteos más directo que puedes hacer."
 
-#: forge_i18n.py:555
+#: forge_i18n.py:565
 msgid "Barbell Hip Thrust"
 msgstr "Hip thrust con barra"
 
-#: forge_i18n.py:555 templates/the_cauldron/forge.html:112
+#: forge_i18n.py:565 templates/the_cauldron/forge.html:112
 msgid "Barbell"
 msgstr "Barra"
 
-#: forge_i18n.py:556
+#: forge_i18n.py:566
 msgid "Load the lap across the hips. Scales near-endlessly — the answer to overloading the hips."
 msgstr "Carga la barra sobre la cadera. Escala casi sin fin — la respuesta para sobrecargar la cadera."
 
-#: forge_i18n.py:557
+#: forge_i18n.py:567
 msgid "Nordic Curl"
 msgstr "Curl nórdico"
 
-#: forge_i18n.py:558
+#: forge_i18n.py:568
 msgid "Ankles anchored, lower your straight body under control. The ultimate hamstring strength feat."
 msgstr "Tobillos anclados, baja tu cuerpo recto con control. La hazaña máxima de fuerza de isquiotibiales."
 
@@ -2592,7 +2636,8 @@ msgstr "Vitamina D"
 msgid "Vitamin B12"
 msgstr "Vitamina B12"
 
-#: grimoire_serializers.py:28 services/breakdown.py:219
+#: grimoire_serializers.py:28 services/breakdown.py:219 services/forge.py:1549
+#: services/forge.py:1551
 msgid "Enter a number."
 msgstr "Escribe un número."
 
@@ -3086,7 +3131,7 @@ msgstr "%(date)s: nada registrado"
 msgid "Show as a table"
 msgstr "Ver como tabla"
 
-#: nutrition_i18n.py:105 templates/the_cauldron/forge.html:344
+#: nutrition_i18n.py:105 templates/the_cauldron/forge.html:355
 msgid "Day"
 msgstr "Día"
 
@@ -3417,61 +3462,86 @@ msgstr "Ese valor ya se conoce."
 msgid "Today's Forge"
 msgstr "La Forja de hoy"
 
-#: services/forge.py:950 services/forge.py:986
+#: services/forge.py:684
+msgid "Weekly volume must be a whole number of sets."
+msgstr "El volumen semanal debe ser un número entero de series."
+
+#: services/forge.py:686
+#, python-format
+msgid "Weekly volume must be between %(min)s and %(max)s sets."
+msgstr "El volumen semanal debe estar entre %(min)s y %(max)s series."
+
+#: services/forge.py:1066 services/forge.py:1102
 msgid "prescription is not on this day"
 msgstr "esa prescripción no está en este día"
 
-#: services/forge.py:957
+#: services/forge.py:1073
 msgid "plan is empty"
 msgstr "el plan está vacío"
 
-#: services/forge.py:1000
+#: services/forge.py:1116
 msgid "that movement is not what this prescription trains"
 msgstr "ese movimiento no es el que entrena esta prescripción"
 
-#: services/forge.py:1004 services/forge.py:1155 services/forge.py:1362
+#: services/forge.py:1120 services/forge.py:1271 services/forge.py:1479
 msgid "you cannot perform that movement"
 msgstr "no puedes hacer ese movimiento con tu equipo"
 
-#: services/forge.py:1147
+#: services/forge.py:1263
 msgid "that movement is not on this session"
 msgstr "ese movimiento no está en esta sesión"
 
-#: services/forge.py:1149 services/forge.py:1396
+#: services/forge.py:1265 services/forge.py:1513 services/forge.py:1567
 msgid "that movement already has logged sets"
 msgstr "ese movimiento ya tiene series registradas"
 
-#: services/forge.py:1151
+#: services/forge.py:1267
 msgid "that movement is already on this session"
 msgstr "ese movimiento ya está en esta sesión"
 
-#: services/forge.py:1183
+#: services/forge.py:1299
 msgid "your last Trial doesn't support that rung yet"
 msgstr "tu última Prueba todavía no respalda ese peldaño"
 
-#: services/forge.py:1360
+#: services/forge.py:1477
 msgid "that rung is not on this ladder"
 msgstr "ese peldaño no está en esta escalera"
 
-#: services/forge.py:1741
+#: services/forge.py:1541
+msgid "This movement progresses by difficulty, not by load."
+msgstr "Este movimiento progresa por dificultad, no por peso."
+
+#: services/forge.py:1545
+msgid "You have no equipment that loads this movement."
+msgstr "No tienes equipo para cargar este movimiento."
+
+#: services/forge.py:1554
+msgid "That isn't a band level you own."
+msgstr "Ese no es un nivel de liga que tengas."
+
+#: services/forge.py:1558
+msgid "Enter a load above 0."
+msgstr "Escribe un peso mayor que 0."
+
+#: services/forge.py:1905
 msgid "A completed session can't be deleted."
 msgstr "Una sesión terminada no se puede borrar."
 
-#: services/forge.py:1909
+#: services/forge.py:2073
 msgid "results required."
 msgstr "faltan los resultados."
 
-#: services/forge.py:1922
+#: services/forge.py:2086
 #, python-format
 msgid "tested_exercise for %(pattern)s must be an exercise id."
 msgstr "tested_exercise de %(pattern)s debe ser el id de un ejercicio."
 
-#: services/forge.py:1929
+#: services/forge.py:2093
 #, python-format
 msgid "reps_or_seconds for %(pattern)s must be a whole number."
 msgstr "reps_or_seconds de %(pattern)s debe ser un número entero."
 
-#: services/forge.py:1932
+#: services/forge.py:2096
 #, python-format
 msgid "reps_or_seconds for %(pattern)s can't be negative."
 msgstr "reps_or_seconds de %(pattern)s no puede ser negativo."
@@ -3835,12 +3905,12 @@ msgstr "Un programa de calistenia que se adapta a ti — y a lo que tienes."
 msgid "Forge sections"
 msgstr "Secciones de la Forja"
 
-#: templates/the_cauldron/forge.html:54 templates/the_cauldron/forge.html:176
+#: templates/the_cauldron/forge.html:54 templates/the_cauldron/forge.html:187
 #: templates/the_cauldron/landing.html:253
 msgid "The Trial"
 msgstr "La Prueba"
 
-#: templates/the_cauldron/forge.html:56 templates/the_cauldron/forge.html:235
+#: templates/the_cauldron/forge.html:56 templates/the_cauldron/forge.html:246
 msgid "Exercises"
 msgstr "Ejercicios"
 
@@ -3946,223 +4016,239 @@ msgstr "Comparamos tus resultados con normas publicadas para tu edad y sexo para
 msgid "Save equipment"
 msgstr "Guardar equipo"
 
-#: templates/the_cauldron/forge.html:177
+#: templates/the_cauldron/forge.html:170
+msgid "Weekly volume"
+msgstr "Volumen semanal"
+
+#: templates/the_cauldron/forge.html:171
+msgid "Working sets per movement pattern per week. Each session's sets follow from it — between 2 and 5 per movement — and change as soon as you save."
+msgstr "Series efectivas por patrón de movimiento a la semana. Las series de cada sesión salen de aquí —entre 2 y 5 por movimiento— y cambian en cuanto guardas."
+
+#: templates/the_cauldron/forge.html:174
+msgid "Sets per pattern per week"
+msgstr "Series por patrón a la semana"
+
+#: templates/the_cauldron/forge.html:176
+msgid "Save volume"
+msgstr "Guardar volumen"
+
+#: templates/the_cauldron/forge.html:188
 msgid "For each pattern, do <strong>one set to honest technical failure</strong> on the suggested move and record the reps (or seconds for holds). We place you objectively — no guessing your level."
 msgstr "En cada patrón, haz <strong>una serie hasta el fallo técnico honesto</strong> con el movimiento sugerido y anota las reps (o los segundos en los sostenes). Te ubicamos de forma objetiva — sin adivinar tu nivel."
 
-#: templates/the_cauldron/forge.html:181
+#: templates/the_cauldron/forge.html:192
 msgid "Forge my program"
 msgstr "Forjar mi programa"
 
-#: templates/the_cauldron/forge.html:182
+#: templates/the_cauldron/forge.html:193
 msgid "Retake the Trial"
 msgstr "Repetir la Prueba"
 
-#: templates/the_cauldron/forge.html:193
+#: templates/the_cauldron/forge.html:204
 msgid "Today's session"
 msgstr "La sesión de hoy"
 
-#: templates/the_cauldron/forge.html:195
+#: templates/the_cauldron/forge.html:206
 msgid "Rest ping"
 msgstr "Aviso de descanso"
 
-#: templates/the_cauldron/forge.html:203
+#: templates/the_cauldron/forge.html:214
 msgid "Preview sound"
 msgstr "Escuchar sonido"
 
-#: templates/the_cauldron/forge.html:203
+#: templates/the_cauldron/forge.html:214
 msgid "Preview rest ping"
 msgstr "Escuchar el aviso de descanso"
 
-#: templates/the_cauldron/forge.html:211
+#: templates/the_cauldron/forge.html:222
 msgid "Muscles forged today"
 msgstr "Músculos forjados hoy"
 
-#: templates/the_cauldron/forge.html:215
+#: templates/the_cauldron/forge.html:226
 msgid "Every set logged — here's the map of what you trained."
 msgstr "Todas las series registradas — este es el mapa de lo que entrenaste."
 
-#: templates/the_cauldron/forge.html:221
+#: templates/the_cauldron/forge.html:232
 msgid "Hands-free guided workout — listen on your earphones and speak your reps"
 msgstr "Entrenamiento guiado manos libres — escucha en tus audífonos y di tus reps"
 
-#: templates/the_cauldron/forge.html:224 templates/the_cauldron/forge.html:313
+#: templates/the_cauldron/forge.html:235 templates/the_cauldron/forge.html:324
 msgid "Save session"
 msgstr "Guardar sesión"
 
-#: templates/the_cauldron/forge.html:236
+#: templates/the_cauldron/forge.html:247
 msgid "Exercise display"
 msgstr "Vista de ejercicios"
 
-#: templates/the_cauldron/forge.html:237
+#: templates/the_cauldron/forge.html:248
 msgid "Tree"
 msgstr "Árbol"
 
-#: templates/the_cauldron/forge.html:238
+#: templates/the_cauldron/forge.html:249
 msgid "Cards"
 msgstr "Tarjetas"
 
-#: templates/the_cauldron/forge.html:241
+#: templates/the_cauldron/forge.html:252
 msgid "Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong> anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from the Trial and your program, and we swap in the closest equal-or-easier alternative for the same pattern. Unblock any time. Groups for gear you don't own are dimmed."
 msgstr "Todos los movimientos de la Forja, agrupados por el equipo que necesitan. <strong>Bloquea</strong> lo que no puedas o no quieras hacer — una lesión, una limitación, algo que no te guste. Los movimientos bloqueados salen de la Prueba y de tu programa, y ponemos la alternativa igual o más fácil más cercana del mismo patrón. Desbloquéalos cuando quieras. Los grupos de equipo que no tienes se ven atenuados."
 
-#: templates/the_cauldron/forge.html:247
+#: templates/the_cauldron/forge.html:258
 msgid "Search exercises…"
 msgstr "Buscar ejercicios…"
 
-#: templates/the_cauldron/forge.html:247
+#: templates/the_cauldron/forge.html:258
 msgid "Search exercises by name"
 msgstr "Buscar ejercicios por nombre"
 
-#: templates/the_cauldron/forge.html:248 templates/the_cauldron/forge.html:331
+#: templates/the_cauldron/forge.html:259 templates/the_cauldron/forge.html:342
 msgid "Muscle"
 msgstr "Músculo"
 
-#: templates/the_cauldron/forge.html:250 templates/the_cauldron/forge.html:333
+#: templates/the_cauldron/forge.html:261 templates/the_cauldron/forge.html:344
 msgid "All muscles"
 msgstr "Todos los músculos"
 
-#: templates/the_cauldron/forge.html:255
+#: templates/the_cauldron/forge.html:266
 msgid "Only show what I can do"
 msgstr "Mostrar solo lo que puedo hacer"
 
-#: templates/the_cauldron/forge.html:265
+#: templates/the_cauldron/forge.html:276
 msgid "Exercise details"
 msgstr "Detalles del ejercicio"
 
-#: templates/the_cauldron/forge.html:271 templates/the_cauldron/forge.html:289
+#: templates/the_cauldron/forge.html:282 templates/the_cauldron/forge.html:300
 #: templates/the_cauldron/nutrition.html:339
 msgid "Close"
 msgstr "Cerrar"
 
-#: templates/the_cauldron/forge.html:288
+#: templates/the_cauldron/forge.html:299
 msgid "Change exercise"
 msgstr "Cambiar ejercicio"
 
-#: templates/the_cauldron/forge.html:307
+#: templates/the_cauldron/forge.html:318
 msgid "Unfinished session"
 msgstr "Sesión sin terminar"
 
-#: templates/the_cauldron/forge.html:324
+#: templates/the_cauldron/forge.html:335
 msgid "Progression"
 msgstr "Progresión"
 
-#: templates/the_cauldron/forge.html:326
+#: templates/the_cauldron/forge.html:337
 msgid "Exercise"
 msgstr "Ejercicio"
 
-#: templates/the_cauldron/forge.html:328
+#: templates/the_cauldron/forge.html:339
 msgid "All (total)"
 msgstr "Todos (total)"
 
-#: templates/the_cauldron/forge.html:336
+#: templates/the_cauldron/forge.html:347
 msgctxt "chart"
 msgid "Metric"
 msgstr "Métrica"
 
-#: templates/the_cauldron/forge.html:338
+#: templates/the_cauldron/forge.html:349
 msgid "Total volume"
 msgstr "Volumen total"
 
-#: templates/the_cauldron/forge.html:339
+#: templates/the_cauldron/forge.html:350
 msgid "Total reps"
 msgstr "Reps totales"
 
-#: templates/the_cauldron/forge.html:340
+#: templates/the_cauldron/forge.html:351
 msgid "Best AMRAP set"
 msgstr "Mejor serie AMRAP"
 
-#: templates/the_cauldron/forge.html:343
+#: templates/the_cauldron/forge.html:354
 msgid "Group by"
 msgstr "Agrupar por"
 
-#: templates/the_cauldron/forge.html:345
+#: templates/the_cauldron/forge.html:356
 msgid "Week"
 msgstr "Semana"
 
-#: templates/the_cauldron/forge.html:346
+#: templates/the_cauldron/forge.html:357
 msgid "Month"
 msgstr "Mes"
 
-#: templates/the_cauldron/forge.html:356
+#: templates/the_cauldron/forge.html:367
 msgid "Saved sessions"
 msgstr "Sesiones guardadas"
 
-#: templates/the_cauldron/forge.html:357
+#: templates/the_cauldron/forge.html:368
 msgid "Planned vs. real for every set you've logged."
 msgstr "Lo planeado contra lo real en cada serie que registraste."
 
-#: templates/the_cauldron/forge.html:399
+#: templates/the_cauldron/forge.html:410
 msgid "Voice input off — tap to enable hands-free voice commands"
 msgstr "Entrada de voz desactivada — toca para activar los comandos de voz manos libres"
 
-#: templates/the_cauldron/forge.html:410
+#: templates/the_cauldron/forge.html:421
 msgid "Exit earphones mode"
 msgstr "Salir del modo audífonos"
 
-#: templates/the_cauldron/forge.html:422
+#: templates/the_cauldron/forge.html:433
 msgid "Listening…"
 msgstr "Escuchando…"
 
-#: templates/the_cauldron/forge.html:429
+#: templates/the_cauldron/forge.html:440
 msgid "Guidance is spoken through your earphones — tap the buttons to log each set. Tap the mic (top-left) for hands-free voice commands; your browser beeps while listening."
 msgstr "Las indicaciones suenan en tus audífonos — toca los botones para registrar cada serie. Toca el micrófono (arriba a la izquierda) para los comandos de voz manos libres; tu navegador pita mientras escucha."
 
-#: templates/the_cauldron/forge.html:440
+#: templates/the_cauldron/forge.html:451
 msgid "How the Forge works — and why"
 msgstr "Cómo funciona la Forja — y por qué"
 
-#: templates/the_cauldron/forge.html:441
+#: templates/the_cauldron/forge.html:452
 msgid "The Forge isn't a fixed routine. It measures where you are, prescribes the next honest step, and adjusts after every session. Each design choice below is anchored to the strength-science evidence — the citations are real and linked."
 msgstr "La Forja no es una rutina fija. Mide dónde estás, prescribe el siguiente paso honesto y se ajusta después de cada sesión. Cada decisión de diseño de abajo se apoya en la evidencia de la ciencia de la fuerza — las citas son reales y tienen enlace."
 
-#: templates/the_cauldron/forge.html:445
+#: templates/the_cauldron/forge.html:456
 msgid "1 · We test, we don't guess"
 msgstr "1 · Medimos, no adivinamos"
 
-#: templates/the_cauldron/forge.html:446
+#: templates/the_cauldron/forge.html:457
 msgid "Most apps ask how hard a set felt — your \"reps in reserve\" (RIR). The problem: novices are unreliable at judging how close to failure they are, and tend to stop well short while believing they were near the limit. Accuracy improves with training experience, but for a beginner it's a shaky foundation.<sup><a href=\"#ref-1\">1</a></sup> Trained lifters estimate effort far more accurately than novices.<sup><a href=\"#ref-2\">2</a></sup> So the Forge places you with an <strong>objective AMRAP</strong> (as-many-reps-as-possible) test set per movement pattern, not a feeling — the number puts you on the right rung automatically."
 msgstr "La mayoría de las apps preguntan qué tan pesada se sintió una serie — tus \"reps en reserva\" (RIR). El problema: quien empieza no calcula bien qué tan cerca está del fallo, y suele parar mucho antes creyendo que estaba al límite. La precisión mejora con la experiencia, pero para un principiante es una base inestable.<sup><a href=\"#ref-1\">1</a></sup> Quien entrena calcula el esfuerzo con mucha más precisión que quien empieza.<sup><a href=\"#ref-2\">2</a></sup> Por eso la Forja te ubica con una serie de prueba <strong>AMRAP objetiva</strong> (tantas reps como puedas) por patrón de movimiento, no con una sensación — el número te pone en el peldaño correcto automáticamente."
 
-#: templates/the_cauldron/forge.html:454
+#: templates/the_cauldron/forge.html:465
 msgid "2 · Autoregulated double progression"
 msgstr "2 · Doble progresión autorregulada"
 
-#: templates/the_cauldron/forge.html:455
+#: templates/the_cauldron/forge.html:466
 msgid "Your last working set each session is an AMRAP \"test set.\" Beat the top of the rep range and you move up; fall short and you back off — the program <em>autoregulates</em> to your daily readiness instead of forcing a fixed weekly jump. Autoregulated progressive resistance exercise (APRE) out-performed traditional linear periodization for strength gains in a controlled trial.<sup><a href=\"#ref-3\">3</a></sup>"
 msgstr "Tu última serie de trabajo de cada sesión es una \"serie de prueba\" AMRAP. Supera el tope del rango de reps y subes; quédate corto y bajas — el programa se <em>autorregula</em> a cómo llegas ese día en vez de forzar un salto fijo cada semana. El ejercicio de resistencia progresiva autorregulado (APRE) superó a la periodización lineal tradicional en ganancias de fuerza en un ensayo controlado.<sup><a href=\"#ref-3\">3</a></sup>"
 
-#: templates/the_cauldron/forge.html:460
+#: templates/the_cauldron/forge.html:471
 msgid "3 · Two ways to get stronger"
 msgstr "3 · Dos formas de hacerte más fuerte"
 
-#: templates/the_cauldron/forge.html:461
+#: templates/the_cauldron/forge.html:472
 msgid "When you only have bodyweight, the Forge progresses by <strong>difficulty</strong> — climbing a ladder of harder variations (wall push-up → push-up → archer push-up). When you own loadable gear, it progresses by <strong>load</strong>, adding the smallest available increment. Load mode also fixes a well-known problem: it's hard to keep overloading the lower body with bodyweight alone."
 msgstr "Cuando solo tienes tu peso corporal, la Forja progresa por <strong>dificultad</strong> — subiendo una escalera de variantes más difíciles (lagartija en pared → lagartija → lagartija arquero). Cuando tienes equipo con carga, progresa por <strong>peso</strong>, agregando el incremento más chico disponible. El modo de peso también resuelve un problema conocido: es difícil seguir sobrecargando las piernas solo con tu peso."
 
-#: templates/the_cauldron/forge.html:466
+#: templates/the_cauldron/forge.html:477
 msgid "4 · Rest like you mean it"
 msgstr "4 · Descansa en serio"
 
-#: templates/the_cauldron/forge.html:467
+#: templates/the_cauldron/forge.html:478
 msgid "Each exercise carries an evidence-based rest target — roughly 2–3 minutes for heavy compounds, less for accessory and isometric work. Longer inter-set rest produced greater gains in both strength and muscle size than short rest in resistance-trained men.<sup><a href=\"#ref-4\">4</a></sup>"
 msgstr "Cada ejercicio trae un descanso meta basado en evidencia — unos 2–3 minutos para los compuestos pesados, menos para el trabajo accesorio e isométrico. Descansar más entre series dio mayores ganancias de fuerza y de tamaño muscular que descansar poco en hombres entrenados.<sup><a href=\"#ref-4\">4</a></sup>"
 
-#: templates/the_cauldron/forge.html:471
+#: templates/the_cauldron/forge.html:482
 msgid "5 · Train each pattern often"
 msgstr "5 · Entrena cada patrón seguido"
 
-#: templates/the_cauldron/forge.html:472
+#: templates/the_cauldron/forge.html:483
 msgid "The default Full-Body ×3 split hits every movement pattern multiple times a week. When volume is equated, higher weekly frequency tends to favour hypertrophy — and frequent practice also accelerates skill on the calisthenics movements themselves.<sup><a href=\"#ref-5\">5</a></sup>"
 msgstr "La división predeterminada de cuerpo completo ×3 trabaja cada patrón varias veces por semana. Con el mismo volumen, más frecuencia semanal tiende a favorecer la hipertrofia — y practicar seguido también acelera la técnica de los movimientos de calistenia.<sup><a href=\"#ref-5\">5</a></sup>"
 
-#: templates/the_cauldron/forge.html:476
+#: templates/the_cauldron/forge.html:487
 msgid "References"
 msgstr "Referencias"
 
-#: templates/the_cauldron/forge.html:480 templates/the_cauldron/forge.html:483
-#: templates/the_cauldron/forge.html:486 templates/the_cauldron/forge.html:489
-#: templates/the_cauldron/forge.html:492
+#: templates/the_cauldron/forge.html:491 templates/the_cauldron/forge.html:494
+#: templates/the_cauldron/forge.html:497 templates/the_cauldron/forge.html:500
+#: templates/the_cauldron/forge.html:503
 msgid "Read ↗"
 msgstr "Leer ↗"
 

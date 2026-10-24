@@ -444,7 +444,7 @@ class Program(ForgeBaseModel):
         max_length=24, choices=Split.choices, default=Split.FULL_BODY_3X
     )
     weekly_volume_target = models.PositiveIntegerField(
-        default=8, help_text="Target working sets per pattern per week."
+        default=16, help_text="Target working sets per pattern per week (4–40); sets per session follow (#109)."
     )
 
     class Meta:

@@ -122,7 +122,7 @@
   display: block; font-family: "Inter", sans-serif; font-size: .82rem;
   color: var(--cauldron-cream-dim); margin-bottom: .35rem;
 }
-.forge-field input, .forge-day-pick select {
+.forge-field input, .forge-day-pick select, .forge-set-load-input {
   width: 100%; box-sizing: border-box;
   background: var(--cauldron-bg-deep);
   border: 1px solid var(--cauldron-paprika-border);
@@ -131,7 +131,7 @@
   padding: .65rem .8rem;
   font-family: "Inter", sans-serif;
 }
-.forge-field input:focus, .forge-day-pick select:focus {
+.forge-field input:focus, .forge-day-pick select:focus, .forge-set-load-input:focus {
   outline: none; border-color: var(--cauldron-paprika); box-shadow: var(--cauldron-shadow-ember);
 }
 
@@ -1431,3 +1431,9 @@ body.forge-overlay-open { overflow: hidden; }
 @media (max-width: 768px) and (prefers-reduced-motion: reduce) {
   .forge-sheet.is-settling { transition: none; }
 }
+
+/* Set my load + weekly volume (#109) */
+.forge-set-load { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.forge-set-load-input { width: 7rem; }
+.forge-volume-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
+.forge-volume-row .forge-field { max-width: 14rem; }

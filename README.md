@@ -106,7 +106,8 @@ any vision; the server exposes tools over the existing services.
   `delete_spell`✱, `fork_spell`, `log_casting`.
 - Forge: `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions`, `get_equipment`,
   `get_trial`, `set_equipment`✱, `submit_trial_results`, `retake_trial`✱, `start_forge_session`, `log_forge_set`,
-  `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱ — same placement, program and progression
+  `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱, `get_forge_rung_options`, `set_forge_rung`,
+  `set_forge_load`, `set_forge_weekly_volume` — same placement, program and progression
   as the website for the same inputs.
 - Goals (#105): `get_goals` returns two sets — `mine` (the user's own goals, plus `history`) and `recommended`
   (WHO/FAO + NASEM DRI references from the Profile's weight, age, sex and activity level, each with its `source`;

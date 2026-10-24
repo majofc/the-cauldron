@@ -135,7 +135,16 @@ left/right capture anywhere (removed in #50; migration 0014 summed old per-side 
 re-placed them, capped at ±1 rung).
 
 **Program** — generated plan
-Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target` (default 8 sets/pattern/week).
+Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target`
+(sets/pattern/week, 4–40, default 16 since #109; migration 0038 set 16 on existing programs without regenerating).
+
+**Weekly volume (#109)** — `target_sets = clamp(round(weekly_volume_target / weekly_frequency), 2, 5)`
+(`forge.sets_for_volume`; half rounds up). `weekly_frequency` = the split's sessions/week (`SESSIONS_PER_WEEK`: 3 or
+4) × `min(DAILY_PATTERN_COUNT, patterns on the day) / patterns on the day`. `generate_program` uses it (no more
+hardcoded 3). `forge.regenerate_volume(program, pattern_ids)` runs for the touched patterns only after `set_rung`,
+`set_load` and `sync_program_equipment` (patterns whose prescription was swapped or re-snapped); editing the volume
+(`set_weekly_volume`) regenerates all. Today's untouched sets follow the new count (`_rewrite_open_sets`); a movement
+with logged values keeps today's sets. ⇄ swaps still use `DEFAULT_TARGET_SETS` (3).
 
 **ProgramDay**
 Fields: `program` FK, `day_index`, `name`.
@@ -228,6 +237,16 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
     Never writes `AssessmentResult` — the live prescription is the source of truth for "current rung"
     (`forge._current_rung_on_chain` prefers it over the Trial placement).
   - `GET /cauldron/api/rungs/` — `{chains: [...], by_exercise: {rung_uuid: presc_uuid}}` for the skill tree
+- **Set my load (#109):** `POST /cauldron/api/prescription/{presc_uuid}/set-load/ {"load": 22.5}` → 200
+  `{load, snapped_from, applied_to}` (`forge.set_load`). Program-wide for the exercise; snaps DOWN to a buildable load
+  (below the lightest → the lightest; `snapped_from` = the asked value when it moved). Bands take an owned level
+  index (assisted rungs keep the inverted meaning). Resets `sessions_at_top`, clears `pending_progression`, rewrites
+  today's untouched sets; 409 with logged sets; 400 for difficulty mode, ≤ 0, a band level not owned. The exercise
+  sheet's "Set my load" uses `load_options` / `is_band_load` from `PrescribedExerciseSerializer`.
+- **Weekly volume:** `PATCH /cauldron/api/program/ {"weekly_volume_target": 16}` (4–40, else 400) → the program;
+  edited in the Equipment tab ("Weekly volume").
+- **PostHog:** `forge_rung_set` (replaced `rung_changed`), `forge_load_set`, `forge_volume_set` —
+  `{pattern_key, direction: up|down|same, source: web|mcp}` (`pattern_key` null for volume).
 
 ---
 
@@ -621,7 +640,9 @@ UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reage
 **Forge tools** (`tools/forge.py`, `tools/forge_writes.py`; no nutrition consent needed):
 read `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions` (≤ 62 days),
 `get_equipment`, `get_trial`; write `set_equipment`✱, `submit_trial_results`, `retake_trial`✱,
-`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱.
+`start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱;
+#109: read `get_forge_rung_options`, write `set_forge_rung` (`set_rung(confirm_unready=True)`: no Trial warning),
+`set_forge_load` (same contract as set-load), `set_forge_weekly_volume` — none two-step.
 They call the same `services/forge.py` functions as the web, so placement, programs and progression match for the
 same inputs. Logic that lived in `api.py` views moved there: `submit_assessment` (+ `TrialInputError`),
 `progress_points`, `session_peer_scores`, `active_program`, `mark_equipment_configured`; new `trial_anchors` and
