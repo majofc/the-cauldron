@@ -70,6 +70,8 @@ api_urlpatterns = [
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
+    path("rolling/breakdown/", nutrition_api.BreakdownView.as_view(), name="nutrition-breakdown"),
+    path("rolling/fill/", nutrition_api.FillView.as_view(), name="nutrition-fill"),
     path("mcp/connections/", oauth_views.McpConnectionsView.as_view(), name="mcp-connections"),
     path("mcp/connect-clicked/", oauth_views.McpConnectClickView.as_view(), name="mcp-connect-clicked"),
     path(

@@ -491,6 +491,23 @@ every tracked nutrient stays in the chips.
 Every page showing them includes `_recommendation_notice.html` (not medical advice, adults only).
 PostHog: `profile_body_data_saved {fields_count}` only.
 
+**Goal cauldron (#107)** — clicking a Journal gauge selects it for the chart **and** opens `#nut-cauldron`
+(a `<dialog>`, nutrition.js `openCauldron`) for that nutrient, `roll.span` and the tick at `roll.index`.
+`GET rolling/breakdown/?span=&end=&nutrient=` (`services/breakdown.py`, consent) groups the window's entries
+(rolling's rule: `end - span < eaten_at <= end`) by spell / reagent / quick-entry name (label = latest snapshot),
+top `TOP` (5) by known amount + an "others" row (`pie`; amounts ÷ 7 for 7d, summing to the card's value) and
+`fog` (every group with an entry missing the nutrient — never sized, never 0; a partly known spell is in both).
+Each fog item says how to fill it: `fill.reagents` (the reagent, or the spell's reagents lacking it, each with
+`editable`) or `fill.quick` (its entries). `POST rolling/fill/ {nutrient, value, reagent|entry}`: an own editable
+reagent is saved; a catalog one gets the user's **private copy** (`Reagent.copy_of`, reused, `nutrients_estimated`)
+and the user's own spells' lines switch to it (others' spells untouched); a quick entry gets its own total. Then
+`refresh_entries` gap-fills **only that nutrient, only where it was missing**, in the user's entries of the last
+`REFRESH_DAYS` (7) that used the reagent (directly, or via a spell still containing it, recomputed from the spell's
+current recipe and the entry's grams; `basis.estimated = True`). Older entries and known values never change — a
+deliberate, narrow exception to "editing the spell later never rewrites history". The pot is inline SVG (pie on the
+potion, fog, embers, bubbles, steam text, status glow via `data-status`); all motion stops under reduced motion.
+PostHog: `goal_breakdown_opened {span}`, `missing_value_filled {source: reagent|reagent_copy|quick}` only.
+
 **Adherence (#82)** — computed on read, `?days=7|30`. % met = met / (met+missed+uncertain); not-logged days
 never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. Streaks look back 90 days.
 
@@ -573,7 +590,8 @@ API — never duplicate rules in a tool). Register with `@registry.tool(...)`; e
 `invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
 `/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
 Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
-Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_meal_plan`,
+Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_goal_breakdown`
+(#107, same payload as `rolling/breakdown/`), `get_meal_plan`,
 `search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
 Write (`cauldron:write`; ✱ = two-step): `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`,
 `update_planned_meal`✱, `delete_planned_meal`✱, `mark_planned_meal_eaten`, `set_goal`, `create_reagent`,

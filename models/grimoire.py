@@ -95,9 +95,20 @@ class Reagent(ForgeBaseModel):
     density_g_per_ml = models.FloatField(
         null=True, blank=True, validators=[MinValueValidator(0.01)]
     )
+    # A user's private copy of a catalog reagent, made to fill a value the
+    # catalog lacks (#107, services.breakdown). One copy per user and original.
+    copy_of = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="private_copies"
+    )
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["copy_of", "created_by"], condition=models.Q(copy_of__isnull=False),
+                name="one_private_copy_per_user",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         # NFKD can lengthen text ("½" → "1⁄2"); clip so a long name can't overflow.

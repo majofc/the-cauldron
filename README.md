@@ -99,7 +99,7 @@ any vision; the server exposes tools over the existing services.
 → stateless JSON-RPC at `/cauldron/mcp/`. Architecture and rules: `CLAUDE.md` → "MCP server".
 
 **Tools**
-- Read: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_meal_plan`, `search_spells`, `get_spell`,
+- Read: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_goal_breakdown`, `get_meal_plan`, `search_spells`, `get_spell`,
   `search_reagents`, `get_reagent`.
 - Write: `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`, `update_planned_meal`✱, `delete_planned_meal`✱,
   `mark_planned_meal_eaten`, `set_goal`, `create_reagent`, `update_reagent`✱, `create_spell`, `update_spell`✱,
