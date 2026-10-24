@@ -12,8 +12,10 @@ shown as "—", never coerced to 0. A stored 0 is a measured zero.
 import unicodedata
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from .forge import ForgeBaseModel, channel_field
 
@@ -110,8 +112,8 @@ class ReagentNutrients(ForgeBaseModel):
     """Per-100 g nutrient profile. Every field nullable — null is "unknown"."""
 
     FIELDS = (
-        "kcal", "protein_g", "carbs_g", "sugar_g", "fiber_g", "fat_g", "sat_fat_g",
-        "mono_fat_g", "poly_fat_g", "trans_fat_g", "omega3_ala_g", "omega3_epa_g",
+        "kcal", "protein_g", "carbs_g", "sugar_g", "added_sugar_g", "fiber_g", "fat_g",
+        "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g", "omega3_ala_g", "omega3_epa_g",
         "omega3_dha_g", "omega6_la_g", "cholesterol_mg", "sodium_mg", "potassium_mg",
         "calcium_mg", "iron_mg", "vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug",
     )
@@ -121,6 +123,10 @@ class ReagentNutrients(ForgeBaseModel):
     protein_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     carbs_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     sugar_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    # Added sugars (#104): sugars added in processing or by the cook, plus sugar and
+    # honey themselves — WHO's free sugars minus fruit-juice sugars. Never above
+    # ``sugar_g`` when both are known.
+    added_sugar_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     fiber_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     fat_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     sat_fat_g = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
@@ -144,8 +150,21 @@ class ReagentNutrients(ForgeBaseModel):
     class Meta:
         verbose_name_plural = "reagent nutrients"
 
+    def clean(self):
+        super().clean()
+        if added_sugar_over_total(self.sugar_g, self.added_sugar_g):
+            raise ValidationError({"added_sugar_g": ADDED_SUGAR_ERROR})
+
     def __str__(self):
         return f"Nutrients for {self.reagent}"
+
+
+ADDED_SUGAR_ERROR = _("Added sugars can't be more than the total sugars.")
+
+
+def added_sugar_over_total(sugar_g, added_sugar_g):
+    """True when both are known and the added sugars exceed the total."""
+    return sugar_g is not None and added_sugar_g is not None and added_sugar_g > sugar_g
 
 
 class Spell(ForgeBaseModel):

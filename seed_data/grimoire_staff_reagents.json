@@ -6,11 +6,11 @@
       "name": "Mexican Coca-Cola",
       "name_es": "Coca-Cola mexicana",
       "category": "beverage",
-      "label_note": "Label per 100 ml: 42 kcal, 10.6 g carbohydrates (all sugars), 0 g protein, 0 g fat. Density 1.04 g/ml; 1 glass = 250 ml.",
+      "label_note": "Label per 100 ml: 42 kcal, 10.6 g carbohydrates (all sugars, all added — cane sugar), 0 g protein, 0 g fat. Density 1.04 g/ml; 1 glass = 250 ml.",
       "grams_per_unit": {"glass": 260.0},
       "density_g_per_ml": 1.04,
       "nutrients": {
-        "kcal": 40.4, "protein_g": 0.0, "carbs_g": 10.19, "sugar_g": 10.19, "fiber_g": 0.0,
+        "kcal": 40.4, "protein_g": 0.0, "carbs_g": 10.19, "sugar_g": 10.19, "added_sugar_g": 10.19, "fiber_g": 0.0,
         "fat_g": 0.0, "sat_fat_g": 0.0, "trans_fat_g": 0.0, "cholesterol_mg": 0.0
       }
     }

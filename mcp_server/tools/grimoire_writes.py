@@ -31,7 +31,9 @@ UNITS = SpellReagent.Unit.values
 
 PER_100G = {
     "type": "object",
-    "description": "Nutrients per 100 g. Leave out what you don't know (unknown, never 0).",
+    "description": "Nutrients per 100 g. Leave out what you don't know (unknown, never 0). "
+                   "added_sugar_g = sugars added in processing (not those naturally in fruit, milk or "
+                   "juice); never more than sugar_g.",
     "properties": {name: {"type": "number", "minimum": 0} for name in ReagentNutrients.FIELDS},
     "additionalProperties": False,
 }

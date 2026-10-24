@@ -24,11 +24,13 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from the_cauldron.models import (
+    ADDED_SUGAR_ERROR,
     CauldronProfile,
     IntakeEntry,
     NutrientGoal,
     PlannedMeal,
     ReagentNutrients,
+    added_sugar_over_total,
 )
 from the_cauldron.models.nutrition import DEFAULT_TIMEZONE
 from the_cauldron.services import grimoire, grimoire_nutrition
@@ -333,6 +335,8 @@ def clean_quick_values(raw):
             values[name] = number
     if not values:
         raise NutritionInputError(_("Enter at least one value, e.g. the calories."))
+    if added_sugar_over_total(values.get("sugar_g"), values.get("added_sugar_g")):
+        raise NutritionInputError(str(ADDED_SUGAR_ERROR))
     return values, {name: 1 for name in FIELDS if name not in values}
 
 

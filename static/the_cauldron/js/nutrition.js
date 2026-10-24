@@ -25,8 +25,8 @@
 
   // Mirrors ReagentNutrients.FIELDS (field → display unit) and grimoire.js's groups.
   const NUTRIENTS = [
-    ["kcal", "kcal"], ["protein_g", "g"], ["carbs_g", "g"], ["sugar_g", "g"], ["fiber_g", "g"],
-    ["fat_g", "g"], ["sat_fat_g", "g"], ["mono_fat_g", "g"], ["poly_fat_g", "g"],
+    ["kcal", "kcal"], ["protein_g", "g"], ["carbs_g", "g"], ["sugar_g", "g"], ["added_sugar_g", "g"],
+    ["fiber_g", "g"], ["fat_g", "g"], ["sat_fat_g", "g"], ["mono_fat_g", "g"], ["poly_fat_g", "g"],
     ["trans_fat_g", "g"], ["omega3_ala_g", "g"], ["omega3_epa_g", "g"], ["omega3_dha_g", "g"],
     ["omega6_la_g", "g"], ["cholesterol_mg", "mg"], ["sodium_mg", "mg"], ["potassium_mg", "mg"],
     ["calcium_mg", "mg"], ["iron_mg", "mg"], ["vit_a_ug", "µg"], ["vit_c_mg", "mg"],
@@ -34,7 +34,7 @@
   ];
   const UNIT_OF = Object.fromEntries(NUTRIENTS);
   const NUTRIENT_GROUPS = [
-    ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "fiber_g"]],
+    ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "added_sugar_g", "fiber_g"]],
     ["grp_fats", ["fat_g", "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g",
       "omega3_ala_g", "omega3_epa_g", "omega3_dha_g", "omega6_la_g"]],
     ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg"]],

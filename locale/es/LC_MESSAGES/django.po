@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-22 01:26+0000\n"
+"POT-Creation-Date: 2026-10-24 03:13+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -288,7 +288,7 @@ msgstr "%(plates)s dentro de la pesa"
 msgid "%(plates)s per side"
 msgstr "%(plates)s por lado"
 
-#: forge_i18n.py:97 serializers.py:199
+#: forge_i18n.py:97 serializers.py:201
 msgid "Dumbbell weights"
 msgstr "Pesos de mancuerna"
 
@@ -300,7 +300,7 @@ msgstr "Discos de mancuerna"
 msgid "Barbell plates"
 msgstr "Discos de barra"
 
-#: forge_i18n.py:100 serializers.py:202
+#: forge_i18n.py:100 serializers.py:204
 msgid "Kettlebell weights"
 msgstr "Pesos de pesa rusa"
 
@@ -843,7 +843,11 @@ msgstr "Este peldaño se asigna con %(required)s en %(anchor)s; tu última Prueb
 msgid "This rung is placed at %(required)s; your last Trial was %(yours)s. You can still take it — if the sets don't land, the Forge will ease you back down."
 msgstr "Este peldaño se asigna con %(required)s; tu última Prueba fue %(yours)s. Aun así puedes tomarlo — si las series no salen, la Forja te bajará con calma."
 
-#: forge_i18n.py:252 templates/the_cauldron/grimoire.html:112 templates/the_cauldron/grimoire.html:160 templates/the_cauldron/grimoire.html:226 templates/the_cauldron/nutrition.html:272 templates/the_cauldron/oauth_authorize.html:84
+#: forge_i18n.py:252 templates/the_cauldron/grimoire.html:112
+#: templates/the_cauldron/grimoire.html:160
+#: templates/the_cauldron/grimoire.html:226
+#: templates/the_cauldron/nutrition.html:272
+#: templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -911,7 +915,8 @@ msgstr "Sem %(n)s"
 msgid "Couldn't start the session."
 msgstr "No se pudo iniciar la sesión."
 
-#: forge_i18n.py:269 templates/the_cauldron/forge.html:247 templates/the_cauldron/forge.html:416 templates/the_cauldron/forge.html:437
+#: forge_i18n.py:269 templates/the_cauldron/forge.html:247
+#: templates/the_cauldron/forge.html:416 templates/the_cauldron/forge.html:437
 msgid "Earphones mode"
 msgstr "Modo audífonos"
 
@@ -1629,7 +1634,7 @@ msgstr "Esas cantidades no se pueden convertir a gramos — usa g."
 msgid "Send a JSON object."
 msgstr "Envía un objeto JSON."
 
-#: grimoire_api.py:348 services/nutrition.py:266
+#: grimoire_api.py:348 services/nutrition.py:268
 msgid "This spell has no weighed ingredients."
 msgstr "Este hechizo no tiene ingredientes con peso."
 
@@ -1803,7 +1808,9 @@ msgstr "Nada coincide con esa búsqueda o etiqueta."
 msgid "The coven hasn't shared a spell yet."
 msgstr "El aquelarre aún no ha compartido ningún hechizo."
 
-#: grimoire_i18n.py:59 grimoire_i18n.py:71 templates/the_cauldron/grimoire.html:74 templates/the_cauldron/grimoire.html:254
+#: grimoire_i18n.py:59 grimoire_i18n.py:71
+#: templates/the_cauldron/grimoire.html:74
+#: templates/the_cauldron/grimoire.html:254
 msgid "Write a spell"
 msgstr "Escribir un hechizo"
 
@@ -1896,7 +1903,8 @@ msgstr "No hay ingredientes con ese nombre"
 msgid "Add it — it stays visible only to you until approved."
 msgstr "Agrégalo — solo tú lo verás hasta que se apruebe."
 
-#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:191 templates/the_cauldron/grimoire.html:272
+#: grimoire_i18n.py:85 templates/the_cauldron/grimoire.html:191
+#: templates/the_cauldron/grimoire.html:272
 msgid "Add a reagent"
 msgstr "Agregar un reactivo"
 
@@ -2181,7 +2189,8 @@ msgstr "El hechizo se eliminó; solo quedan los cambios que guardaste."
 msgid "Scale"
 msgstr "Escalar"
 
-#: grimoire_i18n.py:157 services/grimoire_scaling.py:106 templates/the_cauldron/grimoire.html:80
+#: grimoire_i18n.py:157 services/grimoire_scaling.py:106
+#: templates/the_cauldron/grimoire.html:80
 msgid "Servings"
 msgstr "Porciones"
 
@@ -2466,7 +2475,8 @@ msgstr "1 pieza"
 msgid "1 glass"
 msgstr "1 vaso"
 
-#: grimoire_i18n.py:225 grimoire_serializers.py:114 templates/the_cauldron/grimoire.html:212
+#: grimoire_i18n.py:225 grimoire_serializers.py:116
+#: templates/the_cauldron/grimoire.html:212
 msgid "Density"
 msgstr "Densidad"
 
@@ -2503,180 +2513,184 @@ msgid "Sugars"
 msgstr "Azúcares"
 
 #: grimoire_i18n.py:236
+msgid "Added sugars"
+msgstr "Azúcares añadidos"
+
+#: grimoire_i18n.py:237
 msgid "Fiber"
 msgstr "Fibra"
 
-#: grimoire_i18n.py:237
+#: grimoire_i18n.py:238
 msgid "Fat"
 msgstr "Grasa"
 
-#: grimoire_i18n.py:238
+#: grimoire_i18n.py:239
 msgid "Saturated fat"
 msgstr "Grasa saturada"
 
-#: grimoire_i18n.py:239
+#: grimoire_i18n.py:240
 msgid "Monounsaturated fat"
 msgstr "Grasa monoinsaturada"
 
-#: grimoire_i18n.py:240
+#: grimoire_i18n.py:241
 msgid "Polyunsaturated fat"
 msgstr "Grasa poliinsaturada"
 
-#: grimoire_i18n.py:241
+#: grimoire_i18n.py:242
 msgid "Trans fat"
 msgstr "Grasa trans"
 
-#: grimoire_i18n.py:242
+#: grimoire_i18n.py:243
 msgid "Omega-3 ALA"
 msgstr "Omega-3 ALA"
 
-#: grimoire_i18n.py:243
+#: grimoire_i18n.py:244
 msgid "Omega-3 EPA"
 msgstr "Omega-3 EPA"
 
-#: grimoire_i18n.py:244
+#: grimoire_i18n.py:245
 msgid "Omega-3 DHA"
 msgstr "Omega-3 DHA"
 
-#: grimoire_i18n.py:245
+#: grimoire_i18n.py:246
 msgid "Omega-6 LA"
 msgstr "Omega-6 LA"
 
-#: grimoire_i18n.py:246
+#: grimoire_i18n.py:247
 msgid "Cholesterol"
 msgstr "Colesterol"
 
-#: grimoire_i18n.py:247
+#: grimoire_i18n.py:248
 msgid "Sodium"
 msgstr "Sodio"
 
-#: grimoire_i18n.py:248
+#: grimoire_i18n.py:249
 msgid "Potassium"
 msgstr "Potasio"
 
-#: grimoire_i18n.py:249
+#: grimoire_i18n.py:250
 msgid "Calcium"
 msgstr "Calcio"
 
-#: grimoire_i18n.py:250
+#: grimoire_i18n.py:251
 msgid "Iron"
 msgstr "Hierro"
 
-#: grimoire_i18n.py:251
+#: grimoire_i18n.py:252
 msgid "Vitamin A"
 msgstr "Vitamina A"
 
-#: grimoire_i18n.py:252
+#: grimoire_i18n.py:253
 msgid "Vitamin C"
 msgstr "Vitamina C"
 
-#: grimoire_i18n.py:253
+#: grimoire_i18n.py:254
 msgid "Vitamin D"
 msgstr "Vitamina D"
 
-#: grimoire_i18n.py:254
+#: grimoire_i18n.py:255
 msgid "Vitamin B12"
 msgstr "Vitamina B12"
 
-#: grimoire_serializers.py:26
+#: grimoire_serializers.py:28
 msgid "Enter a number."
 msgstr "Escribe un número."
 
-#: grimoire_serializers.py:39
+#: grimoire_serializers.py:41
 #, python-format
 msgid "%(label)s must be a real number."
 msgstr "%(label)s debe ser un número real."
 
-#: grimoire_serializers.py:92
+#: grimoire_serializers.py:94
 msgid "An ingredient needs a name."
 msgstr "El ingrediente necesita un nombre."
 
-#: grimoire_serializers.py:97
+#: grimoire_serializers.py:99
 msgid "Expected an object like {\"cup\": 240}."
 msgstr "Se esperaba un objeto como {\"cup\": 240}."
 
-#: grimoire_serializers.py:101
+#: grimoire_serializers.py:103
 #, python-format
 msgid "Unknown unit '%(unit)s'."
 msgstr "Unidad desconocida '%(unit)s'."
 
-#: grimoire_serializers.py:107
+#: grimoire_serializers.py:109
 #, python-format
 msgid "Weight per %(unit)s must be a number."
 msgstr "El peso por %(unit)s debe ser un número."
 
-#: grimoire_serializers.py:109
+#: grimoire_serializers.py:111
 #, python-format
 msgid "Weight per %(unit)s must be above 0."
 msgstr "El peso por %(unit)s debe ser mayor que 0."
 
-#: grimoire_serializers.py:248
+#: grimoire_serializers.py:261
 msgid "A recipe needs a name."
 msgstr "La receta necesita un nombre."
 
-#: grimoire_serializers.py:254
+#: grimoire_serializers.py:267
 #, python-format
 msgid "Keep the description under %(n)s characters."
 msgstr "La descripción debe tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:260
+#: grimoire_serializers.py:273
 msgid "Steps must be a list of text."
 msgstr "Los pasos deben ser una lista de textos."
 
-#: grimoire_serializers.py:263
+#: grimoire_serializers.py:276
 #, python-format
 msgid "At most %(n)s steps."
 msgstr "Como máximo %(n)s pasos."
 
-#: grimoire_serializers.py:265
+#: grimoire_serializers.py:278
 #, python-format
 msgid "A step can be at most %(n)s characters."
 msgstr "Un paso puede tener como máximo %(n)s caracteres."
 
-#: grimoire_serializers.py:270 grimoire_serializers.py:416
+#: grimoire_serializers.py:283 grimoire_serializers.py:429
 #, python-format
 msgid "At most %(n)s ingredients."
 msgstr "Como máximo %(n)s ingredientes."
 
-#: grimoire_serializers.py:282
+#: grimoire_serializers.py:295
 msgid "Unknown ingredient."
 msgstr "Ingrediente desconocido."
 
-#: grimoire_serializers.py:287 grimoire_serializers.py:469
+#: grimoire_serializers.py:300 grimoire_serializers.py:482
 msgid "Enter an amount above 0."
 msgstr "Escribe una cantidad mayor que 0."
 
-#: grimoire_serializers.py:398
+#: grimoire_serializers.py:411
 #, python-format
 msgid "Keep the notes under %(n)s characters."
 msgstr "Las notas deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:404
+#: grimoire_serializers.py:417
 #, python-format
 msgid "Keep the substitutions under %(n)s characters."
 msgstr "Las sustituciones deben tener menos de %(n)s caracteres."
 
-#: grimoire_serializers.py:414
+#: grimoire_serializers.py:427
 msgid "Adjustments must be a list."
 msgstr "Los ajustes deben ser una lista."
 
-#: grimoire_serializers.py:421
+#: grimoire_serializers.py:434
 msgid "Each adjustment must be an object."
 msgstr "Cada ajuste debe ser un objeto."
 
-#: grimoire_serializers.py:426 grimoire_serializers.py:429
+#: grimoire_serializers.py:439 grimoire_serializers.py:442
 msgid "Each adjustment needs an ingredient and a unit."
 msgstr "Cada ajuste necesita un ingrediente y una unidad."
 
-#: grimoire_serializers.py:437 grimoire_serializers.py:441
+#: grimoire_serializers.py:450 grimoire_serializers.py:454
 msgid "Amounts must be numbers."
 msgstr "Las cantidades deben ser números."
 
-#: grimoire_serializers.py:443
+#: grimoire_serializers.py:456
 msgid "Amounts must be 0 or more."
 msgstr "Las cantidades deben ser 0 o más."
 
-#: grimoire_serializers.py:446
+#: grimoire_serializers.py:459
 msgid "Enter the amount you used."
 msgstr "Escribe la cantidad que usaste."
 
@@ -2704,6 +2718,10 @@ msgstr "No se encontró."
 msgid "Something went wrong. Try again."
 msgstr "Algo salió mal. Inténtalo de nuevo."
 
+#: models/grimoire.py:161
+msgid "Added sugars can't be more than the total sugars."
+msgstr "Los azúcares añadidos no pueden ser más que los azúcares totales."
+
 #: nutrition_api.py:54
 msgid "Accept the sensitive-data consent to use goals and the meal log."
 msgstr "Acepta el consentimiento para datos sensibles para usar las metas y el diario de comidas."
@@ -2728,7 +2746,8 @@ msgstr "Quitar"
 msgid "Change"
 msgstr "Cambiar"
 
-#: nutrition_i18n.py:23 templates/the_cauldron/forge.html:55 templates/the_cauldron/nutrition.html:97
+#: nutrition_i18n.py:23 templates/the_cauldron/forge.html:55
+#: templates/the_cauldron/nutrition.html:97
 msgid "Today"
 msgstr "Hoy"
 
@@ -3101,7 +3120,7 @@ msgstr "Ese hechizo es privado o ya no existe."
 msgid "Choose a spell."
 msgstr "Elige un hechizo."
 
-#: nutrition_writes.py:55 services/nutrition.py:299
+#: nutrition_writes.py:55 services/nutrition.py:301
 msgid "Use grams or servings for a spell."
 msgstr "Para un hechizo usa gramos o porciones."
 
@@ -3125,7 +3144,7 @@ msgstr "Para un ingrediente usa un peso, un volumen o piezas."
 msgid "Name what you ate."
 msgstr "Escribe qué comiste."
 
-#: nutrition_writes.py:102 services/nutrition.py:335
+#: nutrition_writes.py:102 services/nutrition.py:337
 msgid "Enter at least one value, e.g. the calories."
 msgstr "Escribe al menos un valor, por ejemplo las calorías."
 
@@ -3137,85 +3156,85 @@ msgstr "Elige una comida: desayuno, comida, cena o colación."
 msgid "Already marked as eaten."
 msgstr "Ya está marcado como comido."
 
-#: serializers.py:149
+#: serializers.py:151
 #, python-format
 msgid "%(label)s must be a list of plates."
 msgstr "%(label)s: debe ser una lista de discos."
 
-#: serializers.py:152
+#: serializers.py:154
 #, python-format
 msgid "At most %(n)s different %(label)s denominations."
 msgstr "%(label)s: máximo %(n)s pesos distintos."
 
-#: serializers.py:159
+#: serializers.py:161
 #, python-format
 msgid "Each %(label)s entry must look like {\"weight\": 2.5, \"count\": 4}."
 msgstr "%(label)s: cada registro debe verse así: {\"weight\": 2.5, \"count\": 4}."
 
-#: serializers.py:166
+#: serializers.py:168
 #, python-format
 msgid "Each %(label)s entry needs a numeric \"weight\" and a whole \"count\"."
 msgstr "%(label)s: cada registro necesita un \"weight\" numérico y un \"count\" entero."
 
-#: serializers.py:169
+#: serializers.py:171
 #, python-format
 msgid "%(label)s weights must be greater than zero."
 msgstr "%(label)s: los pesos deben ser mayores que cero."
 
-#: serializers.py:171
+#: serializers.py:173
 #, python-format
 msgid "%(label)s counts must be greater than zero."
 msgstr "%(label)s: las cantidades deben ser mayores que cero."
 
-#: serializers.py:177
+#: serializers.py:179
 #, python-format
 msgid "%(label)s must be a list of numbers."
 msgstr "%(label)s: debe ser una lista de números."
 
-#: serializers.py:183
+#: serializers.py:185
 #, python-format
 msgid "%(label)s must all be numbers."
 msgstr "%(label)s: todos deben ser números."
 
-#: serializers.py:185
+#: serializers.py:187
 #, python-format
 msgid "%(label)s must all be greater than zero."
 msgstr "%(label)s: todos deben ser mayores que cero."
 
-#: serializers.py:190
+#: serializers.py:192
 msgid "dumbbell plate"
 msgstr "disco de mancuerna"
 
-#: serializers.py:193
+#: serializers.py:195
 msgid "barbell plate"
 msgstr "disco de barra"
 
-#: serializers.py:196
+#: serializers.py:198
 msgid "kettlebell plate"
 msgstr "disco de pesa rusa"
 
-#: serializers.py:206
+#: serializers.py:208
 msgid "Band levels must be a list."
 msgstr "Los niveles de liga deben ser una lista."
 
-#: serializers.py:213
+#: serializers.py:215
 #, python-format
 msgid "%(label)s cannot be negative."
 msgstr "%(label)s: no puede ser negativo."
 
-#: serializers.py:217
+#: serializers.py:219
 msgid "Bar weight"
 msgstr "Peso de la barra"
 
-#: serializers.py:220
+#: serializers.py:222
 msgid "Handle weight"
 msgstr "Peso del maneral"
 
-#: serializers.py:223
+#: serializers.py:225
 msgid "Kettlebell shell weight"
 msgstr "Peso de la pesa rusa vacía"
 
-#: serializers.py:227
+#: serializers.py:229
 msgid "Barbell increment must be greater than zero."
 msgstr "El incremento de la barra debe ser mayor que cero."
 
@@ -3286,7 +3305,7 @@ msgstr "reps_or_seconds de %(pattern)s no puede ser negativo."
 msgid "Quantity can't be negative."
 msgstr "La cantidad no puede ser negativa."
 
-#: services/grimoire_scaling.py:55 services/nutrition.py:122
+#: services/grimoire_scaling.py:55 services/nutrition.py:124
 #, python-format
 msgid "%(label)s must be a number."
 msgstr "%(label)s debe ser un número."
@@ -3401,60 +3420,60 @@ msgstr "Todavía no hay datos de %(label)s para tu grupo de edad."
 msgid "Estimated benchmark — not yet from published data."
 msgstr "Referencia estimada — todavía no viene de datos publicados."
 
-#: services/nutrition.py:81
+#: services/nutrition.py:83
 msgid "Use a date like 2026-10-15."
 msgstr "Usa una fecha como 2026-10-15."
 
-#: services/nutrition.py:124
+#: services/nutrition.py:126
 #, python-format
 msgid "%(label)s must be 0 or more."
 msgstr "%(label)s debe ser 0 o más."
 
-#: services/nutrition.py:132 services/nutrition.py:136
+#: services/nutrition.py:134 services/nutrition.py:138
 msgid "Send a list of goals."
 msgstr "Envía una lista de metas."
 
-#: services/nutrition.py:139 services/nutrition.py:330
+#: services/nutrition.py:141 services/nutrition.py:332
 msgid "Unknown nutrient."
 msgstr "Nutriente desconocido."
 
-#: services/nutrition.py:141
+#: services/nutrition.py:143
 msgid "Only one goal per nutrient."
 msgstr "Solo una meta por nutriente."
 
-#: services/nutrition.py:147
+#: services/nutrition.py:149
 msgid "Unknown goal type."
 msgstr "Tipo de meta desconocido."
 
-#: services/nutrition.py:148
+#: services/nutrition.py:150
 msgid "The minimum"
 msgstr "El mínimo"
 
-#: services/nutrition.py:149
+#: services/nutrition.py:151
 msgid "The maximum"
 msgstr "El máximo"
 
-#: services/nutrition.py:152
+#: services/nutrition.py:154
 msgid "An “at least” goal needs a minimum."
 msgstr "Una meta “al menos” necesita un mínimo."
 
-#: services/nutrition.py:156
+#: services/nutrition.py:158
 msgid "An “at most” goal needs a maximum."
 msgstr "Una meta “como máximo” necesita un máximo."
 
-#: services/nutrition.py:160
+#: services/nutrition.py:162
 msgid "A “between” goal needs a minimum and a maximum."
 msgstr "Una meta “entre” necesita un mínimo y un máximo."
 
-#: services/nutrition.py:162
+#: services/nutrition.py:164
 msgid "A goal's minimum can't be above its maximum."
 msgstr "El mínimo de una meta no puede ser mayor que su máximo."
 
-#: services/nutrition.py:310
+#: services/nutrition.py:312
 msgid "That ingredient is gone — use a weight."
 msgstr "Ese ingrediente ya no existe; usa un peso."
 
-#: services/nutrition.py:326
+#: services/nutrition.py:328
 msgid "Send the values as an object."
 msgstr "Envía los valores como un objeto."
 
@@ -3470,7 +3489,8 @@ msgstr "Términos"
 msgid "AI assistants"
 msgstr "Asistentes de IA"
 
-#: templates/the_cauldron/_footer_links.html:6 templates/the_cauldron/mcp_info.html:163
+#: templates/the_cauldron/_footer_links.html:6
+#: templates/the_cauldron/mcp_info.html:163
 msgid "Privacy"
 msgstr "Privacidad"
 
@@ -3506,27 +3526,71 @@ msgstr "La Forja — Calistenia adaptativa"
 msgid "Take the Trial and forge a calisthenics program that adapts to you and your equipment."
 msgstr "Haz la Prueba y forja un programa de calistenia que se adapta a ti y a tu equipo."
 
-#: templates/the_cauldron/forge.html:16 templates/the_cauldron/grimoire.html:18 templates/the_cauldron/landing.html:17 templates/the_cauldron/mcp_info.html:23 templates/the_cauldron/nutrition.html:26 templates/the_cauldron/oauth_authorize.html:24
+#: templates/the_cauldron/forge.html:16 templates/the_cauldron/grimoire.html:18
+#: templates/the_cauldron/landing.html:17
+#: templates/the_cauldron/mcp_info.html:23
+#: templates/the_cauldron/nutrition.html:26
+#: templates/the_cauldron/oauth_authorize.html:24
 msgid "The Cauldron home"
 msgstr "Inicio de El Caldero"
 
-#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29 templates/the_cauldron/grimoire.html:26 templates/the_cauldron/grimoire.html:31 templates/the_cauldron/landing.html:28 templates/the_cauldron/landing.html:37 templates/the_cauldron/landing.html:110 templates/the_cauldron/landing.html:135 templates/the_cauldron/landing.html:574 templates/the_cauldron/landing.html:585 templates/the_cauldron/landing.html:598 templates/the_cauldron/legal/_base.html:18 templates/the_cauldron/legal/_base.html:26 templates/the_cauldron/legal/_base.html:31 templates/the_cauldron/login.html:18 templates/the_cauldron/mcp_info.html:31 templates/the_cauldron/mcp_info.html:36 templates/the_cauldron/nutrition.html:34 templates/the_cauldron/nutrition.html:39 templates/the_cauldron/oauth_authorize.html:32
+#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29
+#: templates/the_cauldron/grimoire.html:26
+#: templates/the_cauldron/grimoire.html:31
+#: templates/the_cauldron/landing.html:28
+#: templates/the_cauldron/landing.html:37
+#: templates/the_cauldron/landing.html:110
+#: templates/the_cauldron/landing.html:135
+#: templates/the_cauldron/landing.html:574
+#: templates/the_cauldron/landing.html:585
+#: templates/the_cauldron/landing.html:598
+#: templates/the_cauldron/legal/_base.html:18
+#: templates/the_cauldron/legal/_base.html:26
+#: templates/the_cauldron/legal/_base.html:31
+#: templates/the_cauldron/login.html:18 templates/the_cauldron/mcp_info.html:31
+#: templates/the_cauldron/mcp_info.html:36
+#: templates/the_cauldron/nutrition.html:34
+#: templates/the_cauldron/nutrition.html:39
+#: templates/the_cauldron/oauth_authorize.html:32
 msgid "The Cauldron"
 msgstr "El Caldero"
 
-#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:50 templates/the_cauldron/grimoire.html:32 templates/the_cauldron/landing.html:34 templates/the_cauldron/landing.html:235 templates/the_cauldron/landing.html:597 templates/the_cauldron/legal/_base.html:32 templates/the_cauldron/login.html:17 templates/the_cauldron/mcp_info.html:37 templates/the_cauldron/nutrition.html:40
+#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:50
+#: templates/the_cauldron/grimoire.html:32
+#: templates/the_cauldron/landing.html:34
+#: templates/the_cauldron/landing.html:235
+#: templates/the_cauldron/landing.html:597
+#: templates/the_cauldron/legal/_base.html:32
+#: templates/the_cauldron/login.html:17 templates/the_cauldron/mcp_info.html:37
+#: templates/the_cauldron/nutrition.html:40
 msgid "The Forge"
 msgstr "La Forja"
 
-#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4 templates/the_cauldron/grimoire.html:33 templates/the_cauldron/grimoire.html:235 templates/the_cauldron/landing.html:35 templates/the_cauldron/landing.html:599 templates/the_cauldron/legal/_base.html:33 templates/the_cauldron/mcp_info.html:38 templates/the_cauldron/nutrition.html:41
+#: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4
+#: templates/the_cauldron/grimoire.html:33
+#: templates/the_cauldron/grimoire.html:235
+#: templates/the_cauldron/landing.html:35
+#: templates/the_cauldron/landing.html:599
+#: templates/the_cauldron/legal/_base.html:33
+#: templates/the_cauldron/mcp_info.html:38
+#: templates/the_cauldron/nutrition.html:41
 msgid "The Grimoire"
 msgstr "El Grimorio"
 
-#: templates/the_cauldron/forge.html:32 templates/the_cauldron/grimoire.html:34 templates/the_cauldron/landing.html:36 templates/the_cauldron/legal/_base.html:34 templates/the_cauldron/mcp_info.html:39 templates/the_cauldron/nutrition.html:42 templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/forge.html:32 templates/the_cauldron/grimoire.html:34
+#: templates/the_cauldron/landing.html:36
+#: templates/the_cauldron/legal/_base.html:34
+#: templates/the_cauldron/mcp_info.html:39
+#: templates/the_cauldron/nutrition.html:42
+#: templates/the_cauldron/nutrition.html:91
 msgid "The Journal"
 msgstr "El Diario"
 
-#: templates/the_cauldron/forge.html:39 templates/the_cauldron/grimoire.html:41 templates/the_cauldron/mcp_info.html:47 templates/the_cauldron/nutrition.html:49 templates/the_cauldron/nutrition.html:79 templates/the_cauldron/oauth_authorize.html:40
+#: templates/the_cauldron/forge.html:39 templates/the_cauldron/grimoire.html:41
+#: templates/the_cauldron/mcp_info.html:47
+#: templates/the_cauldron/nutrition.html:49
+#: templates/the_cauldron/nutrition.html:79
+#: templates/the_cauldron/oauth_authorize.html:40
 msgid "Sign out"
 msgstr "Cerrar sesión"
 
@@ -3542,7 +3606,8 @@ msgstr "Un programa de calistenia que se adapta a ti — y a lo que tienes."
 msgid "Forge sections"
 msgstr "Secciones de la Forja"
 
-#: templates/the_cauldron/forge.html:54 templates/the_cauldron/forge.html:201 templates/the_cauldron/landing.html:253
+#: templates/the_cauldron/forge.html:54 templates/the_cauldron/forge.html:201
+#: templates/the_cauldron/landing.html:253
 msgid "The Trial"
 msgstr "La Prueba"
 
@@ -3594,7 +3659,8 @@ msgstr "Discos que tienes — <code>peso x cuántos</code>"
 msgid "Weight of one empty handle (<span class=\"forge-unit-tag\">kg</span>)"
 msgstr "Peso de un maneral vacío (<span class=\"forge-unit-tag\">kg</span>)"
 
-#: templates/the_cauldron/forge.html:104 templates/the_cauldron/forge.html:119 templates/the_cauldron/forge.html:146
+#: templates/the_cauldron/forge.html:104 templates/the_cauldron/forge.html:119
+#: templates/the_cauldron/forge.html:146
 msgid "weight — 0 if weightless"
 msgstr "peso — 0 si no pesa"
 
@@ -3883,7 +3949,9 @@ msgstr "La división predeterminada de cuerpo completo ×3 trabaja cada patrón 
 msgid "References"
 msgstr "Referencias"
 
-#: templates/the_cauldron/forge.html:505 templates/the_cauldron/forge.html:508 templates/the_cauldron/forge.html:511 templates/the_cauldron/forge.html:514 templates/the_cauldron/forge.html:517
+#: templates/the_cauldron/forge.html:505 templates/the_cauldron/forge.html:508
+#: templates/the_cauldron/forge.html:511 templates/the_cauldron/forge.html:514
+#: templates/the_cauldron/forge.html:517
 msgid "Read ↗"
 msgstr "Leer ↗"
 
@@ -3895,11 +3963,13 @@ msgstr "El Grimorio — El Caldero"
 msgid "Keep, share and fork your spells — the recipe book of The Cauldron."
 msgstr "Guarda, comparte y adapta tus hechizos — el recetario de El Caldero."
 
-#: templates/the_cauldron/grimoire.html:51 templates/the_cauldron/grimoire.html:68
+#: templates/the_cauldron/grimoire.html:51
+#: templates/the_cauldron/grimoire.html:68
 msgid "Back to the Grimoire"
 msgstr "Volver al Grimorio"
 
-#: templates/the_cauldron/grimoire.html:68 templates/the_cauldron/grimoire.html:121
+#: templates/the_cauldron/grimoire.html:68
+#: templates/the_cauldron/grimoire.html:121
 msgid "Back to the spell"
 msgstr "Volver al hechizo"
 
@@ -4020,7 +4090,8 @@ msgstr "Pesa el platillo terminado sin la olla. Con eso se calcula la nutrición
 msgid "Save casting"
 msgstr "Guardar lanzamiento"
 
-#: templates/the_cauldron/grimoire.html:169 templates/the_cauldron/grimoire.html:184
+#: templates/the_cauldron/grimoire.html:169
+#: templates/the_cauldron/grimoire.html:184
 msgid "Back to the reagents"
 msgstr "Volver a los reactivos"
 
@@ -4145,7 +4216,9 @@ msgstr "El Caldero — Recetas y la alquimia de la cocina"
 msgid "Guard your secret recipes. Share ancient kitchen knowledge. Discover the alchemy of every ingredient. The Cauldron, the third Arcana."
 msgstr "Guarda tus recetas secretas. Comparte el saber antiguo de la cocina. Descubre la alquimia de cada ingrediente. El Caldero, el tercer Arcano."
 
-#: templates/the_cauldron/landing.html:44 templates/the_cauldron/landing.html:368 templates/the_cauldron/landing.html:522
+#: templates/the_cauldron/landing.html:44
+#: templates/the_cauldron/landing.html:368
+#: templates/the_cauldron/landing.html:522
 msgid "Enter the Forge →"
 msgstr "Entrar a la Forja →"
 
@@ -4157,7 +4230,9 @@ msgstr "Entrar →"
 msgid "Hero"
 msgstr "Portada"
 
-#: templates/the_cauldron/landing.html:108 templates/the_cauldron/landing.html:532 templates/the_cauldron/landing.html:589
+#: templates/the_cauldron/landing.html:108
+#: templates/the_cauldron/landing.html:532
+#: templates/the_cauldron/landing.html:589
 msgid "The Third Arcana"
 msgstr "El tercer Arcano"
 
@@ -4165,7 +4240,8 @@ msgstr "El tercer Arcano"
 msgid "Where secret recipes are sealed in silence,<br> ancient wisdom passes from hand to hand,<br> and every ingredient reveals its hidden magic."
 msgstr "Donde las recetas secretas se sellan en silencio,<br> la sabiduría antigua pasa de mano en mano,<br> y cada ingrediente revela su magia oculta."
 
-#: templates/the_cauldron/landing.html:121 templates/the_cauldron/landing.html:561
+#: templates/the_cauldron/landing.html:121
+#: templates/the_cauldron/landing.html:561
 msgid "Begin Your Practice"
 msgstr "Comienza tu práctica"
 
@@ -4181,7 +4257,8 @@ msgstr "✦ Úsalo desde Claude: registra comidas con una foto, planea y entrena
 msgid "The Arcana"
 msgstr "Los Arcanos"
 
-#: templates/the_cauldron/landing.html:141 templates/the_cauldron/landing.html:142
+#: templates/the_cauldron/landing.html:141
+#: templates/the_cauldron/landing.html:142
 msgid "The Ancient Arts"
 msgstr "Las artes antiguas"
 
@@ -4557,11 +4634,15 @@ msgstr "Conectar"
 msgid "This is the address of The Cauldron for your assistant:"
 msgstr "Esta es la dirección de El Caldero para tu asistente:"
 
-#: templates/the_cauldron/mcp_info.html:79 templates/the_cauldron/mcp_info.html:100 templates/the_cauldron/mcp_info.html:108 templates/the_cauldron/mcp_info.html:120
+#: templates/the_cauldron/mcp_info.html:79
+#: templates/the_cauldron/mcp_info.html:100
+#: templates/the_cauldron/mcp_info.html:108
+#: templates/the_cauldron/mcp_info.html:120
 msgid "Copied"
 msgstr "Copiado"
 
-#: templates/the_cauldron/mcp_info.html:79 templates/the_cauldron/mcp_info.html:108
+#: templates/the_cauldron/mcp_info.html:79
+#: templates/the_cauldron/mcp_info.html:108
 msgid "Copy"
 msgstr "Copiar"
 
@@ -4601,7 +4682,8 @@ msgstr "Elige “Agregar conector personalizado” y pega la dirección de arrib
 msgid "Press Connect, sign in and allow access."
 msgstr "Presiona Conectar, inicia sesión y permite el acceso."
 
-#: templates/the_cauldron/mcp_info.html:100 templates/the_cauldron/mcp_info.html:120
+#: templates/the_cauldron/mcp_info.html:100
+#: templates/the_cauldron/mcp_info.html:120
 msgid "Copy the address"
 msgstr "Copiar la dirección"
 
@@ -4841,7 +4923,8 @@ msgstr "Por día, de medianoche a medianoche en tu zona horaria. “Sin meta” 
 msgid "Save goals"
 msgstr "Guardar metas"
 
-#: templates/the_cauldron/nutrition.html:152 templates/the_cauldron/nutrition.html:187
+#: templates/the_cauldron/nutrition.html:152
+#: templates/the_cauldron/nutrition.html:187
 msgid "How you're doing"
 msgstr "Cómo voy"
 
@@ -4961,11 +5044,13 @@ msgstr "Grasa (g)"
 msgid "Leave blank what you don't know — it's counted as unknown, never as zero."
 msgstr "Deja en blanco lo que no sepas: cuenta como desconocido, nunca como cero."
 
-#: templates/the_cauldron/nutrition.html:263 templates/the_cauldron/nutrition.html:304
+#: templates/the_cauldron/nutrition.html:263
+#: templates/the_cauldron/nutrition.html:304
 msgid "How much"
 msgstr "Cuánto"
 
-#: templates/the_cauldron/nutrition.html:265 templates/the_cauldron/nutrition.html:306
+#: templates/the_cauldron/nutrition.html:265
+#: templates/the_cauldron/nutrition.html:306
 msgid "Unit"
 msgstr "Unidad"
 
