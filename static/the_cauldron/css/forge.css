@@ -517,6 +517,30 @@ body.forge-overlay-open { overflow: hidden; }
    centring — the card's text-align is reset to left by .forge-form above. */
 .forge-form .btn-cauldron { width: 100%; margin-top: .5rem; justify-content: center; }
 .forge-error { color: var(--cauldron-paprika-light); font-size: .9rem; }
+.forge-field + .forge-error { margin: -.6rem 0 1rem; }
+/* Sign-up / reset (#72) */
+.forge-auth-links { margin: .9rem 0 0; font-size: .88rem; text-align: right; }
+.forge-auth-alt { margin: 1.4rem 0 0; font-size: .92rem; color: var(--cauldron-cream-dim); }
+.forge-auth-note { font-size: .9rem; color: var(--cauldron-cream-muted); }
+.forge-auth-links a, .forge-auth-alt a, .forge-check a {
+  color: var(--cauldron-paprika-light); text-decoration: none;
+}
+.forge-auth-links a:hover, .forge-auth-alt a:hover, .forge-check a:hover { text-decoration: underline; }
+.forge-auth-divider {
+  display: flex; align-items: center; gap: .8rem; margin: 1.4rem 0 1rem;
+  color: var(--cauldron-cream-muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .12em;
+}
+.forge-auth-divider::before, .forge-auth-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--cauldron-paprika-border);
+}
+.forge-auth-google { width: 100%; justify-content: center; gap: .6rem; }
+.forge-check {
+  display: flex; align-items: flex-start; gap: .6rem; margin: .4rem 0 1rem;
+  font-size: .88rem; line-height: 1.45; color: var(--cauldron-cream-dim);
+}
+.forge-check input { margin-top: .2rem; accent-color: var(--cauldron-paprika); }
+/* Honeypot: off-screen, never `display: none` (some bots skip hidden fields). */
+.forge-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
 /* Loader — blocking fixed overlay */
 .forge-loader {

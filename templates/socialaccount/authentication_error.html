@@ -1,0 +1,10 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Google sign-in failed" %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Google sign-in failed" %}</h1>
+<p class="forge-subtitle">{% trans "Something went wrong while signing in with Google. Try again, or use your email and password." %}</p>
+<p class="forge-auth-alt"><a href="{% url 'the_cauldron:login' %}">{% trans "Back to sign in" %}</a></p>
+{% endblock %}

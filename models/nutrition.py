@@ -72,6 +72,10 @@ class CauldronProfile(ForgeBaseModel):
     )
     # IANA name; a day runs midnight to midnight here.
     timezone = models.CharField(max_length=64, default=DEFAULT_TIMEZONE)
+    # A self-registered account waiting for its email verification (#72).
+    # Only this flag lets the confirmation activate the account, so one an
+    # admin switched off is never revived.
+    pending_verification = models.BooleanField(default=False)
     # The language last chosen with the switcher ("" = never chosen). Applied on
     # login so the choice follows the user across browsers (the_cauldron.language).
     language = models.CharField(max_length=8, blank=True, default="", choices=settings.LANGUAGES)

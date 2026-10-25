@@ -1,0 +1,30 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Enter The Cauldron" %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Enter The Cauldron" %}</h1>
+<p class="forge-subtitle">{% trans "Sign in to tend your forge." %}</p>
+
+{% for error in form.non_field_errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}
+
+<form method="post" action="{% url 'the_cauldron:login' %}" class="forge-form">
+  {% csrf_token %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.login %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.password %}
+  {{ redirect_field }}
+  <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Light the fire" %}</button>
+</form>
+
+<p class="forge-auth-links">
+  <a href="{% url 'the_cauldron:password-reset' %}">{% trans "Forgot password?" %}</a>
+</p>
+
+{% include 'the_cauldron/auth/_google.html' %}
+
+<p class="forge-auth-alt">
+  {% trans "New to The Cauldron?" %}
+  <a href="{% url 'the_cauldron:register' %}{% if redirect_field_value %}?next={{ redirect_field_value|urlencode }}{% endif %}">{% trans "Create an account" %}</a>
+</p>
+{% endblock %}

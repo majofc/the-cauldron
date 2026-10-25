@@ -1,0 +1,10 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Sign-in cancelled" %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Sign-in cancelled" %}</h1>
+<p class="forge-subtitle">{% trans "You cancelled signing in with Google." %}</p>
+<p class="forge-auth-alt"><a href="{% url 'the_cauldron:login' %}">{% trans "Back to sign in" %}</a></p>
+{% endblock %}

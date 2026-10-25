@@ -1,0 +1,7 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% comment %}
+  Fallback for allauth pages The Cauldron doesn't restyle one by one (email
+  management, password change…): site chrome + Cauldron styles. Those pages
+  override `content`, so they render without the card.
+{% endcomment %}
+{% block auth_title %}{% block head_title %}{% endblock %}{% endblock %}

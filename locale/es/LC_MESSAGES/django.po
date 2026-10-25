@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-24 22:43+0000\n"
+"POT-Creation-Date: 2026-10-25 00:56+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -48,6 +48,14 @@ msgstr "La sesión ya se cerró."
 #: api.py:640
 msgid "from_exercise and to_exercise must be exercise uuids."
 msgstr "from_exercise y to_exercise deben ser uuids de ejercicios."
+
+#: auth_forms.py:40
+msgid "Display name"
+msgstr "Nombre para mostrar"
+
+#: auth_forms.py:46
+msgid "You must accept the Terms and the Privacy Notice."
+msgstr "Debes aceptar los Términos y el Aviso de Privacidad."
 
 #: forge_i18n.py:33
 msgid "Something went wrong."
@@ -180,7 +188,7 @@ msgstr "Agrega tu año de nacimiento y sexo en Equipo para desbloquear tu califi
 msgid "Add birth year & sex in Equipment to unlock your peer flames."
 msgstr "Agrega año de nacimiento y sexo en Equipo para desbloquear tus llamas."
 
-#: forge_i18n.py:66
+#: forge_i18n.py:66 templates/socialaccount/login.html:12
 msgid "Continue"
 msgstr "Continuar"
 
@@ -482,9 +490,9 @@ msgstr "No se pudo borrar esa sesión."
 msgid "Time to retest."
 msgstr "Hora de volver a probarte."
 
-#: forge_i18n.py:148 templates/the_cauldron/landing.html:364
-#: templates/the_cauldron/landing.html:514
-#: templates/the_cauldron/landing.html:518
+#: forge_i18n.py:148 templates/the_cauldron/landing.html:369
+#: templates/the_cauldron/landing.html:519
+#: templates/the_cauldron/landing.html:523
 msgid "Take the Trial"
 msgstr "Hacer la Prueba"
 
@@ -1368,7 +1376,7 @@ msgstr "Lagartija inclinada"
 msgid "Hands on a raised edge — the higher the surface, the lighter the load. Lower the surface as you get stronger."
 msgstr "Manos en una orilla elevada — entre más alta la superficie, más ligera la carga. Bájala conforme te hagas más fuerte."
 
-#: forge_i18n.py:487 templates/the_cauldron/landing.html:301
+#: forge_i18n.py:487 templates/the_cauldron/landing.html:306
 msgid "Knee Push-up"
 msgstr "Lagartija de rodillas"
 
@@ -1408,7 +1416,7 @@ msgstr "Disco / mochila"
 msgid "Rest a plate or loaded pack on the upper back once bodyweight reps feel easy."
 msgstr "Apoya un disco o una mochila cargada en la espalda alta cuando las reps con tu peso se sientan fáciles."
 
-#: forge_i18n.py:496 templates/the_cauldron/landing.html:303
+#: forge_i18n.py:496 templates/the_cauldron/landing.html:308
 msgid "Diamond Push-up"
 msgstr "Lagartija diamante"
 
@@ -3770,6 +3778,246 @@ msgstr "Sin recomendación para el EPA por separado."
 msgid "No recommendation for DHA on its own."
 msgstr "Sin recomendación para el DHA por separado."
 
+#: templates/account/account_inactive.html:4
+#: templates/account/account_inactive.html:7
+msgid "Account inactive"
+msgstr "Cuenta inactiva"
+
+#: templates/account/account_inactive.html:8
+msgid "This account is inactive. Write to us if you think this is a mistake."
+msgstr "Esta cuenta está inactiva. Escríbenos si crees que es un error."
+
+#: templates/account/account_inactive.html:9
+#: templates/account/verified_email_required.html:9
+msgid "Back to The Cauldron"
+msgstr "Volver a The Cauldron"
+
+#: templates/account/email/base_message.txt:1
+msgid "Hello from The Cauldron!"
+msgstr "¡Hola desde The Cauldron!"
+
+#: templates/account/email/base_message.txt:5
+msgid "— The Cauldron"
+msgstr "— The Cauldron"
+
+#: templates/account/email/google_linked_message.txt:4
+msgid "You just signed in to The Cauldron with Google, and we linked it to the account that uses this email. To keep that account yours only, we removed its password: from now on, use Continue with Google."
+msgstr "Acabas de entrar a The Cauldron con Google y lo vinculamos con la cuenta que usa este correo. Para que esa cuenta sea solo tuya, quitamos su contraseña: desde ahora usa Continuar con Google."
+
+#: templates/account/email/google_linked_message.txt:6
+msgid "If you want a password too, choose a new one here:"
+msgstr "Si también quieres una contraseña, elige una nueva aquí:"
+
+#: templates/account/email/google_linked_subject.txt:1
+msgid "Google is now how you sign in"
+msgstr "Ahora entras con Google"
+
+#: templates/account/email_confirm.html:4
+#: templates/account/email_confirm.html:8
+msgid "Verify your email"
+msgstr "Verifica tu correo"
+
+#: templates/account/email_confirm.html:9
+#, python-format
+msgid "Confirm that %(email)s is your email address."
+msgstr "Confirma que %(email)s es tu correo electrónico."
+
+#: templates/account/email_confirm.html:13
+msgid "Confirm and enter"
+msgstr "Confirmar y entrar"
+
+#: templates/account/email_confirm.html:17
+#: templates/account/password_reset_from_key.html:8
+msgid "This link no longer works"
+msgstr "Este enlace ya no funciona"
+
+#: templates/account/email_confirm.html:18
+msgid "The verification link expired or is invalid. Sign in with your email and password and we'll send you a new one."
+msgstr "El enlace de verificación expiró o no es válido. Inicia sesión con tu correo y contraseña y te enviaremos uno nuevo."
+
+#: templates/account/email_confirm.html:20
+msgid "Send a new link"
+msgstr "Enviar un enlace nuevo"
+
+#: templates/account/login.html:4 templates/account/login.html:7
+#: templates/the_cauldron/auth/_base.html:10
+msgid "Enter The Cauldron"
+msgstr "Entra a El Caldero"
+
+#: templates/account/login.html:8
+msgid "Sign in to tend your forge."
+msgstr "Inicia sesión para atender tu forja."
+
+#: templates/account/login.html:17
+msgid "Light the fire"
+msgstr "Enciende el fuego"
+
+#: templates/account/login.html:21
+msgid "Forgot password?"
+msgstr "¿Olvidaste tu contraseña?"
+
+#: templates/account/login.html:27
+msgid "New to The Cauldron?"
+msgstr "¿Eres nuevo en The Cauldron?"
+
+#: templates/account/login.html:28 templates/the_cauldron/landing.html:43
+msgid "Create an account"
+msgstr "Crear una cuenta"
+
+#: templates/account/password_reset.html:4
+#: templates/account/password_reset.html:7
+msgid "Reset your password"
+msgstr "Restablece tu contraseña"
+
+#: templates/account/password_reset.html:8
+msgid "Enter your email and we'll send you a link to choose a new password."
+msgstr "Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva."
+
+#: templates/account/password_reset.html:16
+msgid "Send the link"
+msgstr "Enviar el enlace"
+
+#: templates/account/password_reset.html:19
+#: templates/account/password_reset_done.html:11
+#: templates/account/verification_sent.html:10
+#: templates/socialaccount/authentication_error.html:9
+#: templates/socialaccount/login_cancelled.html:9
+msgid "Back to sign in"
+msgstr "Volver a iniciar sesión"
+
+#: templates/account/password_reset_done.html:4
+#: templates/account/password_reset_done.html:8
+#: templates/account/verification_sent.html:4
+#: templates/account/verification_sent.html:7
+#: templates/account/verified_email_required.html:4
+#: templates/account/verified_email_required.html:7
+msgid "Check your email"
+msgstr "Revisa tu correo"
+
+#: templates/account/password_reset_done.html:9
+msgid "If that email belongs to an account, a link to reset its password is on its way."
+msgstr "Si ese correo pertenece a una cuenta, va en camino un enlace para restablecer su contraseña."
+
+#: templates/account/password_reset_done.html:10
+msgid "Can't find it? Look in your spam folder."
+msgstr "¿No lo encuentras? Revisa tu carpeta de spam."
+
+#: templates/account/password_reset_from_key.html:4
+#: templates/account/password_reset_from_key.html:12
+msgid "Choose a new password"
+msgstr "Elige una contraseña nueva"
+
+#: templates/account/password_reset_from_key.html:9
+msgid "The reset link expired or was already used."
+msgstr "El enlace para restablecer expiró o ya se usó."
+
+#: templates/account/password_reset_from_key.html:10
+msgid "Request a new link"
+msgstr "Pedir un enlace nuevo"
+
+#: templates/account/password_reset_from_key.html:19
+msgid "Save password"
+msgstr "Guardar contraseña"
+
+#: templates/account/password_reset_from_key_done.html:4
+#: templates/account/password_reset_from_key_done.html:7
+msgid "Password changed"
+msgstr "Contraseña cambiada"
+
+#: templates/account/password_reset_from_key_done.html:8
+msgid "Your new password is set. Sign in with it."
+msgstr "Tu contraseña nueva quedó guardada. Inicia sesión con ella."
+
+#: templates/account/password_reset_from_key_done.html:10
+#: templates/account/signup.html:39 templates/the_cauldron/mcp_info.html:51
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+#: templates/account/signup.html:4 templates/socialaccount/signup.html:4
+#: templates/the_cauldron/landing.html:121
+#: templates/the_cauldron/landing.html:570
+msgid "Create your account"
+msgstr "Crea tu cuenta"
+
+#: templates/account/signup.html:5
+msgid "Create your account in The Cauldron."
+msgstr "Crea tu cuenta en The Cauldron."
+
+#: templates/account/signup.html:8
+msgid "Join The Cauldron"
+msgstr "Únete a The Cauldron"
+
+#: templates/account/signup.html:9
+msgid "One account for The Forge, The Grimoire and The Journal."
+msgstr "Una sola cuenta para The Forge, El Grimorio y El Diario."
+
+#: templates/account/signup.html:27
+#, python-format
+msgid "I accept the <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Terms and Conditions</a> and the <a href=\"%(privacy_url)s\" target=\"_blank\" rel=\"noopener\">Privacy Notice</a>."
+msgstr "Acepto los <a href=\"%(terms_url)s\" target=\"_blank\" rel=\"noopener\">Términos y Condiciones</a> y el <a href=\"%(privacy_url)s\" target=\"_blank\" rel=\"noopener\">Aviso de Privacidad</a>."
+
+#: templates/account/signup.html:32 templates/socialaccount/signup.html:15
+msgid "Create account"
+msgstr "Crear cuenta"
+
+#: templates/account/signup.html:38
+msgid "Already have an account?"
+msgstr "¿Ya tienes una cuenta?"
+
+#: templates/account/verification_sent.html:8
+msgid "We sent you a link to verify your email address. Open it to light the fire — it expires in 24 hours."
+msgstr "Te enviamos un enlace para verificar tu correo. Ábrelo para encender el fuego; vence en 24 horas."
+
+#: templates/account/verification_sent.html:9
+msgid "Can't find it? Look in your spam folder, or sign in again and we'll send a new link."
+msgstr "¿No lo encuentras? Revisa tu carpeta de spam o vuelve a iniciar sesión y te enviaremos un enlace nuevo."
+
+#: templates/account/verified_email_required.html:8
+msgid "Verify your email address to continue. We sent you a new link."
+msgstr "Verifica tu correo para continuar. Te enviamos un enlace nuevo."
+
+#: templates/socialaccount/authentication_error.html:4
+#: templates/socialaccount/authentication_error.html:7
+msgid "Google sign-in failed"
+msgstr "No se pudo entrar con Google"
+
+#: templates/socialaccount/authentication_error.html:8
+msgid "Something went wrong while signing in with Google. Try again, or use your email and password."
+msgstr "Algo salió mal al entrar con Google. Inténtalo de nuevo o usa tu correo y contraseña."
+
+#: templates/socialaccount/login.html:4
+#: templates/the_cauldron/auth/_google.html:11
+msgid "Continue with Google"
+msgstr "Continuar con Google"
+
+#: templates/socialaccount/login.html:8
+#, python-format
+msgid "Continue with %(provider)s"
+msgstr "Continuar con %(provider)s"
+
+#: templates/socialaccount/login.html:9
+#, python-format
+msgid "You're about to sign in to The Cauldron with your %(provider)s account."
+msgstr "Vas a iniciar sesión en The Cauldron con tu cuenta de %(provider)s."
+
+#: templates/socialaccount/login_cancelled.html:4
+#: templates/socialaccount/login_cancelled.html:7
+msgid "Sign-in cancelled"
+msgstr "Inicio de sesión cancelado"
+
+#: templates/socialaccount/login_cancelled.html:8
+msgid "You cancelled signing in with Google."
+msgstr "Cancelaste el inicio de sesión con Google."
+
+#: templates/socialaccount/signup.html:8
+msgid "One more step"
+msgstr "Un paso más"
+
+#: templates/socialaccount/signup.html:9
+#, python-format
+msgid "Choose the email for your Cauldron account to finish signing in with %(provider)s."
+msgstr "Elige el correo de tu cuenta de The Cauldron para terminar de entrar con %(provider)s."
+
 #: templates/the_cauldron/_assistant_link.html:5
 msgid "Use with your AI assistant"
 msgstr "Úsalo con tu asistente de IA"
@@ -3819,6 +4067,54 @@ msgstr "Las metas recomendadas combinan referencias calculadas para tu peso, eda
 msgid "Recommended goals are general references for healthy adults, not medical advice. They don't apply to pregnancy, breastfeeding or conditions that affect nutrition. You use them at your own responsibility — ask a health professional for advice about you."
 msgstr "Las metas recomendadas son referencias generales para personas adultas sanas, no consejo médico. No aplican durante el embarazo, la lactancia ni con condiciones que afecten tu nutrición. Las usas bajo tu propia responsabilidad; pide a un profesional de la salud un consejo para tu caso."
 
+#: templates/the_cauldron/auth/_base.html:11
+msgid "Sign in to The Cauldron."
+msgstr "Inicia sesión en El Caldero."
+
+#: templates/the_cauldron/auth/_base.html:23
+#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:49
+#: templates/the_cauldron/grimoire.html:32
+#: templates/the_cauldron/landing.html:34
+#: templates/the_cauldron/landing.html:236
+#: templates/the_cauldron/landing.html:607
+#: templates/the_cauldron/legal/_base.html:32
+#: templates/the_cauldron/mcp_info.html:40
+#: templates/the_cauldron/nutrition.html:41
+msgid "The Forge"
+msgstr "La Forja"
+
+#: templates/the_cauldron/auth/_base.html:24
+#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29
+#: templates/the_cauldron/grimoire.html:26
+#: templates/the_cauldron/grimoire.html:31
+#: templates/the_cauldron/landing.html:28
+#: templates/the_cauldron/landing.html:36
+#: templates/the_cauldron/landing.html:107
+#: templates/the_cauldron/landing.html:136
+#: templates/the_cauldron/landing.html:579
+#: templates/the_cauldron/landing.html:590
+#: templates/the_cauldron/landing.html:608
+#: templates/the_cauldron/legal/_base.html:18
+#: templates/the_cauldron/legal/_base.html:26
+#: templates/the_cauldron/legal/_base.html:31
+#: templates/the_cauldron/mcp_info.html:33
+#: templates/the_cauldron/mcp_info.html:39
+#: templates/the_cauldron/nutrition.html:12
+#: templates/the_cauldron/nutrition.html:35
+#: templates/the_cauldron/nutrition.html:40
+#: templates/the_cauldron/nutrition.html:91
+#: templates/the_cauldron/oauth_authorize.html:32
+msgid "The Cauldron"
+msgstr "El Caldero"
+
+#: templates/the_cauldron/auth/_base.html:29
+msgid "← Cauldron"
+msgstr "← Caldero"
+
+#: templates/the_cauldron/auth/_google.html:5
+msgid "or"
+msgstr "o"
+
 #: templates/the_cauldron/forge.html:4
 msgid "The Forge — Adaptive Calisthenics"
 msgstr "La Forja — Calistenia adaptativa"
@@ -3835,45 +4131,11 @@ msgstr "Haz la Prueba y forja un programa de calistenia que se adapta a ti y a t
 msgid "The Cauldron home"
 msgstr "Inicio de El Caldero"
 
-#: templates/the_cauldron/forge.html:24 templates/the_cauldron/forge.html:29
-#: templates/the_cauldron/grimoire.html:26
-#: templates/the_cauldron/grimoire.html:31
-#: templates/the_cauldron/landing.html:28
-#: templates/the_cauldron/landing.html:36
-#: templates/the_cauldron/landing.html:106
-#: templates/the_cauldron/landing.html:131
-#: templates/the_cauldron/landing.html:570
-#: templates/the_cauldron/landing.html:581
-#: templates/the_cauldron/landing.html:594
-#: templates/the_cauldron/legal/_base.html:18
-#: templates/the_cauldron/legal/_base.html:26
-#: templates/the_cauldron/legal/_base.html:31
-#: templates/the_cauldron/login.html:18 templates/the_cauldron/mcp_info.html:33
-#: templates/the_cauldron/mcp_info.html:39
-#: templates/the_cauldron/nutrition.html:12
-#: templates/the_cauldron/nutrition.html:35
-#: templates/the_cauldron/nutrition.html:40
-#: templates/the_cauldron/nutrition.html:91
-#: templates/the_cauldron/oauth_authorize.html:32
-msgid "The Cauldron"
-msgstr "El Caldero"
-
-#: templates/the_cauldron/forge.html:30 templates/the_cauldron/forge.html:49
-#: templates/the_cauldron/grimoire.html:32
-#: templates/the_cauldron/landing.html:34
-#: templates/the_cauldron/landing.html:231
-#: templates/the_cauldron/landing.html:593
-#: templates/the_cauldron/legal/_base.html:32
-#: templates/the_cauldron/login.html:17 templates/the_cauldron/mcp_info.html:40
-#: templates/the_cauldron/nutrition.html:41
-msgid "The Forge"
-msgstr "La Forja"
-
 #: templates/the_cauldron/forge.html:31 templates/the_cauldron/grimoire.html:4
 #: templates/the_cauldron/grimoire.html:33
 #: templates/the_cauldron/grimoire.html:234
 #: templates/the_cauldron/landing.html:35
-#: templates/the_cauldron/landing.html:595
+#: templates/the_cauldron/landing.html:609
 #: templates/the_cauldron/legal/_base.html:33
 #: templates/the_cauldron/mcp_info.html:41
 #: templates/the_cauldron/nutrition.html:42
@@ -3901,7 +4163,7 @@ msgid "Forge sections"
 msgstr "Secciones de la Forja"
 
 #: templates/the_cauldron/forge.html:53 templates/the_cauldron/forge.html:186
-#: templates/the_cauldron/landing.html:249
+#: templates/the_cauldron/landing.html:254
 msgid "The Trial"
 msgstr "La Prueba"
 
@@ -4508,330 +4770,338 @@ msgstr "El Caldero — Recetas y la alquimia de la cocina"
 msgid "Guard your secret recipes. Share ancient kitchen knowledge. Discover the alchemy of every ingredient. The Cauldron, the third Arcana."
 msgstr "Guarda tus recetas secretas. Comparte el saber antiguo de la cocina. Descubre la alquimia de cada ingrediente. El Caldero, el tercer Arcano."
 
-#: templates/the_cauldron/landing.html:43
+#: templates/the_cauldron/landing.html:44
 msgid "Enter →"
 msgstr "Entrar →"
 
-#: templates/the_cauldron/landing.html:52
+#: templates/the_cauldron/landing.html:53
 msgid "Hero"
 msgstr "Portada"
 
-#: templates/the_cauldron/landing.html:104
-#: templates/the_cauldron/landing.html:528
-#: templates/the_cauldron/landing.html:585
+#: templates/the_cauldron/landing.html:105
+#: templates/the_cauldron/landing.html:533
+#: templates/the_cauldron/landing.html:594
 msgid "The Third Arcana"
 msgstr "El tercer Arcano"
 
-#: templates/the_cauldron/landing.html:111
+#: templates/the_cauldron/landing.html:112
 msgid "Where secret recipes are sealed in silence,<br> ancient wisdom passes from hand to hand,<br> and every ingredient reveals its hidden magic."
 msgstr "Donde las recetas secretas se sellan en silencio,<br> la sabiduría antigua pasa de mano en mano,<br> y cada ingrediente revela su magia oculta."
 
-#: templates/the_cauldron/landing.html:117
-#: templates/the_cauldron/landing.html:557
+#: templates/the_cauldron/landing.html:119
+#: templates/the_cauldron/landing.html:562
 msgid "Begin Your Practice"
 msgstr "Comienza tu práctica"
 
-#: templates/the_cauldron/landing.html:118
+#: templates/the_cauldron/landing.html:123
 msgid "Explore the Arts"
 msgstr "Explora las artes"
 
-#: templates/the_cauldron/landing.html:121
+#: templates/the_cauldron/landing.html:126
 msgid "✦ Use it from Claude — log meals from a photo, plan and train by chat"
 msgstr "✦ Úsalo desde Claude: registra comidas con una foto, planea y entrena por chat"
 
-#: templates/the_cauldron/landing.html:128
+#: templates/the_cauldron/landing.html:133
 msgid "The Arcana"
 msgstr "Los Arcanos"
 
-#: templates/the_cauldron/landing.html:137
-#: templates/the_cauldron/landing.html:138
+#: templates/the_cauldron/landing.html:142
+#: templates/the_cauldron/landing.html:143
 msgid "The Ancient Arts"
 msgstr "Las artes antiguas"
 
-#: templates/the_cauldron/landing.html:164
+#: templates/the_cauldron/landing.html:169
 msgid "Guard Your Secrets"
 msgstr "Guarda tus secretos"
 
-#: templates/the_cauldron/landing.html:166
+#: templates/the_cauldron/landing.html:171
 msgid "Your most prized formulas — sealed, encrypted, yours alone. Every recipe is a ritual. Keep it safe from prying eyes until the moment you choose to share."
 msgstr "Tus fórmulas más preciadas — selladas, cifradas, solo tuyas. Cada receta es un ritual. Mantenla a salvo de miradas curiosas hasta el momento en que decidas compartirla."
 
-#: templates/the_cauldron/landing.html:191
+#: templates/the_cauldron/landing.html:196
 msgid "Share Ancient Wisdom"
 msgstr "Comparte la sabiduría antigua"
 
-#: templates/the_cauldron/landing.html:193
+#: templates/the_cauldron/landing.html:198
 msgid "Pass the torch. Choose who inherits your culinary lineage — a family member, a student, a fellow practitioner. Knowledge lives on when it is given freely."
 msgstr "Pasa la antorcha. Elige quién hereda tu linaje culinario — alguien de tu familia, un aprendiz, un colega. El saber sigue vivo cuando se da libremente."
 
-#: templates/the_cauldron/landing.html:216
+#: templates/the_cauldron/landing.html:221
 msgid "Know the Magic"
 msgstr "Conoce la magia"
 
-#: templates/the_cauldron/landing.html:218
+#: templates/the_cauldron/landing.html:223
 msgid "Every dish is alchemy. Understand the science beneath the spell — why fat carries flavor, why heat transforms, why salt awakens what was always sleeping inside the ingredient."
 msgstr "Cada platillo es alquimia. Entiende la ciencia detrás del hechizo — por qué la grasa lleva el sabor, por qué el calor transforma, por qué la sal despierta lo que siempre dormía dentro del ingrediente."
 
-#: templates/the_cauldron/landing.html:234
+#: templates/the_cauldron/landing.html:239
 msgid "The Practice · The Forge"
 msgstr "La práctica · La Forja"
 
-#: templates/the_cauldron/landing.html:235
+#: templates/the_cauldron/landing.html:240
 msgid "Temper the body like the blade"
 msgstr "Templa el cuerpo como la hoja"
 
-#: templates/the_cauldron/landing.html:237
+#: templates/the_cauldron/landing.html:242
 msgid "The cauldron tempers the recipe; <strong>the Forge tempers you</strong>. It is an adaptive calisthenics trainer that learns your true strength, then reshapes a program around it — bodyweight first, equipment when you have it. No guesswork, no fixed plan that ignores how you actually moved today. You train, the Forge listens, the difficulty answers."
 msgstr "El caldero templa la receta; <strong>la Forja te templa a ti</strong>. Es un entrenador de calistenia adaptativo que aprende tu fuerza real y arma un programa a su alrededor — primero tu peso corporal, el equipo cuando lo tengas. Sin adivinar, sin un plan fijo que ignore cómo te moviste hoy. Tú entrenas, la Forja escucha, la dificultad responde."
 
-#: templates/the_cauldron/landing.html:251
+#: templates/the_cauldron/landing.html:256
 msgid "One honest all-out set per movement. We measure what you can do — objectively — not what you guess you have left."
 msgstr "Una serie honesta a tope por movimiento. Medimos lo que puedes hacer — de forma objetiva — no lo que crees que te queda."
 
-#: templates/the_cauldron/landing.html:258
+#: templates/the_cauldron/landing.html:263
 msgid "Your Rung"
 msgstr "Tu peldaño"
 
-#: templates/the_cauldron/landing.html:260
+#: templates/the_cauldron/landing.html:265
 msgid "Your score places you on the right rung of each movement ladder — and builds a program from where you truly stand."
 msgstr "Tu resultado te pone en el peldaño correcto de cada escalera de movimiento — y arma un programa desde donde realmente estás."
 
-#: templates/the_cauldron/landing.html:267
+#: templates/the_cauldron/landing.html:272
 msgid "It Adapts"
 msgstr "Se adapta"
 
-#: templates/the_cauldron/landing.html:269
+#: templates/the_cauldron/landing.html:274
 msgid "Every session ends in a test set. Beat it and you climb; fall short and it eases off. The plan rewrites itself around you."
 msgstr "Cada sesión termina con una serie de prueba. Supérala y subes; quédate corto y afloja. El plan se reescribe a tu alrededor."
 
-#: templates/the_cauldron/landing.html:276
+#: templates/the_cauldron/landing.html:281
 msgid "Live from the Forge"
 msgstr "En vivo desde la Forja"
 
-#: templates/the_cauldron/landing.html:284
+#: templates/the_cauldron/landing.html:289
 msgid "AMRAP · Push-up"
 msgstr "AMRAP · Lagartija"
 
-#: templates/the_cauldron/landing.html:286
+#: templates/the_cauldron/landing.html:291
 msgid "reps to failure"
 msgstr "reps hasta el fallo"
 
-#: templates/the_cauldron/landing.html:289
+#: templates/the_cauldron/landing.html:294
 msgid "An objective Trial"
 msgstr "Una Prueba objetiva"
 
-#: templates/the_cauldron/landing.html:291
+#: templates/the_cauldron/landing.html:296
 msgid "One max-effort set counts your real reps — novices misjudge “reps in reserve” by 4–5, so the Forge measures instead of asking."
 msgstr "Una serie a máximo esfuerzo cuenta tus reps reales — quien empieza calcula mal sus “reps en reserva” por 4–5, así que la Forja mide en vez de preguntar."
 
-#: templates/the_cauldron/landing.html:302
+#: templates/the_cauldron/landing.html:307
 msgid "Push-up"
 msgstr "Lagartija"
 
-#: templates/the_cauldron/landing.html:307
+#: templates/the_cauldron/landing.html:312
 msgid "Earn the climb"
 msgstr "Gánate la subida"
 
-#: templates/the_cauldron/landing.html:309
+#: templates/the_cauldron/landing.html:314
 msgid "Hold the top of your rep range and the next, harder rung unlocks — a celebration you choose to claim, never an automatic jump."
 msgstr "Mantén el tope de tu rango de reps y se desbloquea el siguiente peldaño, más difícil — una celebración que tú decides reclamar, nunca un salto automático."
 
-#: templates/the_cauldron/landing.html:325
+#: templates/the_cauldron/landing.html:330
 msgid "See where you stand"
 msgstr "Mira dónde estás"
 
-#: templates/the_cauldron/landing.html:327
+#: templates/the_cauldron/landing.html:332
 msgid "Your Trial score lights up to ten “fires” against published age- and sex-matched norms — and we tell you when a number is only an estimate."
 msgstr "El resultado de tu Prueba enciende hasta diez “llamas” frente a normas publicadas por edad y sexo — y te decimos cuándo un número es solo una estimación."
 
-#: templates/the_cauldron/landing.html:334
+#: templates/the_cauldron/landing.html:339
 msgid "The skill tree"
 msgstr "El árbol de habilidades"
 
-#: templates/the_cauldron/landing.html:336
+#: templates/the_cauldron/landing.html:341
 msgid "Six fundamental movement patterns, each a ladder of exercises that <em>evolve</em> from your first rep to feats of mastery. You start where the Trial places you and climb one rung at a time — branching onto the loaded path whenever you bring equipment. Hover a node for its cue, or tap <span aria-hidden=\"true\">▶</span> to watch a pattern evolve."
 msgstr "Seis patrones de movimiento fundamentales, cada uno una escalera de ejercicios que <em>evolucionan</em> desde tu primera rep hasta hazañas de maestría. Empiezas donde te ubica la Prueba y subes un peldaño a la vez — tomando la ruta con peso cuando traigas equipo. Pasa el cursor sobre un nodo para ver su clave, o toca <span aria-hidden=\"true\">▶</span> para ver evolucionar un patrón."
 
-#: templates/the_cauldron/landing.html:344
+#: templates/the_cauldron/landing.html:349
 msgid "Bodyweight rung"
 msgstr "Peldaño de peso corporal"
 
-#: templates/the_cauldron/landing.html:345
+#: templates/the_cauldron/landing.html:350
 msgid "Needs equipment"
 msgstr "Requiere equipo"
 
-#: templates/the_cauldron/landing.html:346
+#: templates/the_cauldron/landing.html:351
 msgid "Mastery"
 msgstr "Maestría"
 
-#: templates/the_cauldron/landing.html:352
+#: templates/the_cauldron/landing.html:357
 msgid "The interactive skill tree needs JavaScript. The six ladders are: Horizontal Push (Wall Push-up → Archer Push-up), Vertical Pull (Australian Row → Archer Pull-up), Vertical Push (Incline Pike Push-up → Handstand Push-up), Lower Unilateral (Assisted Split Squat → Pistol Squat), Core Anti-Extension (Knee Plank → Hollow Body Hold), and Hinge (Glute Bridge → Nordic Curl) — each with loaded variants for owned equipment."
 msgstr "El árbol de habilidades interactivo necesita JavaScript. Las seis escaleras son: Empuje horizontal (Lagartija en pared → Lagartija arquero), Jalón vertical (Remo australiano → Dominada arquero), Empuje vertical (Lagartija pike inclinada → Flexión en parada de manos), Pierna unilateral (Sentadilla dividida asistida → Sentadilla pistola), Core antiextensión (Plancha de rodillas → Posición hollow) y Bisagra (Puente de glúteo → Curl nórdico) — cada una con variantes con peso para el equipo que tengas."
 
-#: templates/the_cauldron/landing.html:372
+#: templates/the_cauldron/landing.html:377
 msgid "The Method"
 msgstr "El método"
 
-#: templates/the_cauldron/landing.html:373
+#: templates/the_cauldron/landing.html:378
 msgid "How the difficulty rises"
 msgstr "Cómo sube la dificultad"
 
-#: templates/the_cauldron/landing.html:375
+#: templates/the_cauldron/landing.html:380
 msgid "The Forge runs an <strong>autoregulated double-progression</strong> engine (APRE-style): the last working set of every exercise is an all-out test, and its result decides your next session. Two levers turn — climb the ladder, or add load — and the engine picks the right one for the movement and the gear you own."
 msgstr "La Forja usa un motor de <strong>doble progresión autorregulada</strong> (estilo APRE): la última serie de trabajo de cada ejercicio es una prueba a tope, y su resultado decide tu siguiente sesión. Hay dos palancas — subir la escalera o agregar peso — y el motor elige la correcta según el movimiento y el equipo que tienes."
 
-#: templates/the_cauldron/landing.html:387
+#: templates/the_cauldron/landing.html:392
 msgid "Lever 1 — Difficulty"
 msgstr "Palanca 1 — Dificultad"
 
-#: templates/the_cauldron/landing.html:388
+#: templates/the_cauldron/landing.html:393
 msgid "Climb the movement ladder"
 msgstr "Sube la escalera de movimiento"
 
-#: templates/the_cauldron/landing.html:390
+#: templates/the_cauldron/landing.html:395
 msgid "For pure bodyweight work, harder <em>is</em> the progression. Hit the top of your rep range for <strong>two sessions running</strong> and the next rung is earned."
 msgstr "En el trabajo con peso corporal, más difícil <em>es</em> la progresión. Llega al tope de tu rango de reps <strong>dos sesiones seguidas</strong> y te ganas el siguiente peldaño."
 
-#: templates/the_cauldron/landing.html:395
+#: templates/the_cauldron/landing.html:400
 msgid "But it never jumps for you: the unlock is <strong>parked as a celebration</strong> you Claim or hold. Fall below the range and the Forge regresses you a rung to rebuild — no grinding reps you can't do with form."
 msgstr "Pero nunca salta por ti: el desbloqueo <strong>queda en espera como una celebración</strong> que reclamas o pospones. Quédate por debajo del rango y la Forja te baja un peldaño para reconstruir — nada de sacar a la fuerza reps que no puedes hacer con buena técnica."
 
-#: templates/the_cauldron/landing.html:405
+#: templates/the_cauldron/landing.html:410
 msgid "Lever 2 — Load"
 msgstr "Palanca 2 — Peso"
 
-#: templates/the_cauldron/landing.html:406
+#: templates/the_cauldron/landing.html:411
 msgid "Add the smallest real increment"
 msgstr "Agrega el incremento real más chico"
 
-#: templates/the_cauldron/landing.html:408
+#: templates/the_cauldron/landing.html:413
 msgid "When you own loadable gear — dumbbells, a barbell, bands — the Forge switches to <strong>load progression</strong>: beat the top of the range and it adds the smallest weight you actually have, then resets your reps."
 msgstr "Cuando tienes equipo con carga — mancuernas, una barra, ligas — la Forja cambia a <strong>progresión por peso</strong>: supera el tope del rango y agrega el peso más chico que realmente tienes, y reinicia tus reps."
 
-#: templates/the_cauldron/landing.html:414
+#: templates/the_cauldron/landing.html:419
 msgid "This solves the hardest problem in bodyweight training — overloading the legs and hips — and de-loads automatically when a set comes up short."
 msgstr "Esto resuelve el problema más difícil del entrenamiento con peso corporal — sobrecargar piernas y cadera — y descarga automáticamente cuando una serie se queda corta."
 
-#: templates/the_cauldron/landing.html:423
+#: templates/the_cauldron/landing.html:428
 msgid "Measured, not guessed"
 msgstr "Medido, no adivinado"
 
-#: templates/the_cauldron/landing.html:424
+#: templates/the_cauldron/landing.html:429
 msgid "Objective from the first rep"
 msgstr "Objetivo desde la primera rep"
 
-#: templates/the_cauldron/landing.html:426
+#: templates/the_cauldron/landing.html:431
 msgid "Both levers are driven by a real AMRAP count, not a subjective “how hard was that?” Beginners misjudge proximity to failure by <strong>4–5 reps</strong>, so the Forge measures the number and adapts from fact."
 msgstr "Las dos palancas se mueven con un conteo AMRAP real, no con un subjetivo “¿qué tan pesado estuvo?”. Quien empieza calcula mal qué tan cerca está del fallo por <strong>4–5 reps</strong>, así que la Forja mide el número y se adapta a los hechos."
 
-#: templates/the_cauldron/landing.html:432
+#: templates/the_cauldron/landing.html:437
 msgid "Blocked a move for injury or preference? It's swapped for the closest equal-or-easier substitute in the same pattern — the ladder bends around you."
 msgstr "¿Bloqueaste un movimiento por lesión o preferencia? Se cambia por el sustituto igual o más fácil más cercano del mismo patrón — la escalera se acomoda a ti."
 
-#: templates/the_cauldron/landing.html:441
+#: templates/the_cauldron/landing.html:446
 msgid "Recovery, dialled in"
 msgstr "Recuperación a la medida"
 
-#: templates/the_cauldron/landing.html:442
+#: templates/the_cauldron/landing.html:447
 msgid "Rest matched to the work"
 msgstr "Descanso según el trabajo"
 
-#: templates/the_cauldron/landing.html:444
+#: templates/the_cauldron/landing.html:449
 msgid "Rest isn't an afterthought. Heavy, low-rep and loaded compounds get <strong>~2½ minutes</strong>; hypertrophy ranges ~2; endurance sets ~75 seconds; isometric holds ~60 — each grounded in the training literature."
 msgstr "El descanso no es un detalle. Los compuestos pesados, de pocas reps y con carga llevan <strong>~2½ minutos</strong>; los rangos de hipertrofia ~2; las series de resistencia ~75 segundos; los sostenes isométricos ~60 — todo basado en la literatura de entrenamiento."
 
-#: templates/the_cauldron/landing.html:450
+#: templates/the_cauldron/landing.html:455
 msgid "The result: progress you can sustain, on a schedule your body can actually recover from."
 msgstr "El resultado: un progreso que puedes sostener, con un ritmo del que tu cuerpo sí se puede recuperar."
 
-#: templates/the_cauldron/landing.html:459
+#: templates/the_cauldron/landing.html:464
 msgid "Sources"
 msgstr "Fuentes"
 
-#: templates/the_cauldron/landing.html:460
+#: templates/the_cauldron/landing.html:465
 msgid "The evidence"
 msgstr "La evidencia"
 
-#: templates/the_cauldron/landing.html:462
+#: templates/the_cauldron/landing.html:467
 msgid "The Forge's peer scoring and methods are sourced — and honest about confidence. Where no published age×sex benchmark exists, the figure is flagged <em>estimated</em> in the app and here, never passed off as measured data."
 msgstr "La comparación con tus pares y los métodos de la Forja tienen fuentes — y son honestos sobre su confianza. Donde no existe una referencia publicada por edad×sexo, la cifra se marca como <em>estimada</em> en la app y aquí, y nunca se hace pasar por un dato medido."
 
-#: templates/the_cauldron/landing.html:470
+#: templates/the_cauldron/landing.html:475
 msgid "Push-up percentiles — CSEP-PATH, Payne et al. (2000). Real age×sex norms (female norms use the modified knee push-up). <a href=\"https://fitnessnorms.com/strength/push-ups/\" target=\"_blank\" rel=\"noopener\">fitnessnorms.com</a>"
 msgstr "Percentiles de lagartijas — CSEP-PATH, Payne et al. (2000). Normas reales por edad×sexo (las femeninas usan la lagartija modificada de rodillas). <a href=\"https://fitnessnorms.com/strength/push-ups/\" target=\"_blank\" rel=\"noopener\">fitnessnorms.com</a>"
 
-#: templates/the_cauldron/landing.html:477
+#: templates/the_cauldron/landing.html:482
 msgid "Plank-hold norms — Chase/Brigham et al., <em>IJES</em> (collegiate 18–25); brackets 30+ extrapolated.<span class=\"fshow-ref-est\">est. 30+</span> <a href=\"https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/\" target=\"_blank\" rel=\"noopener\">digitalcommons.wku.edu</a>"
 msgstr "Normas de plancha — Chase/Brigham et al., <em>IJES</em> (universitarios de 18–25); rangos de 30+ extrapolados.<span class=\"fshow-ref-est\">est. 30+</span> <a href=\"https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/\" target=\"_blank\" rel=\"noopener\">digitalcommons.wku.edu</a>"
 
-#: templates/the_cauldron/landing.html:484
+#: templates/the_cauldron/landing.html:489
 msgid "Pull-up categories — Topend Sports adult standards (18–35, men). <a href=\"https://www.topendsports.com/testing/tests/pullup.htm\" target=\"_blank\" rel=\"noopener\">topendsports.com</a>"
 msgstr "Categorías de dominadas — estándares para adultos de Topend Sports (18–35, hombres). <a href=\"https://www.topendsports.com/testing/tests/pullup.htm\" target=\"_blank\" rel=\"noopener\">topendsports.com</a>"
 
-#: templates/the_cauldron/landing.html:490
+#: templates/the_cauldron/landing.html:495
 msgid "Inverted-row, pike-push-up, glute-bridge &amp; bodyweight-squat rep standards — Strength Level community data (hundreds of thousands of logged sets; ages 40+ modelled).<span class=\"fshow-ref-est\">est. 40+</span> <a href=\"https://strengthlevel.com/strength-standards\" target=\"_blank\" rel=\"noopener\">strengthlevel.com</a>"
 msgstr "Estándares de reps de remo invertido, lagartija pike, puente de glúteo y sentadilla con peso corporal — datos de la comunidad de Strength Level (cientos de miles de series registradas; edades 40+ modeladas).<span class=\"fshow-ref-est\">est. 40+</span> <a href=\"https://strengthlevel.com/strength-standards\" target=\"_blank\" rel=\"noopener\">strengthlevel.com</a>"
 
-#: templates/the_cauldron/landing.html:498
+#: templates/the_cauldron/landing.html:503
 msgid "Rest-interval prescription — Schoenfeld et al. (2016) &amp; Grgic et al. (2017) review on inter-set rest for strength &amp; hypertrophy. <a href=\"https://pubmed.ncbi.nlm.nih.gov/27038416/\" target=\"_blank\" rel=\"noopener\">pubmed.ncbi.nlm.nih.gov</a>"
 msgstr "Prescripción de descanso — Schoenfeld et al. (2016) y la revisión de Grgic et al. (2017) sobre el descanso entre series para fuerza e hipertrofia. <a href=\"https://pubmed.ncbi.nlm.nih.gov/27038416/\" target=\"_blank\" rel=\"noopener\">pubmed.ncbi.nlm.nih.gov</a>"
 
-#: templates/the_cauldron/landing.html:505
+#: templates/the_cauldron/landing.html:510
 msgid "Progression model — Autoregulated Progressive Resistance Exercise (APRE): the test-set result sets the next prescription. <a href=\"https://pubmed.ncbi.nlm.nih.gov/21993042/\" target=\"_blank\" rel=\"noopener\">pubmed.ncbi.nlm.nih.gov</a>"
 msgstr "Modelo de progresión — Ejercicio de Resistencia Progresiva Autorregulado (APRE): el resultado de la serie de prueba define la siguiente prescripción. <a href=\"https://pubmed.ncbi.nlm.nih.gov/21993042/\" target=\"_blank\" rel=\"noopener\">pubmed.ncbi.nlm.nih.gov</a>"
 
-#: templates/the_cauldron/landing.html:515
+#: templates/the_cauldron/landing.html:520
 msgid "The anvil is hot"
 msgstr "El yunque está caliente"
 
-#: templates/the_cauldron/landing.html:516
+#: templates/the_cauldron/landing.html:521
 msgid "Take the Trial. Find your rung. Start climbing."
 msgstr "Haz la Prueba. Encuentra tu peldaño. Empieza a subir."
 
-#: templates/the_cauldron/landing.html:519
+#: templates/the_cauldron/landing.html:524
 msgid "See the skill tree"
 msgstr "Ver el árbol de habilidades"
 
-#: templates/the_cauldron/landing.html:526
+#: templates/the_cauldron/landing.html:531
 msgid "Philosophy"
 msgstr "Filosofía"
 
-#: templates/the_cauldron/landing.html:531
+#: templates/the_cauldron/landing.html:536
 msgid "Cooking is not merely craft."
 msgstr "Cocinar no es solo un oficio."
 
-#: templates/the_cauldron/landing.html:532
+#: templates/the_cauldron/landing.html:537
 msgid "It is the oldest alchemy."
 msgstr "Es la alquimia más antigua."
 
-#: templates/the_cauldron/landing.html:538
+#: templates/the_cauldron/landing.html:543
 msgid "Long before laboratories and ledgers, the kitchen was where transformation happened — where raw became whole, where the ordinary was made extraordinary by fire, patience, and knowledge passed mouth to ear across generations."
 msgstr "Mucho antes de los laboratorios y los libros de cuentas, la cocina era donde ocurría la transformación — donde lo crudo se volvía completo, donde lo ordinario se volvía extraordinario con fuego, paciencia y saberes que pasaban de boca en boca por generaciones."
 
-#: templates/the_cauldron/landing.html:543
+#: templates/the_cauldron/landing.html:548
 msgid "The Cauldron preserves that lineage. It is a vault for your most guarded formulas, a chronicle of your culinary tradition, and a guide to the invisible forces at work in every pot and pan."
 msgstr "El Caldero preserva ese linaje. Es una bóveda para tus fórmulas más guardadas, una crónica de tu tradición culinaria y una guía de las fuerzas invisibles que trabajan en cada olla y sartén."
 
-#: templates/the_cauldron/landing.html:548
+#: templates/the_cauldron/landing.html:553
 msgid "Part of the Arcano ecosystem. Keeper of the third flame."
 msgstr "Parte del ecosistema Arcano. Guardián de la tercera flama."
 
-#: templates/the_cauldron/landing.html:556
+#: templates/the_cauldron/landing.html:561
 msgid "Call to action"
 msgstr "Llamado a la acción"
 
-#: templates/the_cauldron/landing.html:559
+#: templates/the_cauldron/landing.html:564
 msgid "The cauldron is ready. The flame is lit. What will you preserve?"
 msgstr "El caldero está listo. La flama está encendida. ¿Qué vas a preservar?"
 
-#: templates/the_cauldron/landing.html:562
+#: templates/the_cauldron/landing.html:568
 msgid "Enter the Cauldron"
 msgstr "Entrar al Caldero"
 
-#: templates/the_cauldron/landing.html:584
+#: templates/the_cauldron/landing.html:593
 #, python-format
 msgid "Part of <a href=\"%(arcano_url)s\" style=\"color:inherit; text-decoration:underline; text-underline-offset:3px;\">Arcano</a>"
 msgstr "Parte de <a href=\"%(arcano_url)s\" style=\"color:inherit; text-decoration:underline; text-underline-offset:3px;\">Arcano</a>"
+
+#: templates/the_cauldron/landing.html:597
+msgid "Terms and Conditions"
+msgstr "Términos y Condiciones"
+
+#: templates/the_cauldron/landing.html:599
+msgid "Privacy Notice"
+msgstr "Aviso de Privacidad"
 
 #: templates/the_cauldron/legal/privacy.html:6
 msgid "How The Cauldron collects, uses and protects your personal data."
@@ -4841,38 +5111,6 @@ msgstr "Cómo El Caldero recaba, usa y protege tus datos personales."
 msgid "The Cauldron's terms and conditions: how the recipe book, the Forge and the meal journal may be used."
 msgstr "Los términos y condiciones de El Caldero: cómo se pueden usar el recetario, la Forja y el diario de comidas."
 
-#: templates/the_cauldron/login.html:4 templates/the_cauldron/login.html:35
-msgid "Enter The Cauldron"
-msgstr "Entra a El Caldero"
-
-#: templates/the_cauldron/login.html:5
-msgid "Sign in to The Cauldron."
-msgstr "Inicia sesión en El Caldero."
-
-#: templates/the_cauldron/login.html:23
-msgid "← Cauldron"
-msgstr "← Caldero"
-
-#: templates/the_cauldron/login.html:36
-msgid "Sign in to tend your forge."
-msgstr "Inicia sesión para atender tu forja."
-
-#: templates/the_cauldron/login.html:39
-msgid "Those credentials didn't catch. Try again."
-msgstr "Esos datos no encendieron. Inténtalo de nuevo."
-
-#: templates/the_cauldron/login.html:45
-msgid "Username"
-msgstr "Usuario"
-
-#: templates/the_cauldron/login.html:49
-msgid "Password"
-msgstr "Contraseña"
-
-#: templates/the_cauldron/login.html:53
-msgid "Light the fire"
-msgstr "Enciende el fuego"
-
 #: templates/the_cauldron/mcp_info.html:9
 msgid "Use The Cauldron from your AI assistant"
 msgstr "Usa El Caldero desde tu asistente de IA"
@@ -4880,10 +5118,6 @@ msgstr "Usa El Caldero desde tu asistente de IA"
 #: templates/the_cauldron/mcp_info.html:10
 msgid "Connect Claude or Gemini to The Cauldron: log meals from a photo, find recipes for what's in your fridge, plan your week and log workouts."
 msgstr "Conecta Claude o Gemini a El Caldero: registra comidas con una foto, encuentra recetas con lo que hay en tu refri, planea tu semana y registra tus entrenamientos."
-
-#: templates/the_cauldron/mcp_info.html:51
-msgid "Sign in"
-msgstr "Iniciar sesión"
 
 #: templates/the_cauldron/mcp_info.html:60
 msgid "The Cauldron · AI assistants"
@@ -5507,6 +5741,12 @@ msgstr "Esta conexión no puede continuar"
 msgid "The assistant sent an invalid request. Go back to it and try connecting again."
 msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta conectarte de nuevo."
 
+#~ msgid "Those credentials didn't catch. Try again."
+#~ msgstr "Esos datos no encendieron. Inténtalo de nuevo."
+
+#~ msgid "Username"
+#~ msgstr "Usuario"
+
 #~ msgid "The Journal"
 #~ msgstr "El Diario"
 
@@ -5515,9 +5755,6 @@ msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta con
 
 #~ msgid "Enter the Forge"
 #~ msgstr "Entrar a la Forja"
-
-#~ msgid "The Journal — The Cauldron"
-#~ msgstr "El Diario — El Caldero"
 
 #~ msgid "Open the Journal"
 #~ msgstr "Abrir El Diario"

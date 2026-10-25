@@ -5,6 +5,8 @@ visitors keep the landing. Login lands on the journal by default, and the nav
 calls the journal "The Cauldron" — "Journal" survives only in the URL.
 """
 
+from datetime import datetime, timezone as dt_timezone
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
@@ -25,7 +27,10 @@ def plain_static_storage(settings):
 @pytest.fixture
 def member(db):
     """Past the terms gate, with the sensitive-data consent given."""
-    user = User.objects.create_user(username="caldera", password="pw12345!")
+    # Joined before open sign-up (#72): signs in without email verification.
+    user = User.objects.create_user(
+        username="caldera", password="pw12345!", date_joined=datetime(2026, 1, 1, tzinfo=dt_timezone.utc)
+    )
     legal.accept(user, legal.GATED + (legal.SENSITIVE_CONSENT,))
     return user
 
@@ -65,19 +70,19 @@ class TestEntry:
         assert resp.context["has_consent"] is False  # the consent gate shows
 
     def test_login_without_next_lands_on_the_journal(self, member):
-        resp = Client().post("/cauldron/login/", {"username": "caldera", "password": "pw12345!"})
+        resp = Client().post("/cauldron/login/", {"login": "caldera", "password": "pw12345!"})
         assert resp.status_code == 302
         assert resp["Location"] == JOURNAL
 
     def test_login_with_next_still_honours_it(self, member):
         resp = Client().post(
-            "/cauldron/login/", {"username": "caldera", "password": "pw12345!", "next": "/cauldron/grimoire/"}
+            "/cauldron/login/", {"login": "caldera", "password": "pw12345!", "next": "/cauldron/grimoire/"}
         )
         assert resp["Location"] == "/cauldron/grimoire/"
 
     def test_login_with_an_off_site_next_falls_back_to_the_journal(self, member):
         resp = Client().post(
-            "/cauldron/login/", {"username": "caldera", "password": "pw12345!", "next": "https://evil.example/"}
+            "/cauldron/login/", {"login": "caldera", "password": "pw12345!", "next": "https://evil.example/"}
         )
         assert resp["Location"] == JOURNAL
 

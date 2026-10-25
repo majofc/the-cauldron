@@ -3,10 +3,12 @@
 Adaptive calisthenics training app ("The Forge"). Users complete an assessment trial, get a personalized program, and log workouts. The program adapts as they progress through an exercise difficulty ladder.
 
 URL prefix: `/cauldron/`
-Auth: login required for all app views (landing is public).
+Auth: login required for all app views (landing is public). Open sign-up via django-allauth — see
+"Accounts — sign-up, verification, Google (#72)" below.
 **Entry flow (#102)**: the journal is the app's home. `/cauldron/` and `/cauldron/es/` send a signed-in user
 to `the_cauldron:journal` (302, query string dropped); anonymous visitors get the landing, whose "Enter →" logs
-in with `?next=/cauldron/journal/`. A login without `next` also lands there (`LoginView(next_page=…)`). In the UI
+in with `?next=/cauldron/journal/`. A login without `next` also lands there (`CauldronAccountAdapter.get_login_redirect_url`,
+likewise sign-up and email verification). In the UI
 the journal is just **"The Cauldron"** — "Journal" survives only in the URL and the route name, which must not
 change (MCP `consent_error` reverses it). Pending terms still go through `/cauldron/accept/?next=/cauldron/journal/`,
 and users without the sensitive-data consent see the consent gate on the journal.
@@ -467,6 +469,68 @@ migration 0033 — unknown, never 0.
 
 ---
 
+## Accounts — sign-up, verification, Google (#72)
+
+django-allauth 65 (configured in arcano `settings.py`, `ACCOUNT_*` / `SOCIALACCOUNT_*`); only The Cauldron
+uses it. Routes: `the_cauldron:login` / `register` / `password-reset` → allauth views at `/cauldron/login/`,
+`/cauldron/register/`, `/cauldron/password-reset/`; the rest of allauth (confirm-email, reset-from-key,
+Google callback, email management) under `/cauldron/account/` (arcano `urls.py`, un-namespaced:
+`account_*` / `socialaccount_*` names). Logout stays Django's `LogoutView` (`the_cauldron:logout`).
+
+- **A sign-up is inactive until its email is verified** (`CauldronAccountAdapter.save_user` also sets
+  `CauldronProfile.pending_verification`; `signals.activate_on_email_confirmed` turns the account on **only
+  when that flag is set**, then clears it, so an account an admin switched off is never revived). The session is site-wide: inactive is what stops Domum, Loom, the console
+  and admin (all `authenticate()`) from letting an unverified sign-up in. `pre_login` lets a pending account
+  through to allauth's verification stage (resend + login after the click) instead of "account inactive".
+- `auth_forms.CauldronLoginForm` — email **or** username. Only accounts that joined before
+  `SIGNUP_LAUNCH` (2026-10-20) **and** have no `EmailAddress` row skip verification. Newer accounts without
+  a verified email verify first (console invites accept any address). Tests that sign in a freshly created
+  user through `/cauldron/login/` must set an old `date_joined`.
+- `auth_forms.CauldronSignupForm` — email, display name (the field is `first_name`, so allauth stores it
+  **and builds the username from it**: the username is public in the Coven, from the email it would leak
+  the address), password ×2, Terms/Privacy box (→ `legal.accept(user, legal.GATED)`, the acceptance row is
+  the timestamp), honeypot `website`.
+- `auth_adapters.CauldronAccountAdapter` — redirects stay in `/cauldron/`; **all account mail goes through
+  `tools_communication.send_email`** (`requested_by="the_cauldron"`, in `CommunicationLog`), rendered from
+  allauth's translated `.txt` templates (+ our `account/email/base_message.txt`).
+- Squatting: an unverified sign-up older than the link (24 h) gives its email back to a new sign-up
+  (`CauldronSignupForm.clean_email` → `auth_adapters.discard_pending_signups`); a Google-verified email
+  frees itself from any pending sign-up at once.
+- `auth_adapters.CauldronSocialAccountAdapter` — Google: a Google-**verified** email signs in to (and
+  links) the local account with that email **only if that account has a verified `EmailAddress` for it**.
+  That first link **removes the account's password** and emails the owner (`account/email/google_linked_*`
+  with a reset link): someone may have signed up with their email and they confirmed it.
+  Unverified / no-row accounts are never linked: console invites accept any email, so such an account may
+  belong to someone else and its password would survive (the user then picks another email, or verifies
+  first — e.g. via a password reset). **Staff/superusers never sign in with Google** (linked or connecting →
+  `socialaccount_login_error`).
+- Account emails link only allauth's URLs (`activate_url`, `password_reset_url`, `signup_url`); the rest
+  is escaped text (the display name is user input).
+- `signals.verify_email_on_password_reset` — finishing a reset marks `user.email` verified (requesting one
+  creates an unverified `EmailAddress` for an admin-made account).
+- Email verification is **mandatory** (24 h HMAC link, confirm with a POST). An expired/tampered link
+  page says to sign in again — signing in with an unverified email re-sends the link (rate-limited).
+- No account enumeration (`ACCOUNT_PREVENT_ENUMERATION`): duplicate sign-up and reset answer exactly like
+  a fresh one; the owner gets an email instead. A reset for an unknown address sends nothing
+  (`ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False`).
+- `AUTHENTICATION_BACKENDS` is allauth's backend **only** (it subclasses `ModelBackend`): with two backends
+  every bare `login(request, user)` (console verify/invite) raises.
+- Known gaps: `LOGIN_URL` is still `/admin/login/`, so allauth's signed-in pages (`/cauldron/account/email/`,
+  password change) bounce a signed-out visitor to the admin login; account mail is HTML-only and sent inside
+  the request (`tools_communication.send_email` has no text part).
+- Rate limits (`ACCOUNT_RATE_LIMITS`, LocMem cache → per worker): **one rate per (action, per)** — allauth
+  keeps one history per key, so two `/ip` rates on one action count every hit twice.
+- Google button (`the_cauldron/auth/_google.html`) only renders when `GOOGLE_CLIENT_ID`/`SECRET` are set.
+  Redirect URI: `<site>/cauldron/account/google/login/callback/`. First Google sign-in → the legal gate
+  asks for Terms/Privacy (pages only, like every user).
+- Templates: `the_cauldron/auth/_base.html` (card shell); overrides in `templates/account/`,
+  `templates/socialaccount/`, and `templates/allauth/layouts/base.html` (fallback chrome for allauth
+  pages not restyled). `the_cauldron` must stay **before** `allauth` in `INSTALLED_APPS`.
+- Privacy notice 1.4 adds the display name, verification status and Google data (everyone re-accepts once).
+- Tests: `tests/test_signup.py` (Google via a hand-built `SocialLogin` + `complete_social_login`).
+  Rate limits live in the cache — `cache.clear()` between tests. Rendering needs `collectstatic` once in a
+  fresh worktree (`Missing staticfiles manifest entry`).
+
 ## Daily nutrition — goals, meal log, adherence, planner (#85)
 
 Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules in `services/legal.py`,
@@ -482,7 +546,8 @@ Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules i
 | `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
 | `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
 
-**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.3, privacy 1.4, consent 1.1 since #105); the
+**Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.3, privacy 1.5, consent 1.1; privacy 1.5
+joins #105's body data and #72's sign-up / Google); the
 legal pages state the same versions. `views.cauldron_page` (login + gate) wraps every Cauldron page: a user
 whose latest terms/privacy version isn't current goes to `the_cauldron:legal-accept` (`/cauldron/accept/?next=`,
 `next` checked with `url_has_allowed_host_and_scheme`). The gate covers **pages only** — Forge/Grimoire APIs

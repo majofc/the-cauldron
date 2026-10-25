@@ -1,7 +1,13 @@
 {% extends 'arcano/base.html' %}
 {% load static i18n %}
+{% comment %}
+  Shell for The Cauldron's account pages (#72): sign-in, sign-up, email
+  verification, password reset and Google. allauth renders them; the
+  templates under templates/account/ and templates/socialaccount/ extend this
+  one and fill `auth_card`.
+{% endcomment %}
 
-{% block title %}{% trans "Enter The Cauldron" %}{% endblock %}
+{% block title %}{% block auth_title %}{% trans "Enter The Cauldron" %}{% endblock %} — The Cauldron{% endblock %}
 {% block meta_description %}{% trans "Sign in to The Cauldron." %}{% endblock %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
@@ -32,26 +38,7 @@
     <div class="corner-bl" aria-hidden="true"></div>
     <div class="corner-br" aria-hidden="true"></div>
 
-    <h1 class="forge-title">{% trans "Enter The Cauldron" %}</h1>
-    <p class="forge-subtitle">{% trans "Sign in to tend your forge." %}</p>
-
-    {% if form.errors %}
-    <p class="forge-error" role="alert">{% trans "Those credentials didn't catch. Try again." %}</p>
-    {% endif %}
-
-    <form method="post" class="forge-form">
-      {% csrf_token %}
-      <label class="forge-field">
-        <span>{% trans "Username" %}</span>
-        <input type="text" name="username" autocomplete="username" required autofocus>
-      </label>
-      <label class="forge-field">
-        <span>{% trans "Password" %}</span>
-        <input type="password" name="password" autocomplete="current-password" required>
-      </label>
-      <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Light the fire" %}</button>
-    </form>
+    {% block auth_card %}{% endblock %}
   </div>
 </section>
 {% endblock %}
