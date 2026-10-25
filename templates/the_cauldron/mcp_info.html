@@ -20,7 +20,9 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
+{# Public page (#102): members go home to the journal, visitors to the landing. #}
+{% if user.is_authenticated %}{% url 'the_cauldron:journal' as cauldron_home %}{% else %}{% url 'the_cauldron:landing' as cauldron_home %}{% endif %}
+<a href="{{ cauldron_home }}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans 'The Cauldron home' %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -33,10 +35,10 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
+{% if user.is_authenticated %}{% url 'the_cauldron:journal' as cauldron_home %}{% else %}{% url 'the_cauldron:landing' as cauldron_home %}{% endif %}
+<li class="cauldron-nav-home"><a href="{{ cauldron_home }}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link cauldron-nav-tight">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
@@ -147,7 +149,7 @@ The MCP info page (#89) — oauth_views.mcp_info_view, served when a browser ope
     <div class="grim-spell-page-body">
       <h2 class="grim-h2" id="mcpi-how">{% trans "How it works" %}</h2>
       <ul class="mcpi-list">
-        <li>{% trans "Your assistant does the seeing and the thinking: it looks at the photo, estimates portions and suggests recipes. The Cauldron stores the result — your Journal, Grimoire and Forge stay the same as on the site." %}</li>
+        <li>{% trans "Your assistant does the seeing and the thinking: it looks at the photo, estimates portions and suggests recipes. The Cauldron stores the result — your meal log, Grimoire and Forge stay the same as on the site." %}</li>
         <li>{% trans "Nutrition your assistant estimates is saved marked “estimated”, so you can tell it apart from measured data." %}</li>
         <li>{% trans "Before changing or deleting anything, your assistant shows you what will change and asks you to confirm." %}</li>
         <li>{% trans "Everything it creates is private. Sharing a recipe with the Coven is done only on the site." %}</li>

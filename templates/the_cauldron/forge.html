@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans "The Cauldron home" %}">
+<a href="{% url 'the_cauldron:journal' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans "The Cauldron home" %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -26,10 +26,9 @@
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
 <li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active cauldron-nav-tight">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}

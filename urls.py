@@ -128,6 +128,9 @@ urlpatterns = [
         auth_views.LoginView.as_view(
             template_name='the_cauldron/login.html',
             redirect_authenticated_user=True,
+            # Without ?next=, land on the app's home rather than Django's
+            # /accounts/profile/ default (#102).
+            next_page='the_cauldron:journal',
         ),
         name='login',
     ),
