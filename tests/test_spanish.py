@@ -252,13 +252,13 @@ class TestLanguagePreference:
         assert "What do you have?" in _forge_page(client).content.decode()
         assert get_profile(user).language == "en"
 
-    def test_public_landing_does_not_create_a_profile(self, db):
+    def test_public_page_does_not_create_a_profile(self, db):
         from the_cauldron.models import CauldronProfile
 
         outsider = User.objects.create_user(username="visitor", password="pw12345!")
         client = Client()
         client.force_login(outsider)
-        assert client.get("/cauldron/").status_code == 200
+        assert client.get("/cauldron/terms/").status_code == 200
         assert not CauldronProfile.objects.filter(user=outsider).exists()
 
     def test_no_choice_yet_leaves_the_profile_blank(self, seeded, user):

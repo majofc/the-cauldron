@@ -5,6 +5,13 @@ Adaptive calisthenics training app ("The Forge"). Users complete an assessment t
 URL prefix: `/cauldron/`
 Auth: login required for all app views (landing is public). Open sign-up via django-allauth — see
 "Accounts — sign-up, verification, Google (#72)" below.
+**Entry flow (#102)**: the journal is the app's home. `/cauldron/` and `/cauldron/es/` send a signed-in user
+to `the_cauldron:journal` (302, query string dropped); anonymous visitors get the landing, whose "Enter →" logs
+in with `?next=/cauldron/journal/`. A login without `next` also lands there (`CauldronAccountAdapter.get_login_redirect_url`,
+likewise sign-up and email verification). In the UI
+the journal is just **"The Cauldron"** — "Journal" survives only in the URL and the route name, which must not
+change (MCP `consent_error` reverses it). Pending terms still go through `/cauldron/accept/?next=/cauldron/journal/`,
+and users without the sensitive-data consent see the consent gate on the journal.
 
 ---
 
@@ -190,7 +197,7 @@ Fields: `user`, `exercise`, `reason`. Unique `(user, exercise)`.
 
 | View | Auth | Template |
 |---|---|---|
-| `landing_view` | public | `the_cauldron/landing.html` |
+| `landing_view` / `landing_es_view` | public; signed-in → 302 `the_cauldron:journal` | `the_cauldron/landing.html` |
 | `forge_view` | login_required | `the_cauldron/forge.html` |
 
 `forge.html` is a single-page app driven entirely by API calls to `/cauldron/api/` endpoints. The template itself is mostly a shell.
@@ -329,7 +336,7 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
   "unverified nutrition" badge.
 
 **URLs** (all login → Cauldron login; one template, `grimoire.html`, switched by `page` = list/spell/edit):
-- `the_cauldron:grimoire` → `/cauldron/grimoire/` — list (spells + reagents tabs); linked from the landing and Forge navs
+- `the_cauldron:grimoire` → `/cauldron/grimoire/` — list (spells + reagents tabs); linked from every Cauldron nav
 - `the_cauldron:grimoire-spell` → `/cauldron/grimoire/spell/<uuid>/` — one spell, **full page** (no pop-ups);
   same visibility as the API (`readable_spells`), else 404
 - `the_cauldron:grimoire-spell-new` → `…/spell/new/`, `the_cauldron:grimoire-spell-edit` → `…/spell/<uuid>/edit/` —
@@ -404,7 +411,7 @@ same page in the other language. No sitemap exists yet.
 | The Trial | La Prueba | | hold (timed) | sostén |
 | Anvil | Yunque | | flames / fires 🔥 | llamas |
 | The Grimoire | El Grimorio | | Earphones mode | Modo audífonos |
-| The Journal | El Diario | | Rest ping | Aviso de descanso |
+| The Journal (code/URL only; UI says "The Cauldron") | El Diario | | Rest ping | Aviso de descanso |
 | The Coven | El Aquelarre | | Claim it | Reclamarlo |
 | rung | peldaño | | skill tree | árbol de habilidades |
 | ladder | escalera | | AMRAP | AMRAP (kept) |
@@ -610,6 +617,11 @@ scrubs and charts these client-side with no further requests (`nutrition.js` →
 `me/` (GET/PATCH timezone), `goals/` (GET/PUT full set), `goals/history/`, `intake/` (CRUD, `?date=`),
 `intake/day/?date=`, `adherence/?days=`, `plan/` (CRUD, `?from=&to=` ≤ 62 days), `plan/day/?date=`,
 `plan/{uuid}/eat/`. Naive `eaten_at` is read in the user's timezone (`UserTimezoneMixin`).
+
+**Nav (#102)**: no "The Journal" item anywhere. On signed-in pages the brand and the "The Cauldron" link point to
+`the_cauldron:journal` (active there); public pages (landing, legal, login) keep `the_cauldron:landing`, which
+redirects signed-in users to the journal anyway. The public MCP info page picks per visitor (journal for members,
+landing for anonymous visitors). `_safe_next` (the accept page) also falls back to the journal.
 
 **Pages**: `the_cauldron:profile` (goals, timezone, withdraw consent), `the_cauldron:journal`
 (`?date=`, `?log_spell=` / `?plan_spell=` preselect a readable spell; the spell page's "I ate this" /

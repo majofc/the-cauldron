@@ -64,11 +64,12 @@ class CauldronAccountAdapter(DefaultAccountAdapter):
             return None
         return super().pre_login(request, user, **kwargs)
 
+    # The journal is the app's home (#102): a sign-in without ?next= lands there.
     def get_login_redirect_url(self, request):
-        return reverse('the_cauldron:landing')
+        return reverse('the_cauldron:journal')
 
     def get_signup_redirect_url(self, request):
-        return reverse('the_cauldron:landing')
+        return reverse('the_cauldron:journal')
 
     def get_logout_redirect_url(self, request):
         return reverse('the_cauldron:landing')
@@ -77,7 +78,7 @@ class CauldronAccountAdapter(DefaultAccountAdapter):
         # Logged in by ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION → straight in; a link
         # opened in another browser → sign in first.
         if self.request.user.is_authenticated:
-            return reverse('the_cauldron:landing')
+            return reverse('the_cauldron:journal')
         return reverse('the_cauldron:login')
 
     def send_mail(self, template_prefix, email, context):
