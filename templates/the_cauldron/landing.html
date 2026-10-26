@@ -1,10 +1,11 @@
 {% extends 'arcano/base.html' %}
 {% load static i18n %}
 
-{% block title %}The Cauldron — Recipes & the Alchemy of the Kitchen{% endblock %}
-{% block meta_description %}Guard your secret recipes. Share ancient kitchen knowledge. Discover the alchemy of every ingredient. The Cauldron, the third Arcana.{% endblock %}
+{% block title %}{% trans "The Cauldron — Recipes & the Alchemy of the Kitchen" %}{% endblock %}
+{% block meta_description %}{% trans "Guard your secret recipes. Share ancient kitchen knowledge. Discover the alchemy of every ingredient. The Cauldron, the third Arcana." %}{% endblock %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+{% block extra_head %}{% include 'the_cauldron/_seo_head.html' %}{% endblock %}
 
 {% block app_styles %}
 <link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
@@ -13,7 +14,7 @@
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="The Cauldron home">
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="{% trans "The Cauldron home" %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -24,26 +25,23 @@
     <path d="M32 48 L32 54" />
     <path d="M44 48 L46 54" />
   </svg>
-  The Cauldron
+  {% trans "The Cauldron" %}
 </a>
 {% endblock %}
 
 {% block nav_links %}
 <li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">The Forge</a></li>
-<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">The Grimoire</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link">{% trans "The Journal" %}</a></li>
-<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">The Cauldron</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">{% trans "The Forge" %}</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">{% trans "The Grimoire" %}</a></li>
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">{% trans "The Cauldron" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
 <div class="nav-cta">
   {% include 'the_cauldron/_assistant_link.html' %}
-  {% if user.is_authenticated %}
-    <a href="{% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter the Forge →</a>
-  {% else %}
-    <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:forge' %}" class="btn-primary btn-sm">Enter →</a>
-  {% endif %}
+  {# Only anonymous visitors see the landing; signed-in users are sent to the journal (#102). #}
+  <a href="{% url 'the_cauldron:register' %}" class="btn-ghost btn-sm">{% trans "Create an account" %}</a>
+  <a href="{% url 'the_cauldron:login' %}?next={% url 'the_cauldron:journal' %}" class="btn-primary btn-sm">{% trans "Enter →" %}</a>
 </div>
 {% endblock %}
 
@@ -52,7 +50,7 @@
   <!-- ═══════════════════════════════════════
        HERO
   ═══════════════════════════════════════ -->
-  <section class="cauldron-hero" aria-label="Hero">
+  <section class="cauldron-hero" aria-label="{% trans "Hero" %}">
 
     <!-- Complex cauldron mark -->
     <svg class="cauldron-hero-mark" viewBox="0 0 96 96" fill="none" stroke="currentColor"
@@ -104,21 +102,25 @@
       <path d="M74 60 Q76 64 74 68" opacity="0.6" stroke-width="1.4"/>
     </svg>
 
-    <p class="cauldron-eyebrow">The Third Arcana</p>
+    <p class="cauldron-eyebrow">{% trans "The Third Arcana" %}</p>
 
-    <h1 class="cauldron-hero-title">The Cauldron</h1>
+    <h1 class="cauldron-hero-title">{% trans "The Cauldron" %}</h1>
 
     <span class="cauldron-ornament" aria-hidden="true">✦ ✦ ✦</span>
 
     <p class="cauldron-hero-subtitle">
-      Where secret recipes are sealed in silence,<br>
+      {% blocktrans trimmed %}Where secret recipes are sealed in silence,<br>
       ancient wisdom passes from hand to hand,<br>
-      and every ingredient reveals its hidden magic.
+      and every ingredient reveals its hidden magic.{% endblocktrans %}
     </p>
 
     <div class="cauldron-hero-cta">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Begin Your Practice</a>
-      <a href="#pillars" class="btn-cauldron btn-cauldron--ghost">Explore the Arts</a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Begin Your Practice" %}</a>
+      {% else %}
+      <a href="{% url 'the_cauldron:register' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Create your account" %}</a>
+      {% endif %}
+      <a href="#pillars" class="btn-cauldron btn-cauldron--ghost">{% trans "Explore the Arts" %}</a>
     </div>
     <p class="cauldron-hero-assistant">
       <a href="{% url 'the_cauldron:mcp' %}">{% trans "✦ Use it from Claude — log meals from a photo, plan and train by chat" %}</a>
@@ -128,17 +130,17 @@
   <!-- ═══════════════════════════════════════
        ARCANA ECOSYSTEM STRIP
   ═══════════════════════════════════════ -->
-  <div class="cauldron-arcana-strip" aria-label="The Arcana">
+  <div class="cauldron-arcana-strip" aria-label="{% trans "The Arcana" %}">
     <a href="{% url 'welcome' %}" class="cauldron-arcana-item">⬡ Arcano</a>
     <a href="{% url 'scholomancy-landing' %}" class="cauldron-arcana-item">⬡ Scholomancy</a>
-    <span class="cauldron-arcana-item cauldron-arcana-item--active">⬡ The Cauldron</span>
+    <span class="cauldron-arcana-item cauldron-arcana-item--active">⬡ {% trans "The Cauldron" %}</span>
   </div>
 
   <!-- ═══════════════════════════════════════
        PILLARS
   ═══════════════════════════════════════ -->
-  <section class="cauldron-section" id="pillars" aria-label="The Ancient Arts">
-    <p class="cauldron-section-label">The Ancient Arts</p>
+  <section class="cauldron-section" id="pillars" aria-label="{% trans "The Ancient Arts" %}">
+    <p class="cauldron-section-label">{% trans "The Ancient Arts" %}</p>
 
     <div class="cauldron-pillars">
 
@@ -164,11 +166,11 @@
           <path d="M29 31 Q29 26 32 26 Q35 26 35 31" stroke-width="1.6"/>
         </svg>
 
-        <h2 class="cauldron-card-title">Guard Your Secrets</h2>
+        <h2 class="cauldron-card-title">{% trans "Guard Your Secrets" %}</h2>
         <p class="cauldron-card-text">
-          Your most prized formulas — sealed, encrypted, yours alone.
+          {% blocktrans trimmed %}Your most prized formulas — sealed, encrypted, yours alone.
           Every recipe is a ritual. Keep it safe from prying eyes until
-          the moment you choose to share.
+          the moment you choose to share.{% endblocktrans %}
         </p>
       </article>
 
@@ -191,11 +193,11 @@
           <path d="M14 48 Q10 48 10 44 Q10 40 14 40" stroke-width="1.6"/>
         </svg>
 
-        <h2 class="cauldron-card-title">Share Ancient Wisdom</h2>
+        <h2 class="cauldron-card-title">{% trans "Share Ancient Wisdom" %}</h2>
         <p class="cauldron-card-text">
-          Pass the torch. Choose who inherits your culinary lineage —
+          {% blocktrans trimmed %}Pass the torch. Choose who inherits your culinary lineage —
           a family member, a student, a fellow practitioner.
-          Knowledge lives on when it is given freely.
+          Knowledge lives on when it is given freely.{% endblocktrans %}
         </p>
       </article>
 
@@ -216,11 +218,11 @@
           <circle cx="54" cy="36" r="1.5" fill="currentColor" stroke="none" opacity="0.5"/>
         </svg>
 
-        <h2 class="cauldron-card-title">Know the Magic</h2>
+        <h2 class="cauldron-card-title">{% trans "Know the Magic" %}</h2>
         <p class="cauldron-card-text">
-          Every dish is alchemy. Understand the science beneath the spell —
+          {% blocktrans trimmed %}Every dish is alchemy. Understand the science beneath the spell —
           why fat carries flavor, why heat transforms, why salt awakens
-          what was always sleeping inside the ingredient.
+          what was always sleeping inside the ingredient.{% endblocktrans %}
         </p>
       </article>
     </div>
@@ -231,17 +233,17 @@
   ═══════════════════════════════════════ -->
   <hr class="fshow-seam" aria-hidden="true">
 
-  <section class="fshow" id="forge" aria-label="The Forge">
+  <section class="fshow" id="forge" aria-label="{% trans "The Forge" %}">
 
     <div class="fshow-head">
-      <span class="fshow-eyebrow">The Practice · The Forge</span>
-      <h2 class="fshow-title">Temper the body like the blade</h2>
+      <span class="fshow-eyebrow">{% trans "The Practice · The Forge" %}</span>
+      <h2 class="fshow-title">{% trans "Temper the body like the blade" %}</h2>
       <p class="fshow-lead">
-        The cauldron tempers the recipe; <strong>the Forge tempers you</strong>.
+        {% blocktrans trimmed %}The cauldron tempers the recipe; <strong>the Forge tempers you</strong>.
         It is an adaptive calisthenics trainer that learns your true strength,
         then reshapes a program around it — bodyweight first, equipment when you
         have it. No guesswork, no fixed plan that ignores how you actually moved
-        today. You train, the Forge listens, the difficulty answers.
+        today. You train, the Forge listens, the difficulty answers.{% endblocktrans %}
       </p>
     </div>
 
@@ -249,34 +251,34 @@
     <div class="fshow-flow">
       <div class="fshow-flow-step">
         <span class="fshow-flow-num">I</span>
-        <div class="fshow-flow-title">The Trial</div>
+        <div class="fshow-flow-title">{% trans "The Trial" %}</div>
         <p class="fshow-flow-text">
-          One honest all-out set per movement. We measure what you can do —
-          objectively — not what you guess you have left.
+          {% blocktrans trimmed %}One honest all-out set per movement. We measure what you can do —
+          objectively — not what you guess you have left.{% endblocktrans %}
         </p>
       </div>
       <span class="fshow-flow-arrow" aria-hidden="true">→</span>
       <div class="fshow-flow-step">
         <span class="fshow-flow-num">II</span>
-        <div class="fshow-flow-title">Your Rung</div>
+        <div class="fshow-flow-title">{% trans "Your Rung" %}</div>
         <p class="fshow-flow-text">
-          Your score places you on the right rung of each movement ladder —
-          and builds a program from where you truly stand.
+          {% blocktrans trimmed %}Your score places you on the right rung of each movement ladder —
+          and builds a program from where you truly stand.{% endblocktrans %}
         </p>
       </div>
       <span class="fshow-flow-arrow" aria-hidden="true">→</span>
       <div class="fshow-flow-step">
         <span class="fshow-flow-num">III</span>
-        <div class="fshow-flow-title">It Adapts</div>
+        <div class="fshow-flow-title">{% trans "It Adapts" %}</div>
         <p class="fshow-flow-text">
-          Every session ends in a test set. Beat it and you climb; fall short
-          and it eases off. The plan rewrites itself around you.
+          {% blocktrans trimmed %}Every session ends in a test set. Beat it and you climb; fall short
+          and it eases off. The plan rewrites itself around you.{% endblocktrans %}
         </p>
       </div>
     </div>
 
     <!-- Animated demos -->
-    <p class="fshow-subhead">Live from the Forge</p>
+    <p class="fshow-subhead">{% trans "Live from the Forge" %}</p>
     <div class="fshow-demos">
 
       <article class="fshow-demo">
@@ -284,15 +286,15 @@
         <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
         <div class="fshow-demo-stage">
           <div class="fshow-amrap" aria-hidden="true">
-            <span class="fshow-amrap-label">AMRAP · Push-up</span>
+            <span class="fshow-amrap-label">{% trans "AMRAP · Push-up" %}</span>
             <span class="fshow-amrap-num"></span>
-            <span class="fshow-amrap-unit">reps to failure</span>
+            <span class="fshow-amrap-unit">{% trans "reps to failure" %}</span>
           </div>
         </div>
-        <h3 class="fshow-demo-title">An objective Trial</h3>
+        <h3 class="fshow-demo-title">{% trans "An objective Trial" %}</h3>
         <p class="fshow-demo-text">
-          One max-effort set counts your real reps — novices misjudge “reps in
-          reserve” by 4–5, so the Forge measures instead of asking.
+          {% blocktrans trimmed %}One max-effort set counts your real reps — novices misjudge “reps in
+          reserve” by 4–5, so the Forge measures instead of asking.{% endblocktrans %}
         </p>
       </article>
 
@@ -301,16 +303,16 @@
         <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
         <div class="fshow-demo-stage">
           <div class="fshow-ladder" aria-hidden="true">
-            <div class="fshow-rung fshow-rung--1">Knee Push-up</div>
-            <div class="fshow-rung fshow-rung--2">Push-up</div>
-            <div class="fshow-rung fshow-rung--3">Diamond Push-up</div>
+            <div class="fshow-rung fshow-rung--1">{% trans "Knee Push-up" %}</div>
+            <div class="fshow-rung fshow-rung--2">{% trans "Push-up" %}</div>
+            <div class="fshow-rung fshow-rung--3">{% trans "Diamond Push-up" %}</div>
             <span class="fshow-burst">🔨✨🔥</span>
           </div>
         </div>
-        <h3 class="fshow-demo-title">Earn the climb</h3>
+        <h3 class="fshow-demo-title">{% trans "Earn the climb" %}</h3>
         <p class="fshow-demo-text">
-          Hold the top of your rep range and the next, harder rung unlocks —
-          a celebration you choose to claim, never an automatic jump.
+          {% blocktrans trimmed %}Hold the top of your rep range and the next, harder rung unlocks —
+          a celebration you choose to claim, never an automatic jump.{% endblocktrans %}
         </p>
       </article>
 
@@ -325,46 +327,46 @@
             <span class="fshow-fire">🔥</span>
           </div>
         </div>
-        <h3 class="fshow-demo-title">See where you stand</h3>
+        <h3 class="fshow-demo-title">{% trans "See where you stand" %}</h3>
         <p class="fshow-demo-text">
-          Your Trial score lights up to ten “fires” against published age- and
-          sex-matched norms — and we tell you when a number is only an estimate.
+          {% blocktrans trimmed %}Your Trial score lights up to ten “fires” against published age- and
+          sex-matched norms — and we tell you when a number is only an estimate.{% endblocktrans %}
         </p>
       </article>
     </div>
 
     <!-- Skill tree -->
-    <p class="fshow-subhead">The skill tree</p>
+    <p class="fshow-subhead">{% trans "The skill tree" %}</p>
     <p class="fshow-tree-intro">
-      Six fundamental movement patterns, each a ladder of exercises that
+      {% blocktrans trimmed %}Six fundamental movement patterns, each a ladder of exercises that
       <em>evolve</em> from your first rep to feats of mastery. You start where
       the Trial places you and climb one rung at a time — branching onto the
       loaded path whenever you bring equipment. Hover a node for its cue, or tap
-      <span aria-hidden="true">▶</span> to watch a pattern evolve.
+      <span aria-hidden="true">▶</span> to watch a pattern evolve.{% endblocktrans %}
     </p>
 
     <div class="fshow-tree-legend" aria-hidden="true">
-      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--bw"></span> Bodyweight rung</span>
-      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--gear"></span> Needs equipment</span>
-      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--master"></span> Mastery</span>
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--bw"></span> {% trans "Bodyweight rung" %}</span>
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--gear"></span> {% trans "Needs equipment" %}</span>
+      <span class="fshow-legend-item"><span class="fshow-legend-dot fshow-legend-dot--master"></span> {% trans "Mastery" %}</span>
     </div>
 
     <div class="fshow-tree" id="fshow-tree">
       <noscript>
         <p class="fshow-tree-intro">
-          The interactive skill tree needs JavaScript. The six ladders are:
+          {% blocktrans trimmed %}The interactive skill tree needs JavaScript. The six ladders are:
           Horizontal Push (Wall Push-up → Archer Push-up), Vertical Pull
           (Australian Row → Archer Pull-up), Vertical Push (Incline Pike Push-up
           → Handstand Push-up), Lower Unilateral (Assisted Split Squat → Pistol
           Squat), Core Anti-Extension (Knee Plank → Hollow Body Hold), and Hinge
           (Glute Bridge → Nordic Curl) — each with loaded variants for owned
-          equipment.
+          equipment.{% endblocktrans %}
         </p>
       </noscript>
     </div>
 
     <div class="cauldron-hero-cta" style="justify-content:center; margin-top:2rem;">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Forge →</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Take the Trial" %}</a>
     </div>
   </section>
 
@@ -372,14 +374,14 @@
   <div class="fshow-how">
     <div class="fshow-how-inner">
       <div class="fshow-head" style="margin-bottom:0;">
-        <span class="fshow-eyebrow">The Method</span>
-        <h2 class="fshow-title">How the difficulty rises</h2>
+        <span class="fshow-eyebrow">{% trans "The Method" %}</span>
+        <h2 class="fshow-title">{% trans "How the difficulty rises" %}</h2>
         <p class="fshow-lead">
-          The Forge runs an <strong>autoregulated double-progression</strong>
+          {% blocktrans trimmed %}The Forge runs an <strong>autoregulated double-progression</strong>
           engine (APRE-style): the last working set of every exercise is an
           all-out test, and its result decides your next session. Two levers
           turn — climb the ladder, or add load — and the engine picks the right
-          one for the movement and the gear you own.
+          one for the movement and the gear you own.{% endblocktrans %}
         </p>
       </div>
 
@@ -387,71 +389,71 @@
         <article class="fshow-how-card">
           <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
           <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-          <p class="fshow-how-kicker">Lever 1 — Difficulty</p>
-          <h3 class="fshow-how-title">Climb the movement ladder</h3>
+          <p class="fshow-how-kicker">{% trans "Lever 1 — Difficulty" %}</p>
+          <h3 class="fshow-how-title">{% trans "Climb the movement ladder" %}</h3>
           <p class="fshow-how-text">
-            For pure bodyweight work, harder <em>is</em> the progression. Hit the
+            {% blocktrans trimmed %}For pure bodyweight work, harder <em>is</em> the progression. Hit the
             top of your rep range for <strong>two sessions running</strong> and
-            the next rung is earned.
+            the next rung is earned.{% endblocktrans %}
           </p>
           <p class="fshow-how-text">
-            But it never jumps for you: the unlock is <strong>parked as a
+            {% blocktrans trimmed %}But it never jumps for you: the unlock is <strong>parked as a
             celebration</strong> you Claim or hold. Fall below the range and the
             Forge regresses you a rung to rebuild — no grinding reps you can't
-            do with form.
+            do with form.{% endblocktrans %}
           </p>
         </article>
 
         <article class="fshow-how-card">
           <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
           <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-          <p class="fshow-how-kicker">Lever 2 — Load</p>
-          <h3 class="fshow-how-title">Add the smallest real increment</h3>
+          <p class="fshow-how-kicker">{% trans "Lever 2 — Load" %}</p>
+          <h3 class="fshow-how-title">{% trans "Add the smallest real increment" %}</h3>
           <p class="fshow-how-text">
-            When you own loadable gear — dumbbells, a barbell, bands — the Forge
+            {% blocktrans trimmed %}When you own loadable gear — dumbbells, a barbell, bands — the Forge
             switches to <strong>load progression</strong>: beat the top of the
             range and it adds the smallest weight you actually have, then resets
-            your reps.
+            your reps.{% endblocktrans %}
           </p>
           <p class="fshow-how-text">
-            This solves the hardest problem in bodyweight training — overloading
+            {% blocktrans trimmed %}This solves the hardest problem in bodyweight training — overloading
             the legs and hips — and de-loads automatically when a set comes up
-            short.
+            short.{% endblocktrans %}
           </p>
         </article>
 
         <article class="fshow-how-card">
           <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
           <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-          <p class="fshow-how-kicker">Measured, not guessed</p>
-          <h3 class="fshow-how-title">Objective from the first rep</h3>
+          <p class="fshow-how-kicker">{% trans "Measured, not guessed" %}</p>
+          <h3 class="fshow-how-title">{% trans "Objective from the first rep" %}</h3>
           <p class="fshow-how-text">
-            Both levers are driven by a real AMRAP count, not a subjective
+            {% blocktrans trimmed %}Both levers are driven by a real AMRAP count, not a subjective
             “how hard was that?” Beginners misjudge proximity to failure by
             <strong>4–5 reps</strong>, so the Forge measures the number and
-            adapts from fact.
+            adapts from fact.{% endblocktrans %}
           </p>
           <p class="fshow-how-text">
-            Blocked a move for injury or preference? It's swapped for the closest
+            {% blocktrans trimmed %}Blocked a move for injury or preference? It's swapped for the closest
             equal-or-easier substitute in the same pattern — the ladder bends
-            around you.
+            around you.{% endblocktrans %}
           </p>
         </article>
 
         <article class="fshow-how-card">
           <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
           <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-          <p class="fshow-how-kicker">Recovery, dialled in</p>
-          <h3 class="fshow-how-title">Rest matched to the work</h3>
+          <p class="fshow-how-kicker">{% trans "Recovery, dialled in" %}</p>
+          <h3 class="fshow-how-title">{% trans "Rest matched to the work" %}</h3>
           <p class="fshow-how-text">
-            Rest isn't an afterthought. Heavy, low-rep and loaded compounds get
+            {% blocktrans trimmed %}Rest isn't an afterthought. Heavy, low-rep and loaded compounds get
             <strong>~2½ minutes</strong>; hypertrophy ranges ~2; endurance sets
             ~75 seconds; isometric holds ~60 — each grounded in the training
-            literature.
+            literature.{% endblocktrans %}
           </p>
           <p class="fshow-how-text">
-            The result: progress you can sustain, on a schedule your body can
-            actually recover from.
+            {% blocktrans trimmed %}The result: progress you can sustain, on a schedule your body can
+            actually recover from.{% endblocktrans %}
           </p>
         </article>
       </div>
@@ -459,96 +461,96 @@
   </div>
 
   <!-- Sources -->
-  <section class="fshow-sources" aria-label="Sources">
-    <p class="fshow-subhead">The evidence</p>
+  <section class="fshow-sources" aria-label="{% trans "Sources" %}">
+    <p class="fshow-subhead">{% trans "The evidence" %}</p>
     <p class="fshow-sources-note">
-      The Forge's peer scoring and methods are sourced — and honest about
+      {% blocktrans trimmed %}The Forge's peer scoring and methods are sourced — and honest about
       confidence. Where no published age×sex benchmark exists, the figure is
       flagged <em>estimated</em> in the app and here, never passed off as
-      measured data.
+      measured data.{% endblocktrans %}
     </p>
     <ol class="fshow-refs">
       <li class="fshow-ref">
         <span class="fshow-ref-num">1</span>
-        <span>Push-up percentiles — CSEP-PATH, Payne et al. (2000). Real age×sex
+        <span>{% blocktrans trimmed %}Push-up percentiles — CSEP-PATH, Payne et al. (2000). Real age×sex
           norms (female norms use the modified knee push-up).
-          <a href="https://fitnessnorms.com/strength/push-ups/" target="_blank" rel="noopener">fitnessnorms.com</a>
+          <a href="https://fitnessnorms.com/strength/push-ups/" target="_blank" rel="noopener">fitnessnorms.com</a>{% endblocktrans %}
         </span>
       </li>
       <li class="fshow-ref">
         <span class="fshow-ref-num">2</span>
-        <span>Plank-hold norms — Chase/Brigham et al., <em>IJES</em> (collegiate
+        <span>{% blocktrans trimmed %}Plank-hold norms — Chase/Brigham et al., <em>IJES</em> (collegiate
           18–25); brackets 30+ extrapolated.<span class="fshow-ref-est">est. 30+</span>
-          <a href="https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/" target="_blank" rel="noopener">digitalcommons.wku.edu</a>
+          <a href="https://digitalcommons.wku.edu/ijesab/vol8/iss2/14/" target="_blank" rel="noopener">digitalcommons.wku.edu</a>{% endblocktrans %}
         </span>
       </li>
       <li class="fshow-ref">
         <span class="fshow-ref-num">3</span>
-        <span>Pull-up categories — Topend Sports adult standards (18–35, men).
-          <a href="https://www.topendsports.com/testing/tests/pullup.htm" target="_blank" rel="noopener">topendsports.com</a>
+        <span>{% blocktrans trimmed %}Pull-up categories — Topend Sports adult standards (18–35, men).
+          <a href="https://www.topendsports.com/testing/tests/pullup.htm" target="_blank" rel="noopener">topendsports.com</a>{% endblocktrans %}
         </span>
       </li>
       <li class="fshow-ref">
         <span class="fshow-ref-num">4</span>
-        <span>Inverted-row, pike-push-up, glute-bridge &amp; bodyweight-squat rep
+        <span>{% blocktrans trimmed %}Inverted-row, pike-push-up, glute-bridge &amp; bodyweight-squat rep
           standards — Strength Level community data (hundreds of thousands of
           logged sets; ages 40+ modelled).<span class="fshow-ref-est">est. 40+</span>
-          <a href="https://strengthlevel.com/strength-standards" target="_blank" rel="noopener">strengthlevel.com</a>
+          <a href="https://strengthlevel.com/strength-standards" target="_blank" rel="noopener">strengthlevel.com</a>{% endblocktrans %}
         </span>
       </li>
       <li class="fshow-ref">
         <span class="fshow-ref-num">5</span>
-        <span>Rest-interval prescription — Schoenfeld et al. (2016) &amp; Grgic
+        <span>{% blocktrans trimmed %}Rest-interval prescription — Schoenfeld et al. (2016) &amp; Grgic
           et al. (2017) review on inter-set rest for strength &amp; hypertrophy.
-          <a href="https://pubmed.ncbi.nlm.nih.gov/27038416/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/27038416/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>{% endblocktrans %}
         </span>
       </li>
       <li class="fshow-ref">
         <span class="fshow-ref-num">6</span>
-        <span>Progression model — Autoregulated Progressive Resistance Exercise
+        <span>{% blocktrans trimmed %}Progression model — Autoregulated Progressive Resistance Exercise
           (APRE): the test-set result sets the next prescription.
-          <a href="https://pubmed.ncbi.nlm.nih.gov/21993042/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/21993042/" target="_blank" rel="noopener">pubmed.ncbi.nlm.nih.gov</a>{% endblocktrans %}
         </span>
       </li>
     </ol>
   </section>
 
   <!-- Forge closing CTA -->
-  <section class="fshow-cta" aria-label="Enter the Forge">
-    <h2 class="fshow-cta-title">The anvil is hot</h2>
-    <p class="fshow-cta-sub">Take the Trial. Find your rung. Start climbing.</p>
+  <section class="fshow-cta" aria-label="{% trans "Take the Trial" %}">
+    <h2 class="fshow-cta-title">{% trans "The anvil is hot" %}</h2>
+    <p class="fshow-cta-sub">{% trans "Take the Trial. Find your rung. Start climbing." %}</p>
     <div class="cauldron-hero-cta" style="justify-content:center;">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Forge →</a>
-      <a href="#forge" class="btn-cauldron btn-cauldron--ghost">See the skill tree</a>
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Take the Trial" %}</a>
+      <a href="#forge" class="btn-cauldron btn-cauldron--ghost">{% trans "See the skill tree" %}</a>
     </div>
   </section>
 
   <!-- ═══════════════════════════════════════
        PHILOSOPHY
   ═══════════════════════════════════════ -->
-  <section class="cauldron-philosophy" aria-label="Philosophy">
+  <section class="cauldron-philosophy" aria-label="{% trans "Philosophy" %}">
     <div class="cauldron-philosophy-inner">
-      <p class="cauldron-section-label" style="justify-content:center;">The Third Arcana</p>
+      <p class="cauldron-section-label" style="justify-content:center;">{% trans "The Third Arcana" %}</p>
 
       <h2 class="cauldron-philosophy-title">
-        Cooking is not merely craft.<br>
-        <em style="font-style:italic; color: var(--cauldron-paprika-light);">It is the oldest alchemy.</em>
+        {% trans "Cooking is not merely craft." %}<br>
+        <em style="font-style:italic; color: var(--cauldron-paprika-light);">{% trans "It is the oldest alchemy." %}</em>
       </h2>
 
       <div class="cauldron-philosophy-rule" aria-hidden="true"></div>
 
       <p class="cauldron-philosophy-text">
-        Long before laboratories and ledgers, the kitchen was where transformation happened —
+        {% blocktrans trimmed %}Long before laboratories and ledgers, the kitchen was where transformation happened —
         where raw became whole, where the ordinary was made extraordinary by fire, patience, and knowledge
-        passed mouth to ear across generations.
+        passed mouth to ear across generations.{% endblocktrans %}
       </p>
       <p class="cauldron-philosophy-text">
-        The Cauldron preserves that lineage. It is a vault for your most guarded formulas,
+        {% blocktrans trimmed %}The Cauldron preserves that lineage. It is a vault for your most guarded formulas,
         a chronicle of your culinary tradition, and a guide to the invisible forces
-        at work in every pot and pan.
+        at work in every pot and pan.{% endblocktrans %}
       </p>
       <p class="cauldron-philosophy-text">
-        Part of the Arcano ecosystem. Keeper of the third flame.
+        {% blocktrans trimmed %}Part of the Arcano ecosystem. Keeper of the third flame.{% endblocktrans %}
       </p>
     </div>
   </section>
@@ -556,13 +558,17 @@
   <!-- ═══════════════════════════════════════
        CTA
   ═══════════════════════════════════════ -->
-  <section class="cauldron-cta-section" aria-label="Call to action">
-    <h2 class="cauldron-cta-title">Begin Your Practice</h2>
+  <section class="cauldron-cta-section" aria-label="{% trans "Call to action" %}">
+    <h2 class="cauldron-cta-title">{% trans "Begin Your Practice" %}</h2>
     <p class="cauldron-cta-sub">
-      The cauldron is ready. The flame is lit. What will you preserve?
+      {% blocktrans trimmed %}The cauldron is ready. The flame is lit. What will you preserve?{% endblocktrans %}
     </p>
     <div class="cauldron-hero-cta">
-      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">Enter the Cauldron</a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'the_cauldron:forge' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Enter the Cauldron" %}</a>
+      {% else %}
+      <a href="{% url 'the_cauldron:register' %}" class="btn-cauldron btn-cauldron--primary">{% trans "Create your account" %}</a>
+      {% endif %}
     </div>
   </section>
 
@@ -570,7 +576,7 @@
        FOOTER
   ═══════════════════════════════════════ -->
   <footer class="cauldron-footer">
-    <a href="{% url 'the_cauldron:landing' %}" class="cauldron-footer-brand" aria-label="The Cauldron">
+    <a href="{% url 'the_cauldron:landing' %}" class="cauldron-footer-brand" aria-label="{% trans "The Cauldron" %}">
       <svg width="18" height="18" viewBox="0 0 64 64" fill="none" stroke="currentColor"
            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="12" y1="24" x2="52" y2="24"/>
@@ -581,11 +587,16 @@
         <path d="M32 48 L32 54"/>
         <path d="M44 48 L46 54"/>
       </svg>
-      The Cauldron
+      {% trans "The Cauldron" %}
     </a>
     <p class="cauldron-footer-meta">
-      Part of <a href="{% url 'welcome' %}" style="color:inherit; text-decoration:underline; text-underline-offset:3px;">Arcano</a>
-      &nbsp;·&nbsp; The Third Arcana
+      {% url 'welcome' as arcano_url %}{% blocktrans trimmed %}Part of <a href="{{ arcano_url }}" style="color:inherit; text-decoration:underline; text-underline-offset:3px;">Arcano</a>{% endblocktrans %}
+      &nbsp;·&nbsp; {% trans "The Third Arcana" %}
+    </p>
+    <p class="cauldron-footer-meta cauldron-footer-legal">
+      <a href="{% url 'the_cauldron:terms' %}">{% trans "Terms and Conditions" %}</a>
+      &nbsp;·&nbsp;
+      <a href="{% url 'the_cauldron:privacy' %}">{% trans "Privacy Notice" %}</a>
     </p>
   </footer>
 
@@ -593,16 +604,17 @@
 
 {% block footer_links %}
 <li><a href="{% url 'welcome' %}">Arcano</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}">The Forge</a></li>
-<li><a href="{% url 'the_cauldron:landing' %}">The Cauldron</a></li>
-<li><a href="{% url 'the_cauldron:grimoire' %}">The Grimoire</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}">{% trans "The Forge" %}</a></li>
+<li><a href="{% url 'the_cauldron:landing' %}">{% trans "The Cauldron" %}</a></li>
+<li><a href="{% url 'the_cauldron:grimoire' %}">{% trans "The Grimoire" %}</a></li>
 {% include 'the_cauldron/_footer_links.html' %}
 {% endblock %}
 
 {% block app_scripts %}
+{{ showcase_tree|json_script:"fshow-tree-data" }}
 <script src="{% static 'the_cauldron/js/forge-skilltree.js' %}" defer></script>
 {% endblock %}
 
 {% block nav_auto_loader %}
-<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+{% include 'the_cauldron/_loader_script.html' %}
 {% endblock %}

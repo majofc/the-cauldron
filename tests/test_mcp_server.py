@@ -463,7 +463,7 @@ class TestProtocol:
             registry.TOOLS.pop("zz_test_write")
 
     def test_read_scope_alone_reads(self, alice):
-        assert _ok(_token(alice, scope="cauldron:read"), "get_goals")["goals"] == []
+        assert _ok(_token(alice, scope="cauldron:read"), "get_goals")["mine"] == []
 
     def test_bad_arguments_are_actionable(self, alice):
         err = _err(_token(alice), "get_journal", {"to": "2026-10-01"})
@@ -565,7 +565,7 @@ class TestNutritionTools:
         NutrientGoal.objects.create(user=alice, nutrient="protein_g", kind="at_least", min_value=100,
                                     valid_from=today - timedelta(days=2))
         d = _ok(_token(alice), "get_goals")
-        assert [(g["nutrient"], g["min"]) for g in d["goals"]] == [("protein_g", 100)]
+        assert [(g["nutrient"], g["min"]) for g in d["mine"]] == [("protein_g", 100)]
         assert len(d["history"]) == 2
 
     def test_meal_plan_shows_only_own_meals(self, alice, bob):

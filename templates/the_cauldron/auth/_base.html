@@ -1,0 +1,51 @@
+{% extends 'arcano/base.html' %}
+{% load static i18n %}
+{% comment %}
+  Shell for The Cauldron's account pages (#72): sign-in, sign-up, email
+  verification, password reset and Google. allauth renders them; the
+  templates under templates/account/ and templates/socialaccount/ extend this
+  one and fill `auth_card`.
+{% endcomment %}
+
+{% block title %}{% block auth_title %}{% trans "Enter The Cauldron" %}{% endblock %} — The Cauldron{% endblock %}
+{% block meta_description %}{% trans "Sign in to The Cauldron." %}{% endblock %}
+
+{% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+
+{% block app_styles %}
+<link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/landing.css' %}">
+<link rel="stylesheet" href="{% static 'the_cauldron/css/forge.css' %}">
+{% endblock %}
+
+{% block nav_links %}
+<li><a href="{% url 'welcome' %}" class="nav-link">Arcano</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">{% trans "The Forge" %}</a></li>
+<li><a href="{% url 'the_cauldron:landing' %}" class="nav-link active">{% trans "The Cauldron" %}</a></li>
+{% endblock %}
+
+{% block nav_cta %}
+<div class="nav-cta">
+  <a href="{% url 'the_cauldron:landing' %}" class="btn-primary btn-sm">{% trans "← Cauldron" %}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<section class="forge-auth">
+  <div class="cauldron-card forge-auth-card">
+    <div class="corner-tl" aria-hidden="true"></div>
+    <div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div>
+    <div class="corner-br" aria-hidden="true"></div>
+
+    {% block auth_card %}{% endblock %}
+  </div>
+</section>
+{% endblock %}
+
+{% block nav_auto_loader %}
+{% include 'the_cauldron/_loader_script.html' %}
+{% endblock %}
+
+{# The Cauldron's own legal pages. #}
+{% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

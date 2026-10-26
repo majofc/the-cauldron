@@ -64,6 +64,20 @@
   border-bottom: 1px solid var(--grimoire-border);
 }
 .nut-goal:last-child { border-bottom: 0; }
+/* The recommended goal (#105), read-only, on its own line under the editable row. */
+.nut-goal-rec { grid-column: 1 / -1; font-size: 0.85rem; color: var(--grimoire-text-dim); padding-bottom: 0.15rem; }
+.nut-goal-rec-label { font-weight: 600; color: var(--grimoire-text); }
+.nut-goal-rec-label::before {
+  content: ""; display: inline-block; width: 0.9rem; height: 0; margin-right: 0.35rem; vertical-align: middle;
+  border-top: 2px dashed var(--grimoire-gilt);
+}
+.nut-rec-source { font-size: 0.78rem; letter-spacing: 0.02em; color: var(--grimoire-text-dim); border-bottom: 1px dotted currentColor; }
+.nut-rec-notice {
+  margin: 0.75rem 0; padding: 0.6rem 0.85rem; font-size: 0.88rem;
+  border-left: 3px solid var(--grimoire-gilt-border); background: color-mix(in srgb, var(--grimoire-gilt) 6%, transparent);
+  border-radius: 0 var(--arcano-radius-sm, 6px) var(--arcano-radius-sm, 6px) 0;
+}
+.nut-body-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem 1rem; margin: 1rem 0 0.5rem; }
 .nut-goal[data-kind="none"] .nut-goal-name { color: var(--grimoire-text-dim); }
 .nut-goal select,
 .nut-goal input {
@@ -230,6 +244,8 @@
 .nut-gauge-value { font-family: var(--arcano-font-display); font-size: 1.45rem; font-weight: 700; }
 .nut-gauge-track { position: relative; display: block; height: 12px; border-radius: 6px; background: var(--grimoire-nutrient-track); overflow: hidden; }
 .nut-gauge-band { position: absolute; top: 0; bottom: 0; background: var(--nut-band); }
+/* The recommended range (#105): an outline, dashed, over my filled one. */
+.nut-gauge-band--who { background: transparent; border: 1px dashed var(--grimoire-gilt); border-radius: 6px; z-index: 1; }
 .nut-gauge-fill {
   position: absolute; left: 0; top: 3px; bottom: 3px;
   border-radius: 0 4px 4px 0;
@@ -244,6 +260,20 @@
 }
 .nut-gauge-foot { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; align-items: center; font-size: 0.88rem; }
 .nut-gauge-delta { font-weight: 600; }
+.nut-gauge-targets { display: grid; gap: 0.2rem; font-size: 0.82rem; color: var(--grimoire-text-dim); }
+.nut-gauge-target { display: flex; align-items: center; gap: 0.4rem; }
+/* Both statuses at a glance: a dot per goal set, colour + the word after it. */
+.nut-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex-shrink: 0; background: var(--nut-uncertain); }
+.nut-dot--met { background: var(--nut-met); }
+.nut-dot--missed { background: var(--nut-missed); }
+.nut-dot--not_logged { background: transparent; border: 1px solid var(--nut-uncertain); }
+.nut-gauge-target--who .nut-dot { outline: 1px dashed var(--grimoire-gilt); outline-offset: 1px; }
+.nut-legend { display: flex; gap: 1.25rem; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--grimoire-text-dim); }
+.nut-legend-mine::before, .nut-legend-who::before {
+  content: ""; display: inline-block; width: 1.4rem; height: 0.6rem; margin-right: 0.4rem; vertical-align: middle; border-radius: 3px;
+}
+.nut-legend-mine::before { background: var(--nut-band); }
+.nut-legend-who::before { border: 1px dashed var(--grimoire-gilt); }
 .nut-status--uncertain { color: var(--grimoire-text); border-color: var(--nut-uncertain); background: transparent; }
 .nut-all { margin-top: 1rem; display: grid; gap: 1rem; }
 #nut-all-toggle { margin-top: 1rem; }
@@ -251,6 +281,8 @@
 /* ── Time in range ── */
 .nut-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0 1rem; }
 .nut-chip-pct { margin-left: 0.35rem; opacity: 0.8; }
+.nut-chip-set--who { text-decoration: underline dashed; text-underline-offset: 3px; }
+.nut-tir-sets { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem 1.5rem; }
 .nut-tir { display: flex; align-items: baseline; gap: 0.6rem; margin: 0; }
 .nut-tir-pct { font-family: var(--arcano-font-body); font-size: 3rem; font-weight: 600; line-height: 1; }
 .nut-chart { position: relative; margin: 1rem 0 0.5rem; touch-action: none; }
@@ -258,6 +290,7 @@
 .nut-grid { stroke: var(--grimoire-border); stroke-width: 1; }
 .nut-axis { fill: var(--grimoire-text-dim); font-family: var(--arcano-font-body); font-size: 11px; font-variant-numeric: tabular-nums; }
 .nut-band { fill: var(--nut-band); }
+.nut-band--who { fill: none; stroke: var(--grimoire-gilt); stroke-width: 1.5; stroke-dasharray: 5 4; }
 .nut-line { fill: none; stroke: var(--grimoire-text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .nut-cursor { stroke: var(--grimoire-gilt); stroke-width: 2; }
 .nut-cursor-dot { fill: var(--grimoire-gilt); stroke: var(--grimoire-page); stroke-width: 2; }
@@ -339,3 +372,102 @@
   padding: 0.6rem 0; border-bottom: 1px solid var(--grimoire-border);
 }
 .nut .grim-help a, .nut-oauth-client a { color: var(--grimoire-gilt); }
+
+/* ── The goal cauldron (#107): a card's number as a pot seen from above ──
+   The potion is a pie of the top spells/reagents; unknowns rise as fog. The
+   glow follows the card's status. Every motion stops under reduced motion. */
+.nut-cauldron {
+  position: relative;
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.75rem 1.5rem 1.5rem;
+  color: var(--grimoire-text);
+  background: var(--grimoire-page);
+  border: 1px solid var(--grimoire-gilt-border);
+  border-radius: var(--arcano-radius-md);
+  box-shadow: var(--arcano-shadow-modal);
+  --glow: color-mix(in srgb, var(--arcano-gold) 35%, transparent);
+}
+.nut-cauldron::backdrop { background: color-mix(in srgb, var(--arcano-bg-deep) 78%, transparent); }
+.nut-cauldron[data-status="met"] { --glow: color-mix(in srgb, var(--arcano-sage) 55%, transparent); }
+.nut-cauldron[data-status="missed"] { --glow: color-mix(in srgb, var(--cauldron-paprika) 70%, transparent); }
+.nut-cauldron[data-status="uncertain"] { --glow: color-mix(in srgb, var(--arcano-cream) 30%, transparent); }
+.nut-cauldron-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.nut-cauldron-head .grim-h2 { margin: 0; }
+.nut-cauldron-head .grim-help { margin: 0.2rem 0 0; }
+.nut-cauldron-close { font-size: 1.1rem; line-height: 1; padding: 0.35rem 0.5rem; }
+.nut-cauldron-total { margin: 0.75rem 0 0; font-family: var(--arcano-font-display); font-size: 1.6rem; font-weight: 700; text-align: center; }
+.nut-cauldron-pot { max-width: 340px; margin: 0 auto; }
+.nut-cauldron-pot svg { display: block; width: 100%; height: auto; overflow: visible; }
+.nut-cauldron-caption { min-height: 1.4em; margin: 0 0 0.5rem; text-align: center; font-size: 0.92rem; color: var(--grimoire-text-dim); }
+
+/* The pot */
+.nut-pot { fill: var(--arcano-bg-surface); stroke: var(--grimoire-gilt-border); stroke-width: 1.5; filter: drop-shadow(0 0 14px var(--glow)); }
+.nut-pot-leg { stroke: var(--grimoire-gilt-border); stroke-width: 6; stroke-linecap: round; }
+.nut-pot-rim { fill: none; stroke: var(--arcano-gold); stroke-width: 2.5; }
+.nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--arcano-forest)); }
+.nut-cauldron[data-status="missed"] .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--cauldron-paprika)); }
+
+/* Slices: colours from the design tokens; "others" stays neutral. */
+.nut-slice { stroke: var(--grimoire-page); stroke-width: 2; transition: transform 0.2s ease; }
+.nut-slice--0 { fill: var(--arcano-gold); }
+.nut-slice--1 { fill: var(--cauldron-paprika-light); }
+.nut-slice--2 { fill: var(--arcano-sage); }
+.nut-slice--3 { fill: var(--arcano-lavender); }
+.nut-slice--4 { fill: var(--cauldron-ember); }
+.nut-slice--others { fill: color-mix(in srgb, var(--arcano-cream) 35%, var(--arcano-bg-surface)); }
+.nut-slice-link { cursor: pointer; outline: none; }
+.nut-slice-link.is-lifted .nut-slice { transform: translate(var(--dx), var(--dy)); }
+.nut-slice-link:focus-visible .nut-slice { stroke: var(--arcano-cream); stroke-width: 4; }
+
+/* Embers, bubbles, steam, fog */
+.nut-ember { fill: var(--cauldron-ember); opacity: 0.8; animation: nut-flicker 1.6s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.nut-cauldron[data-status="missed"] .nut-ember { fill: var(--cauldron-paprika-light); animation-duration: 0.7s; }
+.nut-bubble { fill: none; stroke: color-mix(in srgb, var(--arcano-cream) 55%, transparent); stroke-width: 1.2; animation: nut-bubble 2.8s ease-in infinite; animation-delay: calc(var(--i) * -0.6s); }
+.nut-steam {
+  font-family: var(--arcano-font-italic); font-size: 22px; font-style: italic;
+  fill: color-mix(in srgb, var(--arcano-cream) 60%, transparent);
+  animation: nut-steam 5s ease-in-out infinite;
+}
+.nut-fog { fill: color-mix(in srgb, var(--arcano-cream) 30%, transparent); animation: nut-fog 6s ease-in-out infinite; animation-delay: calc(var(--i) * -0.9s); }
+.nut-fogs.is-full .nut-fog,
+.nut-cauldron[data-status="uncertain"] .nut-fog { fill: color-mix(in srgb, var(--arcano-cream) 48%, transparent); }
+
+/* Opening: the brew swirls and the slices pour in. */
+.is-pouring .nut-swirl { animation: nut-swirl 1.1s cubic-bezier(.2, .8, .2, 1) both; }
+.is-pouring .nut-slice { animation: nut-pour 0.6s ease-out both; animation-delay: calc(0.15s + var(--i) * 0.12s); }
+.nut-cauldron-pot.is-empty .nut-potion { fill: var(--arcano-bg-deep); }
+
+@keyframes nut-flicker { from { opacity: 0.45; } to { opacity: 1; } }
+@keyframes nut-bubble { 0% { transform: translateY(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-26px); opacity: 0; } }
+@keyframes nut-steam { 0%, 100% { transform: translateY(6px); opacity: 0.25; } 50% { transform: translateY(-6px); opacity: 0.85; } }
+@keyframes nut-fog { 0%, 100% { transform: translateY(0); opacity: 0.55; } 50% { transform: translateY(-16px); opacity: 0.95; } }
+@keyframes nut-swirl { from { transform: rotate(-200deg); } to { transform: rotate(0); } }
+@keyframes nut-pour { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .nut-ember, .nut-bubble, .nut-steam, .nut-fog,
+  .is-pouring .nut-swirl, .is-pouring .nut-slice { animation: none; }
+  .nut-slice { transition: none; }
+}
+
+/* The list under the pot: the same data, for screen readers and without colour. */
+.nut-cauldron-list { list-style: none; padding: 0; margin: 0.5rem 0 1rem; display: grid; gap: 0.35rem; }
+.nut-cauldron-list li { display: grid; grid-template-columns: 0.9rem minmax(0, 1fr) auto 3.2rem; gap: 0.6rem; align-items: center; }
+.nut-swatch { width: 0.9rem; height: 0.9rem; border-radius: var(--arcano-radius-sm); }
+.nut-cauldron-name { overflow-wrap: anywhere; }
+.nut-cauldron a { color: var(--grimoire-gilt); text-decoration-color: var(--grimoire-gilt-border); text-underline-offset: 3px; }
+.nut-cauldron a:hover, .nut-cauldron a:focus-visible { color: var(--arcano-gold-light); }
+.nut-cauldron-amount, .nut-cauldron-pct { font-variant-numeric: tabular-nums; text-align: right; }
+.nut-cauldron-pct { color: var(--grimoire-text-dim); }
+.nut-cauldron-fog { border-top: 1px solid var(--grimoire-border); padding-top: 0.75rem; }
+.nut-fog-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.9rem; }
+.nut-fog-item p { margin: 0 0 0.35rem; }
+.nut-fill { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 0.6rem; align-items: end; margin: 0.35rem 0; }
+.nut-fill .grim-help { grid-column: 1 / -1; margin: 0; }
+.nut-cauldron-empty { text-align: center; }
+@media (max-width: 420px) {
+  .nut-cauldron { padding: 1.5rem 1rem 1rem; }
+  .nut-fill { grid-template-columns: 1fr; }
+}

@@ -7,6 +7,7 @@ whole, not through gettext — same approach as scholomancy_console's legal page
 {% endcomment %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
+{% block extra_head %}{% include 'the_cauldron/_seo_head.html' %}{% endblock %}
 
 {% block app_styles %}
 <link rel="stylesheet" href="{% static 'the_cauldron/css/tokens.css' %}">
@@ -14,7 +15,7 @@ whole, not through gettext — same approach as scholomancy_console's legal page
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="The Cauldron">
+<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand" aria-label="{% trans "The Cauldron" %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -22,15 +23,14 @@ whole, not through gettext — same approach as scholomancy_console's legal page
     <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
     <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
   </svg>
-  The Cauldron
+  {% trans "The Cauldron" %}
 </a>
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link">The Cauldron</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">The Forge</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link">{% trans "The Cauldron" %}</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block footer_links %}{% include 'the_cauldron/_footer_links.html' %}{% endblock %}

@@ -3,7 +3,9 @@
 - ``LegalAcceptance`` (#84) — append-only record of who accepted which version
   of the terms, the privacy notice and the sensitive-data consent, and when.
 - ``CauldronProfile`` (#80) — per-user settings that aren't Forge or Grimoire
-  specific; today only the timezone that sets where a day starts and ends.
+  specific: the timezone that sets where a day starts and ends, the language,
+  and the body data (#105) — birth year and sex (also the Forge's peer score),
+  weight and activity level (the recommended goals, ``services.recommendations``).
 - ``NutrientGoal`` (#80) — one daily (24 h) goal per nutrient, versioned: a
   change closes the old row and opens a new one, so a past day is judged
   against the goal active that day (#82).
@@ -18,7 +20,7 @@ reach PostHog.
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -70,6 +72,40 @@ class CauldronProfile(ForgeBaseModel):
     )
     # IANA name; a day runs midnight to midnight here.
     timezone = models.CharField(max_length=64, default=DEFAULT_TIMEZONE)
+    # A self-registered account waiting for its email verification (#72).
+    # Only this flag lets the confirmation activate the account, so one an
+    # admin switched off is never revived.
+    pending_verification = models.BooleanField(default=False)
+    # The language last chosen with the switcher ("" = never chosen). Applied on
+    # login so the choice follows the user across browsers (the_cauldron.language).
+    language = models.CharField(max_length=8, blank=True, default="", choices=settings.LANGUAGES)
+
+    # Body data (#105), all optional. Birth year and sex drive the Forge's peer
+    # score and the recommendations; weight and activity only the recommendations
+    # (sensitive data: they need the consent, and withdrawing with delete clears them).
+    class Sex(models.TextChoices):
+        MALE = "male", "Male"
+        FEMALE = "female", "Female"
+        UNDISCLOSED = "undisclosed", "Prefer not to say"
+
+    class Activity(models.TextChoices):
+        # FAO/WHO/UNU 2004 physical activity level (PAL) bands.
+        SEDENTARY = "sedentary", "Sedentary or light"
+        MODERATE = "moderate", "Active or moderately active"
+        VIGOROUS = "vigorous", "Vigorous or vigorously active"
+
+    birth_year = models.PositiveIntegerField(null=True, blank=True)
+    sex = models.CharField(max_length=12, choices=Sex.choices, default=Sex.UNDISCLOSED)
+    weight_kg = models.FloatField(
+        null=True, blank=True, validators=[MinValueValidator(20), MaxValueValidator(400)]
+    )
+    activity_level = models.CharField(max_length=12, choices=Activity.choices, blank=True, default="")
+
+    def age(self, today=None):
+        """Age by birth year (the year's birthday assumed passed), or None."""
+        if not self.birth_year:
+            return None
+        return (today or timezone.localdate()).year - self.birth_year
 
     def __str__(self):
         return f"Cauldron profile for {self.user}"

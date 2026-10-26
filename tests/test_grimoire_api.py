@@ -433,6 +433,27 @@ class TestReagents:
         r = Reagent.objects.get(uuid=body["uuid"])
         assert (r.name_es, r.status, r.nutrients.kcal, r.nutrients.sodium_mg) == ("Zumaque", "pending", 300, None)
 
+    def test_patch_response_shows_the_new_nutrients(self, as_alice, tags):
+        body = as_alice.post(
+            f"{API}reagents/", _reagent_payload("Sumac", nutrients={"kcal": 333, "sodium_mg": 16, "fat_g": 0.5}), format="json"
+        ).json()
+        resp = as_alice.patch(
+            f"{API}reagents/{body['uuid']}/", {"nutrients": {"kcal": 345, "sodium_mg": 12}}, format="json"
+        )
+        assert resp.status_code == 200
+        assert (resp.json()["nutrients"]["kcal"], resp.json()["nutrients"]["sodium_mg"]) == (345, 12)
+        assert resp.json()["nutrients"]["fat_g"] == 0.5  # left alone by a PATCH
+
+    def test_put_response_shows_the_replaced_profile(self, as_alice, tags):
+        body = as_alice.post(
+            f"{API}reagents/", _reagent_payload("Sumac", nutrients={"kcal": 333, "sodium_mg": 16}), format="json"
+        ).json()
+        resp = as_alice.put(
+            f"{API}reagents/{body['uuid']}/", _reagent_payload("Sumac", nutrients={"kcal": 345}), format="json"
+        )
+        assert resp.status_code == 200
+        assert (resp.json()["nutrients"]["kcal"], resp.json()["nutrients"]["sodium_mg"]) == (345, None)
+
     def test_edit_regrams_existing_lines(self, as_alice, tags):
         body = as_alice.post(f"{API}reagents/", _reagent_payload("Sumac"), format="json").json()
         spell = _create(as_alice, (Reagent.objects.get(uuid=body["uuid"]), 2, "tbsp"))

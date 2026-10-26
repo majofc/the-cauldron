@@ -15,11 +15,14 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import gettext_noop
 
 from the_cauldron.models import (
     AssessmentResult,
     AssessmentSession,
     BlockedExercise,
+    CauldronProfile,
     Exercise,
     MovementPattern,
     Muscle,
@@ -36,7 +39,8 @@ from the_cauldron.services import loads, norms, progression
 # and each time it is opened it serves the least-trained subset of them (see
 # ``select_day_prescriptions``), so the rotation emerges from training history
 # rather than from a fixed A/B/C rota the user has to pick between.
-THE_DAY_NAME = "Today's Forge"
+# Stored in English on every ProgramDay; shown translated (forge_i18n.day_name).
+THE_DAY_NAME = gettext_noop("Today's Forge")
 
 # The day trains only this many patterns — the ones whose progression chains have
 # the fewest recent usage events — out of the seven it prescribes. The ones left
@@ -83,12 +87,20 @@ def _peer_score_dict(score) -> dict:
     }
 
 
+def _demographics(user):
+    """``(sex, age)`` from the Cauldron profile (#105) for the peer norms.
+    Reading never creates the profile row."""
+    profile = CauldronProfile.objects.filter(user=user).first()
+    if profile is None:
+        return CauldronProfile.Sex.UNDISCLOSED, None
+    return profile.sex, profile.age()
+
+
 def peer_score(user, exercise_name, value) -> dict:
     """Peer "flames" score for a result, using the user's age+sex and published
     norms. Always returns a dict (``has_data`` False when not scoreable)."""
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
-    return _peer_score_dict(norms.score(exercise_name, value, profile.sex, age))
+    sex, age = _demographics(user)
+    return _peer_score_dict(norms.score(exercise_name, value, sex, age))
 
 
 def best_flames_by_exercise(user) -> dict:
@@ -100,8 +112,7 @@ def best_flames_by_exercise(user) -> dict:
     AMRAP working set and every Trial result. Only movements with a published
     peer norm and at least one recorded result that scores appear in the result.
     """
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
+    sex, age = _demographics(user)
 
     best_value = {}  # exercise name -> best AMRAP reps/seconds ever
 
@@ -123,7 +134,7 @@ def best_flames_by_exercise(user) -> dict:
 
     result = {}
     for name, value in best_value.items():
-        sc = norms.score(name, value, profile.sex, age)
+        sc = norms.score(name, value, sex, age)
         if sc.has_data:
             result[name] = {
                 "flames": sc.flames,
@@ -136,9 +147,8 @@ def best_flames_by_exercise(user) -> dict:
 def peer_decile_cutoffs(user, exercise_name) -> dict:
     """Decile reference values (P10..P90) for charting this exercise against
     peers. ``{has_data, cutoffs, label, source, url}``."""
-    profile = get_or_create_equipment_profile(user)
-    age = (timezone.now().year - profile.birth_year) if profile.birth_year else None
-    cutoffs = norms.decile_cutoffs(exercise_name, profile.sex, age)
+    sex, age = _demographics(user)
+    cutoffs = norms.decile_cutoffs(exercise_name, sex, age)
     if cutoffs is None:
         return {"has_data": False}
     meta = norms.NORMS[norms.EXERCISE_NORMS[exercise_name]]
@@ -419,7 +429,10 @@ def sync_program_equipment(user) -> dict:
         return candidates_by_pattern[pattern.pk]
 
     swapped, hidden = [], set()
+    touched = set()  # pattern ids whose prescription changed (#109: volume follows)
+    program = None
     for presc in _live_prescriptions(user):
+        program = program or presc.day.program
         pending = presc.pending_progression
         clear_pending = pending is not None and not is_performable(pending, owned, blocked)
         if clear_pending:
@@ -433,6 +446,7 @@ def sync_program_equipment(user) -> dict:
                 fields.append("target_load")
             if fields:
                 presc.save(update_fields=fields)
+                touched.add(presc.pattern_id)
             continue
         substitute = progression.find_substitute(
             presc.exercise, candidates(presc.exercise.pattern)
@@ -447,6 +461,9 @@ def sync_program_equipment(user) -> dict:
         else:
             # The full save also persists a cleared pending_progression.
             _repoint_prescription(presc, substitute, profile)
+            touched.add(presc.pattern_id)
+    if touched and program is not None:
+        regenerate_volume(program, touched)
     return {"swapped": swapped, "hidden": hidden}
 
 
@@ -581,7 +598,8 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
     Program.objects.filter(user=user, is_active=True).update(is_active=False)
 
     program = Program.objects.create(
-        user=user, source_assessment=assessment, split=split, weekly_volume_target=8
+        user=user, source_assessment=assessment, split=split,
+        weekly_volume_target=DEFAULT_WEEKLY_VOLUME,
     )
 
     # placement per pattern key -> placed Exercise
@@ -591,6 +609,7 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
     }
 
     day = ProgramDay.objects.create(program=program, day_index=0, name=THE_DAY_NAME)
+    target_sets = sets_for_volume(program.weekly_volume_target, weekly_frequency(program, len(placements)))
     for order, key in enumerate(placements):
         ex = placements[key]
         reps_min, reps_max = progression.rep_targets_for(
@@ -600,7 +619,7 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
             day=day,
             pattern=ex.pattern,
             exercise=ex,
-            target_sets=3,
+            target_sets=target_sets,
             target_reps_min=reps_min,
             target_reps_max=reps_max,
             target_load=_initial_load(profile, ex),
@@ -608,6 +627,123 @@ def generate_program(user, assessment: AssessmentSession, split=None) -> Program
             order=order,
         )
     return program
+
+
+# ── Weekly volume (#109) ─────────────────────────────────────────────────────
+# ``Program.weekly_volume_target`` is working sets per pattern per week. A
+# pattern's sets per session follow from how often it is trained: the split's
+# sessions per week, of which each opening trains DAILY_PATTERN_COUNT of the
+# day's patterns (``select_day_prescriptions``).
+DEFAULT_WEEKLY_VOLUME = 16
+VOLUME_MIN, VOLUME_MAX = 4, 40
+SETS_MIN, SETS_MAX = 2, 5
+SESSIONS_PER_WEEK = {Program.Split.FULL_BODY_3X: 3, Program.Split.UPPER_LOWER_4X: 4}
+
+
+def weekly_frequency(program, patterns_on_day) -> float:
+    """Expected appearances of one pattern per week."""
+    sessions = SESSIONS_PER_WEEK.get(program.split, 3)
+    if patterns_on_day <= 0:
+        return float(sessions)
+    return sessions * min(DAILY_PATTERN_COUNT, patterns_on_day) / patterns_on_day
+
+
+def sets_for_volume(volume, frequency) -> int:
+    """``clamp(round(volume / frequency), SETS_MIN, SETS_MAX)`` — half rounds up."""
+    return max(SETS_MIN, min(SETS_MAX, math.floor(volume / frequency + 0.5)))
+
+
+def regenerate_volume(program, pattern_ids=None) -> list:
+    """Re-derive ``target_sets`` on the served day from the weekly volume, for
+    ``pattern_ids`` only (``None`` = every pattern). Today's untouched sets of
+    the prescriptions that changed follow (added or removed, the last stays
+    AMRAP); a movement with logged values keeps today's sets as they are.
+    Returns the prescriptions whose set count changed."""
+    day = ProgramDay.objects.filter(program=program, day_index=0).first()
+    if day is None:
+        return []
+    prescriptions = list(day.prescriptions.select_related("exercise").prefetch_related(
+        "exercise__required_equipment", "exercise__alternative_equipment"))
+    # Only performable movements rotate through the openings (select_day_prescriptions).
+    owned = owned_equipment_keys_for(program.user)
+    blocked = blocked_exercise_ids(program.user)
+    trained = sum(1 for p in prescriptions if is_performable(p.exercise, owned, blocked))
+    target = sets_for_volume(program.weekly_volume_target, weekly_frequency(program, trained))
+    changed = [
+        p for p in prescriptions
+        if (pattern_ids is None or p.pattern_id in pattern_ids) and p.target_sets != target
+    ]
+    for presc in changed:
+        presc.target_sets = target
+    PrescribedExercise.objects.bulk_update(changed, ["target_sets"])
+    _rewrite_open_sets(program.user, changed, skip_logged=True)
+    return changed
+
+
+def set_weekly_volume(user, program, volume) -> dict:
+    """Set ``weekly_volume_target`` (VOLUME_MIN–VOLUME_MAX) and regenerate every
+    pattern. Raises ``ValueError`` out of range."""
+    if isinstance(volume, bool):
+        raise ValueError(_("Weekly volume must be a whole number of sets."))
+    try:
+        number = float(volume)
+    except (TypeError, ValueError):
+        raise ValueError(_("Weekly volume must be a whole number of sets.")) from None
+    if not math.isfinite(number) or number != int(number):
+        raise ValueError(_("Weekly volume must be a whole number of sets."))
+    volume = int(number)
+    if not VOLUME_MIN <= volume <= VOLUME_MAX:
+        raise ValueError(_("Weekly volume must be between %(min)s and %(max)s sets.")
+                         % {"min": VOLUME_MIN, "max": VOLUME_MAX})
+    previous = program.weekly_volume_target
+    with transaction.atomic():
+        program.weekly_volume_target = volume
+        program.save(update_fields=["weekly_volume_target"])
+        changed = regenerate_volume(program)
+    return {"weekly_volume_target": volume, "changed": len(changed),
+            "direction": _direction(previous, volume)}
+
+
+def _direction(before, after, inverted=False):
+    """``up`` / ``down`` / ``same`` — the PostHog enum. ``inverted`` for assisted
+    bands, where a lower level is harder."""
+    if before is None or after is None or before == after:
+        return "same"
+    up = after > before
+    return "up" if up != inverted else "down"
+
+
+def _rewrite_open_sets(user, prescriptions, skip_logged=False) -> None:
+    """Bring today's open session onto ``prescriptions`` as they now stand
+    (exercise, set count, reps, load). With ``skip_logged`` a movement that has
+    a logged value is left alone; callers that refuse instead check first."""
+    session = resumable_session(user)
+    if session is None or not prescriptions:
+        return
+    profile = get_or_create_equipment_profile(user)
+    rows = list(session.set_logs.filter(prescribed_exercise__in=prescriptions))
+    by_presc = {}
+    for row in rows:
+        by_presc.setdefault(row.prescribed_exercise_id, []).append(row)
+    for presc in prescriptions:
+        open_rows = by_presc.get(presc.pk)
+        if not open_rows:
+            continue
+        if skip_logged and any(r.actual_reps is not None or r.actual_load is not None for r in open_rows):
+            continue
+        session.set_logs.filter(prescribed_exercise=presc).delete()
+        targets = _block_targets(profile, presc.exercise, presc)
+        for set_index in range(targets["sets"]):
+            is_amrap = set_index == targets["sets"] - 1
+            SetLog.objects.create(
+                session=session,
+                prescribed_exercise=presc,
+                exercise=presc.exercise,
+                set_index=set_index,
+                expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
+                expected_load=targets["load"],
+                is_amrap=is_amrap,
+            )
 
 
 def chain_map_for(pattern_ids) -> dict:
@@ -795,7 +931,7 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Sets prescribed for a movement that has no prescription behind it (a ⇄ swap).
-# Mirrors the ``target_sets`` every generated prescription starts at.
+# Generated prescriptions follow the weekly volume instead (``sets_for_volume``).
 DEFAULT_TARGET_SETS = 3
 
 
@@ -937,14 +1073,14 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
             presc_uuid = _uuid_or_none(entry["prescription"])
             if presc_uuid is None:
                 # Don't silently demote a garbled prescription to a free swap.
-                raise ValueError("prescription is not on this day")
+                raise ValueError(_("prescription is not on this day"))
         key = (presc_uuid, exercise_uuid)
         if key in seen:
             continue
         seen.add(key)
         blocks.append(key)
     if not blocks:
-        raise ValueError("plan is empty")
+        raise ValueError(_("plan is empty"))
 
     prescriptions = {
         str(p.uuid): p
@@ -973,7 +1109,7 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
         if presc_uuid:
             presc = prescriptions.get(str(presc_uuid))
             if presc is None:
-                raise ValueError("prescription is not on this day")
+                raise ValueError(_("prescription is not on this day"))
             # The only movement a prescription may be logged against is its own
             # rung — or a grip variant of it, which is the same ladder position
             # and what ``select_grip_variant`` puts on the plan. Anything else
@@ -987,11 +1123,11 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
                 )
             )
             if not same_rung:
-                raise ValueError("that movement is not what this prescription trains")
+                raise ValueError(_("that movement is not what this prescription trains"))
         elif not is_performable(exercise, owned, blocked):
             # A block with no prescription is a ⇄ swap, and gets the same gate
             # the swap endpoint applies.
-            raise ValueError("you cannot perform that movement")
+            raise ValueError(_("you cannot perform that movement"))
         targets = _block_targets(profile, exercise, presc)
         for set_index in range(targets["sets"]):
             is_amrap = set_index == targets["sets"] - 1
@@ -1134,15 +1270,15 @@ def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -
     """
     rows = list(session.set_logs.filter(exercise=from_exercise))
     if not rows:
-        raise ValueError("that movement is not on this session")
+        raise ValueError(_("that movement is not on this session"))
     if any(r.actual_reps is not None or r.actual_load is not None for r in rows):
-        raise SetsAlreadyLogged("that movement already has logged sets")
+        raise SetsAlreadyLogged(_("that movement already has logged sets"))
     if session.set_logs.filter(exercise=to_exercise).exists():
-        raise ValueError("that movement is already on this session")
+        raise ValueError(_("that movement is already on this session"))
 
     owned = owned_equipment_keys_for(session.user)
     if not is_performable(to_exercise, owned, blocked_exercise_ids(session.user)):
-        raise ValueError("you cannot perform that movement")
+        raise ValueError(_("you cannot perform that movement"))
 
     profile = get_or_create_equipment_profile(session.user)
     targets = _block_targets(profile, to_exercise, None)
@@ -1170,7 +1306,7 @@ class UnreadyForRung(Exception):
     and they haven't confirmed. ``payload`` quantifies the gap for the client."""
 
     def __init__(self, payload):
-        super().__init__("your last Trial doesn't support that rung yet")
+        super().__init__(_("your last Trial doesn't support that rung yet"))
         self.payload = payload
 
 
@@ -1338,7 +1474,8 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
 
     Raises ``ValueError`` when ``target`` is not a performable rung of this chain,
     ``UnreadyForRung`` for an unconfirmed climb past the latest Trial, and
-    ``SetsAlreadyLogged``. Returns ``{"exercise": target, "applied_to": n}``.
+    ``SetsAlreadyLogged``. Returns ``{"exercise": target, "applied_to": n,
+    "direction": up|down|same}`` and regenerates the pattern's sets (#109).
     """
     profile = get_or_create_equipment_profile(user)
     owned = owned_equipment_keys(profile)
@@ -1347,9 +1484,9 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
     chain_of = chain_map_for({pattern_id})
     chain = chain_of.get(presc.exercise_id)
     if chain is None or chain_of.get(target.pk) != chain:
-        raise ValueError("that rung is not on this ladder")
+        raise ValueError(_("that rung is not on this ladder"))
     if not is_performable(target, owned, blocked):
-        raise ValueError("you cannot perform that movement")
+        raise ValueError(_("you cannot perform that movement"))
 
     trial_score = latest_trial_score(user.pk, pattern_id)
     if not confirm_unready and _is_unready(presc.exercise, target, trial_score):
@@ -1359,6 +1496,7 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
                 "required": target.placement_threshold,
                 "your_trial": trial_score,
                 "pattern": target.pattern.name,
+                "pattern_key": target.pattern.key,
                 "exercise": target.name,
                 "anchor": anchor.name if anchor else None,
                 "is_timed": anchor.is_timed if anchor else False,
@@ -1373,7 +1511,7 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
         if chain_of.get(p.exercise_id) == chain and not _same_rung(p.exercise, target)
     ]
     if not prescriptions:
-        return {"exercise": target, "applied_to": 0}
+        return {"exercise": target, "applied_to": 0, "direction": "same"}
 
     session = resumable_session(user)
     open_rows = (
@@ -1382,30 +1520,85 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
         else []
     )
     if any(r.actual_reps is not None or r.actual_load is not None for r in open_rows):
-        raise SetsAlreadyLogged("that movement already has logged sets")
+        raise SetsAlreadyLogged(_("that movement already has logged sets"))
 
+    direction = _direction(presc.exercise.difficulty_rank, target.difficulty_rank)
     for p in prescriptions:
         p.pending_progression = None
         _repoint_prescription(p, target, profile)
+    # Today's sets follow the new rung first; the volume pass then reloads the
+    # prescriptions and adjusts the set count where it changed.
+    _rewrite_open_sets(user, prescriptions)
+    regenerate_volume(prescriptions[0].day.program, {pattern_id})
+    return {"exercise": target, "applied_to": len(prescriptions), "direction": direction}
 
-    if open_rows:
-        by_presc = {p.pk: p for p in prescriptions}
-        for presc_id in {r.prescribed_exercise_id for r in open_rows}:
-            p = by_presc[presc_id]
-            session.set_logs.filter(prescribed_exercise=p).delete()
-            targets = _block_targets(profile, target, p)
-            for set_index in range(targets["sets"]):
-                is_amrap = set_index == targets["sets"] - 1
-                SetLog.objects.create(
-                    session=session,
-                    prescribed_exercise=p,
-                    exercise=target,
-                    set_index=set_index,
-                    expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
-                    expected_load=targets["load"],
-                    is_amrap=is_amrap,
-                )
-    return {"exercise": target, "applied_to": len(prescriptions)}
+
+@transaction.atomic
+def set_load(user, presc, load) -> dict:
+    """Set the load every live prescription of ``presc``'s exercise trains with.
+
+    The value snaps silently DOWN to the nearest buildable load (below the
+    lightest → the lightest). Bands take a level index the user owns; on an
+    assisted rung the index keeps its meaning (a lower level is more help).
+    ``sessions_at_top`` resets and a parked unlock clears; today's untouched
+    sets follow. Raises ``ValueError`` (difficulty-mode movement, nothing
+    buildable, a non-positive load, a band level not owned) and
+    ``SetsAlreadyLogged``. Returns ``{"load", "snapped_from", "applied_to",
+    "direction"}`` — ``snapped_from`` is the asked value when it moved, else None.
+    """
+    exercise = presc.exercise
+    if exercise.progression_mode != Exercise.ProgressionMode.LOAD:
+        raise ValueError(_("This movement progresses by difficulty, not by load."))
+    profile = get_or_create_equipment_profile(user)
+    options = progression.available_loads(profile, exercise)
+    if not options:
+        raise ValueError(_("You have no equipment that loads this movement."))
+    try:
+        value = float(load)
+    except (TypeError, ValueError):
+        raise ValueError(_("Enter a number.")) from None
+    if not math.isfinite(value):
+        raise ValueError(_("Enter a number."))
+    if loads.implement_for(profile, exercise) == "bands":
+        if value != int(value) or value not in options:
+            raise ValueError(_("That isn't a band level you own."))
+        snapped = value
+    else:
+        if value <= 0:
+            raise ValueError(_("Enter a load above 0."))
+        below = [o for o in options if o <= value]
+        snapped = max(below) if below else min(options)
+
+    # Already on that load → leave it alone, as set_rung does for the same rung:
+    # resetting would wipe sessions_at_top and a parked unlock for no change.
+    prescriptions = [
+        p for p in _live_prescriptions(user)
+        if p.exercise_id == exercise.pk and p.target_load != snapped
+    ]
+    session = resumable_session(user)
+    if session is not None and session.set_logs.filter(prescribed_exercise__in=prescriptions).filter(
+        Q(actual_reps__isnull=False) | Q(actual_load__isnull=False)
+    ).exists():
+        raise SetsAlreadyLogged(_("that movement already has logged sets"))
+
+    direction = _direction(presc.target_load, snapped, inverted=getattr(exercise, "is_assisted", False))
+    if not prescriptions:
+        return {"load": snapped, "snapped_from": value if snapped != value else None,
+                "applied_to": 0, "direction": "same"}
+    for p in prescriptions:
+        p.target_load = snapped
+        p.sessions_at_top = 0
+        p.pending_progression = None
+        p.save(update_fields=["target_load", "sessions_at_top", "pending_progression"])
+    _rewrite_open_sets(user, prescriptions)
+    if prescriptions:
+        regenerate_volume(prescriptions[0].day.program, {exercise.pattern_id})
+    return {
+        "load": snapped,
+        "snapped_from": value if snapped != value else None,
+        "applied_to": len(prescriptions),
+        "direction": direction,
+    }
 
 
 def _int_or_none(v):
@@ -1727,7 +1920,7 @@ class SessionAlreadyCompleted(Exception):
 def discard_session(session: WorkoutSession) -> None:
     """Delete an unfinished session and its SetLogs. Prescriptions are untouched."""
     if session.status == WorkoutSession.Status.COMPLETED:
-        raise SessionAlreadyCompleted("A completed session can't be deleted.")
+        raise SessionAlreadyCompleted(_("A completed session can't be deleted."))
     session.delete()
 
 
@@ -1895,7 +2088,7 @@ def submit_assessment(user, results, *, channel=None):
     An unknown pattern or exercise is a 404; a bad score a ``TrialInputError``.
     """
     if not results:
-        raise TrialInputError("results required.")
+        raise TrialInputError(_("results required."))
     profile = get_or_create_equipment_profile(user)
     session = AssessmentSession.objects.filter(user=user, is_active=True, completed_at__isnull=True).first()
     if session is None:
@@ -1907,14 +2100,18 @@ def submit_assessment(user, results, *, channel=None):
         try:
             tested_uuid = uuid.UUID(str(item.get("tested_exercise")))
         except (TypeError, ValueError):
-            raise TrialInputError(f"tested_exercise for {pattern.key} must be an exercise id.") from None
+            raise TrialInputError(
+                _("tested_exercise for %(pattern)s must be an exercise id.") % {"pattern": pattern.key}
+            ) from None
         tested = get_object_or_404(Exercise, uuid=tested_uuid)
         try:
             score = int(item.get("reps_or_seconds"))
         except (TypeError, ValueError):
-            raise TrialInputError(f"reps_or_seconds for {pattern.key} must be a whole number.") from None
+            raise TrialInputError(
+                _("reps_or_seconds for %(pattern)s must be a whole number.") % {"pattern": pattern.key}
+            ) from None
         if score < 0:
-            raise TrialInputError(f"reps_or_seconds for {pattern.key} can't be negative.")
+            raise TrialInputError(_("reps_or_seconds for %(pattern)s can't be negative.") % {"pattern": pattern.key})
         ladder = eligible_exercises(pattern, profile, exclude_ids=blocked)
         placed = progression.place_from_assessment(ladder, score)
         session.results.update_or_create(

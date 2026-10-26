@@ -12,11 +12,18 @@ Mapping notes:
   for a food is written as ``null`` (unknown) — never 0. A USDA 0 is kept.
 - ALA prefers nutrient 851 (18:3 n-3 c,c,c) and falls back to 619 (18:3
   undifferentiated); LA prefers 675 (18:2 n-6 c,c) and falls back to 618.
+- Added sugars (#104) come from nutrient 539 when USDA lists it (SR Legacy
+  never does). Otherwise an unprocessed food — a category in
+  ``UNPROCESSED_CATEGORIES`` whose description doesn't match ``SWEETENED`` —
+  gets 0, as does a food in ``NO_ADDED_SUGAR``; a sweetener in
+  ``ALL_ADDED_SUGAR`` (sugar, honey) gets its total sugars; anything else stays
+  unknown.
 - cup / tbsp / tsp weights come from USDA portions; ``piece`` from the portion
   named in REAGENTS. Density is the cup weight / 236.588 ml (US cup).
 """
 
 import json
+import re
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
@@ -30,6 +37,7 @@ NUTRIENT_NUMBERS = {
     "protein_g": ["203"],
     "carbs_g": ["205"],
     "sugar_g": ["269"],
+    "added_sugar_g": ["539"],
     "fiber_g": ["291"],
     "fat_g": ["204"],
     "sat_fat_g": ["606"],
@@ -50,6 +58,38 @@ NUTRIENT_NUMBERS = {
     "vit_d_ug": ["328"],
     "vit_b12_ug": ["418"],
 }
+
+# SR Legacy food categories whose plain foods carry no added sugar.
+UNPROCESSED_CATEGORIES = {
+    "Vegetables and Vegetable Products",
+    "Fruits and Fruit Juices",
+    "Poultry Products",
+    "Beef Products",
+    "Pork Products",
+    "Lamb, Veal, and Game Products",
+    "Finfish and Shellfish Products",
+    "Legumes and Legume Products",
+    "Nut and Seed Products",
+    "Cereal Grains and Pasta",
+    "Spices and Herbs",
+    "Fats and Oils",
+    "Dairy and Egg Products",
+}
+# A description that says (or usually means) sugar was added keeps added sugars
+# unknown even inside those categories: sweetened dried fruit, fruit yogurts,
+# dressings, catsup, relish, flavoured milks, vanilla extract, peanut butter…
+SWEETENED = re.compile(
+    r"(?<!un)sweeten|sweet sauce|candied|syrup|glaze|honey|sugar|chocolate|flavou?r|vanilla|dulce|"
+    r"dressing|catsup|ketchup|relish|pickle|creamer|topping|peanut butter|yogurt, fruit|fruit variety|"
+    r"nectar|eggnog|custard|maraschino|substitute|dry mix",
+    re.IGNORECASE,
+)
+# Seeded foods outside those categories that plainly have none added: tap water,
+# plain oats, unsweetened cocoa, baking powder.
+NO_ADDED_SUGAR = {175103, 173904, 169593, 172804}
+# Sweeteners whose every sugar counts as added — FDA "packaged as such", WHO free
+# sugars: granulated sugar, honey. Added sugars = total sugars.
+ALL_ADDED_SUGAR = {169655, 169640}
 
 # (fdc_id, name, name_es, category, piece portion modifier or None)
 REAGENTS = [
@@ -139,12 +179,24 @@ def _household_unit(modifier):
     return None
 
 
+def _unprocessed(food):
+    if food["fdcId"] in NO_ADDED_SUGAR:
+        return True
+    category = (food.get("foodCategory") or {}).get("description")
+    return category in UNPROCESSED_CATEGORIES and not SWEETENED.search(food["description"])
+
+
 def build_entry(food, name, name_es, category, piece_modifier):
     by_number = {n["nutrient"]["number"]: n.get("amount") for n in food["foodNutrients"]}
     nutrients = {}
     for field, numbers in NUTRIENT_NUMBERS.items():
         value = next((by_number[n] for n in numbers if by_number.get(n) is not None), None)
         nutrients[field] = round(float(value), 3) if value is not None else None
+    if nutrients["added_sugar_g"] is None:
+        if food["fdcId"] in ALL_ADDED_SUGAR:
+            nutrients["added_sugar_g"] = nutrients["sugar_g"]
+        elif _unprocessed(food):
+            nutrients["added_sugar_g"] = 0.0
 
     grams = {}
     for portion in food.get("foodPortions", []):

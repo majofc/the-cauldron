@@ -1,8 +1,8 @@
 {% extends 'arcano/base.html' %}
 {% load static i18n %}
 
-{% block title %}The Forge — Adaptive Calisthenics{% endblock %}
-{% block meta_description %}Take the Trial and forge a calisthenics program that adapts to you and your equipment.{% endblock %}
+{% block title %}{% trans "The Forge — Adaptive Calisthenics" %}{% endblock %}
+{% block meta_description %}{% trans "Take the Trial and forge a calisthenics program that adapts to you and your equipment." %}{% endblock %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
 
@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block nav_brand %}
-<a href="{% url 'the_cauldron:landing' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="The Cauldron home">
+<a href="{% url 'the_cauldron:journal' %}" class="cauldron-nav-brand cauldron-nav-tight" aria-label="{% trans "The Cauldron home" %}">
   <svg class="cauldron-nav-mark" viewBox="0 0 64 64" fill="none" stroke="currentColor"
        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <line x1="12" y1="24" x2="52" y2="24" />
@@ -21,41 +21,40 @@
     <path d="M10 22 Q10 18 14 19" /><path d="M54 22 Q54 18 50 19" />
     <path d="M20 48 L18 54" /><path d="M32 48 L32 54" /><path d="M44 48 L46 54" />
   </svg>
-  The Cauldron
+  {% trans "The Cauldron" %}
 </a>
 {% endblock %}
 
 {% block nav_links %}
-<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:landing' %}" class="nav-link cauldron-nav-tight">The Cauldron</a></li>
-<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active cauldron-nav-tight">The Forge</a></li>
+<li class="cauldron-nav-home"><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Cauldron" %}</a></li>
+<li><a href="{% url 'the_cauldron:forge' %}" class="nav-link active cauldron-nav-tight">{% trans "The Forge" %}</a></li>
 <li><a href="{% url 'the_cauldron:grimoire' %}" class="nav-link cauldron-nav-tight">{% trans "The Grimoire" %}</a></li>
-<li><a href="{% url 'the_cauldron:journal' %}" class="nav-link cauldron-nav-tight">{% trans "The Journal" %}</a></li>
 {% endblock %}
 
 {% block nav_cta %}
 <div class="nav-cta">
   {% include 'the_cauldron/_assistant_link.html' %}
   {% include 'the_cauldron/_profile_link.html' %}
-  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">Sign out</a>
+  <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
 </div>
 {% endblock %}
 
 {% block content %}
 <!-- Blocking loader — sits outside #forge-app so inert on the app doesn't swallow it -->
-<div class="forge-loader" id="forge-loader" hidden aria-live="polite" aria-label="Loading…"></div>
+<div class="forge-loader" id="forge-loader" hidden aria-live="polite" aria-label="{% trans "Loading…" %}"></div>
 
 <main class="forge" id="forge-app">
 
   <header class="forge-header">
-    <h1 class="forge-title">The Forge</h1>
-    <p class="forge-subtitle">A calisthenics program that adapts to you — and to what you own.</p>
-    <nav class="forge-tabs" aria-label="Forge sections">
-      <button class="forge-tab{% if initial_tab == 'equipment' %} is-active{% endif %}" data-tab="equipment">Equipment</button>
-      <button class="forge-tab{% if initial_tab == 'trial' %} is-active{% endif %}" data-tab="trial">The Trial</button>
-      <button class="forge-tab{% if initial_tab == 'today' %} is-active{% endif %}" data-tab="today">Today</button>
-      <button class="forge-tab{% if initial_tab == 'exercises' %} is-active{% endif %}" data-tab="exercises">Exercises</button>
-      <button class="forge-tab{% if initial_tab == 'progress' %} is-active{% endif %}" data-tab="progress">Progress</button>
-      <button class="forge-tab{% if initial_tab == 'about' %} is-active{% endif %}" data-tab="about">About</button>
+    <h1 class="forge-title">{% trans "The Forge" %}</h1>
+    <p class="forge-subtitle">{% trans "A calisthenics program that adapts to you — and to what you own." %}</p>
+    <nav class="forge-tabs" aria-label="{% trans "Forge sections" %}">
+      <button class="forge-tab{% if initial_tab == 'equipment' %} is-active{% endif %}" data-tab="equipment">{% trans "Equipment" %}</button>
+      <button class="forge-tab{% if initial_tab == 'trial' %} is-active{% endif %}" data-tab="trial">{% trans "The Trial" %}</button>
+      <button class="forge-tab{% if initial_tab == 'today' %} is-active{% endif %}" data-tab="today">{% trans "Today" %}</button>
+      <button class="forge-tab{% if initial_tab == 'exercises' %} is-active{% endif %}" data-tab="exercises">{% trans "Exercises" %}</button>
+      <button class="forge-tab{% if initial_tab == 'progress' %} is-active{% endif %}" data-tab="progress">{% trans "Progress" %}</button>
+      <button class="forge-tab{% if initial_tab == 'about' %} is-active{% endif %}" data-tab="about">{% trans "About" %}</button>
     </nav>
   </header>
 
@@ -67,73 +66,73 @@
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">What do you have?</h2>
-      <p class="forge-help">Bodyweight is always assumed. Pick what else you own — the Trial and your
-        program adapt to it. Loadable gear lets the engine add weight instead of only changing difficulty.</p>
+      <h2 class="forge-h2">{% trans "What do you have?" %}</h2>
+      <p class="forge-help">{% blocktrans trimmed %}Bodyweight is always assumed. Pick what else you own — the Trial and your
+        program adapt to it. Loadable gear lets the engine add weight instead of only changing difficulty.{% endblocktrans %}</p>
       <div class="forge-equip-cards" id="forge-equipment-grid"></div>
 
       <div class="forge-unit-row">
-        <span class="forge-unit-label">Weights are in</span>
+        <span class="forge-unit-label">{% trans "Weights are in" %}</span>
         <div class="forge-unit-btns" id="forge-unit">
           <button type="button" class="forge-unit-btn is-on" data-unit="kg" aria-pressed="true">kg</button>
           <button type="button" class="forge-unit-btn" data-unit="lb" aria-pressed="false">lb</button>
         </div>
-        <span class="forge-help forge-unit-note">Switching clears your weights — plate sizes belong to their unit.</span>
+        <span class="forge-help forge-unit-note">{% trans "Switching clears your weights — plate sizes belong to their unit." %}</span>
       </div>
 
       <div class="forge-loadable" id="forge-loadable">
         <div class="forge-implement" data-for="dumbbells" hidden>
           <div class="forge-implement-head">
-            <span class="forge-implement-name">Dumbbells</span>
+            <span class="forge-implement-name">{% trans "Dumbbells" %}</span>
             <div class="forge-mode-btns" data-mode-for="dumbbell">
-              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">Fixed</button>
-              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">Plate-loaded</button>
+              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">{% trans "Fixed" %}</button>
+              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">{% trans "Plate-loaded" %}</button>
             </div>
           </div>
           <label class="forge-field" data-mode-panel="dumbbell-fixed">
-            <span>Dumbbell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated)</span>
+            <span>{% blocktrans trimmed %}Dumbbell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated){% endblocktrans %}</span>
             <input type="text" id="forge-dumbbells" placeholder="5, 10, 15, 20">
           </label>
           <div data-mode-panel="dumbbell-plates" hidden>
             <label class="forge-field">
-              <span>Plates you own — <code>weight x how many</code></span>
+              <span>{% blocktrans trimmed %}Plates you own — <code>weight x how many</code>{% endblocktrans %}</span>
               <input type="text" id="forge-dumbbell-plates" placeholder="2.5x8, 1.25x4">
             </label>
             <label class="forge-field">
-              <span>Weight of one empty handle (<span class="forge-unit-tag">kg</span>)</span>
-              <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="weight — 0 if weightless">
+              <span>{% blocktrans trimmed %}Weight of one empty handle (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
+              <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
             </label>
-            <p class="forge-help">A pair needs 4 of a plate — one per side, per dumbbell. The weight shown
-              is what <em>one</em> dumbbell weighs.</p>
+            <p class="forge-help">{% blocktrans trimmed %}A pair needs 4 of a plate — one per side, per dumbbell. The weight shown
+              is what <em>one</em> dumbbell weighs.{% endblocktrans %}</p>
           </div>
         </div>
 
         <div class="forge-implement" data-for="barbell" hidden>
-          <div class="forge-implement-head"><span class="forge-implement-name">Barbell</span></div>
+          <div class="forge-implement-head"><span class="forge-implement-name">{% trans "Barbell" %}</span></div>
           <label class="forge-field">
             <span>Plates you own — <code>weight x how many</code></span>
             <input type="text" id="forge-barbell-plates" placeholder="20x4, 10x2, 2.5x2">
           </label>
           <label class="forge-field">
-            <span>Empty bar weight (<span class="forge-unit-tag">kg</span>)</span>
-            <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="weight — 0 if weightless">
+            <span>{% blocktrans trimmed %}Empty bar weight (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
+            <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
           </label>
           <label class="forge-field">
-            <span>Smallest increment (<span class="forge-unit-tag">kg</span>) — used only if you list no plates</span>
+            <span>{% blocktrans trimmed %}Smallest increment (<span class="forge-unit-tag">kg</span>) — used only if you list no plates{% endblocktrans %}</span>
             <input type="number" id="forge-barbell-inc" step="0.5" placeholder="2.5">
           </label>
         </div>
 
         <div class="forge-implement" data-for="kettlebell" hidden>
           <div class="forge-implement-head">
-            <span class="forge-implement-name">Kettlebell</span>
+            <span class="forge-implement-name">{% trans "Kettlebell" %}</span>
             <div class="forge-mode-btns" data-mode-for="kettlebell">
-              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">Fixed</button>
-              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">Adjustable</button>
+              <button type="button" class="forge-mode-btn is-on" data-mode="fixed" aria-pressed="true">{% trans "Fixed" %}</button>
+              <button type="button" class="forge-mode-btn" data-mode="plates" aria-pressed="false">{% trans "Adjustable" %}</button>
             </div>
           </div>
           <label class="forge-field" data-mode-panel="kettlebell-fixed">
-            <span>Kettlebell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated)</span>
+            <span>{% blocktrans trimmed %}Kettlebell weights you have (<span class="forge-unit-tag">kg</span>, comma-separated){% endblocktrans %}</span>
             <input type="text" id="forge-kettlebells" placeholder="12, 16, 24">
           </label>
           <div data-mode-panel="kettlebell-plates" hidden>
@@ -142,15 +141,15 @@
               <input type="text" id="forge-kettlebell-plates" placeholder="2x6">
             </label>
             <label class="forge-field">
-              <span>Empty shell weight (<span class="forge-unit-tag">kg</span>)</span>
-              <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="weight — 0 if weightless">
+              <span>{% blocktrans trimmed %}Empty shell weight (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
+              <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
             </label>
           </div>
         </div>
 
         <label class="forge-field" data-for="bands" hidden>
-          <span>Band levels, easiest first (comma-separated)</span>
-          <input type="text" id="forge-bands" placeholder="light, medium, heavy">
+          <span>{% trans "Band levels, easiest first (comma-separated)" %}</span>
+          <input type="text" id="forge-bands" placeholder="{% trans "light, medium, heavy" %}">
         </label>
 
         <p class="forge-orphans" id="forge-orphans" hidden></p>
@@ -158,38 +157,24 @@
       </div>
 
       <div class="forge-demographics">
-        <h3 class="forge-about-h3">Your stats <span class="forge-demo-opt">— optional, for the peer score</span></h3>
-        <p class="forge-help">We compare your results against published norms for your age &amp; sex to award
-          your <span class="forge-flame-inline">🔥</span> rating. Leave blank to skip — everything else still works.</p>
-        <div class="forge-demo-row">
-          <label class="forge-field">
-            <span>Birth year</span>
-            <input type="number" id="forge-birth-year" min="1920" max="2020" placeholder="1995">
-          </label>
-          <div class="forge-field">
-            <span>Sex (for norms)</span>
-            <div class="forge-sex-btns" id="forge-sex">
-              <button type="button" class="forge-sex-btn" data-sex="female" aria-pressed="false">
-                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="32" cy="24" r="12"/><line x1="32" y1="36" x2="32" y2="54"/><line x1="24" y1="46" x2="40" y2="46"/>
-                </svg>
-                Female
-              </button>
-              <button type="button" class="forge-sex-btn" data-sex="male" aria-pressed="false">
-                <svg class="forge-sex-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="26" cy="38" r="12"/><line x1="35" y1="29" x2="50" y2="14"/><path d="M41 14 L50 14 L50 23"/>
-                </svg>
-                Male
-              </button>
-              <button type="button" class="forge-sex-btn is-on" data-sex="undisclosed" aria-pressed="true">
-                Prefer not to say
-              </button>
-            </div>
-          </div>
-        </div>
+        <h3 class="forge-about-h3">{% trans "Your stats" %} <span class="forge-demo-opt">{% trans "— optional, for the peer score" %}</span></h3>
+        {% url 'the_cauldron:profile' as profile_url %}
+        <p class="forge-help">{% blocktrans trimmed with url=profile_url %}We compare your results against published norms for your age &amp; sex to award
+          your <span class="forge-flame-inline">🔥</span> rating. Set your birth year and sex in <a href="{{ url }}">your profile</a> — everything else works without them.{% endblocktrans %}</p>
       </div>
 
-      <button class="btn-cauldron btn-cauldron--primary" id="forge-save-equipment">Save equipment</button>
+      <button class="btn-cauldron btn-cauldron--primary" id="forge-save-equipment">{% trans "Save equipment" %}</button>
+
+      <div class="forge-demographics forge-volume" id="forge-volume" hidden>
+        <h3 class="forge-about-h3">{% trans "Weekly volume" %}</h3>
+        <p class="forge-help">{% blocktrans trimmed %}Working sets per movement pattern per week. Each session's sets
+          follow from it — between 2 and 5 per movement — and change as soon as you save.{% endblocktrans %}</p>
+        <div class="forge-volume-row">
+          <label class="forge-field"><span>{% trans "Sets per pattern per week" %}</span>
+            <input type="number" id="forge-volume-input" min="4" max="40" step="1" inputmode="numeric"></label>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-volume-save">{% trans "Save volume" %}</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -198,13 +183,13 @@
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">The Trial</h2>
-      <p class="forge-help">For each pattern, do <strong>one set to honest technical failure</strong> on the
-        suggested move and record the reps (or seconds for holds). We place you objectively — no guessing your level.</p>
+      <h2 class="forge-h2">{% trans "The Trial" %}</h2>
+      <p class="forge-help">{% blocktrans trimmed %}For each pattern, do <strong>one set to honest technical failure</strong> on the
+        suggested move and record the reps (or seconds for holds). We place you objectively — no guessing your level.{% endblocktrans %}</p>
       <div id="forge-trial-list" class="forge-trial-list"></div>
       <div class="forge-trial-actions">
-        <button class="btn-cauldron btn-cauldron--primary" id="forge-submit-trial">Forge my program</button>
-        <button class="btn-cauldron btn-cauldron--ghost" id="forge-retake" hidden>Retake the Trial</button>
+        <button class="btn-cauldron btn-cauldron--primary" id="forge-submit-trial">{% trans "Forge my program" %}</button>
+        <button class="btn-cauldron btn-cauldron--ghost" id="forge-retake" hidden>{% trans "Retake the Trial" %}</button>
       </div>
     </div>
   </section>
@@ -215,17 +200,17 @@
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="forge-today-head">
-        <h2 class="forge-h2">Today's session</h2>
+        <h2 class="forge-h2">{% trans "Today's session" %}</h2>
         <div class="forge-today-controls">
-          <label class="forge-day-pick">Rest ping
+          <label class="forge-day-pick">{% trans "Rest ping" %}
             <select id="forge-chime-select">
-              <option value="cauldron">Cauldron Chime</option>
-              <option value="ember">Ember Bell</option>
-              <option value="gong">Deep Gong</option>
-              <option value="triad">Arcane Triad</option>
+              <option value="cauldron">{% trans "Cauldron Chime" %}</option>
+              <option value="ember">{% trans "Ember Bell" %}</option>
+              <option value="gong">{% trans "Deep Gong" %}</option>
+              <option value="triad">{% trans "Arcane Triad" %}</option>
             </select>
           </label>
-          <button type="button" class="forge-chime-preview" title="Preview sound" aria-label="Preview rest ping">🔊</button>
+          <button type="button" class="forge-chime-preview" title="{% trans "Preview sound" %}" aria-label="{% trans "Preview rest ping" %}">🔊</button>
         </div>
       </div>
       <div id="forge-retest-banner" class="forge-retest-banner" role="status" hidden></div>
@@ -233,20 +218,20 @@
       <div id="forge-today-muscles" class="forge-muscle-map" hidden>
         <button type="button" id="forge-today-muscles-toggle" class="forge-muscle-map-toggle"
                 aria-expanded="false" aria-controls="forge-today-muscles-panel">
-          <span class="forge-muscle-map-title">Muscles forged today</span>
+          <span class="forge-muscle-map-title">{% trans "Muscles forged today" %}</span>
           <span class="forge-muscle-map-caret" aria-hidden="true">▾</span>
         </button>
         <div id="forge-today-muscles-panel" class="forge-muscle-map-panel" hidden>
-          <p class="forge-muscle-map-hint">Every set logged — here's the map of what you trained.</p>
+          <p class="forge-muscle-map-hint">{% trans "Every set logged — here's the map of what you trained." %}</p>
           <div id="forge-today-muscles-body"></div>
         </div>
       </div>
       <div class="forge-today-actions">
         <button class="btn-cauldron btn-cauldron--ghost" id="forge-earphones" hidden
-                title="Hands-free guided workout — listen on your earphones and speak your reps">
-          🎧 Earphones mode
+                title="{% trans "Hands-free guided workout — listen on your earphones and speak your reps" %}">
+          🎧 {% trans "Earphones mode" %}
         </button>
-        <button class="btn-cauldron btn-cauldron--primary" id="forge-log-session" hidden>Save session</button>
+        <button class="btn-cauldron btn-cauldron--primary" id="forge-log-session" hidden>{% trans "Save session" %}</button>
       </div>
     </div>
   </section>
@@ -257,27 +242,27 @@
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="forge-ex-header">
-        <h2 class="forge-h2">Exercises</h2>
-        <div class="forge-view-toggle" role="group" aria-label="Exercise display">
-          <button class="forge-view-btn is-active" data-view="tree" aria-pressed="true">Tree</button>
-          <button class="forge-view-btn" data-view="cards" aria-pressed="false">Cards</button>
+        <h2 class="forge-h2">{% trans "Exercises" %}</h2>
+        <div class="forge-view-toggle" role="group" aria-label="{% trans "Exercise display" %}">
+          <button class="forge-view-btn is-active" data-view="tree" aria-pressed="true">{% trans "Tree" %}</button>
+          <button class="forge-view-btn" data-view="cards" aria-pressed="false">{% trans "Cards" %}</button>
         </div>
       </div>
-      <p class="forge-help">Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong>
+      <p class="forge-help">{% blocktrans trimmed %}Every move in the Forge, grouped by the equipment it needs. <strong>Block</strong>
         anything you can't or won't do — an injury, a limitation, a dislike. Blocked moves are dropped from
         the Trial and your program, and we swap in the closest equal-or-easier alternative for the same
-        pattern. Unblock any time. Groups for gear you don't own are dimmed.</p>
+        pattern. Unblock any time. Groups for gear you don't own are dimmed.{% endblocktrans %}</p>
       <div class="forge-ex-filters">
         <input type="search" id="forge-ex-search" class="forge-ex-search"
-               placeholder="Search exercises…" aria-label="Search exercises by name">
-        <label class="forge-day-pick">Muscle
+               placeholder="{% trans "Search exercises…" %}" aria-label="{% trans "Search exercises by name" %}">
+        <label class="forge-day-pick">{% trans "Muscle" %}
           <select id="forge-ex-muscle">
-            <option value="">All muscles</option>
+            <option value="">{% trans "All muscles" %}</option>
           </select>
         </label>
       </div>
       <label class="forge-catalog-filter" id="forge-catalog-filter-label" hidden>
-        <input type="checkbox" id="forge-catalog-mine"> Only show what I can do
+        <input type="checkbox" id="forge-catalog-mine"> {% trans "Only show what I can do" %}
       </label>
       <div id="forge-tree" class="forge-tree"></div>
       <div id="forge-catalog" class="forge-catalog" hidden></div>
@@ -287,13 +272,13 @@
   <!-- ── Exercise detail modal ─────────────────────────────── -->
   <!-- Dialogs become bottom sheets on phones: the head (drag handle, title, ✕)
        stays put while only .forge-sheet-body scrolls. See forge.css "Mobile sheets". -->
-  <div class="forge-overlay forge-sheet-overlay" id="forge-ex-modal" hidden role="dialog" aria-modal="true" aria-label="Exercise details">
+  <div class="forge-overlay forge-sheet-overlay" id="forge-ex-modal" hidden role="dialog" aria-modal="true" aria-label="{% trans "Exercise details" %}">
     <div class="cauldron-card forge-ex-modal-card forge-sheet">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="forge-sheet-head">
         <span class="forge-sheet-handle" aria-hidden="true"></span>
-        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-ex-modal-close" aria-label="Close">✕</button>
+        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-ex-modal-close" aria-label="{% trans "Close" %}">✕</button>
       </div>
       <div class="forge-sheet-body">
         <div id="forge-ex-modal-body"></div>
@@ -310,8 +295,8 @@
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="forge-sheet-head">
         <span class="forge-sheet-handle" aria-hidden="true"></span>
-        <h3 class="forge-h3" id="forge-swap-title">Change exercise</h3>
-        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-swap-close" aria-label="Close">✕</button>
+        <h3 class="forge-h3" id="forge-swap-title">{% trans "Change exercise" %}</h3>
+        <button type="button" class="forge-voice-exit forge-sheet-close" id="forge-swap-close" aria-label="{% trans "Close" %}">✕</button>
       </div>
       <div class="forge-sheet-body">
         <div id="forge-swap-body"></div>
@@ -329,13 +314,13 @@
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="forge-sheet-head">
         <span class="forge-sheet-handle" aria-hidden="true"></span>
-        <h3 class="forge-h3" id="forge-unfinished-title">Unfinished session</h3>
+        <h3 class="forge-h3" id="forge-unfinished-title">{% trans "Unfinished session" %}</h3>
       </div>
       <div class="forge-sheet-body">
         <div id="forge-unfinished-body"></div>
         <div id="forge-unfinished-actions" class="forge-reveal-actions">
-          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-unfinished-delete">Delete it</button>
-          <button type="button" class="btn-cauldron btn-cauldron--primary" id="forge-unfinished-save">Save session</button>
+          <button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-unfinished-delete">{% trans "Delete it" %}</button>
+          <button type="button" class="btn-cauldron btn-cauldron--primary" id="forge-unfinished-save">{% trans "Save session" %}</button>
         </div>
       </div>
     </div>
@@ -346,29 +331,29 @@
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">Progression</h2>
+      <h2 class="forge-h2">{% trans "Progression" %}</h2>
       <div class="forge-chart-head">
-        <label class="forge-chart-metric">Exercise
+        <label class="forge-chart-metric">{% trans "Exercise" %}
           <select id="forge-chart-exercise">
-            <option value="">All (total)</option>
+            <option value="">{% trans "All (total)" %}</option>
           </select>
         </label>
-        <label class="forge-chart-metric">Muscle
+        <label class="forge-chart-metric">{% trans "Muscle" %}
           <select id="forge-chart-muscle">
-            <option value="">All muscles</option>
+            <option value="">{% trans "All muscles" %}</option>
           </select>
         </label>
-        <label class="forge-chart-metric">Metric
+        <label class="forge-chart-metric">{% trans "Metric" context "chart" %}
           <select id="forge-chart-metric">
-            <option value="total_volume">Total volume</option>
-            <option value="total_reps">Total reps</option>
-            <option value="best_amrap">Best AMRAP set</option>
+            <option value="total_volume">{% trans "Total volume" %}</option>
+            <option value="total_reps">{% trans "Total reps" %}</option>
+            <option value="best_amrap">{% trans "Best AMRAP set" %}</option>
           </select>
         </label>
-        <div class="forge-period-toggle" role="group" aria-label="Group by">
-          <button class="forge-period is-active" data-period="day">Day</button>
-          <button class="forge-period" data-period="week">Week</button>
-          <button class="forge-period" data-period="month">Month</button>
+        <div class="forge-period-toggle" role="group" aria-label="{% trans "Group by" %}">
+          <button class="forge-period is-active" data-period="day">{% trans "Day" %}</button>
+          <button class="forge-period" data-period="week">{% trans "Week" %}</button>
+          <button class="forge-period" data-period="month">{% trans "Month" %}</button>
         </div>
       </div>
       <div id="forge-chart" class="forge-chart"></div>
@@ -378,8 +363,8 @@
     <div class="cauldron-card forge-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">Saved sessions</h2>
-      <p class="forge-help">Planned vs. real for every set you've logged.</p>
+      <h2 class="forge-h2">{% trans "Saved sessions" %}</h2>
+      <p class="forge-help">{% trans "Planned vs. real for every set you've logged." %}</p>
       <div id="forge-history" class="forge-history"></div>
     </div>
   </section>
@@ -413,15 +398,15 @@
 
   <!-- ── Earphones mode (hands-free voice-guided session) ──── -->
   <div class="forge-overlay forge-voice" id="forge-voice" hidden role="dialog"
-       aria-modal="true" aria-label="Earphones mode">
+       aria-modal="true" aria-label="{% trans "Earphones mode" %}">
     <div class="cauldron-card forge-voice-card">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
 
       <button type="button" class="forge-voice-mictoggle is-muted" id="forge-voice-mictoggle"
               aria-pressed="false"
-              title="Voice input off — tap to enable hands-free commands (your browser beeps while listening)"
-              aria-label="Voice input off — tap to enable hands-free voice commands">
+              title="{% trans "Voice input off — tap to enable hands-free commands (your browser beeps while listening)" %}"
+              aria-label="{% trans "Voice input off — tap to enable hands-free voice commands" %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <rect x="9" y="2.5" width="6" height="11" rx="3"/>
@@ -432,10 +417,10 @@
       </button>
 
       <button type="button" class="forge-voice-exit" id="forge-voice-exit"
-              aria-label="Exit earphones mode">✕</button>
+              aria-label="{% trans "Exit earphones mode" %}">✕</button>
 
-      <p class="forge-voice-eyebrow" id="forge-voice-progress">🎧 Earphones mode</p>
-      <h2 class="forge-voice-exercise" id="forge-voice-exercise">Getting ready…</h2>
+      <p class="forge-voice-eyebrow" id="forge-voice-progress">🎧 {% trans "Earphones mode" %}</p>
+      <h2 class="forge-voice-exercise" id="forge-voice-exercise">{% trans "Getting ready…" %}</h2>
       <p class="forge-voice-target" id="forge-voice-target"></p>
 
       <div class="forge-voice-timer" id="forge-voice-timer" hidden aria-live="off">0:00</div>
@@ -444,15 +429,15 @@
 
       <div class="forge-voice-mic" id="forge-voice-mic" hidden>
         <span class="forge-voice-mic-dot" aria-hidden="true"></span>
-        <span>Listening…</span>
+        <span>{% trans "Listening…" %}</span>
       </div>
       <p class="forge-voice-heard" id="forge-voice-heard" aria-live="polite"></p>
 
       <div class="forge-voice-controls" id="forge-voice-controls"></div>
 
       <p class="forge-voice-help">
-        Guidance is spoken through your earphones — tap the buttons to log each set.
-        Tap the mic (top-left) for hands-free voice commands; your browser beeps while listening.
+        {% blocktrans trimmed %}Guidance is spoken through your earphones — tap the buttons to log each set.
+        Tap the mic (top-left) for hands-free voice commands; your browser beeps while listening.{% endblocktrans %}
       </p>
     </div>
   </div>
@@ -462,66 +447,70 @@
     <div class="cauldron-card forge-card forge-about">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
-      <h2 class="forge-h2">How the Forge works — and why</h2>
-      <p class="forge-help">The Forge isn't a fixed routine. It measures where you are, prescribes the next
+      <h2 class="forge-h2">{% trans "How the Forge works — and why" %}</h2>
+      <p class="forge-help">{% blocktrans trimmed %}The Forge isn't a fixed routine. It measures where you are, prescribes the next
         honest step, and adjusts after every session. Each design choice below is anchored to the strength-science
-        evidence — the citations are real and linked.</p>
+        evidence — the citations are real and linked.{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">1 · We test, we don't guess</h3>
-      <p class="forge-about-p">Most apps ask how hard a set felt — your "reps in reserve" (RIR). The problem:
+      <h3 class="forge-about-h3">{% trans "1 · We test, we don't guess" %}</h3>
+      <p class="forge-about-p">{% blocktrans trimmed %}Most apps ask how hard a set felt — your "reps in reserve" (RIR). The problem:
         novices are unreliable at judging how close to failure they are, and tend to stop well short while
         believing they were near the limit. Accuracy improves with training experience, but for a beginner it's
         a shaky foundation.<sup><a href="#ref-1">1</a></sup> Trained lifters estimate effort far more accurately
         than novices.<sup><a href="#ref-2">2</a></sup> So the Forge places you with an <strong>objective AMRAP</strong>
         (as-many-reps-as-possible) test set per movement pattern, not a feeling — the number puts you on the right
-        rung automatically.</p>
+        rung automatically.{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">2 · Autoregulated double progression</h3>
-      <p class="forge-about-p">Your last working set each session is an AMRAP "test set." Beat the top of the
+      <h3 class="forge-about-h3">{% trans "2 · Autoregulated double progression" %}</h3>
+      <p class="forge-about-p">{% blocktrans trimmed %}Your last working set each session is an AMRAP "test set." Beat the top of the
         rep range and you move up; fall short and you back off — the program <em>autoregulates</em> to your daily
         readiness instead of forcing a fixed weekly jump. Autoregulated progressive resistance exercise (APRE)
-        out-performed traditional linear periodization for strength gains in a controlled trial.<sup><a href="#ref-3">3</a></sup></p>
+        out-performed traditional linear periodization for strength gains in a controlled trial.<sup><a href="#ref-3">3</a></sup>{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">3 · Two ways to get stronger</h3>
-      <p class="forge-about-p">When you only have bodyweight, the Forge progresses by <strong>difficulty</strong>
+      <h3 class="forge-about-h3">{% trans "3 · Two ways to get stronger" %}</h3>
+      <p class="forge-about-p">{% blocktrans trimmed %}When you only have bodyweight, the Forge progresses by <strong>difficulty</strong>
         — climbing a ladder of harder variations (wall push-up → push-up → archer push-up). When you own loadable
         gear, it progresses by <strong>load</strong>, adding the smallest available increment. Load mode also fixes
-        a well-known problem: it's hard to keep overloading the lower body with bodyweight alone.</p>
+        a well-known problem: it's hard to keep overloading the lower body with bodyweight alone.{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">4 · Rest like you mean it</h3>
-      <p class="forge-about-p">Each exercise carries an evidence-based rest target — roughly 2–3 minutes for heavy
+      <h3 class="forge-about-h3">{% trans "4 · Rest like you mean it" %}</h3>
+      <p class="forge-about-p">{% blocktrans trimmed %}Each exercise carries an evidence-based rest target — roughly 2–3 minutes for heavy
         compounds, less for accessory and isometric work. Longer inter-set rest produced greater gains in both
-        strength and muscle size than short rest in resistance-trained men.<sup><a href="#ref-4">4</a></sup></p>
+        strength and muscle size than short rest in resistance-trained men.<sup><a href="#ref-4">4</a></sup>{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">5 · Train each pattern often</h3>
-      <p class="forge-about-p">The default Full-Body ×3 split hits every movement pattern multiple times a week.
+      <h3 class="forge-about-h3">{% trans "5 · Train each pattern often" %}</h3>
+      <p class="forge-about-p">{% blocktrans trimmed %}The default Full-Body ×3 split hits every movement pattern multiple times a week.
         When volume is equated, higher weekly frequency tends to favour hypertrophy — and frequent practice also
-        accelerates skill on the calisthenics movements themselves.<sup><a href="#ref-5">5</a></sup></p>
+        accelerates skill on the calisthenics movements themselves.<sup><a href="#ref-5">5</a></sup>{% endblocktrans %}</p>
 
-      <h3 class="forge-about-h3">References</h3>
+      <h3 class="forge-about-h3">{% trans "References" %}</h3>
       <ol class="forge-refs">
         <li id="ref-1">Steele J, et al. <em>Ability to predict repetitions to momentary failure is not perfectly
           accurate, though improves with resistance training experience.</em> PLoS ONE, 2017.
-          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5712461/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5712461/" target="_blank" rel="noopener" data-no-loader>{% trans "Read ↗" %}</a></li>
         <li id="ref-2">Zourdos MC, et al. <em>Novel Resistance Training–Specific Rating of Perceived Exertion Scale
           Measuring Repetitions in Reserve.</em> J Strength Cond Res, 2016.
-          <a href="https://pubmed.ncbi.nlm.nih.gov/26049792/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/26049792/" target="_blank" rel="noopener" data-no-loader>{% trans "Read ↗" %}</a></li>
         <li id="ref-3">Mann JB, et al. <em>The effect of autoregulatory progressive resistance exercise vs. linear
           periodization on strength improvement in college athletes.</em> J Strength Cond Res, 2010.
-          <a href="https://pubmed.ncbi.nlm.nih.gov/20543732/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/20543732/" target="_blank" rel="noopener" data-no-loader>{% trans "Read ↗" %}</a></li>
         <li id="ref-4">Schoenfeld BJ, et al. <em>Longer Interset Rest Periods Enhance Muscle Strength and Hypertrophy
           in Resistance-Trained Men.</em> J Strength Cond Res, 2016.
-          <a href="https://pubmed.ncbi.nlm.nih.gov/26605807/" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/26605807/" target="_blank" rel="noopener" data-no-loader>{% trans "Read ↗" %}</a></li>
         <li id="ref-5">Schoenfeld BJ, Ogborn D, Krieger JW. <em>Effects of Resistance Training Frequency on Measures
           of Muscle Hypertrophy: A Systematic Review and Meta-Analysis.</em> Sports Med, 2016.
-          <a href="https://link.springer.com/article/10.1007/s40279-016-0543-8" target="_blank" rel="noopener" data-no-loader>Read ↗</a></li>
+          <a href="https://link.springer.com/article/10.1007/s40279-016-0543-8" target="_blank" rel="noopener" data-no-loader>{% trans "Read ↗" %}</a></li>
       </ol>
     </div>
   </section>
 
 </main>
 
+{% get_current_language as LANGUAGE_CODE %}
+{{ forge_strings|json_script:"forge-i18n" }}
+{{ forge_catalog|json_script:"forge-catalog-i18n" }}
 <script>
+  window.FORGE_LANG = "{{ LANGUAGE_CODE|escapejs }}";
   window.FORGE_API = "{% url 'the_cauldron:forge-api:api-root' %}";
   window.FORGE_ROOT = "{% url 'the_cauldron:forge' %}";
   window.FORGE_INITIAL_TAB = "{{ initial_tab|default:'equipment' }}";
@@ -534,7 +523,7 @@
 <script src="{% static 'the_cauldron/js/forge-anatomy.js' %}"></script>
 <script src="{% static 'the_cauldron/js/forge-anvil.js' %}"></script>
 <!-- Cauldron loader first so forge.js can use it; it also takes over page transitions. -->
-<script src="{% static 'the_cauldron/js/cauldron-loader.js' %}"></script>
+{% include 'the_cauldron/_loader_script.html' %}
 <script src="{% static 'the_cauldron/js/forge.js' %}"></script>
 {% endblock %}
 

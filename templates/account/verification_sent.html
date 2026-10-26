@@ -1,0 +1,11 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Check your email" %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Check your email" %}</h1>
+<p class="forge-subtitle">{% trans "We sent you a link to verify your email address. Open it to light the fire — it expires in 24 hours." %}</p>
+<p class="forge-auth-note">{% trans "Can't find it? Look in your spam folder, or sign in again and we'll send a new link." %}</p>
+<p class="forge-auth-alt"><a href="{% url 'the_cauldron:login' %}">{% trans "Back to sign in" %}</a></p>
+{% endblock %}

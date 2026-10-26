@@ -3,11 +3,12 @@
 {% get_current_language as LANGUAGE_CODE %}
 
 {% block title %}{% if LANGUAGE_CODE == "es" %}Aviso de Privacidad — The Cauldron{% else %}Privacy Notice — The Cauldron{% endif %}{% endblock %}
+{% block meta_description %}{% trans "How The Cauldron collects, uses and protects your personal data." %}{% endblock %}
 
 {% block legal_body %}
 {% if LANGUAGE_CODE == "es" %}
 <h1 class="cauldron-legal-title">Aviso de Privacidad de The Cauldron</h1>
-<p class="cauldron-legal-version">Versión 1.3 — Vigente a partir del 17 de octubre de 2026</p>
+<p class="cauldron-legal-version">Versión 1.5 — Vigente a partir del 24 de octubre de 2026</p>
 
 <section>
   <h2>1. Responsable</h2>
@@ -20,9 +21,13 @@
 <section>
   <h2>2. Datos que tratamos</h2>
   <ul>
-    <li><strong>Cuenta:</strong> nombre de usuario, correo electrónico y contraseña cifrada.</li>
-    <li><strong>The Forge:</strong> equipo que tienes, resultados de evaluaciones, entrenamientos registrados y, si los
-      das, año de nacimiento y sexo (solo para comparar con referencias de tu grupo).</li>
+    <li><strong>Cuenta:</strong> nombre de usuario, el nombre que eliges mostrar, correo electrónico (y si ya lo
+      verificaste) y contraseña cifrada. Si entras con Google, también el identificador de tu cuenta de Google y los datos
+      de perfil que Google nos comparte (nombre, correo y foto); nunca recibimos tu contraseña de Google.</li>
+    <li><strong>The Forge:</strong> equipo que tienes, resultados de evaluaciones y entrenamientos registrados.</li>
+    <li><strong>Sobre ti (tu perfil):</strong> si los das, año de nacimiento, sexo, peso y nivel de actividad física. El
+      año de nacimiento y el sexo sirven para comparar tus resultados de The Forge con referencias de tu grupo; junto con
+      tu peso y tu nivel de actividad, para calcular tus metas recomendadas.</li>
     <li><strong>El Grimorio:</strong> las recetas que escribes o copias, su estado (privada o compartida), los
       ingredientes que agregas, tus <strong>lanzamientos</strong> (cuándo preparaste una receta, tu calificación, notas,
       cantidades y sustituciones; solo los ves tú) y tus preferencias (sistema de unidades e idioma).</li>
@@ -39,8 +44,8 @@
     <li><strong>Datos técnicos y de uso:</strong> dirección IP, navegador, cookies necesarias (sesión, seguridad e
       idioma) y registros de qué funciones, recetas e ingredientes usas.</li>
   </ul>
-  <p><strong>Datos personales sensibles.</strong> Tus metas, lo que comes y tus planes de comida pueden revelar
-    información sobre tu estado de salud, por lo que los tratamos como datos personales sensibles (artículo 3, fracción
+  <p><strong>Datos personales sensibles.</strong> Tus metas, lo que comes, tus planes de comida, tu peso y tu nivel de
+    actividad pueden revelar información sobre tu estado de salud, por lo que los tratamos como datos personales sensibles (artículo 3, fracción
     VI, de la LFPDPPP). Solo los tratamos con tu <strong>consentimiento expreso</strong>, que nos das marcando una
     casilla que nunca está marcada de antemano la primera vez que abres tus metas o El Diario. Ese consentimiento no
     es condición para usar The Forge ni El Grimorio. Puedes retirarlo en cualquier momento desde tu perfil: dejamos
@@ -52,7 +57,10 @@
   <h2>3. Para qué los usamos</h2>
   <p><strong>Finalidades necesarias:</strong> crear y proteger tu cuenta; guardar y mostrarte tus recetas, ingredientes
     y entrenamientos; calcular conversiones, nutrición y progresiones; con tu consentimiento, guardar tus metas, lo que
-    comes y tus planes, y calcular tus totales del día, porciones sugeridas y con qué frecuencia cumples tus metas;
+    comes, tus planes, tu peso y tu nivel de actividad, y calcular tus totales del día, porciones sugeridas, con qué
+    frecuencia cumples tus metas y tus <strong>metas recomendadas</strong> (a partir de tu edad, sexo, peso y nivel de
+    actividad, con referencias de la OMS/FAO y de las Academias Nacionales de EE. UU.; son referencias generales, no
+    consejo médico);
     guardar el registro de tus aceptaciones; atender lo que tu asistente de IA conectado nos pide en tu nombre; mostrar
     a otras personas lo que tú decides compartir; moderar contenido y prevenir abusos.</p>
   <p><strong>Finalidades adicionales:</strong> generar <strong>estadísticas de uso</strong> (qué funciones usas y con qué
@@ -80,13 +88,16 @@
       Anthropic, con Claude) y lo trata conforme a sus propios términos y aviso de privacidad. Ese envío lo haces tú, a
       través de tu asistente; nosotros no le enviamos nada por nuestra cuenta. Puedes desconectarlo en cualquier momento
       desde tu perfil y pierde el acceso de inmediato.</li>
+    <li><strong>Google:</strong> si eliges entrar con Google, Google sabe que iniciaste sesión en The Cauldron y lo
+      trata conforme a su propio aviso de privacidad. Solo le pedimos tu nombre, correo y foto de perfil.</li>
   </ul>
   <p>No vendemos tus datos personales. Usamos proveedores de alojamiento, base de datos, correo y analítica de producto
     que los tratan por cuenta nuestra y bajo nuestras instrucciones; pueden estar fuera de México. Para la analítica usamos
     PostHog (Estados Unidos): solo le enviamos qué acción hiciste, un identificador interno de tu cuenta y la página en la que
     ocurrió (sin parámetros). Nunca le enviamos datos personales: ni tu correo, tu nombre de usuario, tu dirección IP o
-    tu navegador, ni el contenido de tus recetas o entrenamientos, ni tus metas, lo que comes o tus planes (solo
-    conteos, como “registró una comida”). De tus asistentes de IA solo le enviamos qué herramienta se usó, si funcionó,
+    tu navegador, ni el contenido de tus recetas o entrenamientos, ni tus metas, lo que comes o tus planes, ni tu edad,
+    sexo, peso o nivel de actividad (solo conteos, como “registró una comida”, cuántos datos de tu perfil llenaste, que
+    abriste el desglose de una meta o que completaste un valor faltante, sin decir cuál ni de qué alimento). De tus asistentes de IA solo le enviamos qué herramienta se usó, si funcionó,
     cuánto tardó y el tipo de aplicación (por ejemplo Claude); nunca lo que pediste ni lo que el asistente leyó. Esto
     no instala cookies en tu navegador.</p>
 </section>
@@ -95,7 +106,8 @@
   <h2>5. Conservación</h2>
   <p>Conservamos tus datos mientras tu cuenta esté activa. Si la eliminas, borramos o anonimizamos tus datos personales
     en un plazo razonable, salvo lo que la ley nos obligue a conservar. Tus metas, lo que comes y tus planes se borran
-    con tu cuenta, o antes si retiras el consentimiento y pides borrarlos. El registro de aceptaciones lo conservamos
+    con tu cuenta, o antes si retiras el consentimiento y pides borrarlos; en ese caso también borramos tu peso y tu
+    nivel de actividad. El registro de aceptaciones lo conservamos
     mientras exista tu cuenta y el tiempo que la ley exija, como prueba de tu consentimiento. Las copias de recetas que otras personas ya
     hicieron y los ingredientes que pasaron al catálogo compartido permanecen, sin vincularse a ti.</p>
 </section>
@@ -117,7 +129,7 @@
 
 {% else %}
 <h1 class="cauldron-legal-title">The Cauldron Privacy Notice</h1>
-<p class="cauldron-legal-version">Version 1.3 — Effective October 17, 2026</p>
+<p class="cauldron-legal-version">Version 1.5 — Effective October 24, 2026</p>
 
 <section>
   <h2>1. Controller</h2>
@@ -130,9 +142,13 @@
 <section>
   <h2>2. Data we process</h2>
   <ul>
-    <li><strong>Account:</strong> username, email address and hashed password.</li>
-    <li><strong>The Forge:</strong> the equipment you own, assessment results, logged workouts and, if you give them,
-      birth year and sex (only to compare with reference data for your group).</li>
+    <li><strong>Account:</strong> username, the display name you choose, email address (and whether you verified it) and
+      hashed password. If you sign in with Google, also your Google account identifier and the profile data Google shares
+      with us (name, email and photo); we never receive your Google password.</li>
+    <li><strong>The Forge:</strong> the equipment you own, assessment results and logged workouts.</li>
+    <li><strong>About you (your profile):</strong> if you give them, birth year, sex, weight and physical activity level.
+      Birth year and sex are used to compare your Forge results with reference data for your group; together with your
+      weight and activity level, to calculate your recommended goals.</li>
     <li><strong>The Grimoire:</strong> the recipes you write or copy, their status (private or shared), the ingredients you
       add, your <strong>castings</strong> (when you made a recipe, your score, notes, amounts and substitutions; only you see
       them), and your preferences (unit system and language).</li>
@@ -148,8 +164,8 @@
     <li><strong>Technical and usage data:</strong> IP address, browser, necessary cookies (session, security and
       language) and records of which features, recipes and ingredients you use.</li>
   </ul>
-  <p><strong>Sensitive personal data.</strong> Your goals, what you eat and your meal plans can reveal information about
-    your health, so we treat them as sensitive personal data (Article 3, section VI, of the LFPDPPP). We process them
+  <p><strong>Sensitive personal data.</strong> Your goals, what you eat, your meal plans, your weight and your activity
+    level can reveal information about your health, so we treat them as sensitive personal data (Article 3, section VI, of the LFPDPPP). We process them
     only with your <strong>express consent</strong>, which you give by ticking a box that is never pre-ticked the first
     time you open your goals or The Journal. That consent is not a condition for using The Forge or The Grimoire. You
     can withdraw it at any time from your profile: we stop recording this data at once and you can have it deleted
@@ -160,8 +176,9 @@
   <h2>3. What we use it for</h2>
   <p><strong>Necessary purposes:</strong> creating and protecting your account; storing and showing you your recipes,
     ingredients and workouts; calculating conversions, nutrition and progressions; with your consent, storing your
-    goals, what you eat and your plans, and calculating your day totals, suggested portions and how often you meet
-    your goals; keeping the record of your acceptances; handling what your connected AI assistant asks of us on your
+    goals, what you eat, your plans, your weight and your activity level, and calculating your day totals, suggested
+    portions, how often you meet your goals and your <strong>recommended goals</strong> (from your age, sex, weight and
+    activity level, with WHO/FAO and US National Academies references; general references, not medical advice); keeping the record of your acceptances; handling what your connected AI assistant asks of us on your
     behalf; showing others what you choose to share; moderating content and preventing abuse.</p>
   <p><strong>Additional purposes:</strong> producing <strong>usage statistics</strong> (which features you use and how
     often, linked to an internal identifier for your account) to improve the Service and build new features, and publishing <strong>aggregated</strong> statistics that don't identify you. If you don't want your
@@ -188,13 +205,17 @@
       assistant (for example Anthropic, for Claude), which handles it under its own terms and privacy notice. You make
       that transfer, through your assistant; we don't send it anything on our own. You can disconnect it at any time
       from your profile and it loses access at once.</li>
+    <li><strong>Google:</strong> if you choose to sign in with Google, Google knows you signed in to The Cauldron and
+      handles that under its own privacy notice. We only ask it for your name, email and profile photo.</li>
   </ul>
   <p>We don't sell your personal data. We use hosting, database, email and product analytics providers that process it
     on our behalf and under our instructions; they may be located outside Mexico. For analytics we use PostHog (United
     States): we send it only which action you took, an internal identifier for your account and the page it
     happened on (without parameters). We never send it personal data: not your email, username, IP address or
-    browser, nor the content of your recipes or workouts, nor your goals, what you eat or your plans (only counts,
-    such as “logged a meal”). For AI assistants we send only which tool was used, whether it worked, how long it took
+    browser, nor the content of your recipes or workouts, nor your goals, what you eat or your plans, nor your age,
+    sex, weight or activity level (only counts, such as “logged a meal”, how many of your profile details you
+    filled in, or that you opened a goal's breakdown or filled in a missing value, never which one or for which
+    food). For AI assistants we send only which tool was used, whether it worked, how long it took
     and the kind of app (for example Claude); never what you asked or what the assistant read. This doesn't place
     cookies in your browser.</p>
 </section>
@@ -203,7 +224,8 @@
   <h2>5. Retention</h2>
   <p>We keep your data while your account is active. If you delete it, we delete or anonymise your personal data within
     a reasonable time, except what the law requires us to keep. Your goals, what you eat and your plans are deleted
-    with your account, or earlier if you withdraw your consent and ask for them to be deleted. We keep the record of
+    with your account, or earlier if you withdraw your consent and ask for them to be deleted; we then also delete
+    your weight and activity level. We keep the record of
     acceptances while your account exists and for as long as the law requires, as evidence of your consent. Copies of recipes others already made and ingredients
     that joined the shared catalog remain, unlinked from you.</p>
 </section>

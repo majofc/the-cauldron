@@ -20,6 +20,66 @@
 
   const LOADABLE = ["dumbbells", "bands", "barbell"];
 
+  // ── i18n ───────────────────────────────────────────────────────────────────
+  // UI strings come translated from the server (forge_i18n.forge_strings →
+  // #forge-i18n); `%(name)s` placeholders. Plurals ship as `<key>_one` /
+  // `<key>_other` (ngettext at n=1 / n=2). Catalog names (#forge-catalog-i18n)
+  // are keyed by the English name, which stays the identifier everywhere —
+  // translate only at display time.
+  const LANG = String(window.FORGE_LANG || document.documentElement.lang || "en");
+  const IS_ES = LANG.toLowerCase().startsWith("es");
+  const I18N = JSON.parse(($("#forge-i18n") || {}).textContent || "{}");
+  const CATALOG = JSON.parse(($("#forge-catalog-i18n") || {}).textContent || "{}");
+
+  function t(key, vars) {
+    let s = I18N[key] || key;
+    if (vars) s = s.replace(/%\((\w+)\)s/g, (_, name) => (name in vars ? vars[name] : ""));
+    return s;
+  }
+  function tn(key, n, vars) {
+    return t(`${key}_${n === 1 ? "one" : "other"}`, Object.assign({ n }, vars));
+  }
+  // Display names. Unknown names (e.g. a rung added after the page loaded)
+  // fall back to the English name they came with.
+  function exName(name) {
+    const e = (CATALOG.exercises || {})[name];
+    return (e && e.name) || name || "";
+  }
+  function exCues(name, fallback) {
+    const e = (CATALOG.exercises || {})[name];
+    return (e && e.cues) || fallback || "";
+  }
+  function patternName(key, fallback) {
+    return (CATALOG.patterns || {})[key] || fallback || key || "";
+  }
+  function muscleName(key, fallback) {
+    return (CATALOG.muscles || {})[key] || fallback || key || "";
+  }
+  function equipName(key, fallback) {
+    return (CATALOG.equipment || {})[key] || fallback || key || "";
+  }
+  const fmtNum = (n, opts) => new Intl.NumberFormat(LANG, opts).format(n);
+  // "8 reps" / "30 seconds", pluralised.
+  function unitCount(isTimed, n) {
+    return tn(isTimed ? "n_seconds" : "n_reps", n);
+  }
+  // A YYYY-MM-DD date in the page language (noon, so no timezone shifts the day).
+  function fmtDate(iso, opts = { year: "numeric", month: "short", day: "numeric" }) {
+    const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+    return isNaN(d) ? String(iso) : d.toLocaleDateString(LANG, opts);
+  }
+  // Case- and accent-insensitive search key ("Sentadilla" matches "sentadílla").
+  function foldText(s) {
+    return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+  // "Blocked. Substitute: X. Swapped in 2 live prescriptions."
+  function blockedNotice(res) {
+    const parts = [t("blocked")];
+    parts.push(res.substitute ? t("substitute_is", { name: exName(res.substitute.name) }) : t("no_substitute"));
+    if (res.swapped) parts.push(tn("swapped_n", res.swapped));
+    return parts.join(" ");
+  }
+
   // ── XSS guard ─────────────────────────────────────────────────────────────
   function esc(str) {
     const d = document.createElement("div");
@@ -66,7 +126,7 @@
       });
       if (msgs.length) return msgs.join(" ");
     } catch (e) { /* not JSON — fall through to the raw text */ }
-    return body || "Something went wrong.";
+    return body || t("err_generic");
   }
 
   // ── UI helpers ─────────────────────────────────────────────────────────────
@@ -160,7 +220,9 @@
     gong: (c, t) => { tone(c, 196, t, 2.8, 0.30, "sine"); tone(c, 233, t, 2.5, 0.12, "sine"); tone(c, 392, t, 1.9, 0.07, "triangle"); },
     triad: (c, t) => { [523.25, 659.25, 783.99].forEach((f, i) => tone(c, f, t + i * 0.16, 1.0, 0.20, "sine")); },
   };
-  const CHIME_LABELS = { cauldron: "Cauldron Chime", ember: "Ember Bell", gong: "Deep Gong", triad: "Arcane Triad" };
+  const CHIME_LABELS = {
+    cauldron: t("chime_cauldron"), ember: t("chime_ember"), gong: t("chime_gong"), triad: t("chime_triad"),
+  };
   function getChime() { return localStorage.getItem("forge-chime") || "cauldron"; }
   function setChime(name) { localStorage.setItem("forge-chime", name); }
   function playChime(name) {
@@ -182,14 +244,14 @@
     if (swTimers.has(input)) {
       clearInterval(swTimers.get(input));
       swTimers.delete(input);
-      btn.textContent = "▶ Start"; btn.classList.remove("is-running");
+      btn.textContent = t("sw_start"); btn.classList.remove("is-running");
       // Hold finished — notify listeners (e.g. the worked-muscle map) now that
       // the value is final, rather than on every tick while still timing.
       input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     if (!input.value || isNaN(+input.value)) input.value = 0;
-    btn.textContent = "⏸ Stop"; btn.classList.add("is-running");
+    btn.textContent = t("sw_stop"); btn.classList.add("is-running");
     const id = setInterval(() => { input.value = (parseInt(input.value, 10) || 0) + 1; }, 1000);
     swTimers.set(input, id);
   }
@@ -213,7 +275,7 @@
         clearInterval(restTimers.get(btn));
         restTimers.delete(btn);
         btn.classList.remove("is-running");
-        btn.textContent = "✓ Rested";
+        btn.textContent = t("rested");
         playChime(getChime());
         setTimeout(() => { btn.textContent = btn.dataset.label; }, 3000);
         return;
@@ -265,33 +327,41 @@
   const anvil = $("#forge-anvil");
 
   function flamesMarkup(lit) {
-    let s = `<div class="forge-flames" role="img" aria-label="${lit} out of 10 flames">`;
+    let s = `<div class="forge-flames" role="img" aria-label="${esc(t("flames_aria", { n: lit }))}">`;
     for (let i = 0; i < 10; i++) {
       s += `<span class="forge-flame${i < lit ? " lit" : ""}" style="--i:${i}">🔥</span>`;
     }
     return s + "</div>";
   }
 
+  // "You've mastered X. The path to Y is open — take it?" (names in <strong>).
+  function unlockText(u) {
+    return t("unlock_text", {
+      from: `<strong>${esc(exName(u.from_name))}</strong>`,
+      to: `<strong>${esc(exName(u.to_name))}</strong>`,
+    });
+  }
+
   function scoreCardMarkup(item) {
     const sc = item.score || {};
     if (!sc.has_data) {
       return `<div class="forge-score-row forge-score-row--nodata">` +
-        `<span class="forge-score-ex">${item.exercise}</span>` +
-        `<span class="forge-score-note">${sc.reason || "No peer data yet."}</span></div>`;
+        `<span class="forge-score-ex">${esc(exName(item.exercise))}</span>` +
+        `<span class="forge-score-note">${esc(sc.reason || t("no_peer_data"))}</span></div>`;
     }
     const approx = sc.estimated
-      ? `<span class="forge-score-approx" title="Estimated benchmark — not yet from published data">≈ est.</span>`
+      ? `<span class="forge-score-approx" title="${esc(t("score_est_title"))}">${esc(t("score_est"))}</span>`
       : sc.approximate
-      ? `<span class="forge-score-approx" title="Interpolated from published percentiles">≈ approx</span>`
+      ? `<span class="forge-score-approx" title="${esc(t("score_approx_title"))}">${esc(t("score_approx"))}</span>`
       : "";
-    const note = sc.note ? `<div class="forge-score-subnote">${sc.note}</div>` : "";
+    const note = sc.note ? `<div class="forge-score-subnote">${esc(sc.note)}</div>` : "";
     const topPct = Math.max(1, 100 - Math.round(sc.percentile));
     return `<div class="forge-score-row">` +
-      `<div class="forge-score-head"><span class="forge-score-ex">${item.exercise} · ${item.value}</span>` +
-      `<span class="forge-score-decile">top ${topPct}% · decile ${sc.decile}/10</span></div>` +
+      `<div class="forge-score-head"><span class="forge-score-ex">${esc(exName(item.exercise))} · ${item.value}</span>` +
+      `<span class="forge-score-decile">${esc(t("score_decile", { pct: `${topPct}%`, decile: sc.decile }))}</span></div>` +
       flamesMarkup(sc.flames) +
-      `<div class="forge-score-meta">${sc.flames}/10 🔥 vs peers your age &amp; sex ${approx} · ` +
-      `<a href="${sc.url}" target="_blank" rel="noopener" data-no-loader>${sc.label} norms</a></div>` +
+      `<div class="forge-score-meta">${esc(t("score_vs_peers", { n: sc.flames }))} ${approx} · ` +
+      `<a href="${sc.url}" target="_blank" rel="noopener" data-no-loader>${esc(t("score_norms", { label: sc.label }))}</a></div>` +
       note + `</div>`;
   }
 
@@ -321,7 +391,7 @@
       revealBody.innerHTML = bodyHtml;
       igniteFlames(revealBody);
       revealActions.innerHTML = buttons
-        .map((b) => `<button class="btn-cauldron ${b.cls}" data-act="${b.act}">${b.label}</button>`)
+        .map((b) => `<button class="btn-cauldron ${b.cls}" data-act="${b.act}">${esc(b.label)}</button>`)
         .join("");
       revealActions.hidden = false;
       revealActions.querySelectorAll("button").forEach((btn) =>
@@ -330,7 +400,7 @@
     });
   }
 
-  async function showResults({ peer = [], unlocks = [], title = "The verdict" }) {
+  async function showResults({ peer = [], unlocks = [], title = t("verdict") }) {
     openOverlay();
     await wait(1300); // let the forge roar before the reveal
     anvil.classList.remove("forging");
@@ -339,17 +409,16 @@
     for (const u of unlocks) {
       const body =
         `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
-        `<h3 class="forge-reveal-title forge-unlock-title">New power unlocked!</h3>` +
-        `<p class="forge-unlock-text">You've mastered <strong>${u.from_name}</strong>. ` +
-        `The path to <strong>${u.to_name}</strong> is open — take it?</p>`;
+        `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("unlock_title"))}</h3>` +
+        `<p class="forge-unlock-text">${unlockText(u)}</p>`;
       const act = await step(body, [
-        { act: "accept", cls: "btn-cauldron--primary", label: "Claim it 🔥" },
-        { act: "deny", cls: "btn-cauldron--ghost", label: "Not yet" },
+        { act: "accept", cls: "btn-cauldron--primary", label: t("claim_it") },
+        { act: "deny", cls: "btn-cauldron--ghost", label: t("not_yet") },
       ]);
       try {
         await api(`progression/${u.prescription}/${act}/`, { method: "POST" });
-        notify(act === "accept" ? `Advanced to ${u.to_name}!` : "Holding at your current level.");
-      } catch (e) { notify("Couldn't update progression."); }
+        notify(act === "accept" ? t("advanced_to", { name: exName(u.to_name) }) : t("holding_level"));
+      } catch (e) { notify(t("err_progression")); }
     }
 
     // Then the flames verdict.
@@ -360,15 +429,15 @@
       html += scoreCardMarkup(scored[0]);
       const rest = scored.slice(1);
       if (rest.length) {
-        html += `<details class="forge-score-more"><summary>Other movements (${rest.length})</summary>` +
+        html += `<details class="forge-score-more"><summary>${esc(t("other_movements", { n: rest.length }))}</summary>` +
           rest.map(scoreCardMarkup).join("") + `</details>`;
       }
     } else {
       const reason = (peer.find((p) => p.score && p.score.reason) || {}).score?.reason ||
-        "Add your birth year & sex in Equipment to unlock your 🔥 peer rating.";
-      html += `<p class="forge-score-note forge-score-note--center">${reason}</p>`;
+        t("peer_hint_rating");
+      html += `<p class="forge-score-note forge-score-note--center">${esc(reason)}</p>`;
     }
-    await step(html, [{ act: "done", cls: "btn-cauldron--primary", label: "Continue" }]);
+    await step(html, [{ act: "done", cls: "btn-cauldron--primary", label: t("continue") }]);
     closeOverlay();
   }
 
@@ -387,7 +456,7 @@
       unlocksEl.className = "forge-report-unlocks";
       const sectionTitle = document.createElement("h4");
       sectionTitle.className = "forge-report-section-title";
-      sectionTitle.textContent = "New paths unlocked";
+      sectionTitle.textContent = t("report_unlocks");
       unlocksEl.appendChild(sectionTitle);
       unlocks.forEach((u) => {
         const iconKey = exIconKey(u.to_name);
@@ -403,9 +472,9 @@
         const textSpan = document.createElement("span");
         textSpan.className = "forge-report-unlock-text";
         const strong = document.createElement("strong");
-        strong.textContent = u.to_name;
+        strong.textContent = exName(u.to_name);
         textSpan.appendChild(strong);
-        textSpan.appendChild(document.createTextNode(" unlocked from " + u.from_name));
+        textSpan.appendChild(document.createTextNode(" " + t("unlocked_from", { name: exName(u.from_name) })));
         item.appendChild(textSpan);
         unlocksEl.appendChild(item);
       });
@@ -420,7 +489,7 @@
       scoresEl.className = "forge-report-scores";
       const sectionTitle = document.createElement("h4");
       sectionTitle.className = "forge-report-section-title";
-      sectionTitle.textContent = "Your flames";
+      sectionTitle.textContent = t("report_flames");
       scoresEl.appendChild(sectionTitle);
       scored.forEach((p) => {
         const flames = Math.min(parseInt(p.score.flames, 10) || 0, 5);
@@ -437,10 +506,10 @@
         }
         const nameSpan = document.createElement("span");
         nameSpan.className = "forge-report-score-name";
-        nameSpan.textContent = p.exercise_name || "";
+        nameSpan.textContent = exName(p.exercise_name);
         const flamesSpan = document.createElement("span");
         flamesSpan.className = "forge-report-score-flames";
-        flamesSpan.title = flames + " flames";
+        flamesSpan.title = tn("n_flames", flames);
         flamesSpan.textContent = flameStr || "–";
         item.appendChild(nameSpan);
         item.appendChild(flamesSpan);
@@ -449,7 +518,7 @@
       content.appendChild(scoresEl);
     } else {
       const reason = (peer.find((p) => p.score && p.score.reason) || {}).score?.reason ||
-        "Add birth year & sex in Equipment to unlock your peer flames.";
+        t("peer_hint_flames");
       const note = document.createElement("p");
       note.className = "forge-score-note forge-score-note--center";
       note.textContent = reason;
@@ -458,15 +527,15 @@
 
     // Use ForgeAnvil if available; otherwise fall back to old showResults.
     if (!window.ForgeAnvil) {
-      await showResults({ peer, unlocks, title: "Session forged" });
+      await showResults({ peer, unlocks, title: t("session_forged") });
       return;
     }
 
     const { done } = window.ForgeAnvil.celebrate({
-      eyebrow: "Day complete",
-      title: "Forged.",
-      sub: "Every rep on today's list is struck and tempered. Rest — the anvil keeps its heat.",
-      cta: "Bank the day",
+      eyebrow: t("anvil_eyebrow"),
+      title: t("anvil_title"),
+      sub: t("anvil_sub"),
+      cta: t("anvil_cta"),
       content,
       strikes: 3,
     });
@@ -479,17 +548,16 @@
       for (const u of unlocks) {
         const body =
           `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
-          `<h3 class="forge-reveal-title forge-unlock-title">New power unlocked!</h3>` +
-          `<p class="forge-unlock-text">You've mastered <strong>${u.from_name}</strong>. ` +
-          `The path to <strong>${u.to_name}</strong> is open — take it?</p>`;
+          `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("unlock_title"))}</h3>` +
+          `<p class="forge-unlock-text">${unlockText(u)}</p>`;
         const act = await step(body, [
-          { act: "accept", cls: "btn-cauldron--primary", label: "Claim it 🔥" },
-          { act: "deny", cls: "btn-cauldron--ghost", label: "Not yet" },
+          { act: "accept", cls: "btn-cauldron--primary", label: t("claim_it") },
+          { act: "deny", cls: "btn-cauldron--ghost", label: t("not_yet") },
         ]);
         try {
           await api(`progression/${u.prescription}/${act}/`, { method: "POST" });
-          notify(act === "accept" ? `Advanced to ${u.to_name}!` : "Holding at your current level.");
-        } catch (e) { notify("Couldn't update progression."); }
+          notify(act === "accept" ? t("advanced_to", { name: exName(u.to_name) }) : t("holding_level"));
+        } catch (e) { notify(t("err_progression")); }
       }
       closeOverlay();
     }
@@ -518,10 +586,12 @@
       setImplementMode("dumbbell", profile.dumbbell_mode || "fixed");
       setImplementMode("kettlebell", profile.kettlebell_mode || "fixed");
       renderOrphans(profile.orphan_plates);
-      $("#forge-birth-year").value = profile.birth_year || "";
-      setSexValue(profile.sex || "undisclosed");
+      api("program/").then((program) => {
+        $("#forge-volume-input").value = program.weekly_volume_target;
+        $("#forge-volume").hidden = false;
+      }).catch(() => { $("#forge-volume").hidden = true; });
     } catch (e) {
-      notify("Couldn't load equipment.");
+      notify(t("err_load_equipment"));
     } finally {
       showLoader(false);
     }
@@ -573,24 +643,23 @@
     return EXERCISE_ICON_MAP[name.toLowerCase()] || null;
   }
 
-  // Sex button group helpers.
-  function sexValue() {
-    const on = $(".forge-sex-btn.is-on", $("#forge-sex"));
-    return on ? on.dataset.sex : "undisclosed";
-  }
-
-  function setSexValue(val) {
-    $$(".forge-sex-btn", $("#forge-sex")).forEach((btn) => {
-      const active = btn.dataset.sex === val;
-      btn.classList.toggle("is-on", active);
-      btn.setAttribute("aria-pressed", String(active));
-    });
-  }
-
-  // Wire sex button group clicks (runs once).
-  (function wireSexBtns() {
-    $$(".forge-sex-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setSexValue(btn.dataset.sex));
+  // Weekly volume (#109): sets per pattern per week; sets per session follow.
+  (function wireVolume() {
+    const btn = $("#forge-volume-save");
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const program = await api("program/", {
+          method: "PATCH", body: { weekly_volume_target: Number($("#forge-volume-input").value) },
+        });
+        notify(t("volume_saved", { n: program.weekly_volume_target }));
+      } catch (err) {
+        const { data } = apiErrorPayload(err);
+        notify((data && data.detail) || t("err_volume"));
+      } finally {
+        btn.disabled = false;
+      }
     });
   }());
 
@@ -622,7 +691,7 @@
         `<input type="checkbox" value="${eq.key}" ${owned.has(eq.key) ? "checked" : ""}>` +
         `<span class="forge-equip-glow" aria-hidden="true"></span>` +
         icon +
-        `<span class="forge-equip-name">${eq.name}</span>` +
+        `<span class="forge-equip-name">${esc(equipName(eq.key, eq.name))}</span>` +
         `<span class="forge-equip-check" aria-hidden="true">✦</span>`;
       const input = label.querySelector("input");
       input.addEventListener("change", () => {
@@ -658,12 +727,12 @@
     return parseList(str).map((chunk) => {
       const m = chunk.match(/^([\d.]+)\s*[x×*]\s*(\d+)$/i);
       if (!m) {
-        throw new Error(`${label}: write "${chunk}" as weight x how many, e.g. 2.5x8.`);
+        throw new Error(t("plates_format", { label, chunk }));
       }
       const weight = parseFloat(m[1]);
       const count = parseInt(m[2], 10);
-      if (isNaN(weight) || weight <= 0) throw new Error(`${label}: "${chunk}" needs a weight above zero.`);
-      if (isNaN(count) || count <= 0) throw new Error(`${label}: "${chunk}" needs a count above zero.`);
+      if (isNaN(weight) || weight <= 0) throw new Error(t("plates_weight", { label, chunk }));
+      if (isNaN(count) || count <= 0) throw new Error(t("plates_count", { label, chunk }));
       return { weight, count };
     });
   }
@@ -671,8 +740,8 @@
   function parseWeights(str, label) {
     return parseList(str).map((chunk) => {
       const n = Number(chunk);
-      if (isNaN(n)) throw new Error(`${label}: "${chunk}" isn't a number.`);
-      if (n <= 0) throw new Error(`${label}: "${chunk}" must be above zero.`);
+      if (isNaN(n)) throw new Error(t("weights_nan", { label, chunk }));
+      if (n <= 0) throw new Error(t("weights_positive", { label, chunk }));
       return n;
     });
   }
@@ -712,10 +781,7 @@
         if (next === loadUnit) return;
         // A 2.5 kg plate is not 2.5 lb, and converting would invent
         // denominations nobody owns — so the inventory goes, not the numbers.
-        const ok = window.confirm(
-          `Switching to ${next} clears the weights and plates you've entered — ` +
-          `they'd no longer match anything you own. Continue?`
-        );
+        const ok = window.confirm(t("unit_switch_confirm", { unit: next }));
         if (!ok) return;
         setLoadUnit(next);
         clearInventoryInputs();
@@ -761,12 +827,12 @@
     const parts = [];
     Object.entries(orphans || {}).forEach(([implement, plates]) => {
       (plates || []).forEach((p) => {
-        parts.push(`${p.count} × ${fmtLoad(p.weight, loadUnit)} (${implement})`);
+        parts.push(`${p.count} × ${fmtLoad(p.weight, loadUnit)} (${equipName(implement, implement)})`);
       });
     });
     box.hidden = !parts.length;
     box.textContent = parts.length
-      ? `Unused — not enough to make a set: ${parts.join(", ")}.`
+      ? t("orphans", { list: parts.join(" · ") })
       : "";
   }
 
@@ -787,7 +853,7 @@
   function fmtLoad(load, unit) {
     if (load == null) return "";
     const u = unitLabel(unit);
-    return u ? `${load} ${u}` : String(load);
+    return u ? `${fmtNum(load)} ${u}` : String(load);
   }
 
   // "2 × 2.5 kg + 1 × 1.25 kg per side" — the fewest plates that make the load.
@@ -795,19 +861,19 @@
     if (!recipe) return "";
     const plates = recipe.per_side || [];
     const u = unitLabel(unit);
-    if (!plates.length) return "just the bare bar / empty handle";
-    const parts = plates.map((p) => `${p.count} × ${p.weight}${u ? ` ${u}` : ""}`);
+    if (!plates.length) return t("recipe_bare");
+    const parts = plates.map((p) => `${p.count} × ${fmtNum(p.weight)}${u ? ` ${u}` : ""}`);
     // Kettlebell plates stack in one shell; everything else is mirrored.
-    return parts.join(" + ") + (recipe.stacked ? " in the bell" : " per side");
+    return t(recipe.stacked ? "recipe_in_bell" : "recipe_per_side", { plates: parts.join(" + ") });
   }
 
   function fmtRest(sec) {
     if (sec >= 60) {
       const m = Math.floor(sec / 60);
       const s = sec % 60;
-      return s ? `${m}m ${s}s` : `${m} min`;
+      return s ? t("rest_m_s", { m, s }) : t("rest_m", { m });
     }
-    return `${sec}s`;
+    return t("rest_s", { s: sec });
   }
 
   $("#forge-save-equipment").addEventListener("click", async () => {
@@ -818,56 +884,44 @@
     let body;
     try {
       showEquipError("");
-      const birthYear = parseInt($("#forge-birth-year").value, 10);
       body = {
         equipment: selectedEquipment(),
         load_unit: loadUnit,
         dumbbell_mode: implementMode("dumbbell"),
-        dumbbell_weights: parseWeights($("#forge-dumbbells").value, "Dumbbell weights"),
-        dumbbell_plates: parsePlates($("#forge-dumbbell-plates").value, "Dumbbell plates"),
+        dumbbell_weights: parseWeights($("#forge-dumbbells").value, t("lbl_dumbbell_weights")),
+        dumbbell_plates: parsePlates($("#forge-dumbbell-plates").value, t("lbl_dumbbell_plates")),
         dumbbell_handle_weight: num("#forge-dumbbell-handle", 0),
         band_levels: parseList($("#forge-bands").value),
         barbell_min_increment: num("#forge-barbell-inc", 2.5),
-        barbell_plates: parsePlates($("#forge-barbell-plates").value, "Barbell plates"),
+        barbell_plates: parsePlates($("#forge-barbell-plates").value, t("lbl_barbell_plates")),
         bar_weight: num("#forge-bar-weight", 0),
         kettlebell_mode: implementMode("kettlebell"),
-        kettlebell_weights: parseWeights($("#forge-kettlebells").value, "Kettlebell weights"),
-        kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, "Kettlebell plates"),
+        kettlebell_weights: parseWeights($("#forge-kettlebells").value, t("lbl_kettlebell_weights")),
+        kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, t("lbl_kettlebell_plates")),
         kettlebell_handle_weight: num("#forge-kettlebell-handle", 0),
-        birth_year: isNaN(birthYear) ? null : birthYear,
-        sex: sexValue(),
       };
     } catch (err) {
       // A parse failure is the user's typo, not a server problem — show exactly
       // what to fix instead of dropping the entry and saving something else.
       showEquipError(err.message);
-      notify("Check your weights — something didn't parse.");
+      notify(t("err_parse_weights"));
       return;
     }
     showLoader(true);
     try {
       const saved = await api("equipment/", { method: "PUT", body });
       renderOrphans(saved.orphan_plates);
-      notify("Equipment saved. Now take the Trial.");
+      notify(t("equipment_saved"));
       switchTab("trial");
     } catch (e) {
       showEquipError(apiErrorText(e));
-      notify("Couldn't save equipment.");
+      notify(t("err_save_equipment"));
     } finally {
       showLoader(false);
     }
   });
 
   // ── The Trial ────────────────────────────────────────────────────────────--
-  const PATTERN_LABELS = {
-    horizontal_push: "Horizontal Push",
-    vertical_pull: "Vertical Pull",
-    vertical_push: "Vertical Push",
-    lower_unilateral: "Lower (Unilateral)",
-    core_anti_extension: "Core (Anti-Extension)",
-    hinge: "Hinge / Posterior Chain",
-    grip: "Grip / Forearms",
-  };
 
   // Per-pattern Trial history, keyed by pattern_key — feeds the Evolution
   // toggles. Loaded alongside the Trial; an empty/failed load just renders the
@@ -888,7 +942,7 @@
       renderTrial(patterns, exercises);
       $("#forge-retake").hidden = !program;
     } catch (e) {
-      notify("Couldn't load the Trial.");
+      notify(t("err_load_trial"));
     } finally {
       showLoader(false);
     }
@@ -921,29 +975,29 @@
       // esc() before innerHTML — and the video href is scheme-checked, as the
       // exercise modal already does.
       const video = anchor.video_url && /^https?:\/\//i.test(anchor.video_url)
-        ? `<a class="forge-video-link" href="${esc(anchor.video_url)}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
+        ? `<a class="forge-video-link" href="${esc(anchor.video_url)}" target="_blank" rel="noopener" data-no-loader>${esc(t("watch_how"))}</a>`
         : "";
-      const unit = anchor.is_timed ? "seconds" : "reps";
+      const unit = anchor.is_timed ? t("unit_seconds") : t("unit_reps");
       const rest = anchor.rest_seconds
-        ? `<div class="forge-trial-rest">⏱ Rest ${fmtRest(anchor.rest_seconds)} before testing</div>`
+        ? `<div class="forge-trial-rest">${esc(t("trial_rest", { rest: fmtRest(anchor.rest_seconds) }))}</div>`
         : "";
       // One input per pattern: every anchor is a bilateral movement.
       const inputs = anchor.is_timed
         ? `<div class="forge-timed-cell">` +
-          `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${esc(anchor.name)}">` +
-          `<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button>` +
+          `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="${esc(t("result_for", { name: exName(anchor.name) }))}">` +
+          `<button type="button" class="forge-timer-btn" title="${esc(t("timer_title"))}">${esc(t("sw_start"))}</button>` +
           `</div>`
-        : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="result for ${esc(anchor.name)}">`;
+        : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="${esc(t("result_for", { name: exName(anchor.name) }))}">`;
       // A per-side move tested with one box needs to say so — "8" means 8 each
       // side, not 8 total.
       const perSideNote = anchor.is_unilateral
-        ? ` <span class="forge-trial-perleg">· ${unit} per side</span>`
+        ? ` <span class="forge-trial-perleg">${esc(t("unit_per_side", { unit }))}</span>`
         : "";
       row.innerHTML =
         `<div>` +
-        `<div class="forge-trial-pattern">${PATTERN_LABELS[p.key] || p.key}</div>` +
-        `<div class="forge-trial-move">${esc(anchor.name)}${perSideNote}</div>` +
-        `<div class="forge-trial-cues">${esc(anchor.cues || "")} (${unit})</div>` +
+        `<div class="forge-trial-pattern">${esc(patternName(p.key))}</div>` +
+        `<div class="forge-trial-move">${esc(exName(anchor.name))}${perSideNote}</div>` +
+        `<div class="forge-trial-cues">${esc(exCues(anchor.name, anchor.cues))} (${esc(unit)})</div>` +
         rest +
         video +
         evolutionMarkup(p.key, anchor) +
@@ -961,10 +1015,10 @@
   // Hand-rolled inline SVG reusing the .forge-chart-* classes; no chart library.
 
   const VERDICT_LABELS = {
-    progress: "▲ progress",
-    "no change": "= no change",
-    setback: "▼ setback",
-    none: "· first Trial",
+    progress: t("verdict_progress"),
+    "no change": t("verdict_same"),
+    setback: t("verdict_setback"),
+    none: t("verdict_first"),
   };
 
   function evolutionMarkup(patternKey, anchor) {
@@ -973,9 +1027,9 @@
     return (
       `<div class="forge-evolution" data-pattern="${patternKey}">` +
       `<button type="button" class="forge-evolution-toggle" aria-expanded="false">` +
-      `<span class="forge-evolution-caret" aria-hidden="true">▸</span> Evolution` +
+      `<span class="forge-evolution-caret" aria-hidden="true">▸</span> ${esc(t("evolution"))}` +
       `<span class="forge-evolution-count">${
-        points.length ? `${points.length} Trial${points.length === 1 ? "" : "s"}` : "no history"
+        points.length ? tn("n_trials", points.length) : t("no_history")
       }</span>` +
       `</button>` +
       `<div class="forge-evolution-panel" hidden>${evolutionBody(points, anchor)}</div>` +
@@ -985,26 +1039,23 @@
 
   function evolutionBody(points, anchor) {
     if (!points.length) {
-      return `<p class="forge-help forge-evolution-empty">No Trials logged yet — your first result starts the line.</p>`;
+      return `<p class="forge-help forge-evolution-empty">${esc(t("evolution_empty"))}</p>`;
     }
-    const unit = anchor.is_timed ? "seconds" : "reps";
     const latest = points[points.length - 1];
     const verdict = VERDICT_LABELS[latest.verdict] || VERDICT_LABELS.none;
     let html =
       `<div class="forge-evolution-verdict forge-verdict--${latest.verdict.replace(" ", "-")}">` +
-      `Latest: ${latest.reps_or_seconds} ${unit} on ${esc(latest.exercise)} · ${verdict}</div>`;
+      `${esc(t("evolution_latest", { value: unitCount(anchor.is_timed, latest.reps_or_seconds), name: exName(latest.exercise) }))} · ${esc(verdict)}</div>`;
     // Performance: plot the ladder-normalised score, but label the dots with the
     // raw value the user actually recorded (in the right unit).
     html +=
       `<div class="forge-evolution-chart">` +
-      `<div class="forge-evolution-label">Performance (ladder-normalised)</div>` +
+      `<div class="forge-evolution-label">${esc(t("evolution_perf"))}</div>` +
       sparkline(
         points.map((p) => ({
           x: p.date,
           y: p.ladder_score,
-          title: `${p.date.slice(0, 10)}: ${p.reps_or_seconds} ${
-            p.is_timed ? "seconds" : "reps"
-          } · ${p.exercise}`,
+          title: `${fmtDate(p.date.slice(0, 10))}: ${unitCount(p.is_timed, p.reps_or_seconds)} · ${exName(p.exercise)}`,
         })),
         { zeroFloor: true }
       ) +
@@ -1063,16 +1114,15 @@
     const xLabels = pts
       .map((p, i) =>
         i % step === 0 || i === n - 1
-          ? `<text x="${xFor(i)}" y="${H - 6}" class="forge-chart-axis" text-anchor="middle">${p.x.slice(
-              5,
-              10
+          ? `<text x="${xFor(i)}" y="${H - 6}" class="forge-chart-axis" text-anchor="middle">${esc(
+              fmtDate(p.x.slice(0, 10), { month: "numeric", day: "numeric" })
             )}</text>`
           : ""
       )
       .join("");
     return (
       `<svg viewBox="0 0 ${W} ${H}" class="forge-chart-svg forge-evolution-svg" ` +
-      `preserveAspectRatio="xMidYMid meet" role="img" aria-label="Trial history">` +
+      `preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t("trial_history"))}">` +
       grid + zeroLine + line + dots + xLabels +
       `</svg>`
     );
@@ -1124,7 +1174,7 @@
       tested_exercise: row.dataset.exercise,
       reps_or_seconds: parseInt(row.querySelector("input").value, 10) || 0,
     }));
-    if (!results.length) return notify("Set your equipment first.");
+    if (!results.length) return notify(t("set_equipment_first"));
     showLoader(true);
     try {
       // No split to choose any more — every program is one all-patterns day.
@@ -1132,25 +1182,25 @@
       showLoader(false);
       await showResults({
         peer: res.peer || [],
-        title: "Your Trial verdict",
+        title: t("trial_verdict"),
       });
       switchTab("today");
     } catch (e) {
-      notify("Couldn't forge the program.");
+      notify(t("err_forge_program"));
     } finally {
       showLoader(false);
     }
   });
 
   $("#forge-retake").addEventListener("click", async () => {
-    if (!confirm("Retake the Trial? Your current program will be replaced (history is kept).")) return;
+    if (!confirm(t("retake_confirm"))) return;
     showLoader(true);
     try {
       await api("assessment/retake/", { method: "POST" });
-      notify("Fresh Trial opened. Enter your new results.");
+      notify(t("retake_opened"));
       loadTrial();
     } catch (e) {
-      notify("Couldn't start a retake.");
+      notify(t("err_retake"));
     } finally {
       showLoader(false);
     }
@@ -1174,7 +1224,7 @@
         return api("today/").catch(() => null);
       });
       if (!currentSession) {
-        $("#forge-today-list").innerHTML = `<p class="forge-help">No program yet — take the Trial.</p>`;
+        $("#forge-today-list").innerHTML = `<p class="forge-help">${esc(t("no_program"))}</p>`;
         $("#forge-log-session").hidden = true;
         $("#forge-earphones").hidden = true;
         return;
@@ -1185,7 +1235,7 @@
       $("#forge-earphones").hidden = !voiceSupported();
       loadSwapCandidates();
     } catch (e) {
-      notify("Couldn't load today.");
+      notify(t("err_load_today"));
     } finally {
       showLoader(false);
     }
@@ -1217,37 +1267,34 @@
       groups.get(s.exercise).push(s);
     });
     const day = session.scheduled_for
-      ? new Date(`${session.scheduled_for}T12:00:00`).toLocaleDateString(undefined, {
-          weekday: "long", month: "short", day: "numeric",
-        })
-      : "an earlier day";
+      ? fmtDate(session.scheduled_for, { weekday: "long", month: "short", day: "numeric" })
+      : t("an_earlier_day");
     let html =
-      `<p class="forge-help">You logged sets on <strong>${esc(day)}</strong> but never saved ` +
-      `the session. Check the numbers, then save it to count toward your progress — or delete it.</p>`;
+      `<p class="forge-help">${t("unfinished_help", { day: `<strong>${esc(day)}</strong>` })}</p>`;
     groups.forEach((sets) => {
       const meta = sets[0];
-      const unit = meta.is_timed ? "s" : "reps";
+      const unit = meta.is_timed ? t("unit_s") : t("unit_reps");
       html +=
         `<div class="forge-ex-block"><div class="forge-ex-head">` +
-        `<span class="forge-ex-name">${esc(meta.exercise_name)}</span></div>`;
+        `<span class="forge-ex-name">${esc(exName(meta.exercise_name))}</span></div>`;
       sets.forEach((s) => {
         const loadInput = s.expected_load == null
           ? ""
-          : `<label class="forge-load-actual"><span class="forge-load-actual-label">Load</span>` +
+          : `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
             `<input type="number" min="0" step="0.25" class="forge-trial-input forge-unfinished-load" ` +
             `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
-            `aria-label="weight used for set ${s.set_index + 1} of ${esc(meta.exercise_name)}">` +
+            `aria-label="${esc(t("weight_for_set", { n: s.set_index + 1, name: exName(meta.exercise_name) }))}">` +
             `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
         html +=
           `<div class="forge-set-row${s.is_amrap ? " is-amrap" : ""}">` +
-          `<span class="forge-set-label">Set ${s.set_index + 1}${
-            s.is_unilateral ? ` <span class="forge-trial-perleg">· per side</span>` : ""
+          `<span class="forge-set-label">${esc(t("set_n", { n: s.set_index + 1 }))}${
+            s.is_unilateral ? ` <span class="forge-trial-perleg">${esc(t("per_side_dot"))}</span>` : ""
           }</span>` +
-          `<span class="forge-set-expected">target ${s.expected_reps} ${unit}${
+          `<span class="forge-set-expected">${esc(t("target_n", { n: s.expected_reps, unit }))}${
             s.expected_load == null ? "" : ` @ ${esc(fmtLoad(s.expected_load, s.load_unit))}`}</span>` +
           `<input type="number" min="0" class="forge-trial-input forge-unfinished-reps" ` +
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" value="${s.actual_reps ?? ""}" ` +
-          `placeholder="${s.expected_reps}" aria-label="${unit} for set ${s.set_index + 1} of ${esc(meta.exercise_name)}">` +
+          `placeholder="${s.expected_reps}" aria-label="${esc(t("unit_for_set", { unit, n: s.set_index + 1, name: exName(meta.exercise_name) }))}">` +
           loadInput +
           `</div>`;
       });
@@ -1276,7 +1323,7 @@
     renderUnfinished(session);
     const save = $("#forge-unfinished-save");
     const del = $("#forge-unfinished-delete");
-    del.textContent = "Delete it";
+    del.textContent = t("delete_it");
     delete del.dataset.armed;
     unfinishedModal.hidden = false;
     document.body.classList.add("forge-overlay-open");
@@ -1299,7 +1346,7 @@
           showLoader(false);
           await showSessionReport(res);
         } catch (e) {
-          notify("Couldn't save that session.");
+          notify(t("err_save_that_session"));
         } finally {
           showLoader(false);
         }
@@ -1308,16 +1355,16 @@
       del.onclick = async () => {
         if (!del.dataset.armed) {
           del.dataset.armed = "1";
-          del.textContent = "Tap again to delete";
+          del.textContent = t("tap_again_delete");
           return;
         }
         showLoader(true);
         try {
           await api(`sessions/${session.uuid}/`, { method: "DELETE" });
           done();
-          notify("Session deleted.");
+          notify(t("session_deleted"));
         } catch (e) {
-          notify("Couldn't delete that session.");
+          notify(t("err_delete_session"));
         } finally {
           showLoader(false);
         }
@@ -1340,12 +1387,11 @@
     host.hidden = false;
     host.innerHTML =
       `<div class="forge-retest-text">` +
-      `<strong>Time to retest.</strong> Your last Trial was ${days} days ago — ` +
-      `retake it to re-place yourself and see how your strength has moved.` +
+      `<strong>${esc(t("retest_title"))}</strong> ${esc(tn("retest_text", days))}` +
       `</div>` +
       `<div class="forge-retest-actions">` +
-      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-retest-go">Take the Trial</button>` +
-      `<button type="button" class="forge-retest-dismiss" aria-label="Dismiss this reminder">✕</button>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-retest-go">${esc(t("take_trial"))}</button>` +
+      `<button type="button" class="forge-retest-dismiss" aria-label="${esc(t("dismiss_reminder"))}">✕</button>` +
       `</div>`;
     $(".forge-retest-go", host).addEventListener("click", () => switchTab("trial"));
     $(".forge-retest-dismiss", host).addEventListener("click", async () => {
@@ -1400,9 +1446,9 @@
       if (meta.prescription) block.dataset.prescription = meta.prescription;
       const rest = meta.rest_seconds ? fmtRest(meta.rest_seconds) : "";
       const video = meta.video_url
-        ? `<a class="forge-video-link" href="${meta.video_url}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`
+        ? `<a class="forge-video-link" href="${meta.video_url}" target="_blank" rel="noopener" data-no-loader>${esc(t("watch_how"))}</a>`
         : "";
-      const unit = meta.is_timed ? "s" : "reps";
+      const unit = meta.is_timed ? t("unit_s") : t("unit_reps");
       const iconKey = exIconKey(name);
       const iconHTML = (iconKey && window.ForgeIcons)
         ? `<span class="forge-ex-icon" aria-hidden="true">${window.ForgeIcons.html(iconKey)}</span>`
@@ -1410,15 +1456,15 @@
       block.innerHTML =
         `<div class="forge-ex-head">` +
         iconHTML +
-        `<span class="forge-ex-name">${esc(name)}</span>${video}` +
+        `<span class="forge-ex-name">${esc(exName(name))}</span>${video}` +
         // Only a prescribed movement has a rung to move; a ⇄ swap-in does not.
         (meta.prescription
           ? `<button type="button" class="forge-rung-ex-btn" ` +
-            `title="Move to an easier or harder rung of this ladder">⇅ Rung</button>`
+            `title="${esc(t("rung_btn_title"))}">${esc(t("rung_btn"))}</button>`
           : "") +
         `<button type="button" class="forge-swap-ex-btn" ` +
-        `title="Swap this for a movement you've trained less">⇄ Change</button>` +
-        `<button type="button" class="forge-skip-ex-btn" title="Remove this exercise from the session">✕ Skip exercise</button>` +
+        `title="${esc(t("swap_btn_title"))}">${esc(t("swap_btn"))}</button>` +
+        `<button type="button" class="forge-skip-ex-btn" title="${esc(t("skip_btn_title"))}">${esc(t("skip_btn"))}</button>` +
         `</div>`;
       sets.forEach((s) => {
         const row = document.createElement("div");
@@ -1433,17 +1479,17 @@
           ? ""
           : recipeBySetUuid[s.uuid]
           ? `<button type="button" class="forge-load-btn" data-recipe-uuid="${s.uuid}" ` +
-            `title="How to build this load">${esc(fmtLoad(s.expected_load, s.load_unit))}</button>`
+            `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(s.expected_load, s.load_unit))}</button>`
           : `<span class="forge-load-plain">${esc(fmtLoad(s.expected_load, s.load_unit))}</span>`;
         // A logged weight may differ from the prescribed one (a plate went
         // missing, or the day felt strong). It is recorded as history only —
         // progression still advances from the prescription.
         const loadInput = s.expected_load == null
           ? ""
-          : `<label class="forge-load-actual"><span class="forge-load-actual-label">Load</span>` +
+          : `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
             `<input type="number" min="0" step="0.25" class="forge-trial-input forge-actual-load" ` +
             `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
-            `aria-label="weight used for set ${s.set_index + 1} of ${esc(name)}">` +
+            `aria-label="${esc(t("weight_for_set", { n: s.set_index + 1, name: exName(name) }))}">` +
             `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
         // Reps already logged are rendered back in: a resumed session has to
         // come back with the user's work on screen, not an empty form.
@@ -1452,13 +1498,13 @@
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" ` +
           `value="${s.actual_reps ?? ""}" placeholder="${s.expected_reps}">`;
         const inputCell = meta.is_timed
-          ? `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="Tap to start; tap again when done">▶ Start</button></div>`
+          ? `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="${esc(t("timer_title"))}">${esc(t("sw_start"))}</button></div>`
           : input;
         row.innerHTML =
-          `<span class="forge-set-label">Set ${s.set_index + 1}${
-            s.is_unilateral ? ` <span class="forge-trial-perleg">· per side</span>` : ""
+          `<span class="forge-set-label">${esc(t("set_n", { n: s.set_index + 1 }))}${
+            s.is_unilateral ? ` <span class="forge-trial-perleg">${esc(t("per_side_dot"))}</span>` : ""
           }</span>` +
-          `<span class="forge-set-expected">target ${s.expected_reps} ${unit}${
+          `<span class="forge-set-expected">${esc(t("target_n", { n: s.expected_reps, unit }))}${
             loadCell ? " @ " : ""}${loadCell}</span>` +
           inputCell +
           loadInput;
@@ -1470,7 +1516,7 @@
         restRow.className = "forge-rest-row";
         restRow.innerHTML =
           `<button type="button" class="forge-rest-btn" data-rest="${meta.rest_seconds}">` +
-          `⏱ Start rest (${fmtRest(meta.rest_seconds)})</button>`;
+          `${esc(t("start_rest", { rest: fmtRest(meta.rest_seconds) }))}</button>`;
         block.appendChild(restRow);
       }
       list.appendChild(block);
@@ -1588,7 +1634,7 @@
       refreshSwapButtons();
     } catch (e) {
       // Values stay on screen; Save session is still there as the backstop.
-      notify("Couldn't save that just yet — your reps are still on screen.");
+      notify(t("err_save_values"));
     }
   }
 
@@ -1637,17 +1683,15 @@
       const rungBtn = $(".forge-rung-ex-btn", block);
       if (rungBtn) {
         rungBtn.disabled = logged;
-        rungBtn.title = logged
-          ? "You've already logged sets for this one."
-          : "Move to an easier or harder rung of this ladder";
+        rungBtn.title = logged ? t("already_logged") : t("rung_btn_title");
       }
       const btn = $(".forge-swap-ex-btn", block);
       if (!btn) return;
       let reason = "";
-      if (logged) reason = "You've already logged sets for this one.";
-      else if (!remaining) reason = "No other movement left to swap in.";
+      if (logged) reason = t("already_logged");
+      else if (!remaining) reason = t("no_swap_left");
       btn.disabled = Boolean(reason);
-      btn.title = reason || "Swap this for a movement you've trained less";
+      btn.title = reason || t("swap_btn_title");
     });
   }
 
@@ -1676,14 +1720,15 @@
   function renderChainPicker() {
     const candidates = eligibleCandidates();
     if (!candidates.length) {
-      swapBody.innerHTML = `<p class="forge-help">No other movement left to swap in.</p>`;
+      swapBody.innerHTML = `<p class="forge-help">${esc(t("no_swap_left"))}</p>`;
       return;
     }
     const lowest = candidates[0].chain_key;
     const byPattern = new Map();
     candidates.forEach((c) => {
-      if (!byPattern.has(c.pattern_name)) byPattern.set(c.pattern_name, []);
-      byPattern.get(c.pattern_name).push(c);
+      const label = patternName(c.pattern_key, c.pattern_name);
+      if (!byPattern.has(label)) byPattern.set(label, []);
+      byPattern.get(label).push(c);
     });
     // Patterns ordered by their own least-trained chain, so the recommendation
     // sits at the top of the list rather than buried alphabetically.
@@ -1691,21 +1736,18 @@
       (a, b) => a[1][0].event_count - b[1][0].event_count
     );
     let html =
-      `<p class="forge-help">Pick a movement you've trained less. ` +
-      `Counts are sessions in the last two weeks.</p>`;
+      `<p class="forge-help">${esc(t("swap_help"))}</p>`;
     patterns.forEach(([patternName, rows]) => {
       html += `<h4 class="forge-swap-group">${esc(patternName)}</h4><ul class="forge-swap-list">`;
       rows.forEach((c) => {
         const badge =
           c.chain_key === lowest
-            ? `<span class="forge-swap-badge">Least trained</span>`
+            ? `<span class="forge-swap-badge">${esc(t("least_trained"))}</span>`
             : "";
         html +=
           `<li><button type="button" class="forge-swap-option" data-chain="${esc(c.chain_key)}">` +
-          `<span class="forge-swap-option-name">${esc(c.exercise_name)}</span>${badge}` +
-          `<span class="forge-swap-option-count">${c.event_count} session${
-            c.event_count === 1 ? "" : "s"
-          }</span></button></li>`;
+          `<span class="forge-swap-option-name">${esc(exName(c.exercise_name))}</span>${badge}` +
+          `<span class="forge-swap-option-count">${esc(tn("n_sessions", c.event_count))}</span></button></li>`;
       });
       html += `</ul>`;
     });
@@ -1715,7 +1757,7 @@
   // Step 2 — confirm, showing exactly what will be prescribed. The replacement
   // brings its own sets, rep targets, rest and load; nothing is inherited.
   function renderSwapConfirm(candidate) {
-    const unit = candidate.is_timed ? "s" : "reps";
+    const unit = candidate.is_timed ? t("unit_s") : t("unit_reps");
     const reps =
       candidate.target_reps_min === candidate.target_reps_max
         ? `${candidate.target_reps_max}`
@@ -1723,21 +1765,21 @@
     const load =
       candidate.target_load == null
         ? ""
-        : `<li>Load: ${esc(fmtLoad(candidate.target_load, candidate.load_unit))}</li>`;
+        : `<li>${esc(t("load_value", { load: fmtLoad(candidate.target_load, candidate.load_unit) }))}</li>`;
     swapBody.innerHTML =
-      `<h4 class="forge-swap-confirm-name">${esc(candidate.exercise_name)}</h4>` +
-      `<p class="forge-help">${esc(candidate.pattern_name)}</p>` +
+      `<h4 class="forge-swap-confirm-name">${esc(exName(candidate.exercise_name))}</h4>` +
+      `<p class="forge-help">${esc(patternName(candidate.pattern_key, candidate.pattern_name))}</p>` +
       `<ul class="forge-swap-targets">` +
-      `<li>${candidate.target_sets} sets × ${reps} ${unit}${
-        candidate.is_unilateral ? " per side" : ""
-      }</li>` +
+      `<li>${esc(t(candidate.is_unilateral ? "sets_x_reps_side" : "sets_x_reps", {
+        sets: tn("n_sets", candidate.target_sets), reps, unit,
+      }))}</li>` +
       load +
-      `<li>Rest: ${esc(fmtRest(candidate.target_rest_seconds))}</li>` +
+      `<li>${esc(t("rest_value", { rest: fmtRest(candidate.target_rest_seconds) }))}</li>` +
       `</ul>` +
       `<div class="forge-reveal-actions">` +
-      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-swap-back">Back</button>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-swap-back">${esc(t("back"))}</button>` +
       `<button type="button" class="btn-cauldron btn-cauldron--primary forge-swap-confirm" ` +
-      `data-chain="${esc(candidate.chain_key)}">Use this instead</button>` +
+      `data-chain="${esc(candidate.chain_key)}">${esc(t("use_instead"))}</button>` +
       `</div>`;
   }
 
@@ -1766,7 +1808,7 @@
       }
       renderToday(currentSession);
     } catch (e) {
-      notify(apiErrorText(e) || "Couldn't change that exercise.");
+      notify(apiErrorText(e) || t("err_change_exercise"));
     } finally {
       showLoader(false);
     }
@@ -1863,7 +1905,7 @@
     const worked = new Map(); // key → display name
     inputs.forEach((i) => {
       (muscleBySetUuid[i.dataset.uuid] || []).forEach((m) =>
-        worked.set(m.key, m.name)
+        worked.set(m.key, muscleName(m.key, m.name))
       );
     });
     let html = window.ForgeAnatomy
@@ -1873,7 +1915,7 @@
       html +=
         `<ul class="forge-muscle-legend">` +
         Array.from(worked.values())
-          .sort()
+          .sort((a, b) => a.localeCompare(b, LANG))
           .map((n) => `<li class="forge-muscle-chip">${esc(n)}</li>`)
           .join("") +
         `</ul>`;
@@ -1918,7 +1960,7 @@
     if (!currentSession) return;
     const logged = Object.keys(collectActualInputs($$(".forge-actual"))).length;
     if (!logged && !currentSession.persisted) {
-      notify("Log at least one set before saving.");
+      notify(t("log_one_set"));
       return;
     }
     showLoader(true);
@@ -1931,7 +1973,7 @@
       showLoader(false);
       await showSessionReport(res);
     } catch (e) {
-      notify("Couldn't save the session.");
+      notify(t("err_save_session"));
     } finally {
       showLoader(false);
     }
@@ -1950,8 +1992,8 @@
   }
 
   function passesExFilter(ex) {
-    const nm = exNameFilter.trim().toLowerCase();
-    if (nm && !ex.name.toLowerCase().includes(nm)) return false;
+    const nm = foldText(exNameFilter.trim());
+    if (nm && !foldText(exName(ex.name)).includes(nm) && !foldText(ex.name).includes(nm)) return false;
     if (exMuscleFilter && !exMuscleKeys(ex).includes(exMuscleFilter)) return false;
     return true;
   }
@@ -1963,11 +2005,11 @@
     if (!sel) return;
     const seen = new Map();
     exercises.forEach((ex) =>
-      (ex.muscles || []).forEach((m) => seen.set(m.key, m.name))
+      (ex.muscles || []).forEach((m) => seen.set(m.key, muscleName(m.key, m.name)))
     );
     if (!seen.size) return; // wait for data that actually carries muscles
     Array.from(seen.entries())
-      .sort((a, b) => a[1].localeCompare(b[1]))
+      .sort((a, b) => a[1].localeCompare(b[1], LANG))
       .forEach(([key, name]) => {
         const o = document.createElement("option");
         o.value = key;
@@ -1994,7 +2036,7 @@
       populateExMuscleFilter(catalogGroups.flatMap((g) => g.exercises || []));
       renderCatalog();
     } catch (e) {
-      notify("Couldn't load exercises.");
+      notify(t("err_load_exercises"));
     } finally {
       showLoader(false);
     }
@@ -2007,7 +2049,7 @@
       ? catalogGroups.filter((g) => g.owned)
       : catalogGroups;
     if (!groups.length) {
-      host.innerHTML = `<p class="forge-help">No exercises to show.</p>`;
+      host.innerHTML = `<p class="forge-help">${esc(t("no_exercises"))}</p>`;
       return;
     }
     let shown = 0;
@@ -2019,33 +2061,34 @@
       section.className = "forge-cat-group" + (g.owned ? "" : " is-unowned");
       const owned = g.owned
         ? ""
-        : `<span class="forge-cat-tag" title="You haven't marked this equipment as owned">not owned</span>`;
+        : `<span class="forge-cat-tag" title="${esc(t("not_owned_title"))}">${esc(t("not_owned"))}</span>`;
       let rows = "";
       exList.forEach((ex) => {
         const eligible = ex.eligible;
         const blockedCls = ex.is_blocked ? " is-blocked" : "";
         const sub =
           ex.is_blocked && ex.substitute
-            ? `<span class="forge-cat-sub">→ using <strong>${ex.substitute.name}</strong></span>`
+            ? `<span class="forge-cat-sub">${t("using_sub", { name: `<strong>${esc(exName(ex.substitute.name))}</strong>` })}</span>`
             : ex.is_blocked
-            ? `<span class="forge-cat-sub forge-cat-sub--none">→ no substitute available</span>`
+            ? `<span class="forge-cat-sub forge-cat-sub--none">${esc(t("no_sub"))}</span>`
             : "";
-        const btnLabel = ex.is_blocked ? "Unblock" : "Block";
+        const btnLabel = ex.is_blocked ? t("unblock") : t("block");
         const btnAct = ex.is_blocked ? "unblock" : "block";
         const fires =
           ex.best_fires != null
             ? `<span class="forge-cat-fires${ex.best_fires_estimated ? " is-estimated" : ""}" ` +
-              `title="Your best peer score on ${ex.name}: ${ex.best_fires}/10 fires (${ex.best_fires_value} reps)` +
-              `${ex.best_fires_estimated ? " — estimated benchmark, not yet from published data" : ""}">` +
+              `title="${esc(t(ex.best_fires_estimated ? "best_fires_title_est" : "best_fires_title", {
+                name: exName(ex.name), n: ex.best_fires, value: unitCount(ex.is_timed, ex.best_fires_value),
+              }))}">` +
               `🔥 <strong>${ex.best_fires}</strong><span class="forge-cat-fires-max">/10</span>` +
-              `${ex.best_fires_estimated ? `<span class="forge-cat-fires-est">est.</span>` : ""}</span>`
+              `${ex.best_fires_estimated ? `<span class="forge-cat-fires-est">${esc(t("est"))}</span>` : ""}</span>`
             : "";
         rows +=
           `<div class="forge-cat-row${blockedCls}">` +
           `<div class="forge-cat-meta">` +
-          `<span class="forge-cat-name">${ex.name}${fires}</span>` +
-          `<span class="forge-cat-pattern">${PATTERN_LABELS[ex.pattern_key] || ex.pattern_name}` +
-          (eligible ? "" : ` · <span class="forge-cat-tag">needs gear</span>`) + `</span>` +
+          `<span class="forge-cat-name">${esc(exName(ex.name))}${fires}</span>` +
+          `<span class="forge-cat-pattern">${esc(patternName(ex.pattern_key, ex.pattern_name))}` +
+          (eligible ? "" : ` · <span class="forge-cat-tag">${esc(t("needs_gear"))}</span>`) + `</span>` +
           sub +
           `</div>` +
           `<button class="btn-cauldron btn-cauldron--ghost forge-cat-btn" ` +
@@ -2053,12 +2096,12 @@
           `</div>`;
       });
       section.innerHTML =
-        `<h3 class="forge-cat-head">${g.equipment_name}${owned}</h3>` +
+        `<h3 class="forge-cat-head">${esc(equipName(g.equipment_key, g.equipment_name))}${owned}</h3>` +
         `<div class="forge-cat-rows">${rows}</div>`;
       host.appendChild(section);
     });
     if (!shown) {
-      host.innerHTML = `<p class="forge-help">No exercises match your filters.</p>`;
+      host.innerHTML = `<p class="forge-help">${esc(t("no_exercises_match"))}</p>`;
     }
   }
 
@@ -2071,15 +2114,13 @@
     try {
       const res = await api(`exercises/${uuid}/${action}/`, { method: "POST" });
       if (action === "block") {
-        const sub = res.substitute ? ` Substitute: ${res.substitute.name}.` : " No substitute available.";
-        const swap = res.swapped ? ` Swapped in ${res.swapped} live prescription(s).` : "";
-        notify(`Blocked.${sub}${swap}`);
+        notify(blockedNotice(res));
       } else {
-        notify("Unblocked.");
+        notify(t("unblocked"));
       }
       await loadCatalog(); // refresh blocked flags + substitutes
     } catch (err) {
-      notify("Couldn't update that exercise.");
+      notify(t("err_update_exercise"));
       btn.disabled = false;
     }
   });
@@ -2123,13 +2164,13 @@
   // structured per-exercise Muscle M2M (exercise.muscles) is the source of truth
   // for the muscle chips and the front/back diagram; this map is display-only.
   const PATTERN_MUSCLES = {
-    horizontal_push: "Chest · Front Delts · Triceps",
-    vertical_pull: "Lats · Biceps · Mid-back",
-    vertical_push: "Shoulders · Triceps",
-    lower_unilateral: "Quads · Glutes",
-    core_anti_extension: "Abs · Deep Core",
-    hinge: "Hamstrings · Glutes · Low Back",
-    grip: "Forearms · Hands",
+    horizontal_push: t("pm_horizontal_push"),
+    vertical_pull: t("pm_vertical_pull"),
+    vertical_push: t("pm_vertical_push"),
+    lower_unilateral: t("pm_lower_unilateral"),
+    core_anti_extension: t("pm_core_anti_extension"),
+    hinge: t("pm_hinge"),
+    grip: t("pm_grip"),
   };
 
   const PATTERN_ICON_PATHS = {
@@ -2144,8 +2185,8 @@
   };
 
   const TREE_STATE_LABELS = {
-    done: "Cleared", current: "Active", next: "Next up",
-    locked: "Needs gear", blocked: "Blocked", noprogram: "",
+    done: t("state_done"), current: t("state_current"), next: t("state_next"),
+    locked: t("state_locked"), blocked: t("state_blocked"), noprogram: "",
   };
 
   // Structural equipment: non-loadable, fixed fixtures.
@@ -2235,7 +2276,7 @@
       populateExMuscleFilter(exercises);
       renderSkillTree(exercises, catalogMap, stateMap);
     } catch (e) {
-      notify("Couldn't load the skill tree.");
+      notify(t("err_load_tree"));
     } finally {
       showLoader(false);
     }
@@ -2245,7 +2286,7 @@
     if (ex.rep_range_min == null) return "";
     const range = ex.rep_range_min === ex.rep_range_max
       ? `${ex.rep_range_min}` : `${ex.rep_range_min}–${ex.rep_range_max}`;
-    return ex.is_timed ? `${range}s hold` : `${range} reps`;
+    return t(ex.is_timed ? "range_hold" : "range_reps", { range });
   }
 
   function renderSkillTree(exercises, catalogMap, stateMap) {
@@ -2253,7 +2294,7 @@
     host.innerHTML = "";
     const visible = exercises.filter(passesExFilter);
     if (!visible.length) {
-      host.innerHTML = `<p class="forge-help">No exercises match your filters.</p>`;
+      host.innerHTML = `<p class="forge-help">${esc(t("no_exercises_match"))}</p>`;
       return;
     }
     const byPattern = {};
@@ -2280,7 +2321,7 @@
         (PATTERN_ICON_PATHS[patKey] || "") + `</svg>`;
       const nameEl = document.createElement("div");
       nameEl.className = "ftree-pattern-name";
-      nameEl.textContent = PATTERN_LABELS[patKey] || patKey;
+      nameEl.textContent = patternName(patKey);
       head.appendChild(nameEl);
       track.appendChild(head);
 
@@ -2309,7 +2350,7 @@
           node.setAttribute("data-uuid", ex.uuid);
           node.setAttribute("tabindex", "0");
           node.setAttribute("role", "button");
-          node.setAttribute("aria-label", `${ex.name} — ${TREE_STATE_LABELS[state] || state}`);
+          node.setAttribute("aria-label", `${exName(ex.name)} — ${TREE_STATE_LABELS[state] || state}`);
 
           const orb = document.createElement("div");
           orb.className = "ftree-node-orb";
@@ -2323,7 +2364,7 @@
           info.className = "ftree-node-info";
           const nameDiv = document.createElement("div");
           nameDiv.className = "ftree-node-name";
-          nameDiv.textContent = ex.name;
+          nameDiv.textContent = exName(ex.name);
           info.appendChild(nameDiv);
           const reps = fmtRepsRange(ex);
           if (reps) {
@@ -2345,7 +2386,7 @@
           if (cat.best_fires != null) {
             const fires = document.createElement("span");
             fires.className = "ftree-node-fires";
-            fires.title = `Best peer score: ${cat.best_fires}/10 flames`;
+            fires.title = t("best_score_title", { n: cat.best_fires });
             fires.textContent = `🔥${cat.best_fires}`;
             tile.appendChild(fires);
           }
@@ -2367,14 +2408,14 @@
       if (spine.length) {
         const lbl = document.createElement("div");
         lbl.className = "ftree-section-label";
-        lbl.textContent = "Bodyweight";
+        lbl.textContent = t("tree_bodyweight");
         track.appendChild(lbl);
         track.appendChild(buildLadder(spine));
       }
       if (gear.length) {
         const lbl = document.createElement("div");
         lbl.className = "ftree-section-label";
-        lbl.textContent = "With equipment";
+        lbl.textContent = t("tree_with_equipment");
         track.appendChild(lbl);
         track.appendChild(buildLadder(gear));
       }
@@ -2395,8 +2436,8 @@
     exModalActions.innerHTML = "";
 
     exModalBody.innerHTML =
-      `<p class="forge-ex-modal-name">${esc(ex.name)}</p>` +
-      `<p class="forge-ex-modal-pattern">${esc(PATTERN_LABELS[ex.pattern_key] || ex.pattern_key)}</p>`;
+      `<p class="forge-ex-modal-name">${esc(exName(ex.name))}</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(patternName(ex.pattern_key))}</p>`;
 
     if (TREE_STATE_LABELS[state]) {
       const s = document.createElement("div");
@@ -2413,51 +2454,57 @@
     }
 
     const reps = fmtRepsRange(ex);
-    if (reps) addSection("Target", `<div class="forge-ex-modal-value">${reps}</div>`);
+    if (reps) addSection(esc(t("sec_target")), `<div class="forge-ex-modal-value">${esc(reps)}</div>`);
     const presc = prescriptionByExerciseName[ex.name];
     if (presc && presc.target_load != null) {
       const body = presc.target_load_recipe
         ? `<button type="button" class="forge-load-btn" data-recipe-prescription="${presc.uuid}" ` +
-          `title="How to build this load">${esc(fmtLoad(presc.target_load, presc.load_unit))}</button>`
+          `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(presc.target_load, presc.load_unit))}</button>`
         : `<div class="forge-ex-modal-value">${esc(fmtLoad(presc.target_load, presc.load_unit))}</div>`;
-      addSection("Prescribed load", body);
+      addSection(esc(t("sec_prescribed_load")), body);
+    }
+    if (presc && presc.load_options && presc.load_options.length && state !== "blocked") {
+      addSection(esc(t("sec_set_load")), loadControlHtml(presc));
+      $("#forge-set-load-btn", exModalBody).addEventListener("click", () => submitLoad(presc));
     }
     if (ex.muscles && ex.muscles.length) {
       const chips = ex.muscles
-        .map((m) => `<span class="forge-muscle-chip">${esc(m.name)}</span>`)
+        .map((m) => `<span class="forge-muscle-chip">${esc(muscleName(m.key, m.name))}</span>`)
         .join("");
       addSection(
-        "Muscles worked",
+        esc(t("sec_muscles")),
         `<div class="forge-muscle-chips">${chips}</div>` +
           (window.ForgeAnatomy ? window.ForgeAnatomy.svg(ex.muscles.map((m) => m.key)) : "")
       );
     }
-    if (ex.cues) addSection("Cues", `<div class="forge-ex-modal-cues">"${esc(ex.cues)}"</div>`);
+    const cues = exCues(ex.name, ex.cues);
+    if (cues) addSection(esc(t("sec_cues")), `<div class="forge-ex-modal-cues">${esc(t("quoted", { text: cues }))}</div>`);
     if (ex.video_url && /^https:\/\//i.test(ex.video_url)) {
-      addSection("Video", `<a class="forge-video-link" href="${esc(ex.video_url)}" target="_blank" rel="noopener" data-no-loader>▶ Watch how</a>`);
+      addSection(esc(t("sec_video")), `<a class="forge-video-link" href="${esc(ex.video_url)}" target="_blank" rel="noopener" data-no-loader>${esc(t("watch_how"))}</a>`);
     }
 
     const req = ex.required_equipment.filter((k) => k !== "bodyweight");
     const alt = (ex.alternative_equipment || []).filter((k) => k !== "bodyweight");
     if (req.length || alt.length) {
-      const tag = (k) => `<span class="forge-ex-modal-equip-tag">${esc(k.replace(/_/g, " "))}</span>`;
+      const tag = (label) => `<span class="forge-ex-modal-equip-tag">${esc(label)}</span>`;
+      const label = (k) => equipName(k, k.replace(/_/g, " "));
       // Any-of options read as one "a or b" tag — owning either is enough.
-      const tags = req.map(tag).join("") +
-        (alt.length ? tag(alt.join(" or ")) : "");
-      addSection("Equipment", `<div class="forge-ex-modal-equip">${tags}</div>`);
+      const tags = req.map((k) => tag(label(k))).join("") +
+        (alt.length ? tag(alt.map(label).join(t("or"))) : "");
+      addSection(esc(t("sec_equipment")), `<div class="forge-ex-modal-equip">${tags}</div>`);
     }
 
     if (cat.best_fires != null) {
       addSection(
-        "Peer score",
+        esc(t("sec_peer_score")),
         flamesMarkup(cat.best_fires) +
-        `<div class="forge-score-note">${cat.best_fires}/10 🔥 vs peers your age &amp; sex</div>`
+        `<div class="forge-score-note">${esc(t("score_vs_peers", { n: cat.best_fires }))}</div>`
       );
       igniteFlames(exModalBody);
     }
 
     if (state === "blocked" && cat.substitute) {
-      addSection("Substitute", `<div class="forge-ex-modal-value">→ ${esc(cat.substitute.name)}</div>`);
+      addSection(esc(t("sec_substitute")), `<div class="forge-ex-modal-value">→ ${esc(exName(cat.substitute.name))}</div>`);
     }
 
     // Any rung the program could move to: the current one opens the full picker,
@@ -2467,10 +2514,10 @@
       const rungBtn = document.createElement("button");
       rungBtn.className = "btn-cauldron btn-cauldron--primary";
       if (state === "current" || currentRungs.has(ex.uuid)) {
-        rungBtn.textContent = "⇅ Change my rung";
+        rungBtn.textContent = t("change_my_rung");
         rungBtn.addEventListener("click", () => openRungPicker(rungPresc));
       } else {
-        rungBtn.textContent = "Make this my rung";
+        rungBtn.textContent = t("make_my_rung");
         rungBtn.addEventListener("click", () =>
           setRung(rungPresc, { exercise: ex.uuid, name: ex.name }, false)
         );
@@ -2481,22 +2528,21 @@
     const isBlocked = state === "blocked";
     const actionBtn = document.createElement("button");
     actionBtn.className = `btn-cauldron ${isBlocked ? "btn-cauldron--primary" : "btn-cauldron--ghost"}`;
-    actionBtn.textContent = isBlocked ? "Unblock" : "Block this exercise";
+    actionBtn.textContent = isBlocked ? t("unblock") : t("block_exercise");
     actionBtn.addEventListener("click", async () => {
       actionBtn.disabled = true;
       const act = isBlocked ? "unblock" : "block";
       try {
         const res = await api(`exercises/${ex.uuid}/${act}/`, { method: "POST" });
         if (act === "block") {
-          const sub = res.substitute ? ` Substitute: ${res.substitute.name}.` : " No substitute available.";
-          notify(`Blocked.${sub}`);
+          notify(blockedNotice({ substitute: res.substitute }));
         } else {
-          notify("Unblocked.");
+          notify(t("unblocked"));
         }
         closeExerciseModal();
         loadCatalogTree();
       } catch (err) {
-        notify("Couldn't update that exercise.");
+        notify(t("err_update_exercise"));
         actionBtn.disabled = false;
       }
     });
@@ -2519,7 +2565,7 @@
     exModalActions.innerHTML = "";
     exModalBody.innerHTML =
       `<p class="forge-ex-modal-name">${esc(fmtLoad(load, unit))}</p>` +
-      (exerciseName ? `<p class="forge-ex-modal-pattern">${esc(exerciseName)}</p>` : "");
+      (exerciseName ? `<p class="forge-ex-modal-pattern">${esc(exName(exerciseName))}</p>` : "");
 
     const section = (label, html) => {
       const sec = document.createElement("div");
@@ -2530,14 +2576,14 @@
 
     const plates = (recipe && recipe.per_side) || [];
     if (!plates.length) {
-      section("How to build it", `<div class="forge-ex-modal-value">Bare bar / empty handle — no plates.</div>`);
+      section(esc(t("sec_how_build")), `<div class="forge-ex-modal-value">${esc(t("bare_no_plates"))}</div>`);
     } else {
       const rows = plates
         .map((p) => `<li class="forge-recipe-row"><span class="forge-recipe-count">${p.count} ×</span> ` +
-          `<span class="forge-recipe-plate">${esc(String(p.weight))}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}</span></li>`)
+          `<span class="forge-recipe-plate">${esc(fmtNum(p.weight))}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}</span></li>`)
         .join("");
       section(
-        recipe.stacked ? "Load into the bell" : "Load per side",
+        esc(t(recipe.stacked ? "sec_load_bell" : "sec_load_side")),
         `<ul class="forge-recipe-list">${rows}</ul>` +
         `<div class="forge-ex-modal-cues">${esc(fmtRecipe(recipe, unit))}</div>`
       );
@@ -2545,9 +2591,9 @@
     const left = (recipe && recipe.leftover_plates) || [];
     if (left.length) {
       section(
-        "Still in the box",
+        esc(t("sec_leftover")),
         `<div class="forge-ex-modal-value">${esc(
-          left.map((p) => `${p.count} × ${p.weight}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}`).join(", ")
+          left.map((p) => `${p.count} × ${fmtNum(p.weight)}${unitLabel(unit) ? ` ${unitLabel(unit)}` : ""}`).join(", ")
         )}</div>`
       );
     }
@@ -2571,6 +2617,45 @@
   if (exModalCloseBtn) exModalCloseBtn.addEventListener("click", closeExerciseModal);
   if (exModal) {
     exModal.addEventListener("click", (e) => { if (e.target === exModal) closeExerciseModal(); });
+  }
+
+  // ── Set my load (#109) ────────────────────────────────────────────────────
+  // Program-wide for the exercise; the server snaps DOWN to a buildable load.
+  // Bands pick one of the owned levels (an index; on assisted rungs a lower
+  // level is more help).
+  function loadControlHtml(presc) {
+    const field = presc.is_band_load
+      ? `<select class="forge-set-load-input" id="forge-set-load-value" aria-label="${esc(t("sec_set_load"))}">${
+        presc.load_options.map((v) => `<option value="${v}"${v === presc.target_load ? " selected" : ""}>${
+          esc(t("band_level", { n: fmtNum(v) }))}</option>`).join("")}</select>`
+      : `<input type="number" class="forge-set-load-input" id="forge-set-load-value" min="0" step="any" inputmode="decimal" ` +
+        `value="${presc.target_load ?? ""}" aria-label="${esc(t("sec_set_load"))}">` +
+        `<span class="forge-load-unit">${esc(unitLabel(presc.load_unit))}</span>`;
+    return `<div class="forge-set-load">${field}` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost" id="forge-set-load-btn">${esc(t("set_load_save"))}</button></div>` +
+      `<p class="forge-help">${esc(t("set_load_help"))}</p>`;
+  }
+
+  async function submitLoad(presc) {
+    const btn = $("#forge-set-load-btn", exModalBody);
+    const value = Number($("#forge-set-load-value", exModalBody).value);
+    btn.disabled = true;
+    try {
+      const res = await api(`prescription/${presc.uuid}/set-load/`, { method: "POST", body: { load: value } });
+      const shown = presc.is_band_load ? t("band_level", { n: fmtNum(res.load) }) : fmtLoad(res.load, presc.load_unit);
+      notify(res.snapped_from != null
+        ? t("load_snapped", { asked: fmtLoad(res.snapped_from, presc.load_unit), load: shown })
+        : t("load_set", { load: shown }));
+      closeExerciseModal();
+      // Today's untouched sets were rewritten server-side: refresh them like a rung move.
+      const panel = $(".forge-panel.is-active");
+      if (panel && panel.dataset.panel === "today") refreshTodayAfterRungChange(presc.uuid);
+      else loadCatalogTree();
+    } catch (err) {
+      const { data } = apiErrorPayload(err);
+      notify((data && data.detail) || t("err_set_load"));
+      btn.disabled = false;
+    }
   }
 
   // ── ⇅ Set my rung ─────────────────────────────────────────────────────────
@@ -2602,7 +2687,7 @@
     try {
       rungPicker = await api(`prescription/${prescUuid}/set-rung/`);
     } catch (e) {
-      notify("Couldn't load your ladder.");
+      notify(t("err_load_ladder"));
       return;
     } finally {
       showLoader(false);
@@ -2616,22 +2701,21 @@
     exModalActions.innerHTML = "";
     const trialNote = p.trial_score == null
       ? ""
-      : " Rungs marked <em>above your Trial</em> ask you to confirm first.";
+      : ` ${t("rung_trial_note", { mark: `<em>${esc(t("above_trial_lc"))}</em>` })}`;
     let html =
-      `<p class="forge-ex-modal-name">Change your rung</p>` +
-      `<p class="forge-ex-modal-pattern">${esc(p.pattern_name)}</p>` +
-      `<p class="forge-help">Jump to any rung you can do, up or down. Every day that trains ` +
-      `this ladder moves with it, and progress carries on from there.${trialNote}</p>` +
+      `<p class="forge-ex-modal-name">${esc(t("change_your_rung"))}</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(patternName(p.pattern_key, p.pattern_name))}</p>` +
+      `<p class="forge-help">${esc(t("rung_help"))}${trialNote}</p>` +
       `<ul class="forge-swap-list">`;
     p.options.forEach((o) => {
       const badges =
-        (o.is_current ? `<span class="forge-swap-badge">Current</span>` : "") +
-        (o.unready ? `<span class="forge-swap-badge forge-rung-badge--unready">Above your Trial</span>` : "");
+        (o.is_current ? `<span class="forge-swap-badge">${esc(t("current"))}</span>` : "") +
+        (o.unready ? `<span class="forge-swap-badge forge-rung-badge--unready">${esc(t("above_trial"))}</span>` : "");
       html +=
         `<li><button type="button" class="forge-swap-option forge-rung-option${o.is_current ? " is-current" : ""}" ` +
         `data-exercise="${esc(o.exercise)}"${o.is_current ? ' aria-current="true"' : ""}>` +
         `<span class="forge-rung-option-rank" aria-hidden="true">${o.difficulty_rank}</span>` +
-        `<span class="forge-swap-option-name">${esc(o.name)}${o.is_per_side ? " · per side" : ""}</span>` +
+        `<span class="forge-swap-option-name">${esc(exName(o.name))}${o.is_per_side ? ` ${esc(t("per_side_dot"))}` : ""}</span>` +
         `${badges}</button></li>`;
     });
     exModalBody.innerHTML = html + `</ul>`;
@@ -2640,24 +2724,25 @@
   // The 409 gap, in the user's terms: the anchor they were tested on, and how far
   // their last Trial falls short of what places at this rung.
   function renderRungWarning(prescUuid, target, gap) {
-    const unit = gap.is_timed ? "seconds" : "reps";
-    const anchor = gap.anchor ? ` on the ${esc(gap.anchor)}` : "";
+    const required = `<strong>${esc(unitCount(gap.is_timed, gap.required))}</strong>`;
+    const yours = `<strong>${esc(gap.your_trial)}</strong>`;
     exModalBody.innerHTML =
-      `<p class="forge-ex-modal-name">${esc(gap.exercise || target.name)}</p>` +
-      `<p class="forge-ex-modal-pattern">${esc(gap.pattern)}</p>` +
-      `<div class="forge-rung-warning" role="alert">This rung is placed at ` +
-      `<strong>${esc(gap.required)} ${unit}</strong>${anchor}; your last Trial was ` +
-      `<strong>${esc(gap.your_trial)}</strong>. You can still take it — if the sets don't ` +
-      `land, the Forge will ease you back down.</div>`;
+      `<p class="forge-ex-modal-name">${esc(exName(gap.exercise || target.name))}</p>` +
+      `<p class="forge-ex-modal-pattern">${esc(patternName(gap.pattern_key, gap.pattern))}</p>` +
+      `<div class="forge-rung-warning" role="alert">${
+        gap.anchor
+          ? t("rung_warning_anchor", { required, anchor: esc(exName(gap.anchor)), yours })
+          : t("rung_warning", { required, yours })
+      }</div>`;
     exModalActions.innerHTML = "";
     const back = document.createElement("button");
     back.className = "btn-cauldron btn-cauldron--ghost";
     const fromPicker = rungPicker && rungPicker.prescription === prescUuid;
-    back.textContent = fromPicker ? "Back" : "Cancel";
+    back.textContent = fromPicker ? t("back") : t("cancel");
     back.addEventListener("click", () => (fromPicker ? renderRungPicker() : closeExerciseModal()));
     const go = document.createElement("button");
     go.className = "btn-cauldron btn-cauldron--primary";
-    go.textContent = "Move anyway";
+    go.textContent = t("move_anyway");
     go.addEventListener("click", () => setRung(prescUuid, target, true));
     exModalActions.append(back, go);
   }
@@ -2675,7 +2760,7 @@
         renderRungWarning(prescUuid, target, data);
         showExerciseSheet();
       } else {
-        notify(apiErrorText(err) || "Couldn't change your rung.");
+        notify(apiErrorText(err) || t("err_change_rung"));
       }
       return;
     } finally {
@@ -2683,7 +2768,7 @@
     }
     rungPicker = null;
     closeExerciseModal();
-    notify(`Now training ${target.name}.`);
+    notify(t("now_training", { name: exName(target.name) }));
     const panel = $(".forge-panel.is-active");
     if (panel && panel.dataset.panel === "today") refreshTodayAfterRungChange(prescUuid);
     else if (panel && panel.dataset.panel === "exercises" && catalogView === "tree") loadCatalogTree();
@@ -2827,26 +2912,31 @@
       const completed = sessions.filter((s) => s.status === "completed");
       const wrap = $("#forge-history");
       if (!completed.length) {
-        wrap.innerHTML = `<p class="forge-help">No saved sessions yet.</p>`;
+        wrap.innerHTML = `<p class="forge-help">${esc(t("no_saved_sessions"))}</p>`;
         return;
       }
       wrap.innerHTML = "";
       completed.forEach((s) => {
         const card = document.createElement("div");
         card.className = "forge-history-card";
-        const when = s.performed_at ? new Date(s.performed_at).toLocaleString() : "—";
-        let rows = `<div class="forge-history-date">${s.day_name || "Session"} · ${when}</div>`;
+        const when = s.performed_at
+          ? new Date(s.performed_at).toLocaleString(LANG, { dateStyle: "medium", timeStyle: "short" })
+          : "—";
+        let rows = `<div class="forge-history-date">${esc(s.day_name || t("session"))} · ${esc(when)}</div>`;
         s.set_logs.forEach((sl) => {
           const cls = sl.actual_reps >= (sl.expected_reps || 0) ? "forge-delta-up" : "forge-delta-down";
           rows +=
-            `<div class="forge-history-set"><span>${sl.exercise_name} · set ${sl.set_index + 1}</span>` +
-            `<span class="${cls}">${sl.actual_reps ?? "–"} / ${sl.expected_reps ?? "–"} reps</span></div>`;
+            `<div class="forge-history-set"><span>${esc(t("history_set", { name: exName(sl.exercise_name), n: sl.set_index + 1 }))}</span>` +
+            `<span class="${cls}">${esc(t("history_reps", {
+              actual: sl.actual_reps ?? "–", expected: sl.expected_reps ?? "–",
+              unit: sl.is_timed ? t("unit_s") : t("unit_reps"),
+            }))}</span></div>`;
         });
         card.innerHTML = rows;
         wrap.appendChild(card);
       });
     } catch (e) {
-      notify("Couldn't load history.");
+      notify(t("err_load_history"));
     } finally {
       showLoader(false);
     }
@@ -2892,7 +2982,7 @@
     if (!sel) return;
     names.forEach((n) => {
       const o = document.createElement("option");
-      o.value = n; o.textContent = n;
+      o.value = n; o.textContent = exName(n);
       sel.appendChild(o);
     });
     sel.addEventListener("change", () => {
@@ -2908,7 +2998,7 @@
     if (!sel || !muscles.length) return;
     muscles.forEach((m) => {
       const o = document.createElement("option");
-      o.value = m.key; o.textContent = m.name;
+      o.value = m.key; o.textContent = muscleName(m.key, m.name);
       sel.appendChild(o);
     });
     sel.addEventListener("change", () => {
@@ -2933,6 +3023,15 @@
     return iso.slice(0, 10); // day
   }
 
+  // A bucket key ("2026-10-21", "2026-W43", "2026-10") in the page language.
+  function periodLabel(key, short) {
+    if (/W\d+$/.test(key)) return t("week_label", { n: Number(key.split("W")[1]) });
+    if (/^\d{4}-\d{2}$/.test(key)) {
+      return fmtDate(`${key}-01`, short ? { month: "short" } : { month: "long", year: "numeric" });
+    }
+    return fmtDate(key, short ? { month: "numeric", day: "numeric" } : undefined);
+  }
+
   function aggregate() {
     const buckets = new Map();
     progressPoints.forEach((p) => {
@@ -2950,7 +3049,7 @@
     const host = $("#forge-chart");
     const series = aggregate();
     if (series.length === 0) {
-      host.innerHTML = `<p class="forge-help">Log a session to see your progression.</p>`;
+      host.innerHTML = `<p class="forge-help">${esc(t("chart_empty"))}</p>`;
       return;
     }
     const W = 640, H = 240, padL = 44, padR = 16, padT = 16, padB = 36;
@@ -2973,7 +3072,7 @@
     }
     if (legend) {
       legend.hidden = deciles.length === 0;
-      if (deciles.length) legend.textContent = `Dashed lines = peer deciles for ${chartExercise} (your age & sex).`;
+      if (deciles.length) legend.textContent = t("chart_deciles", { name: exName(chartExercise) });
     }
 
     const decileMax = deciles.length ? Math.max(...deciles.map((c) => c.v)) : 0;
@@ -2991,25 +3090,25 @@
     const decileLines = deciles.map((c) => {
       const y = yFor(c.v);
       return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" class="forge-chart-decile"/>` +
-        `<text x="${W - padR}" y="${y - 3}" class="forge-chart-decile-label" text-anchor="end">D${c.d}</text>`;
+        `<text x="${W - padR}" y="${y - 3}" class="forge-chart-decile-label" text-anchor="end">${esc(t("decile_short", { d: c.d }))}</text>`;
     }).join("");
 
     const linePts = series.map((s, i) => `${xFor(i)},${yFor(s[1])}`).join(" ");
     const area = `M ${padL},${H - padB} L ` + series.map((s, i) => `${xFor(i)},${yFor(s[1])}`).join(" L ") +
       ` L ${xFor(n - 1)},${H - padB} Z`;
     const dots = series.map((s, i) =>
-      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot"><title>${s[0]}: ${s[1]}</title></circle>`
+      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot"><title>${esc(periodLabel(s[0]))}: ${esc(fmtNum(s[1]))}</title></circle>`
     ).join("");
     // X labels: show a handful to avoid crowding.
     const step = Math.ceil(n / 6);
     const xLabels = series.map((s, i) =>
       i % step === 0 || i === n - 1
-        ? `<text x="${xFor(i)}" y="${H - 12}" class="forge-chart-axis" text-anchor="middle">${s[0].slice(5)}</text>`
+        ? `<text x="${xFor(i)}" y="${H - 12}" class="forge-chart-axis" text-anchor="middle">${esc(periodLabel(s[0], true))}</text>`
         : ""
     ).join("");
 
     host.innerHTML =
-      `<svg viewBox="0 0 ${W} ${H}" class="forge-chart-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Progression chart">` +
+      `<svg viewBox="0 0 ${W} ${H}" class="forge-chart-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t("chart_aria"))}">` +
       gridLines +
       decileLines +
       `<path d="${area}" class="forge-chart-area"/>` +
@@ -3041,6 +3140,7 @@
   // over the existing Today data + the existing sessions/<uuid>/log/ endpoint.
   // Recognition is Chromium-only; everything degrades to on-screen buttons.
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SPEECH_LANG = IS_ES ? "es-MX" : "en-US";
   function voiceSupported() {
     return !!(window.speechSynthesis && SR);
   }
@@ -3069,6 +3169,8 @@
     ttsVoice: null,
   };
 
+  // Spoken numbers (recognition mostly returns digits; this catches the rest).
+  // Spanish keys are accent-folded, see foldText().
   const NUM_WORDS = {
     zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
     eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
@@ -3076,8 +3178,30 @@
     nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
     seventy: 70, eighty: 80, ninety: 90,
   };
+  // Spanish only on a Spanish page: "once" is 11 in Spanish, not in English.
+  // No "un"/"una" — they are articles far more often than counts.
+  if (IS_ES) Object.assign(NUM_WORDS, {
+    cero: 0, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7,
+    ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15,
+    dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
+    veintiuno: 21, veintidos: 22, veintitres: 23, veinticuatro: 24, veinticinco: 25,
+    veintiseis: 26, veintisiete: 27, veintiocho: 28, veintinueve: 29,
+    treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90,
+  });
+  // Voice commands, English words always understood; Spanish added when the
+  // page is in Spanish (folded, no accents).
+  const VOICE_WORDS = {
+    exit: "exit|quit|cancel|close|abort" + (IS_ES ? "|salir|sal|terminar|cerrar|cancelar" : ""),
+    repeat: "repeat|again|pardon" + (IS_ES ? "|repite|repetir|otra vez" : ""),
+    start: "start|begin|go|ready|now" + (IS_ES ? "|empieza|empezar|inicia|iniciar|comienza|ya|listo|lista|vamos" : ""),
+    // Not "para"/"ya": everyday words that would end a hold mid-sentence.
+    stop: "stop|done|finished|finish|end" + (IS_ES ? "|alto|parar|detente|listo|lista|termine" : ""),
+    none: "none|nothing|skip" + (IS_ES ? "|ninguna|ninguno|nada|salta|saltar|omitir" : ""),
+    skiprest: "skip|next|ready|continue|go|done" + (IS_ES ? "|salta|saltar|siguiente|listo|lista|sigue|seguir|vamos|ya" : ""),
+  };
+  const voiceRe = (key) => new RegExp(`\\b(${VOICE_WORDS[key]})\\b`);
   function wordsToNumber(text) {
-    const tokens = String(text).toLowerCase().replace(/[-,]/g, " ").split(/\s+/);
+    const tokens = foldText(text).replace(/[-,]/g, " ").split(/\s+/);
     let total = null;
     for (const tok of tokens) {
       if (Object.prototype.hasOwnProperty.call(NUM_WORDS, tok)) {
@@ -3113,17 +3237,17 @@
       .map((b) =>
         `<button type="button" class="btn-cauldron ` +
         `${b.act === "exit" || b.act === "skipset" || b.act === "skiprest" ? "btn-cauldron--ghost" : "btn-cauldron--primary"} ` +
-        `forge-voice-cmd" data-act="${b.act}">${b.label}</button>`)
+        `forge-voice-cmd" data-act="${b.act}">${esc(b.label)}</button>`)
       .join("");
   }
   function setRepsControls() {
     vEl("controls").innerHTML =
       `<div class="forge-voice-reps">` +
-      `<input type="number" min="0" id="forge-voice-reps-input" class="forge-trial-input" placeholder="reps" inputmode="numeric">` +
-      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-voice-cmd" data-act="logreps">Log</button>` +
+      `<input type="number" min="0" id="forge-voice-reps-input" class="forge-trial-input" placeholder="${esc(t("unit_reps"))}" inputmode="numeric">` +
+      `<button type="button" class="btn-cauldron btn-cauldron--primary forge-voice-cmd" data-act="logreps">${esc(t("v_log"))}</button>` +
       `</div>` +
-      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="skipset">Skip</button>` +
-      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="exit">Exit</button>`;
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="skipset">${esc(t("v_skip"))}</button>` +
+      `<button type="button" class="btn-cauldron btn-cauldron--ghost forge-voice-cmd" data-act="exit">${esc(t("v_exit"))}</button>`;
   }
 
   // ── Speech (TTS) ──
@@ -3131,9 +3255,10 @@
     if (!window.speechSynthesis) return;
     const choose = () => {
       const vs = window.speechSynthesis.getVoices();
-      voice.ttsVoice =
-        vs.find((v) => /en[-_]US/i.test(v.lang)) ||
-        vs.find((v) => /^en/i.test(v.lang)) || null;
+      voice.ttsVoice = IS_ES
+        ? vs.find((v) => /es[-_]MX/i.test(v.lang)) || vs.find((v) => /es[-_]US/i.test(v.lang)) ||
+          vs.find((v) => /^es/i.test(v.lang)) || null
+        : vs.find((v) => /en[-_]US/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
     };
     choose();
     if (!voice.ttsVoice) window.speechSynthesis.onvoiceschanged = choose;
@@ -3143,7 +3268,7 @@
   // listening afterwards or the user could no longer say "stop"/"skip" in the
   // last few seconds. Cues are driven by the rest/hold intervals, so clearing
   // those intervals (skip, stop, exit) automatically cancels pending cues.
-  const COUNTDOWN_WORDS = { 3: "three", 2: "two", 1: "one" };
+  const COUNTDOWN_WORDS = { 3: t("v_count_3"), 2: t("v_count_2"), 1: t("v_count_1") };
   function speakCountdown(n) {
     const word = COUNTDOWN_WORDS[n];
     if (!word) return;
@@ -3157,7 +3282,7 @@
       try {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = "en-US";
+        u.lang = SPEECH_LANG;
         u.rate = 1.0;
         if (voice.ttsVoice) u.voice = voice.ttsVoice;
         u.onend = resolve;
@@ -3175,7 +3300,7 @@
     voice.wantListen = true;
     if (voice.recog) return;
     const r = new SR();
-    r.lang = "en-US";
+    r.lang = SPEECH_LANG;
     r.continuous = true;
     r.interimResults = false;
     r.maxAlternatives = 4;
@@ -3208,34 +3333,34 @@
   }
   function micDenied() {
     showMic(false);
-    setInstruction("Microphone blocked — use the on-screen buttons (allow the mic and reopen for voice).");
-    notify("Mic permission denied — voice off. Use the buttons.");
+    setInstruction(t("v_mic_blocked"));
+    notify(t("v_mic_denied"));
   }
 
   // ── Command routing ──
   function handleHeard(alts) {
     const primary = (alts[0] || "").trim();
-    vEl("heard").textContent = primary ? "“" + primary + "”" : "";
-    const t = alts.join(" • ").toLowerCase();
+    vEl("heard").textContent = primary ? t("quoted", { text: primary }) : "";
+    const heard = foldText(alts.join(" • "));
 
-    if (/\b(exit|quit|cancel|close|abort)\b/.test(t)) return command("exit");
-    if (/\b(repeat|again|pardon)\b/.test(t)) return command("repeat");
+    if (voiceRe("exit").test(heard)) return command("exit");
+    if (voiceRe("repeat").test(heard)) return command("repeat");
 
     switch (voice.state) {
       case "ready_timed":
-        if (/\b(start|begin|go|ready|now)\b/.test(t)) return command("start");
+        if (voiceRe("start").test(heard)) return command("start");
         break;
       case "timing":
-        if (/\b(stop|done|finished|finish|end)\b/.test(t)) return command("stop");
+        if (voiceRe("stop").test(heard)) return command("stop");
         break;
       case "awaiting_reps": {
         const n = parseReps(alts);
         if (n != null) return command("reps", n);
-        if (/\b(none|nothing|skip)\b/.test(t)) return command("skipset");
+        if (voiceRe("none").test(heard)) return command("skipset");
         break;
       }
       case "resting":
-        if (/\b(skip|next|ready|continue|go|done)\b/.test(t)) return command("skiprest");
+        if (voiceRe("skiprest").test(heard)) return command("skiprest");
         break;
     }
   }
@@ -3290,45 +3415,47 @@
     if (i >= voice.steps.length) return finishVoice();
     const s = voice.steps[i];
     voice.state = s.isTimed ? "ready_timed" : "awaiting_reps";
-    setProgress(`Set ${s.setNumber} of ${s.totalSets}${s.isAmrap && !s.isTimed ? " · AMRAP" : ""}`);
-    setExercise(s.exerciseName);
-    const unit = s.isTimed ? "seconds" : "reps";
+    const name = exName(s.exerciseName);
+    const setOf = t("v_set_of", { n: s.setNumber, total: s.totalSets });
+    setProgress(`${setOf}${s.isAmrap && !s.isTimed ? " · AMRAP" : ""}`);
+    setExercise(name);
     // Hands-free: the weight is useless without its unit, and a short recipe
     // saves walking back to the screen to see which plates to grab.
-    const loadStr = s.expectedLoad != null ? ` at ${fmtLoad(s.expectedLoad, s.loadUnit)}` : "";
+    const loadStr = s.expectedLoad != null ? ` ${t("v_at", { load: fmtLoad(s.expectedLoad, s.loadUnit) })}` : "";
     const recipeStr = s.loadRecipe ? ` — ${fmtRecipe(s.loadRecipe, s.loadUnit)}` : "";
     setTarget(
       s.isTimed
-        ? (s.isAmrap ? "Hold as long as you can" : `Target hold ${s.targetReps} seconds`)
+        ? (s.isAmrap ? t("v_hold_max") : t("v_target_hold", { n: s.targetReps }))
         : s.isAmrap
-        ? `As many reps as possible (target ${s.targetReps}+)`
-        : `Target ${s.targetReps} ${unit}${loadStr}`
+        ? t("v_amrap_target", { n: s.targetReps })
+        : `${t("target_n", { n: s.targetReps, unit: t("unit_reps") })}${loadStr}`
     );
 
-    const startHint = micCue("Say start when you're ready.", "Tap start when you're ready.");
-    const repsHint = micCue("Say your reps when you're done.", "Tap your reps when you're done.");
-    let say = `${s.exerciseName}. Set ${s.setNumber} of ${s.totalSets}. `;
+    const startHint = micCue(t("v_say_start"), t("v_tap_start"));
+    const repsHint = micCue(t("v_say_reps"), t("v_tap_reps"));
+    let say = `${name}. ${setOf}. `;
     if (s.isTimed) {
       say += s.isAmrap
-        ? `Hold as long as you can. ${startHint}`
-        : `Target hold, ${s.targetReps} seconds. ${startHint}`;
+        ? `${t("v_hold_max")}. ${startHint}`
+        : `${t("v_target_hold_say", { n: s.targetReps })} ${startHint}`;
     } else if (s.isAmrap) {
-      say += `As many reps as you can${loadStr}${recipeStr}. ${repsHint}`;
+      say += `${t("v_amrap_say")}${loadStr}${recipeStr}. ${repsHint}`;
     } else {
-      say += `Target ${s.targetReps} reps${loadStr}${recipeStr}. ${repsHint}`;
+      say += `${t("v_target_reps_say", { n: s.targetReps })}${loadStr}${recipeStr}. ${repsHint}`;
     }
-    if (s.setNumber === 1 && s.cues) say += ` ${s.cues}`;
+    const cues = exCues(s.exerciseName, s.cues);
+    if (s.setNumber === 1 && cues) say += ` ${cues}`;
     voice.lastAnnounce = say;
 
     if (s.isTimed) {
-      setInstruction(micCue("Say “start” to begin the hold.", "Tap Start to begin the hold."));
+      setInstruction(micCue(t("v_i_say_start"), t("v_i_tap_start")));
       setControls([
-        { label: "▶ Start", act: "start" },
-        { label: "Skip", act: "skipset" },
-        { label: "Exit", act: "exit" },
+        { label: t("sw_start"), act: "start" },
+        { label: t("v_skip"), act: "skipset" },
+        { label: t("v_exit"), act: "exit" },
       ]);
     } else {
-      setInstruction(micCue("Do your set, then say your reps (a number).", "Do your set, then tap your reps below."));
+      setInstruction(micCue(t("v_i_say_reps"), t("v_i_tap_reps")));
       setRepsControls();
     }
     await speak(say);
@@ -3337,8 +3464,8 @@
 
   function reAnnounce() {
     const txt =
-      voice.state === "resting" ? "Still resting. Say skip to go now."
-      : voice.state === "timing" ? `Holding. ${voice.elapsed} seconds so far. Say stop when done.`
+      voice.state === "resting" ? t("v_still_resting")
+      : voice.state === "timing" ? tn("v_holding_so_far", voice.elapsed)
       : voice.lastAnnounce;
     if (txt) speak(txt).then(startListening);
   }
@@ -3347,10 +3474,10 @@
   // (used when the user flips the Voice input toggle mid-session).
   function refreshVoiceInstruction() {
     switch (voice.state) {
-      case "ready_timed":   setInstruction(micCue("Say “start” to begin the hold.", "Tap Start to begin the hold.")); break;
-      case "timing":        setInstruction(micCue("Holding… say “stop” when you're done.", "Holding… tap Stop when you're done.")); break;
-      case "awaiting_reps": setInstruction(micCue("Do your set, then say your reps (a number).", "Do your set, then tap your reps below.")); break;
-      case "resting":       setInstruction(micCue("Resting — say “skip” to go now.", "Resting — tap Skip to go now.")); break;
+      case "ready_timed":   setInstruction(micCue(t("v_i_say_start"), t("v_i_tap_start"))); break;
+      case "timing":        setInstruction(micCue(t("v_i_say_stop"), t("v_i_tap_stop"))); break;
+      case "awaiting_reps": setInstruction(micCue(t("v_i_say_reps"), t("v_i_tap_reps"))); break;
+      case "resting":       setInstruction(micCue(t("v_i_say_skip"), t("v_i_tap_skip"))); break;
     }
   }
 
@@ -3358,8 +3485,8 @@
     voice.state = "timing";
     voice.elapsed = 0;
     showTimer(true); updateTimer(0);
-    setInstruction(micCue("Holding… say “stop” when you're done.", "Holding… tap Stop when you're done."));
-    setControls([{ label: "■ Stop", act: "stop" }, { label: "Exit", act: "exit" }]);
+    setInstruction(micCue(t("v_i_say_stop"), t("v_i_tap_stop")));
+    setControls([{ label: t("v_stop_btn"), act: "stop" }, { label: t("v_exit"), act: "exit" }]);
     // Spoken 3-2-1 cue as a targeted hold nears its target duration. Cue only —
     // the hold does not auto-stop; the user still says "stop". No countdown for
     // AMRAP ("as long as you can") holds or targets shorter than 3s.
@@ -3373,7 +3500,7 @@
         if (left >= 1 && left <= 3) speakCountdown(left);
       }
     }, 1000);
-    speak("Go.").then(startListening);
+    speak(t("v_go")).then(startListening);
   }
   function endHold() {
     if (voice.state !== "timing") return; // ignore a duplicate "stop"
@@ -3382,14 +3509,14 @@
     showTimer(false);
     const secs = voice.elapsed;
     recordValue(secs);
-    speak(`Recorded ${secs} seconds.`).then(afterSet);
+    speak(tn("v_recorded_secs", secs)).then(afterSet);
   }
 
   function recordReps(n) {
     if (voice.state !== "awaiting_reps") return; // ignore a duplicate number
     voice.state = "busy";                        // block re-entry during the ack
     recordValue(n);
-    speak(`Logged ${n} ${n === 1 ? "rep" : "reps"}.`).then(afterSet);
+    speak(tn("v_logged_reps", n)).then(afterSet);
   }
   function recordValue(v) {
     const step = voice.steps[voice.idx];
@@ -3416,33 +3543,33 @@
   // phrasing (load shown as "at N", matching announceStep — no unit). (#16)
   function nextExercisePhrase(step) {
     if (!step) return "";
-    const load = step.expectedLoad != null ? ` at ${step.expectedLoad}` : "";
+    const load = step.expectedLoad != null ? ` ${t("v_at", { load: step.expectedLoad })}` : "";
     let detail;
     if (step.isTimed) {
-      detail = step.isAmrap ? "hold as long as you can" : `hold ${step.targetReps} seconds`;
+      detail = step.isAmrap ? t("v_next_hold_max") : t("v_next_hold", { n: step.targetReps });
     } else if (step.isAmrap) {
-      detail = "as many reps as you can";
+      detail = t("v_next_amrap");
     } else {
-      detail = `target ${step.targetReps} reps${load}`;
+      detail = `${t("v_next_target", { n: step.targetReps })}${load}`;
     }
-    return `Next: ${step.exerciseName}, ${detail}.`;
+    return t("v_next", { name: exName(step.exerciseName), detail });
   }
   function beginRest(total, nextI) {
     voice.state = "resting";
     let remaining = total;
-    setProgress("Recover");
-    setExercise("Rest");
+    setProgress(t("v_recover"));
+    setExercise(t("v_rest"));
     setTarget("");
     showTimer(true); updateTimer(remaining);
-    setInstruction(micCue(`Rest ${fmtRest(total)} — say “skip” to go now.`, `Rest ${fmtRest(total)} — tap Skip to go now.`));
-    setControls([{ label: "⏭ Skip rest", act: "skiprest" }, { label: "Exit", act: "exit" }]);
+    setInstruction(micCue(t("v_rest_say_skip", { rest: fmtRest(total) }), t("v_rest_tap_skip", { rest: fmtRest(total) })));
+    setControls([{ label: t("v_skip_rest"), act: "skiprest" }, { label: t("v_exit"), act: "exit" }]);
     voice.restId = setInterval(() => {
       remaining--;
       if (remaining <= 0) {
         clearInterval(voice.restId); voice.restId = null;
         showTimer(false);
         playChime(getChime());
-        speak("Rest over.").then(() => announceStep(nextI));
+        speak(t("v_rest_over")).then(() => announceStep(nextI));
         return;
       }
       // Spoken 3-2-1 heads-up before rest ends. Skip rests shorter than 3s
@@ -3451,7 +3578,7 @@
       updateTimer(remaining);
     }, 1000);
     const nextPhrase = nextExercisePhrase(voice.steps[nextI]);
-    const restLine = nextPhrase ? `Rest for ${total} seconds. ${nextPhrase}` : `Rest for ${total} seconds.`;
+    const restLine = nextPhrase ? `${tn("v_rest_for", total)} ${nextPhrase}` : tn("v_rest_for", total);
     speak(restLine).then(startListening);
   }
   function skipRest() {
@@ -3465,19 +3592,19 @@
     voice.state = "done";
     stopListening();
     showTimer(false);
-    setProgress("Done");
-    setExercise("Workout complete");
+    setProgress(t("v_done"));
+    setExercise(t("v_complete"));
     setTarget("");
     setControls([]);
     vEl("heard").textContent = "";
     const sets = voice.collected;
     if (!Object.keys(sets).length) {
-      setInstruction("No sets logged.");
-      await speak("No sets were logged. Exiting earphones mode.");
+      setInstruction(t("v_no_sets"));
+      await speak(t("v_no_sets_say"));
       return closeVoice();
     }
-    setInstruction("Saving your session…");
-    await speak("Workout complete. Saving your session.");
+    setInstruction(t("v_saving"));
+    await speak(t("v_complete_say"));
     try {
       const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
       closeVoice();
@@ -3485,17 +3612,17 @@
       $("#forge-earphones").hidden = true;
       await showSessionReport(res);
     } catch (e) {
-      notify("Couldn't save the session.");
-      setInstruction("Couldn't save — your reps are still on the Today screen.");
+      notify(t("err_save_session"));
+      setInstruction(t("v_save_failed"));
       closeVoice();
     }
   }
 
   function exitVoice() {
     if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (e) {} }
-    speak("Exiting earphones mode.");
+    speak(t("v_exiting"));
     closeVoice();
-    notify("Earphones mode closed. Your logged reps are on the Today screen — tap Save session to keep them.");
+    notify(t("v_closed"));
   }
   function closeVoice() {
     voice.active = false;
@@ -3508,35 +3635,35 @@
   }
 
   async function startVoice() {
-    if (!voiceSupported()) { notify("Earphones mode needs Chrome or Edge."); return; }
-    if (!currentSession) { notify("Open a day first."); return; }
+    if (!voiceSupported()) { notify(t("v_unsupported")); return; }
+    if (!currentSession) { notify(t("v_open_day")); return; }
     // Starting a guided workout is a commitment to doing it, so persist the plan
     // now rather than mid-set: the steps then key off real set uuids and never
     // have to be re-keyed underneath a running session.
     try {
       await ensureSession();
     } catch (e) {
-      notify("Couldn't start the session.");
+      notify(t("err_start_session"));
       return;
     }
     const allSteps = buildSteps(currentSession);
-    if (!allSteps.length) { notify("Nothing scheduled today."); return; }
+    if (!allSteps.length) { notify(t("v_nothing_today")); return; }
     // Build a map of already-filled set UUIDs directly from DOM inputs, via the
     // shared collector so manual entry and earphones mode agree on the shape
     // (one value per set — "reps per side" for per-side movements).
     const preCollected = collectActualInputs($$(".forge-actual"));
     const steps = allSteps.filter((s) => !(s.uuid in preCollected));
-    if (!steps.length) { notify("All sets are already filled — nothing left for earphones mode."); return; }
+    if (!steps.length) { notify(t("v_all_filled")); return; }
     voice.steps = steps; voice.idx = 0; voice.collected = preCollected; voice.active = true;
     pickVoice();
     try { audioCtx().resume(); } catch (e) { /* gesture unlock */ }
-    setProgress("🎧 Earphones mode");
-    setExercise("Getting ready…");
+    setProgress(`🎧 ${t("v_mode")}`);
+    setExercise(t("v_getting_ready"));
     setTarget(""); setInstruction(""); setControls([]);
     vEl("heard").textContent = "";
     $("#forge-voice").hidden = false;
     document.body.classList.add("forge-overlay-open");
-    await speak("Earphones mode on. Let's forge.");
+    await speak(t("v_on"));
     announceStep(0);
   }
 
@@ -3549,9 +3676,7 @@
     const on = voiceInputEnabled();
     micToggle.classList.toggle("is-muted", !on);
     micToggle.setAttribute("aria-pressed", on ? "true" : "false");
-    const msg = on
-      ? "Voice input on — tap to mute (stops the listening beep)"
-      : "Voice input off — tap to enable hands-free commands (your browser beeps while listening)";
+    const msg = on ? t("v_input_on") : t("v_input_off");
     micToggle.title = msg;
     micToggle.setAttribute("aria-label", msg);
   }

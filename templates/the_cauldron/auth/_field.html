@@ -1,0 +1,6 @@
+{# One labelled input of an allauth form, with its errors. #}
+<label class="forge-field">
+  <span>{{ field.label }}</span>
+  {{ field }}
+</label>
+{% for error in field.errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}

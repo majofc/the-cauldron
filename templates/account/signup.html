@@ -1,0 +1,41 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Create your account" %}{% endblock %}
+{% block meta_description %}{% trans "Create your account in The Cauldron." %}{% endblock %}
+
+{% block auth_card %}
+<h1 class="forge-title">{% trans "Join The Cauldron" %}</h1>
+<p class="forge-subtitle">{% trans "One account for The Forge, The Grimoire and The Journal." %}</p>
+
+{% for error in form.non_field_errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}
+
+<form method="post" action="{% url 'the_cauldron:register' %}" class="forge-form">
+  {% csrf_token %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.email %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.first_name %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.password1 %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.password2 %}
+
+  {# Honeypot: hidden from people, filled in by bots (ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD). #}
+  <div class="forge-hp" aria-hidden="true">
+    <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+  </div>
+
+  <label class="forge-check">
+    <input type="checkbox" name="accept_terms" required{% if form.accept_terms.value %} checked{% endif %}>
+    <span>{% url 'the_cauldron:terms' as terms_url %}{% url 'the_cauldron:privacy' as privacy_url %}{% blocktrans %}I accept the <a href="{{ terms_url }}" target="_blank" rel="noopener">Terms and Conditions</a> and the <a href="{{ privacy_url }}" target="_blank" rel="noopener">Privacy Notice</a>.{% endblocktrans %}</span>
+  </label>
+  {% for error in form.accept_terms.errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}
+
+  {{ redirect_field }}
+  <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Create account" %}</button>
+</form>
+
+{% include 'the_cauldron/auth/_google.html' %}
+
+<p class="forge-auth-alt">
+  {% trans "Already have an account?" %}
+  <a href="{% url 'the_cauldron:login' %}{% if redirect_field_value %}?next={{ redirect_field_value|urlencode }}{% endif %}">{% trans "Sign in" %}</a>
+</p>
+{% endblock %}

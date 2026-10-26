@@ -1,4 +1,5 @@
-"""Nutrition read tools: today, the journal, adherence, goals, the meal plan.
+"""Nutrition read tools: today, the journal, adherence, goals, the goal
+breakdown (#107), the meal plan.
 
 All need the sensitive-data consent (``consent=True``) and read only the
 caller's own rows, through ``nutrition_payloads`` — the same code the web uses.
@@ -10,7 +11,8 @@ from the_cauldron import nutrition_payloads as payloads
 from the_cauldron.mcp_server.errors import ToolError
 from the_cauldron.mcp_server.registry import tool
 from the_cauldron.mcp_server.tools import _format as fmt
-from the_cauldron.services import adherence, nutrition, rolling
+from the_cauldron.services import adherence, breakdown, nutrition, rolling
+from the_cauldron.services.nutrition import NutritionInputError
 
 MAX_JOURNAL_DAYS = 31
 DATE = {"type": "string", "format": "date", "description": "YYYY-MM-DD, in the user's timezone."}
@@ -93,7 +95,8 @@ def get_journal(ctx, **args):
     description=(
         "How often the user meets their daily goals over the last 7, 30 or 90 days. "
         "time_in_range: share of hours the rolling 24-hour window was within each goal (hours with "
-        "nothing logged don't count). For 7 and 30 days also by_day_goal: days met / missed / "
+        "nothing logged don't count); time_in_range_recommended: the same against the recommended goals "
+        "(see get_goals). For 7 and 30 days also by_day_goal: days met / missed / "
         "uncertain per nutrient, % met and current/best streaks."
     ),
     schema={
@@ -104,7 +107,8 @@ def get_journal(ctx, **args):
 )
 def get_adherence(ctx, days=7):
     roll = rolling.rolling(ctx.user, "24h", days)
-    out = {"days": days, "time_in_range": roll["summary"]}
+    out = {"days": days, "time_in_range": roll["sets"]["mine"]["summary"],
+           "time_in_range_recommended": roll["sets"]["who"]["summary"]}
     if days in adherence.WINDOWS:
         out["by_day_goal"] = adherence.adherence(ctx.user, days)["nutrients"]
     return out
@@ -115,16 +119,31 @@ def get_adherence(ctx, days=7):
     title="Daily goals",
     consent=True,
     description=(
-        "The user's active daily nutrient goals (at_least / at_most / between, per 24 h) and every past "
-        "version with the dates it applied. No goal for a nutrient = not tracked."
+        "Two goal sets, per 24 h (at_least / at_most / between). mine: the user's own active goals, plus every "
+        "past version with the dates it applied (history); no goal for a nutrient = not tracked. recommended: "
+        "WHO/FAO and NASEM DRI references from the user's weight, age, sex and activity level (each with its "
+        "source), general references for healthy adults, not medical advice; status 'minor' = under 18, none "
+        "given. assumed lists body data the user hasn't given (the most conservative value was used); "
+        "needs_weight lists goals left out until a weight is set; unresolved, goals left out because the "
+        "cautious values for an unknown sex or age contradict each other (ask for the missing data)."
     ),
 )
 def get_goals(ctx):
     current = payloads.goals_payload(ctx.user)
+    rec = current["recommended"]
     return {
         "today": current["today"],
-        "goals": [fmt.goal(g) for g in current["goals"]],
+        "mine": [fmt.goal(g) for g in current["goals"]],
         "history": [fmt.goal(g) for g in payloads.goal_history(ctx.user)],
+        "recommended": {
+            "status": rec["status"],
+            "assumed": rec["assumed"],
+            "needs_weight": rec["needs_weight"],
+            "unresolved": rec["unresolved"],
+            "goals": [{"nutrient": g["nutrient"], "kind": g["kind"], "min": g["min_value"], "max": g["max_value"],
+                       "source": g["source"], "note": g["note"]} for g in rec["goals"]],
+            "no_recommendation": rec["none"],
+        },
     }
 
 
@@ -146,3 +165,33 @@ def get_meal_plan(ctx, **args):
     first, last = _range(ctx, args.get("from"), args.get("to"), 7, nutrition.MAX_RANGE_DAYS)
     meals = payloads.plan_range(ctx.user, first, last, ctx.serializer_request)
     return {"from": first, "to": last, "meals": [fmt.planned(m) for m in meals]}
+
+
+@tool(
+    "get_goal_breakdown",
+    title="What a goal's number is made of",
+    consent=True,
+    description=(
+        "Break one nutrient's rolling-window total into what was eaten: the top 5 spells/reagents "
+        "(entries combined) plus 'others' (pie, amounts add up to total), and the fog — everything lacking "
+        "the value (never 0; while any remain the total is a lower bound). For span 7d amounts are daily "
+        "averages. end defaults to now (local ISO, no offset). Each fog item says how it could be filled "
+        "(reagents on the spell missing it, or quick entries); filling is done by the user on the website."
+    ),
+    schema={
+        "type": "object",
+        "properties": {
+            "nutrient": {"type": "string", "enum": list(nutrition.FIELDS)},
+            "span": {"type": "string", "enum": list(rolling.SPANS), "default": "24h"},
+            "end": {"type": "string", "description": "Window end, local time, e.g. 2026-10-15T18:00."},
+        },
+        "required": ["nutrient"],
+        "additionalProperties": False,
+    },
+)
+def get_goal_breakdown(ctx, nutrient, span="24h", end=None):
+    try:
+        span, end_at, nutrient = breakdown.window_args(ctx.user, {"span": span, "end": end, "nutrient": nutrient})
+    except NutritionInputError as exc:
+        raise ToolError("invalid_arguments", str(exc)) from None
+    return breakdown.breakdown(ctx.user, span, end_at, nutrient)

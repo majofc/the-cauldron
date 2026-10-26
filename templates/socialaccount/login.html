@@ -1,0 +1,14 @@
+{% extends 'the_cauldron/auth/_base.html' %}
+{% load i18n %}
+
+{% block auth_title %}{% trans "Continue with Google" %}{% endblock %}
+
+{% block auth_card %}
+{# Shown when the Google link is opened with GET (SOCIALACCOUNT_LOGIN_ON_GET is off). #}
+<h1 class="forge-title">{% blocktrans with provider=provider.name %}Continue with {{ provider }}{% endblocktrans %}</h1>
+<p class="forge-subtitle">{% blocktrans with provider=provider.name %}You're about to sign in to The Cauldron with your {{ provider }} account.{% endblocktrans %}</p>
+<form method="post" class="forge-form">
+  {% csrf_token %}
+  <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Continue" %}</button>
+</form>
+{% endblock %}

@@ -99,15 +99,20 @@ any vision; the server exposes tools over the existing services.
 → stateless JSON-RPC at `/cauldron/mcp/`. Architecture and rules: `CLAUDE.md` → "MCP server".
 
 **Tools**
-- Read: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_meal_plan`, `search_spells`, `get_spell`,
+- Read: `get_today`, `get_journal`, `get_adherence`, `get_goals`, `get_goal_breakdown`, `get_meal_plan`, `search_spells`, `get_spell`,
   `search_reagents`, `get_reagent`.
 - Write: `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`, `update_planned_meal`✱, `delete_planned_meal`✱,
   `mark_planned_meal_eaten`, `set_goal`, `create_reagent`, `update_reagent`✱, `create_spell`, `update_spell`✱,
   `delete_spell`✱, `fork_spell`, `log_casting`.
 - Forge: `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions`, `get_equipment`,
   `get_trial`, `set_equipment`✱, `submit_trial_results`, `retake_trial`✱, `start_forge_session`, `log_forge_set`,
-  `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱ — same placement, program and progression
+  `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱, `get_forge_rung_options`, `set_forge_rung`,
+  `set_forge_load`, `set_forge_weekly_volume` — same placement, program and progression
   as the website for the same inputs.
+- Goals (#105): `get_goals` returns two sets — `mine` (the user's own goals, plus `history`) and `recommended`
+  (WHO/FAO + NASEM DRI references from the Profile's weight, age, sex and activity level, each with its `source`;
+  `status: "minor"` under 18; `assumed` / `needs_weight` say what's missing). `get_adherence` adds
+  `time_in_range_recommended`. Birth year and sex are set on the Profile page, not through `set_equipment`.
 - ✱ Two-step: the first call changes nothing and returns a preview + `confirm_token`; the assistant shows it to
   the user and applies only with the token (single use, 5 minutes). Write tools accept `client_request_id` so a
   retry never writes twice. Everything created is private and tagged `channel="mcp"`.

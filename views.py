@@ -10,7 +10,9 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import get_language
 
+from .forge_i18n import forge_catalog, forge_strings, showcase_tree
 from .grimoire_i18n import grimoire_strings
+from .language import force_spanish, public_seo, remember_language
 from .models import Casting, GrimoirePreferences, Program, Spell, UserEquipmentProfile
 from .nutrition_i18n import nutrition_strings
 from .services import grimoire, legal, nutrition
@@ -43,6 +45,7 @@ def cauldron_page(view):
 
     @wraps(view)
     @login_required(login_url='the_cauldron:login')
+    @remember_language
     def wrapped(request, *args, **kwargs):
         if legal.pending_documents(request.user):
             query = urlencode({'next': request.get_full_path()})
@@ -52,8 +55,42 @@ def cauldron_page(view):
     return wrapped
 
 
+def _landing(request):
+    """The public landing. Signed-in users go straight to their day: the
+    journal is The Cauldron's home (#102)."""
+    if request.user.is_authenticated:
+        return redirect('the_cauldron:journal')
+    return render(request, 'the_cauldron/landing.html', {
+        **public_seo(request, 'landing'),
+        'showcase_tree': showcase_tree(),
+    })
+
+
+@remember_language
 def landing_view(request):
-    return render(request, 'the_cauldron/landing.html')
+    return _landing(request)
+
+
+def landing_es_view(request):
+    """/cauldron/es/ — the landing, always in Spanish (indexable)."""
+    force_spanish(request)
+    return _landing(request)
+
+
+def _legal_page(request, page):
+    return render(request, f'the_cauldron/legal/{page}.html', public_seo(request, page))
+
+
+@remember_language
+def legal_page_view(request, page):
+    """Terms or privacy notice, in the user's language."""
+    return _legal_page(request, page)
+
+
+def legal_page_es_view(request, page):
+    """Terms or privacy notice at their /cauldron/es/ URL, always in Spanish."""
+    force_spanish(request)
+    return _legal_page(request, page)
 
 
 def _first_unready_section(user):
@@ -95,7 +132,11 @@ def forge_view(request, section=None):
     return render(
         request,
         'the_cauldron/forge.html',
-        {'initial_tab': FORGE_SECTIONS[section]},
+        {
+            'initial_tab': FORGE_SECTIONS[section],
+            'forge_strings': forge_strings(),
+            'forge_catalog': forge_catalog(),
+        },
     )
 
 
@@ -205,7 +246,7 @@ def _safe_next(request):
         target, allowed_hosts={request.get_host()}, require_https=request.is_secure()
     ):
         return target
-    return reverse('the_cauldron:landing')
+    return reverse('the_cauldron:journal')  # the app's home (#102)
 
 
 def _nutrition_context(request, page, **extra):

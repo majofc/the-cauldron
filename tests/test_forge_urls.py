@@ -1,5 +1,7 @@
 """Per-section Forge URLs: routing, state-based redirects, deep links."""
 
+from datetime import datetime, timezone as dt_timezone
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
@@ -25,7 +27,10 @@ def plain_static_storage(settings):
 
 @pytest.fixture
 def user(db):
-    user = User.objects.create_user(username="wanderer", password="pw12345!")
+    # Joined before open sign-up (#72): signs in without email verification.
+    user = User.objects.create_user(
+        username="wanderer", password="pw12345!", date_joined=datetime(2026, 1, 1, tzinfo=dt_timezone.utc)
+    )
     legal.accept(user, legal.GATED)  # past the terms gate (#84)
     return user
 
@@ -152,7 +157,7 @@ def test_logged_out_deep_link_round_trips_to_the_requested_section(db, user):
 
     logged_in = anon.post(
         "/cauldron/login/?next=/cauldron/forge/progress/",
-        {"username": "wanderer", "password": "pw12345!"},
+        {"login": "wanderer", "password": "pw12345!"},  # allauth form (#72)
     )
     assert logged_in.status_code == 302
     assert logged_in.url == "/cauldron/forge/progress/"
