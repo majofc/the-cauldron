@@ -653,22 +653,45 @@ def sets_for_volume(volume, frequency) -> int:
     return max(SETS_MIN, min(SETS_MAX, math.floor(volume / frequency + 0.5)))
 
 
-def regenerate_volume(program, pattern_ids=None) -> list:
-    """Re-derive ``target_sets`` on the served day from the weekly volume, for
-    ``pattern_ids`` only (``None`` = every pattern). Today's untouched sets of
-    the prescriptions that changed follow (added or removed, the last stays
-    AMRAP); a movement with logged values keeps today's sets as they are.
-    Returns the prescriptions whose set count changed."""
+def _served_volume(program):
+    """``(prescriptions, frequency)`` of the served day — ``([], None)`` without one."""
     day = ProgramDay.objects.filter(program=program, day_index=0).first()
     if day is None:
-        return []
+        return [], None
     prescriptions = list(day.prescriptions.select_related("exercise").prefetch_related(
         "exercise__required_equipment", "exercise__alternative_equipment"))
     # Only performable movements rotate through the openings (select_day_prescriptions).
     owned = owned_equipment_keys_for(program.user)
     blocked = blocked_exercise_ids(program.user)
     trained = sum(1 for p in prescriptions if is_performable(p.exercise, owned, blocked))
-    target = sets_for_volume(program.weekly_volume_target, weekly_frequency(program, trained))
+    return prescriptions, weekly_frequency(program, trained)
+
+
+def program_sets(user) -> int:
+    """Sets per session the active program's volume gives — what a ⇄ swap
+    prescribes (#116). ``DEFAULT_TARGET_SETS`` without a program."""
+    return _sets_of(Program.objects.filter(user=user, is_active=True).first())
+
+
+def _sets_of(program) -> int:
+    if program is None:
+        return DEFAULT_TARGET_SETS
+    _, frequency = _served_volume(program)
+    if frequency is None:
+        return DEFAULT_TARGET_SETS
+    return sets_for_volume(program.weekly_volume_target, frequency)
+
+
+def regenerate_volume(program, pattern_ids=None) -> list:
+    """Re-derive ``target_sets`` on the served day from the weekly volume, for
+    ``pattern_ids`` only (``None`` = every pattern). Today's untouched sets of
+    the prescriptions that changed follow (added or removed, the last stays
+    AMRAP); a movement with logged values keeps today's sets as they are.
+    Returns the prescriptions whose set count changed."""
+    prescriptions, frequency = _served_volume(program)
+    if frequency is None:
+        return []
+    target = sets_for_volume(program.weekly_volume_target, frequency)
     changed = [
         p for p in prescriptions
         if (pattern_ids is None or p.pattern_id in pattern_ids) and p.target_sets != target
@@ -678,6 +701,30 @@ def regenerate_volume(program, pattern_ids=None) -> list:
     PrescribedExercise.objects.bulk_update(changed, ["target_sets"])
     _rewrite_open_sets(program.user, changed, skip_logged=True)
     return changed
+
+
+def align_volume(program) -> bool:
+    """Put a program whose patterns disagree with its weekly volume back on
+    ``DEFAULT_TARGET_SETS`` everywhere (#116): 0038 set every volume to 16
+    without regenerating, so the first touched pattern jumped to 5 sets. The
+    volume becomes the highest that still gives 3, so losing one pattern later
+    doesn't drop to 2. An aligned program is left alone; today's untouched sets
+    follow (``regenerate_volume``). Returns whether the program changed."""
+    prescriptions, frequency = _served_volume(program)
+    if frequency is None:
+        return False
+    target = sets_for_volume(program.weekly_volume_target, frequency)
+    if all(p.target_sets == target for p in prescriptions):
+        return False
+    volumes = [v for v in range(VOLUME_MIN, VOLUME_MAX + 1)
+               if sets_for_volume(v, frequency) == DEFAULT_TARGET_SETS]
+    if not volumes:
+        return False
+    with transaction.atomic():
+        program.weekly_volume_target = max(volumes)
+        program.save(update_fields=["weekly_volume_target"])
+        regenerate_volume(program)
+    return True
 
 
 def set_weekly_volume(user, program, volume) -> dict:
@@ -930,8 +977,8 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
 # value — otherwise every page load would leave an empty session behind.
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Sets prescribed for a movement that has no prescription behind it (a ⇄ swap).
-# Generated prescriptions follow the weekly volume instead (``sets_for_volume``).
+# Sets of a pattern before any volume applies, and what ``align_volume`` resets
+# to. A ⇄ swap follows the program's volume (``program_sets``).
 DEFAULT_TARGET_SETS = 3
 
 
@@ -964,12 +1011,13 @@ def resumable_session(user) -> "WorkoutSession | None":
     )
 
 
-def _block_targets(profile, exercise, presc=None) -> dict:
+def _block_targets(profile, exercise, presc=None, sets=DEFAULT_TARGET_SETS) -> dict:
     """Sets / rep targets / load / rest for one movement on the plan.
 
     With a prescription behind it those come from the prescription. Without one
     — a ⇄ swap — they come from the exercise itself: a swapped-in movement
-    inherits nothing from the movement it replaced.
+    inherits nothing from the movement it replaced. Its ``sets`` are the
+    program's (``program_sets``), passed in by the caller.
     """
     if presc is not None:
         return {
@@ -983,7 +1031,7 @@ def _block_targets(profile, exercise, presc=None) -> dict:
         exercise, exercise.rep_range_min, exercise.rep_range_max
     )
     return {
-        "sets": DEFAULT_TARGET_SETS,
+        "sets": sets,
         "reps_min": reps_min,
         "reps_max": reps_max,
         "load": _initial_load(profile, exercise),
@@ -1188,6 +1236,7 @@ def swap_candidates(user) -> dict:
     profile = get_or_create_equipment_profile(user)
     owned = owned_equipment_keys(profile)
     blocked = blocked_exercise_ids(user)
+    sets = program_sets(user)
 
     pattern_ids = set(MovementPattern.objects.values_list("uuid", flat=True))
     chain_of = chain_map_for(pattern_ids)
@@ -1227,7 +1276,7 @@ def swap_candidates(user) -> dict:
         )
         # Bar pull-up chains present as the grip the Forge would schedule today.
         current = select_grip_variant(user, current)
-        targets = _block_targets(profile, current, None)
+        targets = _block_targets(profile, current, None, sets)
         candidates.append(
             {
                 "chain_key": str(chain),
@@ -1281,7 +1330,9 @@ def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -
         raise ValueError(_("you cannot perform that movement"))
 
     profile = get_or_create_equipment_profile(session.user)
-    targets = _block_targets(profile, to_exercise, None)
+    # The session's own program, which may no longer be the active one.
+    program = session.program_day.program if session.program_day_id else None
+    targets = _block_targets(profile, to_exercise, None, _sets_of(program))
     session.set_logs.filter(exercise=from_exercise).delete()
     for set_index in range(targets["sets"]):
         is_amrap = set_index == targets["sets"] - 1
