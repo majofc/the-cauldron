@@ -40,6 +40,13 @@ def nutrition_strings():
         "rec_field_sex": _("sex"),
         "rec_field_age": _("birth year"),
         "rec_field_activity": _("activity level"),
+        # Age gate (#115)
+        "age_required": _("Your birth year is required."),
+        # Journal: why the gauges lack a recommended goal (#114)
+        "who_needs_weight": _("No recommended goal for %(nutrients)s: it's calculated from your weight, which you haven't added yet."),
+        "who_needs_weight_link": _("Add your weight"),
+        "who_unresolved": _("No recommended goal for %(nutrients)s until you add your %(fields)s."),
+        "who_unresolved_link": _("Complete “About you”"),
         # The goal cauldron (#107)
         "cauldron_others": _("Others (%(n)s)"),
         "cauldron_avg": _("daily average"),
@@ -74,6 +81,7 @@ def nutrition_strings():
         "status_met": _("met"),
         "status_missed": _("missed"),
         "status_uncertain": _("uncertain"),
+        "status_near": _("off your goal · within the recommended"),
         "status_pending": _("not yet"),
         "status_not_logged": _("not logged"),
         "totals_incomplete": _("“≥” means some of what you ate has no data for that nutrient, so the real amount may be higher."),

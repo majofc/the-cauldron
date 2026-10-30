@@ -95,12 +95,12 @@ class TestConnectClicked:
 
 class TestLegalUpdate:
     def test_versions_bumped_and_pages_match(self, db):
-        assert legal.CURRENT_VERSIONS[legal.TERMS] == "1.3"
-        assert legal.CURRENT_VERSIONS[legal.PRIVACY] == "1.5"  # 1.5: body data (#105) + sign-up / Google (#72)
+        assert legal.CURRENT_VERSIONS[legal.TERMS] == "1.4"  # 1.4: adults only (#115)
+        assert legal.CURRENT_VERSIONS[legal.PRIVACY] == "1.6"  # 1.6: the birth year is required (#115)
         privacy = Client().get("/cauldron/privacy/").content.decode()
         terms = Client().get("/cauldron/terms/").content.decode()
-        assert "Version 1.5" in privacy and "AI assistants you connect" in privacy
-        assert "Version 1.3" in terms and "7. AI assistants" in terms
+        assert "Version 1.6" in privacy and "AI assistants you connect" in privacy
+        assert "Version 1.4" in terms and "7. AI assistants" in terms
 
     def test_users_on_the_old_versions_are_asked_again(self, db):
         user = _user("old", consent=False)

@@ -43,7 +43,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from the_cauldron.mcp_server.errors import INVALID_PARAMS, InsufficientScope, ProtocolError, ToolError
 from the_cauldron.models import McpConfirmation, McpIdempotency
 from the_cauldron.nutrition_writes import PlanConflict
-from the_cauldron.services import legal
+from the_cauldron.services import age_gate, legal
 from the_cauldron.services.grimoire import ConversionError
 from the_cauldron.services.nutrition import NutritionInputError
 
@@ -124,6 +124,18 @@ def list_tools():
 
 def has_scope(ctx, scope):
     return scope in ctx.scopes or (scope == READ and WRITE in ctx.scopes)
+
+
+def age_error(ctx):
+    """None when the user may use The Cauldron at all (#115); else why not."""
+    code = age_gate.blocked(ctx.user)
+    if code is None:
+        return None
+    if code == age_gate.AGE_REQUIRED:
+        message = _("The Cauldron needs your birth year first. Open this page, confirm it, and ask again.")
+    else:
+        message = _("The Cauldron is only for people 18 and older.")
+    return ToolError(code, message, accept_url=ctx.absolute(reverse("the_cauldron:age-confirm")))
 
 
 def consent_error(ctx):
@@ -243,6 +255,9 @@ def call_tool(ctx, name, arguments):
         request_id = arguments.pop("client_request_id", None)
         token = arguments.pop("confirm_token", None)
         with translation.override(ctx.language), timezone.override(ctx.tz):
+            blocked = age_error(ctx)
+            if blocked:
+                raise blocked
             if entry.consent:
                 blocked = consent_error(ctx)
                 if blocked:

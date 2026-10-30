@@ -3,13 +3,14 @@
 {% comment %}
 Daily nutrition pages (#80–#84), one template switched by ``page``:
 - accept  — accept the current terms + privacy notice (the legal gate)
+- age / underage — confirm the birth year; no access under 18 (the age gate, #115)
 - profile — body data (#105), timezone, sensitive-data consent, my goals beside
   the recommended ones
 - journal — one day: what you ate, the ritual (meal plan), totals vs goals
 Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 {% endcomment %}
 
-{% block title %}{% if page == "profile" %}{% trans "Your profile — The Cauldron" %}{% elif page == "journal" %}{% trans "The Cauldron" %}{% else %}{% trans "Terms update — The Cauldron" %}{% endif %}{% endblock %}
+{% block title %}{% if page == "profile" %}{% trans "Your profile — The Cauldron" %}{% elif page == "journal" %}{% trans "The Cauldron" %}{% elif page == "age" or page == "underage" %}{% trans "Your age — The Cauldron" %}{% else %}{% trans "Terms update — The Cauldron" %}{% endif %}{% endblock %}
 {% block meta_description %}{% trans "Daily nutrient goals, a meal log and a meal planner — The Cauldron." %}{% endblock %}
 
 {% block favicons %}{% include 'the_cauldron/_favicons.html' %}{% endblock %}
@@ -44,8 +45,8 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
 
 {% block nav_cta %}
 <div class="nav-cta">
-  {% if page != "accept" %}{% include 'the_cauldron/_assistant_link.html' %}{% endif %}
-  {% if page == "profile" %}{% include 'the_cauldron/_profile_link.html' with active=True %}{% elif page != "accept" %}{% include 'the_cauldron/_profile_link.html' %}{% endif %}
+  {% if not is_gate %}{% include 'the_cauldron/_assistant_link.html' %}{% endif %}
+  {% if page == "profile" %}{% include 'the_cauldron/_profile_link.html' with active=True %}{% elif not is_gate %}{% include 'the_cauldron/_profile_link.html' %}{% endif %}
   <a href="{% url 'the_cauldron:logout' %}" class="btn-primary btn-sm">{% trans "Sign out" %}</a>
 </div>
 {% endblock %}
@@ -80,6 +81,39 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
         <button type="submit" class="btn-cauldron btn-cauldron--primary" id="nut-accept-btn" disabled>{% trans "Accept and continue" %}</button>
       </div>
     </form>
+  </article>
+
+  {% elif page == "age" %}
+  <!-- ── Age gate (#115): the birth year, once ── -->
+  <article class="grim-spell-page nut-narrow">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <form class="grim-spell-page-body grim-form" id="nut-age-form" novalidate>
+      <h1 class="grim-h2">{% trans "Confirm your birth year" %}</h1>
+      <p class="grim-help">{% trans "The Cauldron is only for people 18 and older. Tell us the year you were born to keep going." %}</p>
+      <label class="grim-field"><span>{% trans "Birth year" %}</span>
+        <input type="number" name="birth_year" id="nut-age-year" min="1900" max="2100" inputmode="numeric" placeholder="1995" required></label>
+      <p class="grim-error" id="nut-age-error" role="alert" hidden></p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--ghost" href="{% url 'the_cauldron:logout' %}">{% trans "Sign out" %}</a>
+        <button type="submit" class="btn-cauldron btn-cauldron--primary" id="nut-age-btn">{% trans "Continue" %}</button>
+      </div>
+    </form>
+  </article>
+
+  {% elif page == "underage" %}
+  <!-- ── Age gate (#115): under 18, no access. The account isn't deleted. ── -->
+  <article class="grim-spell-page nut-narrow">
+    <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
+    <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+    <div class="grim-spell-page-body">
+      <h1 class="grim-h2">{% trans "Access not available" %}</h1>
+      <p>{% trans "The Cauldron is only for people 18 and older, so this account can't use it." %}</p>
+      <p class="grim-help">{% blocktrans %}If your birth year is wrong, or you want your data deleted, write to <a href="mailto:siesacv.90@gmail.com">siesacv.90@gmail.com</a>.{% endblocktrans %}</p>
+      <div class="grim-actions">
+        <a class="btn-cauldron btn-cauldron--primary" href="{% url 'the_cauldron:logout' %}">{% trans "Sign out" %}</a>
+      </div>
+    </div>
   </article>
 
   {% else %}
@@ -209,7 +243,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
           </div>
         </div>
         <p class="nut-legend" aria-hidden="true"><span class="nut-legend-mine">{% trans "My goal" %}</span>
-          <span class="nut-legend-who">{% trans "Recommended" %}</span></p>
+          <span class="nut-legend-who">{% trans "Recommended" %}</span>
+          <span class="nut-legend-near">{% trans "Off your goal, within the recommended" %}</span></p>
+        <p class="grim-help nut-who-missing" id="nut-who-missing" hidden></p>
         <p class="grim-help" id="nut-who-minor" hidden>{% trans "Recommended goals are for adults only, so none are shown." %}</p>
         <div id="nut-gauges" class="nut-gauges" aria-live="polite"></div>
         {% include "the_cauldron/_recommendation_notice.html" %}
@@ -358,10 +394,10 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
     <form class="grim-spell-page-body grim-form" id="nut-body-form" novalidate>
       <h2 class="grim-h2" id="nut-body-title">{% trans "About you" %}</h2>
-      <p class="grim-help">{% trans "All optional. Birth year and sex compare your Forge results with people like you; with your weight and activity level they also set your recommended daily goals." %}</p>
+      <p class="grim-help">{% trans "Your birth year is required: The Cauldron is for people 18 and older. The rest is optional. Birth year and sex compare your Forge results with people like you; with your weight and activity level they also set your recommended daily goals." %}</p>
       <div class="nut-body-grid">
         <label class="grim-field"><span>{% trans "Birth year" %}</span>
-          <input type="number" name="birth_year" id="nut-birth-year" min="1900" max="2100" inputmode="numeric" placeholder="1995"></label>
+          <input type="number" name="birth_year" id="nut-birth-year" min="1900" max="2100" inputmode="numeric" placeholder="1995" required></label>
         <label class="grim-field"><span>{% trans "Sex" %}</span>
           <select name="sex" id="nut-sex">
             <option value="undisclosed">{% trans "Prefer not to say" %}</option>

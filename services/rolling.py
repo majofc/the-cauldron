@@ -107,6 +107,9 @@ def rolling(user, span, days, now=None):
     who = _judge_set([n for n in nu.FIELDS if n in rec["goals"]],
                      lambda day: rec["goals"], local_days, values, missing, logged)
     who["status_reason"] = rec["status"]
+    # Why a recommendation is missing, so the journal can say what to add (#114).
+    for reason in ("needs_weight", "assumed", "unresolved"):
+        who[reason] = rec[reason]
 
     return {
         "span": span,

@@ -28,11 +28,12 @@ from the_cauldron.grimoire_serializers import (
     TagSerializer,
 )
 from the_cauldron.models import Casting, GrimoirePreferences, Spell, Tag
+from the_cauldron.permissions import AdultOnly
 from the_cauldron.services import grimoire, grimoire_nutrition, grimoire_scaling, legal, nutrition
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     lookup_field = "slug"
@@ -55,7 +56,7 @@ class ReagentViewSet(
     PUT/PATCH: only the creator, only before approval (403 otherwise; a
     reagent the user can't see is a 404)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = ReagentSerializer
     lookup_field = "uuid"
     pagination_class = None
@@ -113,7 +114,7 @@ class SpellViewSet(viewsets.ModelViewSet):
     ``?q=`` (English or Spanish title, case/accent-insensitive).
     Order: the user's own spells first, then the coven's; newest first within each."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = SpellSerializer
     lookup_field = "uuid"
     pagination_class = None
@@ -387,7 +388,7 @@ class CastingViewSet(
     including ones whose spell was removed. Only ever the user's own: anyone
     else's casting is a 404. Created through ``spells/{uuid}/castings/``."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = CastingSerializer
     lookup_field = "uuid"
     pagination_class = None
@@ -404,7 +405,7 @@ class CastingViewSet(
 class PreferencesView(APIView):
     """``GET`` / ``PATCH`` the user's Grimoire preferences (``unit_system``)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def _prefs(self, request):
         prefs, _created = GrimoirePreferences.objects.get_or_create(user=request.user)

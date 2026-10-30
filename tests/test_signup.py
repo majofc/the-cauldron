@@ -49,6 +49,7 @@ def _signup_data(**overrides):
         "first_name": "Ada",
         "password1": "s3cret-Cauldron!",
         "password2": "s3cret-Cauldron!",
+        "birth_year": "1990",
         "accept_terms": "on",
         "website": "",
     }
