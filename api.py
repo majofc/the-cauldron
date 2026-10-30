@@ -22,6 +22,7 @@ from the_cauldron.models import (
     PrescribedExercise,
     WorkoutSession,
 )
+from the_cauldron.permissions import AdultOnly
 from the_cauldron.serializers import (
     AssessmentSessionSerializer,
     ExerciseSerializer,
@@ -35,7 +36,7 @@ from the_cauldron.services import forge
 
 
 class PatternViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = MovementPatternSerializer
     queryset = MovementPattern.objects.all()
     lookup_field = "uuid"
@@ -45,7 +46,7 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
     """Catalog of exercises, optionally filtered to the user's owned equipment
     via ?equipment=mine."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = ExerciseSerializer
     lookup_field = "uuid"
 
@@ -100,7 +101,7 @@ class CatalogView(APIView):
     (bodyweight if it needs none); ``owned`` flags groups the user can train.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         profile = forge.get_or_create_equipment_profile(request.user)
@@ -186,7 +187,7 @@ class CatalogView(APIView):
 class EquipmentProfileView(APIView):
     """GET/PUT the current user's equipment profile."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         profile = forge.get_or_create_equipment_profile(request.user)
@@ -212,7 +213,7 @@ class AssessmentView(APIView):
     day now — so an older cached client still forges a program.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         active = AssessmentSession.objects.filter(user=request.user, is_active=True).first()
@@ -242,7 +243,7 @@ class AssessmentView(APIView):
 class RetakeAssessmentView(APIView):
     """POST → deactivate current assessment/program, open a fresh assessment."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def post(self, request):
         session = forge.retake_assessment(request.user)
@@ -254,7 +255,7 @@ class ProgressionActionView(APIView):
     """Accept (climb) or deny (hold) a parked difficulty unlock for one
     prescription. POST /progression/<presc_uuid>/<accept|deny>/."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def post(self, request, presc_uuid, action):
         presc = get_object_or_404(
@@ -280,7 +281,7 @@ class RungOverviewView(APIView):
     """GET → every chain on the live program with the rungs the user may move to,
     plus ``by_exercise`` (rung uuid → prescription uuid) for the skill tree."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         return Response(forge.rung_overview(request.user))
@@ -301,7 +302,7 @@ class SetRungView(APIView):
     - 400 — not a uuid, not on this chain, blocked or needs missing gear.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def _prescription(self, request, presc_uuid):
         return get_object_or_404(
@@ -378,7 +379,7 @@ class ProgramView(APIView):
     """GET the user's active program; ``PATCH {"weekly_volume_target": 16}``
     (4–40, #109) sets the weekly volume and regenerates every pattern's sets."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         # Prescriptions are reconciled when equipment changes, so this is a plain
@@ -435,7 +436,7 @@ class TodayView(APIView):
     second round-trip.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         day = forge.active_day(request.user)
@@ -474,7 +475,7 @@ class SwapCandidatesView(APIView):
     put there — and offers the rest.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         return Response(forge.swap_candidates(request.user))
@@ -483,7 +484,7 @@ class SwapCandidatesView(APIView):
 class RetestReminderDismissView(APIView):
     """POST → suppress the retest nudge for a few days (it returns if still due)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def post(self, request):
         forge.dismiss_retest_prompt(request.user)
@@ -499,7 +500,7 @@ class AssessmentHistoryView(APIView):
     Trial.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         return Response(forge.trial_history(request.user))
@@ -509,7 +510,7 @@ class NormsView(APIView):
     """Decile reference cutoffs for an exercise, for the Progress chart's peer
     lines. GET ?exercise=<name>."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         name = request.query_params.get("exercise", "")
@@ -520,7 +521,7 @@ class ProgressView(APIView):
     """Time-series of completed sessions for the progression chart. Returns one
     point per completed session; the client groups by day/week/month."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def get(self, request):
         # Optional ?exercise=<name> narrows every point to that one movement;
@@ -556,7 +557,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     - ``DELETE /sessions/{uuid}/`` — discard an unfinished session (409 if completed)
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = WorkoutSessionSerializer
     lookup_field = "uuid"
 

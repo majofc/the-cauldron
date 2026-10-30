@@ -15,7 +15,7 @@ from .grimoire_i18n import grimoire_strings
 from .language import force_spanish, public_seo, remember_language
 from .models import Casting, GrimoirePreferences, Program, Spell, UserEquipmentProfile
 from .nutrition_i18n import nutrition_strings
-from .services import grimoire, legal, nutrition
+from .services import age_gate, grimoire, legal, nutrition
 
 # URL slug → the ``data-tab`` key forge.js switches on. Mirrored client-side by
 # TAB_SLUGS in forge.js; keep the two in step.
@@ -41,15 +41,21 @@ SECTION_REQUIREMENTS = {
 def cauldron_page(view):
     """``login_required`` plus the legal gate (#84): a signed-in user who hasn't
     accepted the current terms and privacy notice is sent to the acceptance
-    page first, and comes back here afterwards."""
+    page first, and comes back here afterwards. Then the age gate (#115): no
+    birth year yet → confirm it first; under 18 → no access."""
 
     @wraps(view)
     @login_required(login_url='the_cauldron:login')
     @remember_language
     def wrapped(request, *args, **kwargs):
+        query = urlencode({'next': request.get_full_path()})
         if legal.pending_documents(request.user):
-            query = urlencode({'next': request.get_full_path()})
             return redirect(f"{reverse('the_cauldron:legal-accept')}?{query}")
+        blocked = age_gate.blocked(request.user)
+        if blocked == age_gate.AGE_REQUIRED:
+            return redirect(f"{reverse('the_cauldron:age-confirm')}?{query}")
+        if blocked == age_gate.UNDERAGE:
+            return _underage(request)
         return view(request, *args, **kwargs)
 
     return wrapped
@@ -253,6 +259,8 @@ def _nutrition_context(request, page, **extra):
     prefs, _created = GrimoirePreferences.objects.get_or_create(user=request.user)
     return {
         'page': page,
+        # The gates (#84, #115): no app navigation until they're passed.
+        'is_gate': page in ('accept', 'age', 'underage'),
         'nutrition_strings': nutrition_strings(),
         'unit_system': prefs.unit_system,
         'legal_versions': legal.CURRENT_VERSIONS,
@@ -270,6 +278,29 @@ def legal_accept_view(request):
         return redirect(target)
     return render(request, 'the_cauldron/nutrition.html', _nutrition_context(
         request, 'accept', pending=pending, next_url=target,
+    ))
+
+
+def _underage(request):
+    return render(request, 'the_cauldron/nutrition.html', _nutrition_context(request, 'underage'), status=403)
+
+
+@login_required(login_url='the_cauldron:login')
+@remember_language
+def age_confirm_view(request):
+    """Confirm the birth year (#115): accounts from before the age rule and
+    Google sign-ups have none. The form posts to ``api/age/``; once given, an
+    adult moves on to ``?next=`` and anyone under 18 gets no access."""
+    target = _safe_next(request)
+    if legal.pending_documents(request.user):
+        return redirect(f"{reverse('the_cauldron:legal-accept')}?{urlencode({'next': request.get_full_path()})}")
+    blocked = age_gate.blocked(request.user)
+    if blocked is None:
+        return redirect(target)
+    if blocked == age_gate.UNDERAGE:
+        return _underage(request)
+    return render(request, 'the_cauldron/nutrition.html', _nutrition_context(
+        request, 'age', next_url=target,
     ))
 
 

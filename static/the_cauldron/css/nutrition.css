@@ -190,6 +190,8 @@
   --nut-met: var(--grimoire-herb);
   --nut-missed: var(--grimoire-accent);
   --nut-uncertain: color-mix(in srgb, var(--grimoire-text) 40%, var(--grimoire-page));
+  /* Off my goal, inside the recommended one (#117). */
+  --nut-near: var(--arcano-gold);
   --nut-band: color-mix(in srgb, var(--grimoire-herb) 16%, transparent);
 }
 .nut-scrub { margin: 1.25rem 0 1.5rem; }
@@ -254,6 +256,7 @@
 }
 .nut-gauge--met .nut-gauge-fill { background: var(--nut-met); }
 .nut-gauge--missed .nut-gauge-fill { background: var(--nut-missed); }
+.nut-gauge--near .nut-gauge-fill { background: var(--nut-near); }
 /* Uncertain is told apart by texture as well as tone (the 45° hatch). */
 .nut-gauge--uncertain .nut-gauge-fill {
   background: repeating-linear-gradient(45deg, var(--nut-uncertain) 0 4px, transparent 4px 7px), var(--nut-band);
@@ -266,14 +269,21 @@
 .nut-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex-shrink: 0; background: var(--nut-uncertain); }
 .nut-dot--met { background: var(--nut-met); }
 .nut-dot--missed { background: var(--nut-missed); }
+.nut-dot--near { background: var(--nut-near); }
 .nut-dot--not_logged { background: transparent; border: 1px solid var(--nut-uncertain); }
 .nut-gauge-target--who .nut-dot { outline: 1px dashed var(--grimoire-gilt); outline-offset: 1px; }
-.nut-legend { display: flex; gap: 1.25rem; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--grimoire-text-dim); }
-.nut-legend-mine::before, .nut-legend-who::before {
+/* Journal: why a gauge has no recommended goal (#114) */
+.nut-who-missing-line { display: block; }
+.nut-who-missing-line + .nut-who-missing-line { margin-top: 0.3rem; }
+.nut-who-missing a { color: var(--grimoire-gilt); }
+.nut-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--grimoire-text-dim); }
+.nut-legend-mine::before, .nut-legend-who::before, .nut-legend-near::before {
   content: ""; display: inline-block; width: 1.4rem; height: 0.6rem; margin-right: 0.4rem; vertical-align: middle; border-radius: 3px;
 }
 .nut-legend-mine::before { background: var(--nut-band); }
 .nut-legend-who::before { border: 1px dashed var(--grimoire-gilt); }
+.nut-legend-near::before { background: var(--nut-near); }
+.nut-status--near { color: var(--arcano-gold); border-color: var(--arcano-border-gold); background: var(--arcano-gold-dim); }
 .nut-status--uncertain { color: var(--grimoire-text); border-color: var(--nut-uncertain); background: transparent; }
 .nut-all { margin-top: 1rem; display: grid; gap: 1rem; }
 #nut-all-toggle { margin-top: 1rem; }
@@ -392,6 +402,7 @@
 .nut-cauldron::backdrop { background: color-mix(in srgb, var(--arcano-bg-deep) 78%, transparent); }
 .nut-cauldron[data-status="met"] { --glow: color-mix(in srgb, var(--arcano-sage) 55%, transparent); }
 .nut-cauldron[data-status="missed"] { --glow: color-mix(in srgb, var(--cauldron-paprika) 70%, transparent); }
+.nut-cauldron[data-status="near"] { --glow: color-mix(in srgb, var(--arcano-gold) 65%, transparent); }
 .nut-cauldron[data-status="uncertain"] { --glow: color-mix(in srgb, var(--arcano-cream) 30%, transparent); }
 .nut-cauldron-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .nut-cauldron-head .grim-h2 { margin: 0; }
@@ -407,6 +418,7 @@
 .nut-pot-leg { stroke: var(--grimoire-gilt-border); stroke-width: 6; stroke-linecap: round; }
 .nut-pot-rim { fill: none; stroke: var(--arcano-gold); stroke-width: 2.5; }
 .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--arcano-forest)); }
+.nut-cauldron[data-status="near"] .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--arcano-gold)); }
 .nut-cauldron[data-status="missed"] .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--cauldron-paprika)); }
 
 /* Slices: colours from the design tokens; "others" stays neutral. */
@@ -423,6 +435,7 @@
 
 /* Embers, bubbles, steam, fog */
 .nut-ember { fill: var(--cauldron-ember); opacity: 0.8; animation: nut-flicker 1.6s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.nut-cauldron[data-status="near"] .nut-ember { fill: var(--arcano-gold-light); }
 .nut-cauldron[data-status="missed"] .nut-ember { fill: var(--cauldron-paprika-light); animation-duration: 0.7s; }
 .nut-bubble { fill: none; stroke: color-mix(in srgb, var(--arcano-cream) 55%, transparent); stroke-width: 1.2; animation: nut-bubble 2.8s ease-in infinite; animation-delay: calc(var(--i) * -0.6s); }
 .nut-steam {

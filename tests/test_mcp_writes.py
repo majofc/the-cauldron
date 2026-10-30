@@ -123,9 +123,9 @@ class TestTwoStep:
         token = _token(alice)
         entry = _quick_entry(token)
         raw = _ok(token, "delete_meal", {"id": entry["id"]})["confirm_token"]
-        monkeypatch.setattr(IntakeEntry, "delete", lambda self: (_ for _ in ()).throw(RuntimeError("db down")))
-        assert _err(token, "delete_meal", {"id": entry["id"], "confirm_token": raw})["code"] == "internal_error"
-        monkeypatch.undo()
+        with monkeypatch.context() as m:
+            m.setattr(IntakeEntry, "delete", lambda self: (_ for _ in ()).throw(RuntimeError("db down")))
+            assert _err(token, "delete_meal", {"id": entry["id"], "confirm_token": raw})["code"] == "internal_error"
         assert _ok(token, "delete_meal", {"id": entry["id"], "confirm_token": raw})["deleted"] == entry["id"]
 
     def test_edit_tools_are_marked_and_take_a_token(self, alice):

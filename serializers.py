@@ -1,3 +1,5 @@
+import math
+
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 from rest_framework import serializers
@@ -167,10 +169,18 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     _('Each %(label)s entry needs a numeric "weight" and a whole "count".') % {"label": label}
                 )
-            if weight <= 0:
+            if not math.isfinite(weight) or weight <= 0:
                 raise serializers.ValidationError(_("%(label)s weights must be greater than zero.") % {"label": label})
+            if weight > loads.MAX_PLATE_WEIGHT:
+                raise serializers.ValidationError(
+                    _("%(label)s weights can be at most %(n)s.") % {"label": label, "n": loads.MAX_PLATE_WEIGHT}
+                )
             if count <= 0:
                 raise serializers.ValidationError(_("%(label)s counts must be greater than zero.") % {"label": label})
+            if count > loads.MAX_PLATE_COUNT:
+                raise serializers.ValidationError(
+                    _("At most %(n)s of each %(label)s weight.") % {"label": label, "n": loads.MAX_PLATE_COUNT}
+                )
             cleaned.append({"weight": weight, "count": count})
         return cleaned
 

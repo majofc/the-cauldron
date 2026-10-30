@@ -179,6 +179,27 @@
     });
   }
 
+  // ── Age gate (#115): the birth year, once ──────────────────────────────────
+  function initAge() {
+    const form = $("#nut-age-form");
+    const btn = $("#nut-age-btn");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const year = $("#nut-age-year").value;
+      if (year === "") return showError($("#nut-age-error"), t("age_required"));
+      btn.disabled = true;
+      try {
+        const res = await api("age/", { method: "POST", body: { birth_year: Number(year) } });
+        // Under 18 the page reloads into "Access not available".
+        if (res.code) location.reload();
+        else location.assign(CFG.next || "/cauldron/");
+      } catch (err) {
+        showError($("#nut-age-error"), err);
+        btn.disabled = false;
+      }
+    });
+  }
+
   // ── Sensitive-data consent ─────────────────────────────────────────────────
   function initConsent() {
     const check = $("#nut-consent-check");
@@ -290,7 +311,25 @@
       $("#nut-weight").disabled = !b.has_consent && b.weight_kg == null;
       $("#nut-activity").disabled = !b.has_consent && !b.activity_level;
       $("#nut-body-consent").hidden = b.has_consent;
+      focusMissingBodyField(b);
     } catch (err) { /* the fields just stay empty */ }
+  }
+
+  // Arriving from the journal's "Add your weight" (#114): scroll to "About you"
+  // and focus what's missing. Weight needs the consent first, so without it
+  // the consent section gets the focus instead.
+  function focusMissingBodyField(b) {
+    if (location.hash !== "#nut-body-form") return;
+    let target;
+    if (b.weight_kg == null && !b.has_consent) target = $("#nut-consent-check");
+    else if (b.weight_kg == null) target = $("#nut-weight");
+    else if (!b.birth_year) target = $("#nut-birth-year");
+    else if (!b.sex || b.sex === "undisclosed") target = $("#nut-sex");
+    else target = $("#nut-weight");
+    if (!target) return;
+    const section = target.closest("section") || target;
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.focus({ preventScroll: true });
   }
 
   async function saveBody(e) {
@@ -575,6 +614,18 @@
     return st ? st[i] : null;
   };
 
+  // What a gauge shows (#117): off my goal but inside the recommended one is
+  // "near" (yellow), not "missed"; an uncertain recommendation greys it instead.
+  // Display only — time in range still judges against my goal.
+  function shownStatus(n, i) {
+    const mine = statusOf(n, i, "mine");
+    const who = statusOf(n, i, "who");
+    if (!mine) return who;
+    if (mine === "missed" && who === "met") return "near";
+    if (mine === "missed" && who === "uncertain") return "uncertain";
+    return mine;
+  }
+
   function goalOf(n, i, set = "mine") {
     const s = roll.data.sets[set];
     const low = s.low[n] ? s.low[n][i] : null;
@@ -584,6 +635,25 @@
   }
 
   const summaryOf = (n, set) => roll.data.sets[set].summary.find((x) => x.nutrient === n) || null;
+
+  // Why some gauges have no recommended goal (#114): no weight, or a sex/birth
+  // year the fallbacks can't agree without. Each line links to "About you".
+  function renderWhoMissing(who) {
+    const el = $("#nut-who-missing");
+    if (!el) return;
+    const names = (keys) => keys.map((n) => t(`n_${n}`)).join(", ");
+    const link = (label) => `<a href="${esc(`${CFG.profile}#nut-body-form`)}">${esc(label)}</a>`;
+    const lines = [];
+    if (who.status_reason === "adult" && (who.needs_weight || []).length) {
+      lines.push(`${esc(t("who_needs_weight", { nutrients: names(who.needs_weight) }))} ${link(t("who_needs_weight_link"))}`);
+    }
+    if (who.status_reason === "adult" && (who.unresolved || []).length) {
+      const fields = (who.assumed || []).filter((f) => f !== "activity").map((f) => t(`rec_field_${f}`)).join(", ");
+      lines.push(`${esc(t("who_unresolved", { nutrients: names(who.unresolved), fields }))} ${link(t("who_unresolved_link"))}`);
+    }
+    el.innerHTML = lines.map((line) => `<span class="nut-who-missing-line">${line}</span>`).join("");
+    el.hidden = !lines.length;
+  }
 
   function initialIndex(d) {
     const last = d.ticks.length - 1;
@@ -604,6 +674,7 @@
       roll.follow = roll.index === lastIndex();
       if (!d.tracked.includes(roll.nutrient)) roll.nutrient = d.tracked[0] || null;
       $("#nut-who-minor").hidden = d.sets.who.status_reason !== "minor";
+      renderWhoMissing(d.sets.who);
       const scrub = $("#nut-scrub");
       scrub.max = String(lastIndex());
       scrub.value = String(roll.index);
@@ -680,8 +751,7 @@
     const missing = d.missing[n][i];
     const mine = goalOf(n, i, "mine");
     const who = goalOf(n, i, "who");
-    const lead = mine ? "mine" : "who";
-    const status = statusOf(n, i, lead);
+    const status = shownStatus(n, i);
     const goal = mine || who;
     const low = goal.min_value;
     const high = goal.max_value;
@@ -695,8 +765,10 @@
       const to = g.max_value != null ? at(g.max_value) : 100;
       return `<span class="${cls}" style="left:${from}%;width:${Math.max(0, to - from)}%"></span>`;
     };
+    // My goal's dot follows the gauge, so "near" is yellow there too.
+    const dotOf = (set) => (set === "mine" && status === "near" ? status : statusOf(n, i, set));
     const target = (set, g) => `<span class="nut-gauge-target nut-gauge-target--${set}">
-        <span class="nut-dot nut-dot--${esc(statusOf(n, i, set))}" aria-hidden="true"></span>
+        <span class="nut-dot nut-dot--${esc(dotOf(set))}" aria-hidden="true"></span>
         ${esc(t(`set_${set}`))}: ${esc(rangeText(g))} · ${esc(t(`status_${statusOf(n, i, set)}`))}</span>`;
     let delta;
     if (status === "not_logged") delta = t("gauge_nothing");
@@ -705,7 +777,7 @@
     else delta = t("gauge_in");
     const name = t(`n_${n}`);
     const targets = SETS.map((set) => [set, goalOf(n, i, set)]).filter(([, g]) => g);
-    const label = `${name}: ${valueText(n, value, missing)}, ${targets.map(([set, g]) =>
+    const label = `${name}: ${valueText(n, value, missing)}, ${status === "near" ? `${t("status_near")}, ` : ""}${targets.map(([set, g]) =>
       `${t(`set_${set}`)} ${rangeText(g)} ${t(`status_${statusOf(n, i, set)}`)}`).join(", ")}`;
     return `<button type="button" class="nut-gauge nut-gauge--${esc(status)}${n === roll.nutrient ? " is-selected" : ""}"
         data-nutrient="${n}" aria-pressed="${n === roll.nutrient}" aria-label="${esc(label)}">
@@ -1014,7 +1086,7 @@
 
   function cauldronStatus(n) {
     const i = roll.index;
-    return statusOf(n, i, "mine") || statusOf(n, i, "who") || "none";
+    return shownStatus(n, i) || "none";
   }
 
   async function openCauldron(n) {
@@ -1550,6 +1622,7 @@
   }
 
   if (PAGE === "accept") initAccept();
+  else if (PAGE === "age") initAge();
   else if (PAGE === "profile") initProfile();
   else if (PAGE === "journal") initJournal();
 })();

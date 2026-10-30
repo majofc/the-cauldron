@@ -1321,6 +1321,12 @@ def test_invalid_plate_inventory_is_rejected_not_stored(seeded, client):
                           dumbbell_plates=[{"weight": 2.5, "count": 0}])
     assert resp.status_code == 400
 
+    # Non-finite or absurd inventories would hang the load table (#113 review).
+    for plate in ({"weight": "inf", "count": 4}, {"weight": "nan", "count": 4},
+                  {"weight": 501, "count": 4}, {"weight": 2.5, "count": 101}):
+        resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_plates=[plate])
+        assert resp.status_code == 400, plate
+
     resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights="hello")
     assert resp.status_code == 400
 
