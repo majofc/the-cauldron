@@ -77,6 +77,15 @@ its `scheduled_for` via `forge._performed_at`); **Delete** → `DELETE sessions/
 SetLogs, prescriptions untouched; 409 for a completed session). Today's own planned session and past
 sessions with no values never trigger it.
 
+### After the day's save (#120)
+
+`forge.js:showSessionReport(res, { goToProgress })`: the anvil (`ForgeAnvil.celebrate` → its `closed`
+promise resolves on the button, Escape or a backdrop tap, once), then the unlocks (Claim it / Not yet),
+then — with `goToProgress` — `switchTab("progress")` (pushes `/cauldron/forge/progress/`, so Back returns
+to Today) and the saved session is marked `.is-just-saved` ~2s in the history (`data-session`) and on the
+chart (points carry `session` = its uuid; the dot of its period bucket). Today's Save and earphones mode
+pass `goToProgress: true`; the unfinished-past-session sheet does not (the user still has today to do).
+
 ---
 
 ## Models
@@ -588,6 +597,9 @@ PostHog: `profile_body_data_saved {fields_count}` only.
 
 **Goal cauldron (#107)** — clicking a Journal gauge selects it for the chart **and** opens `#nut-cauldron`
 (a `<dialog>`, nutrition.js `openCauldron`) for that nutrient, `roll.span` and the tick at `roll.index`.
+It is centred on desktop (`position: fixed; inset: 0; margin: auto` — base.css's reset drops the dialog's
+`margin: auto`) and a bottom sheet at ≤768px (#119, STYLE_GUIDE.md § Dialogs): `.nut-cauldron-head` never scrolls,
+`.nut-cauldron-scroll` does, and dragging the head closes it through `js/cauldron-sheet.js` (shared with forge.js).
 `GET rolling/breakdown/?span=&end=&nutrient=` (`services/breakdown.py`, consent) groups the window's entries
 (rolling's rule: `end - span < eaten_at <= end`) by spell / reagent / quick-entry name (label = latest snapshot),
 top `TOP` (5) by known amount + an "others" row (`pie`; amounts ÷ 7 for 7d, summing to the card's value) and

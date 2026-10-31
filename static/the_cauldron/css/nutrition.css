@@ -386,8 +386,13 @@
 /* ── The goal cauldron (#107): a card's number as a pot seen from above ──
    The potion is a pie of the top spells/reagents; unknowns rise as fog. The
    glow follows the card's status. Every motion stops under reduced motion. */
+/* A showModal() <dialog> is centred by hand: base.css's reset drops the UA's
+   margin: auto, and a position other than fixed undoes its inset: 0 (#119). */
 .nut-cauldron {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
   width: min(560px, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   overflow: auto;
@@ -404,7 +409,10 @@
 .nut-cauldron[data-status="missed"] { --glow: color-mix(in srgb, var(--cauldron-paprika) 70%, transparent); }
 .nut-cauldron[data-status="near"] { --glow: color-mix(in srgb, var(--arcano-gold) 65%, transparent); }
 .nut-cauldron[data-status="uncertain"] { --glow: color-mix(in srgb, var(--arcano-cream) 30%, transparent); }
+.nut-cauldron .corner-tl, .nut-cauldron .corner-tr,
+.nut-cauldron .corner-bl, .nut-cauldron .corner-br { border-color: var(--grimoire-corner-color); }
 .nut-cauldron-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.nut-cauldron-handle { display: none; }
 .nut-cauldron-head .grim-h2 { margin: 0; }
 .nut-cauldron-head .grim-help { margin: 0.2rem 0 0; }
 .nut-cauldron-close { font-size: 1.1rem; line-height: 1; padding: 0.35rem 0.5rem; }
@@ -481,6 +489,53 @@
 .nut-fill .grim-help { grid-column: 1 / -1; margin: 0; }
 .nut-cauldron-empty { text-align: center; }
 @media (max-width: 420px) {
-  .nut-cauldron { padding: 1.5rem 1rem 1rem; }
   .nut-fill { grid-template-columns: 1fr; }
+}
+
+/* ── Goal cauldron on phones (≤768px): a bottom sheet (#119) ──
+   ARCANO_STYLE_GUIDE.md § Mobile sheets; the Forge's sheets are the reference.
+   Docked to the bottom at full width; the head (handle · title · 44px ✕) never
+   scrolls, .nut-cauldron-scroll does. Dragging the head down closes it
+   (cauldron-sheet.js). Only the top corner ornaments show. */
+@media (max-width: 768px) {
+  .nut-cauldron {
+    inset: auto 0 0 0;
+    width: 100%; max-width: none;
+    max-height: 92vh; max-height: 92svh;
+    overflow: hidden; padding: 0;
+    border-bottom: none;
+    border-radius: var(--arcano-radius-md) var(--arcano-radius-md) 0 0;
+    will-change: transform;
+  }
+  /* Only while open — display on a closed <dialog> would override the UA's display: none. */
+  .nut-cauldron[open] { display: flex; flex-direction: column; animation: nut-sheet-in 0.25s ease-out; }
+  .nut-cauldron.is-dragging { transition: none; }
+  .nut-cauldron.is-settling { transition: transform 0.2s ease; }
+  .nut-cauldron .corner-bl, .nut-cauldron .corner-br { display: none; }
+
+  .nut-cauldron-head {
+    flex: none; position: relative; align-items: center; min-height: 44px;
+    padding: 1.4rem 1rem 0.6rem 1.4rem;
+    border-bottom: 1px solid var(--grimoire-border);
+    touch-action: none; cursor: grab;
+  }
+  .nut-cauldron-handle {
+    display: block; position: absolute; top: 0.55rem; left: 50%;
+    width: 44px; height: 5px; margin-left: -22px; border-radius: 999px;
+    background: var(--grimoire-gilt-border);
+  }
+  .nut-cauldron-heading { flex: 1 1 auto; min-width: 0; }
+  .nut-cauldron-close { flex: none; width: 44px; height: 44px; padding: 0; }
+
+  .nut-cauldron-scroll {
+    flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: 0 1.4rem calc(1.6rem + env(safe-area-inset-bottom));
+  }
+}
+@keyframes nut-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .nut-cauldron[open] { animation: none; }
+  .nut-cauldron.is-settling { transition: none; }
 }

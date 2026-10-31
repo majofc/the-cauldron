@@ -2219,6 +2219,8 @@ def progress_points(user, exercise=None, muscle=None) -> dict:
             continue
         when = s.performed_at or s.created_at
         points.append({
+            # Lets the client mark the session it just saved on the chart (#120).
+            "session": str(s.uuid),
             "date": when.isoformat(),
             "total_reps": total_reps,
             "total_volume": round(total_volume, 1),
