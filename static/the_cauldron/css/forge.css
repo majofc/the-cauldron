@@ -248,6 +248,17 @@
 .forge-history-card { padding: 1rem; border: 1px solid var(--cauldron-paprika-border); border-radius: 10px; background: var(--cauldron-bg-card); }
 .forge-history-date { color: var(--cauldron-cream-dim); font-size: .85rem; margin-bottom: .5rem; }
 .forge-history-set { display: flex; justify-content: space-between; font-size: .85rem; color: var(--cauldron-cream); padding: .15rem 0; }
+/* Just saved (#120): the day's session, freshly banked, glows for ~2s on Progress. */
+.forge-history-card { transition: border-color .6s ease, box-shadow .6s ease; }
+.forge-history-card.is-just-saved {
+  border-color: var(--cauldron-paprika-light);
+  box-shadow: var(--cauldron-shadow-ember);
+  animation: forge-just-saved 1s ease-in-out 2;
+}
+@keyframes forge-just-saved {
+  0%, 100% { box-shadow: var(--cauldron-shadow-ember); }
+  50% { box-shadow: var(--cauldron-shadow-glow); }
+}
 .forge-delta-up { color: var(--cauldron-paprika-light); }
 .forge-delta-down { color: var(--cauldron-cream-muted); }
 
@@ -1083,7 +1094,19 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-chart-axis { fill: var(--cauldron-cream-muted); font-family: "Inter", sans-serif; font-size: 11px; }
 .forge-chart-line { fill: none; stroke: var(--cauldron-paprika-light); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .forge-chart-area { fill: var(--cauldron-paprika-glow); stroke: none; }
-.forge-chart-dot { fill: var(--cauldron-paprika); stroke: var(--cauldron-bg-card); stroke-width: 1.5; }
+.forge-chart-dot { fill: var(--cauldron-paprika); stroke: var(--cauldron-bg-card); stroke-width: 1.5; transition: r .6s ease, fill .6s ease, stroke .6s ease; }
+.forge-chart-dot.is-just-saved {
+  r: 6px; fill: var(--cauldron-ember); stroke: var(--cauldron-paprika-light); stroke-width: 2;
+  animation: forge-just-saved-dot 1s ease-in-out 2;
+}
+@keyframes forge-just-saved-dot {
+  0%, 100% { stroke-width: 2; }
+  50% { stroke-width: 5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forge-history-card, .forge-chart-dot { transition: none; }
+  .forge-history-card.is-just-saved, .forge-chart-dot.is-just-saved { animation: none; }
+}
 
 /* ── Exercise filters (name + muscle) ───────────────────────────────────── */
 .forge-ex-filters {

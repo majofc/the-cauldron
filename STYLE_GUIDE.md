@@ -189,6 +189,14 @@ below the lowest value, the one just above the highest, and those in between.
 `.forge-asym-row` shows per-leg Trial results with L/R bars; `.is-warn` flags a
 ≥20% imbalance.
 
+## Progress: just-saved highlight (`.is-just-saved`)
+
+After the day's save the Forge lands on Progress and marks the session it just
+stored, for ~2s: its `.forge-history-card` takes a `--cauldron-paprika-light`
+border with a pulsing `--cauldron-shadow-ember`, and its `.forge-chart-dot`
+grows (`r: 6px`) in `--cauldron-ember`. Under `prefers-reduced-motion` the mark
+is static (no pulse, no transition) and still clears after ~2s.
+
 ## Arcane numeral input (`.forge-trial-input`)
 
 Result fields (the Trial and Today logging) are **not boxed**. They render as a
