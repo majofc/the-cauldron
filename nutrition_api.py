@@ -44,7 +44,8 @@ from the_cauldron.nutrition_serializers import (
     PlannedMealInputSerializer,
     PlannedMealSerializer,
 )
-from the_cauldron.services import adherence, breakdown, grimoire, legal, nutrition, rolling
+from the_cauldron.permissions import AdultOnly
+from the_cauldron.services import adherence, age_gate, breakdown, grimoire, legal, nutrition, rolling
 from the_cauldron.services.nutrition import NutritionInputError
 
 
@@ -136,7 +137,7 @@ class LegalWithdrawView(APIView):
 class MeView(APIView):
     """``GET`` / ``PATCH`` ``{"timezone": "America/Mexico_City"}``."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
 
     def _payload(self, user):
         return {"timezone": nutrition.get_profile(user).timezone, "today": nutrition.today_for(user)}
@@ -158,7 +159,7 @@ class BodyView(APIView):
     Adding a weight or activity level needs the sensitive-data consent (403
     ``consent_required`` otherwise); clearing them, birth year and sex don't."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, AdultOnly]
     SENSITIVE = ("weight_kg", "activity_level")
 
     def _payload(self, user):
@@ -175,6 +176,9 @@ class BodyView(APIView):
         if adding and not legal.has_sensitive_consent(request.user):
             return Response({"code": "consent_required", "detail": _("Give your consent first.")},
                             status=status.HTTP_403_FORBIDDEN)
+        # The Cauldron is for adults (#115): the birth year that proves it stays.
+        if "birth_year" in request.data and request.data.get("birth_year") in (None, ""):
+            return Response({"birth_year": [_("Your birth year is required.")]}, status=status.HTTP_400_BAD_REQUEST)
         serializer = BodySerializer(nutrition.get_profile(request.user), data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         profile = serializer.save()
@@ -182,6 +186,31 @@ class BodyView(APIView):
                   profile.activity_level]
         posthog.capture("profile_body_data_saved", properties={"fields_count": sum(bool(f) for f in filled)})
         return Response(self._payload(request.user))
+
+
+class AgeView(APIView):
+    """``POST {"birth_year"}`` — the one-time birth year for an account that has
+    none yet (#115: Google sign-ups and accounts from before the age rule).
+    Never changes one already given: that goes through ``body/``, which a
+    blocked account can't reach. Returns ``{"code"}``: null when they're in."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Terms and privacy (which say why the year is asked) come first.
+        if legal.pending_documents(request.user):
+            raise PermissionDenied({"code": "consent_required",
+                                    "detail": _("Accept the terms and the privacy notice first.")})
+        profile = nutrition.get_profile(request.user)
+        if profile.birth_year:
+            return Response({"code": "conflict", "detail": _("Your birth year is already set.")},
+                            status=status.HTTP_409_CONFLICT)
+        serializer = BodySerializer(profile, data={"birth_year": request.data.get("birth_year")}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get("birth_year") is None:
+            return Response({"birth_year": [_("Your birth year is required.")]}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response({"code": age_gate.blocked(request.user)})
 
 
 # ── Goals (#80) ─────────────────────────────────────────────────────────────
@@ -193,7 +222,7 @@ class GoalsView(APIView):
     min_value, max_value}]}`` replaces it (a nutrient left out, or with kind
     ``none``, has no goal). Changes are versioned, never overwritten."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def get(self, request):
         return Response(payloads.goals_payload(request.user))
@@ -214,7 +243,7 @@ class GoalHistoryView(APIView):
     """Every goal version, newest first per nutrient. Rows replaced on the day
     they were set (never active on any day) are left out."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def get(self, request):
         return Response({"history": payloads.goal_history(request.user)})
@@ -227,7 +256,7 @@ class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
     """The user's meal log. ``?date=YYYY-MM-DD`` (their timezone) filters the
     list; ``day/?date=`` adds totals and goal status."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
     serializer_class = IntakeEntrySerializer
     lookup_field = "uuid"
     pagination_class = None
@@ -288,7 +317,7 @@ class AdherenceView(UserTimezoneMixin, APIView):
     """``?days=7|30`` — met / missed / uncertain / not logged per nutrient,
     % met, streaks and a calendar strip."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def get(self, request):
         try:
@@ -305,7 +334,7 @@ class RollingView(UserTimezoneMixin, APIView):
     hourly tick of the history: values of every nutrient, goal status, goal
     bands and time in range (``services.rolling``)."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def get(self, request):
         span = request.query_params.get("span", "24h")
@@ -323,7 +352,7 @@ class BreakdownView(UserTimezoneMixin, APIView):
     """``?span=24h|7d&end=<tick iso>&nutrient=<key>`` — the goal cauldron
     (``services.breakdown``): top spells/reagents, "others" and the fog."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def get(self, request):
         try:
@@ -340,7 +369,7 @@ class FillView(UserTimezoneMixin, APIView):
     copy of a catalog one; ``entry``: a quick entry's own total. Marked estimated;
     recent entries are gap-filled (``services.breakdown``)."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
 
     def post(self, request):
         data = request.data
@@ -386,7 +415,7 @@ class PlanViewSet(UserTimezoneMixin, mixins.ListModelMixin, mixins.RetrieveModel
     today). ``day/?date=`` adds each meal's totals and the day's projected
     totals vs goals; ``{uuid}/eat/`` turns a planned meal into a log entry."""
 
-    permission_classes = [IsAuthenticated, NutritionConsent]
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
     serializer_class = PlannedMealSerializer
     lookup_field = "uuid"
     pagination_class = None

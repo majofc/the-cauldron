@@ -7,9 +7,10 @@ from allauth.account.app_settings import EmailVerificationMethod
 from allauth.account.forms import LoginForm, SignupForm
 from allauth.account.models import EmailAddress
 from django import forms
+from django.utils import timezone as dj_timezone
 from django.utils.translation import gettext_lazy as _
 
-from .services import legal
+from .services import age_gate, legal
 
 
 # Accounts that existed before open sign-up (#72) were never asked to verify.
@@ -41,10 +42,25 @@ class CauldronSignupForm(SignupForm):
         max_length=150,
         widget=forms.TextInput(attrs={'autocomplete': 'nickname'}),
     )
+    # The Cauldron is for adults (#115): no birth year, or under 18, no account.
+    birth_year = forms.IntegerField(
+        label=_('Birth year'),
+        min_value=1900,
+        widget=forms.NumberInput(attrs={'inputmode': 'numeric', 'placeholder': '1995'}),
+        error_messages={'required': _('Your birth year is required.')},
+    )
     accept_terms = forms.BooleanField(
         required=True,
         error_messages={'required': _('You must accept the Terms and the Privacy Notice.')},
     )
+
+    def clean_birth_year(self):
+        year = self.cleaned_data['birth_year']
+        if year > dj_timezone.localdate().year:
+            raise forms.ValidationError(_('Enter a year between 1900 and this year.'))
+        if not age_gate.is_adult(year):
+            raise forms.ValidationError(_('The Cauldron is only for people 18 and older.'))
+        return year
 
     def clean_email(self):
         # A sign-up left unverified past the link's lifetime gives the address
@@ -62,4 +78,7 @@ class CauldronSignupForm(SignupForm):
         # Runs only for a new account: an email that already exists is never
         # saved (allauth emails that inbox instead, so the response doesn't
         # reveal the account). The ticked box is the acceptance, timestamped.
+        from .models import CauldronProfile
+
         legal.accept(user, legal.GATED)
+        CauldronProfile.objects.update_or_create(user=user, defaults={'birth_year': self.cleaned_data['birth_year']})

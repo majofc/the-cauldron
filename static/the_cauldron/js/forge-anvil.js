@@ -2,7 +2,8 @@
    Arcano Design System — The Cauldron · The Forge
    Hammer-and-anvil forging animation.
      ForgeAnvil.scene(el, {loop})      → ambient inline widget
-     ForgeAnvil.celebrate(opts)        → full-screen reveal
+     ForgeAnvil.celebrate(opts)        → full-screen reveal; returns
+                                         {overlay, close, done, closed}
    Restrained: a few refined sparks, a mystical glow.
    Honours prefers-reduced-motion.
    ═══════════════════════════════════════════════ */
@@ -120,15 +121,23 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
+    // Every way out (the button, Escape, a tap on the backdrop) closes once and
+    // resolves `closed`, so callers can follow up however the card was dismissed.
+    var resolveClosed;
+    var closed = new Promise(function (resolve) { resolveClosed = resolve; });
+    var isClosed = false;
+    function esc(e) { if (e.key === 'Escape') close(); }
     function close() {
+      if (isClosed) return;
+      isClosed = true;
+      document.removeEventListener('keydown', esc);
       overlay.classList.add('is-closing');
       setTimeout(function () { overlay.remove(); }, 360);
+      resolveClosed();
     }
     done.addEventListener('click', function () { close(); if (opts.onDone) opts.onDone(); });
     overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
-    document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
-    });
+    document.addEventListener('keydown', esc);
 
     requestAnimationFrame(function () { overlay.classList.add('is-in'); });
 
@@ -139,7 +148,7 @@
     }, revealAt);
 
     setTimeout(function () { done.focus(); }, revealAt + 260);
-    return { overlay: overlay, close: close, done: done };
+    return { overlay: overlay, close: close, done: done, closed: closed };
   }
 
   window.ForgeAnvil = { scene: scene, celebrate: celebrate, CYCLE: CYCLE };

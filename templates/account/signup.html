@@ -14,6 +14,7 @@
   {% csrf_token %}
   {% include 'the_cauldron/auth/_field.html' with field=form.email %}
   {% include 'the_cauldron/auth/_field.html' with field=form.first_name %}
+  {% include 'the_cauldron/auth/_field.html' with field=form.birth_year %}
   {% include 'the_cauldron/auth/_field.html' with field=form.password1 %}
   {% include 'the_cauldron/auth/_field.html' with field=form.password2 %}
 

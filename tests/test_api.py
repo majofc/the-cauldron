@@ -526,13 +526,19 @@ def test_swap_candidates_exclude_unowned_and_blocked(seeded, client, user):
     assert "Barbell Bench Press" not in names  # no barbell owned
 
 
-def test_swap_candidate_carries_its_own_targets(seeded, client):
+def test_swap_candidate_carries_its_own_targets(seeded, client, user):
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
+    # Sets follow the program's weekly volume (#116), not a fixed 3: the same
+    # count generate_program gave the prescriptions.
+    generated = set(PrescribedExercise.objects.filter(
+        day__program__user=user, day__program__is_active=True, day__day_index=0
+    ).values_list("target_sets", flat=True))
+    assert len(generated) == 1
     for c in _candidates(client)["candidates"]:
         exercise = Exercise.objects.get(uuid=c["exercise"])
-        assert c["target_sets"] == forge.DEFAULT_TARGET_SETS
+        assert {c["target_sets"]} == generated
         assert c["target_rest_seconds"] == exercise.rest_seconds
         assert c["pattern_key"] == exercise.pattern.key
 
@@ -903,6 +909,20 @@ def test_progress_payload_carries_no_asymmetry(seeded, client, user):
     body = client.get("/cauldron/api/progress/").json()
     assert "exercises" in body
     assert "asymmetry" not in body
+
+
+def test_progress_points_name_their_session(seeded, client, user):
+    """Each chart point carries its session's uuid, so after the day's save the
+    client can mark the session it just stored on the Progress chart (#120)."""
+    _set_equipment(client, ["bodyweight"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+    sets = {s["uuid"]: {"actual_reps": s["expected_reps"] or 5} for s in session["set_logs"]}
+    saved = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/", {"sets": sets}, format="json"
+    ).json()["session"]
+    points = client.get("/cauldron/api/progress/").json()["points"]
+    assert [p["session"] for p in points] == [saved["uuid"]]
 
 
 def test_unilateral_amrap_logs_one_reps_per_side_value(seeded, client, user):
@@ -1320,6 +1340,12 @@ def test_invalid_plate_inventory_is_rejected_not_stored(seeded, client):
     resp = _set_equipment(client, ["bodyweight", "dumbbells"],
                           dumbbell_plates=[{"weight": 2.5, "count": 0}])
     assert resp.status_code == 400
+
+    # Non-finite or absurd inventories would hang the load table (#113 review).
+    for plate in ({"weight": "inf", "count": 4}, {"weight": "nan", "count": 4},
+                  {"weight": 501, "count": 4}, {"weight": 2.5, "count": 101}):
+        resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_plates=[plate])
+        assert resp.status_code == 400, plate
 
     resp = _set_equipment(client, ["bodyweight", "dumbbells"], dumbbell_weights="hello")
     assert resp.status_code == 400

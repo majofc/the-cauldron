@@ -15,13 +15,14 @@ Three loading geometries, because the plate arithmetic genuinely differs:
   step costs **1** plate and the total is ``handle + Σ plates``.
 
 The bare bar / empty handle is itself a valid load and is normally the lightest.
-Recipes are minimal-plate greedy (heaviest denomination first) so the
-instruction is deterministic and matches what a person actually does.
+Recipes use the fewest plates, ties broken deterministically, so the
+instruction is stable and matches what a person actually does.
 """
 
 import logging
-from dataclasses import dataclass, field
-from itertools import product
+import math
+from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,12 @@ logger = logging.getLogger(__name__)
 # logged rather than silently discarded.
 MAX_DENOMINATIONS = 8
 MAX_LOADS = 200
+# Per denomination: more plates than this, or heavier, is a typo — and an
+# unbounded count would grow the enumeration table without limit.
+MAX_PLATE_COUNT = 100
+MAX_PLATE_WEIGHT = 500
+# Distinct inventories kept by the enumeration cache — a handful per active user.
+_CACHE_SIZE = 256
 
 # Totals are compared and de-duplicated at this precision — plate weights are
 # real numbers like 1.25, and float noise must not split one load into two.
@@ -88,10 +95,10 @@ def normalize_plates(raw) -> list:
                 weight, count = float(entry), 4
         except (TypeError, ValueError):
             continue
-        if weight <= 0 or count <= 0:
+        if not math.isfinite(weight) or weight <= 0 or weight > MAX_PLATE_WEIGHT or count <= 0:
             continue
         weight = round(weight, _PRECISION)
-        out[weight] = out.get(weight, 0) + count
+        out[weight] = min(out.get(weight, 0) + count, MAX_PLATE_COUNT)
     plates = [{"weight": w, "count": c} for w, c in out.items()]
     plates.sort(key=lambda p: p["weight"], reverse=True)
     if len(plates) > MAX_DENOMINATIONS:
@@ -137,64 +144,79 @@ def orphan_plates(raw, per_step: int) -> list:
 
 
 def _enumerate(plates: list, base: float, per_step: int, multiplier: int) -> list:
-    """Every load assemblable from ``plates``.
+    """Every load assemblable from ``plates``, lightest first.
 
     ``per_step`` is how many physical plates one "step" of a denomination costs
     (4 dumbbell / 2 barbell / 1 kettlebell); ``multiplier`` is how many times a
     step's weight counts toward the prescribed figure (2 for anything symmetric
     loaded per side, 1 for a kettlebell).
 
-    Steps are enumerated heaviest-denomination-first so the first recipe reaching
-    a given total is already the minimal-plate one — later ties are dropped.
+    Cached per inventory (#113): one save asks for the same implement's loads a
+    dozen times. Callers get fresh copies, so nothing they do reaches the cache.
     """
-    usable = [
-        {"weight": p["weight"], "steps": p["count"] // per_step}
-        for p in plates
-        if p["count"] // per_step > 0
-    ]
-    base = round(base, _PRECISION)
-    # The bare bar / empty handle: always buildable, usually the lightest.
-    stacked = multiplier == 1
-    by_total = {
-        base: Load(total=base, per_side=[], leftover_plates=_leftover(plates, {}, per_step),
-                   plate_count=0, stacked=stacked)
-    }
-    if not usable:
-        return list(by_total.values())
+    key = tuple((p["weight"], p["count"]) for p in plates)
+    cached = _enumerate_cached(key, round(base, _PRECISION), per_step, multiplier)
+    return [_clone(load) for load in cached]
 
+
+@lru_cache(maxsize=_CACHE_SIZE)
+def _enumerate_cached(plates: tuple, base: float, per_step: int, multiplier: int) -> tuple:
+    """A reachable-totals table, one denomination at a time (#113).
+
+    Each entry keeps the cheapest recipe for its total: fewest plates, then the
+    smallest step counts heaviest denomination first — the same recipe an
+    exhaustive walk in ``product()`` order would keep. Totals are in hundredths
+    so float noise never splits one load into two. Past ``MAX_LOADS`` only the
+    lightest totals survive each round: a heavier partial total can't end up
+    lighter than the ones already kept.
+    """
+    scale = 10 ** _PRECISION
+    usable = [(weight, count // per_step) for weight, count in plates if count // per_step > 0]
+    # Added weight (hundredths) → (steps used, steps per denomination).
+    # The bare bar / empty handle is the 0 entry: always buildable, the lightest.
+    table = {0: (0, ())}
     truncated = False
-    for combo in product(*[range(u["steps"] + 1) for u in usable]):
-        if not any(combo):
-            continue  # the empty combo is the bare bar, already recorded
-        per_side = [
-            {"weight": usable[i]["weight"], "count": n}
-            for i, n in enumerate(combo)
-            if n
-        ]
-        added = sum(p["weight"] * p["count"] for p in per_side)
-        total = round(base + multiplier * added, _PRECISION)
-        used = {p["weight"]: p["count"] for p in per_side}
-        plate_count = sum(used.values()) * per_step
-        existing = by_total.get(total)
-        if existing is not None and existing.plate_count <= plate_count:
-            continue  # keep the cheaper recipe for this total
-        if existing is None and len(by_total) >= MAX_LOADS:
+    for weight, steps in usable:
+        cents = round(weight * scale)
+        grown = {}
+        for added, (used, combo) in table.items():
+            for n in range(steps + 1):
+                candidate = (used + n, combo + (n,))
+                best = grown.get(added + n * cents)
+                if best is None or candidate < best:
+                    grown[added + n * cents] = candidate
+        if len(grown) > MAX_LOADS:
             truncated = True
-            continue
-        by_total[total] = Load(
-            total=total,
-            per_side=per_side,
-            leftover_plates=_leftover(plates, used, per_step),
-            plate_count=plate_count,
-            stacked=stacked,
-        )
+            cutoff = sorted(grown)[MAX_LOADS - 1]
+            grown = {added: entry for added, entry in grown.items() if added <= cutoff}
+        table = grown
 
     if truncated:
         logger.warning(
             "loads: enumeration capped at %s distinct loads; heavier combinations dropped",
             MAX_LOADS,
         )
-    return sorted(by_total.values(), key=lambda l: l.total)
+    box = [{"weight": weight, "count": count} for weight, count in plates]
+    out = []
+    for added in sorted(table):
+        used, combo = table[added]
+        per_side = [{"weight": weight, "count": n} for (weight, _), n in zip(usable, combo) if n]
+        out.append(Load(
+            total=round(base + multiplier * added / scale, _PRECISION),
+            per_side=per_side,
+            leftover_plates=_leftover(box, {p["weight"]: p["count"] for p in per_side}, per_step),
+            plate_count=used * per_step,
+            stacked=multiplier == 1,
+        ))
+    return tuple(out)
+
+
+def _clone(load: Load) -> Load:
+    return replace(
+        load,
+        per_side=[dict(p) for p in load.per_side],
+        leftover_plates=[dict(p) for p in load.leftover_plates],
+    )
 
 
 def _leftover(plates: list, used_per_side: dict, per_step: int) -> list:

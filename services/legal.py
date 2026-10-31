@@ -24,8 +24,8 @@ PRIVACY = LegalAcceptance.Document.PRIVACY
 SENSITIVE_CONSENT = LegalAcceptance.Document.SENSITIVE_CONSENT
 
 CURRENT_VERSIONS = {
-    TERMS: "1.3",
-    PRIVACY: "1.5",
+    TERMS: "1.4",  # 1.4: adults only (#115)
+    PRIVACY: "1.6",  # 1.6: the birth year is required (#115)
     SENSITIVE_CONSENT: "1.1",
 }
 # Accepting these is required to use any part of The Cauldron.

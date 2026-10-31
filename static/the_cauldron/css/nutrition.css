@@ -190,6 +190,8 @@
   --nut-met: var(--grimoire-herb);
   --nut-missed: var(--grimoire-accent);
   --nut-uncertain: color-mix(in srgb, var(--grimoire-text) 40%, var(--grimoire-page));
+  /* Off my goal, inside the recommended one (#117). */
+  --nut-near: var(--arcano-gold);
   --nut-band: color-mix(in srgb, var(--grimoire-herb) 16%, transparent);
 }
 .nut-scrub { margin: 1.25rem 0 1.5rem; }
@@ -254,6 +256,7 @@
 }
 .nut-gauge--met .nut-gauge-fill { background: var(--nut-met); }
 .nut-gauge--missed .nut-gauge-fill { background: var(--nut-missed); }
+.nut-gauge--near .nut-gauge-fill { background: var(--nut-near); }
 /* Uncertain is told apart by texture as well as tone (the 45° hatch). */
 .nut-gauge--uncertain .nut-gauge-fill {
   background: repeating-linear-gradient(45deg, var(--nut-uncertain) 0 4px, transparent 4px 7px), var(--nut-band);
@@ -266,14 +269,21 @@
 .nut-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; flex-shrink: 0; background: var(--nut-uncertain); }
 .nut-dot--met { background: var(--nut-met); }
 .nut-dot--missed { background: var(--nut-missed); }
+.nut-dot--near { background: var(--nut-near); }
 .nut-dot--not_logged { background: transparent; border: 1px solid var(--nut-uncertain); }
 .nut-gauge-target--who .nut-dot { outline: 1px dashed var(--grimoire-gilt); outline-offset: 1px; }
-.nut-legend { display: flex; gap: 1.25rem; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--grimoire-text-dim); }
-.nut-legend-mine::before, .nut-legend-who::before {
+/* Journal: why a gauge has no recommended goal (#114) */
+.nut-who-missing-line { display: block; }
+.nut-who-missing-line + .nut-who-missing-line { margin-top: 0.3rem; }
+.nut-who-missing a { color: var(--grimoire-gilt); }
+.nut-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--grimoire-text-dim); }
+.nut-legend-mine::before, .nut-legend-who::before, .nut-legend-near::before {
   content: ""; display: inline-block; width: 1.4rem; height: 0.6rem; margin-right: 0.4rem; vertical-align: middle; border-radius: 3px;
 }
 .nut-legend-mine::before { background: var(--nut-band); }
 .nut-legend-who::before { border: 1px dashed var(--grimoire-gilt); }
+.nut-legend-near::before { background: var(--nut-near); }
+.nut-status--near { color: var(--arcano-gold); border-color: var(--arcano-border-gold); background: var(--arcano-gold-dim); }
 .nut-status--uncertain { color: var(--grimoire-text); border-color: var(--nut-uncertain); background: transparent; }
 .nut-all { margin-top: 1rem; display: grid; gap: 1rem; }
 #nut-all-toggle { margin-top: 1rem; }
@@ -376,8 +386,13 @@
 /* ── The goal cauldron (#107): a card's number as a pot seen from above ──
    The potion is a pie of the top spells/reagents; unknowns rise as fog. The
    glow follows the card's status. Every motion stops under reduced motion. */
+/* A showModal() <dialog> is centred by hand: base.css's reset drops the UA's
+   margin: auto, and a position other than fixed undoes its inset: 0 (#119). */
 .nut-cauldron {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
   width: min(560px, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   overflow: auto;
@@ -392,8 +407,12 @@
 .nut-cauldron::backdrop { background: color-mix(in srgb, var(--arcano-bg-deep) 78%, transparent); }
 .nut-cauldron[data-status="met"] { --glow: color-mix(in srgb, var(--arcano-sage) 55%, transparent); }
 .nut-cauldron[data-status="missed"] { --glow: color-mix(in srgb, var(--cauldron-paprika) 70%, transparent); }
+.nut-cauldron[data-status="near"] { --glow: color-mix(in srgb, var(--arcano-gold) 65%, transparent); }
 .nut-cauldron[data-status="uncertain"] { --glow: color-mix(in srgb, var(--arcano-cream) 30%, transparent); }
+.nut-cauldron .corner-tl, .nut-cauldron .corner-tr,
+.nut-cauldron .corner-bl, .nut-cauldron .corner-br { border-color: var(--grimoire-corner-color); }
 .nut-cauldron-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.nut-cauldron-handle { display: none; }
 .nut-cauldron-head .grim-h2 { margin: 0; }
 .nut-cauldron-head .grim-help { margin: 0.2rem 0 0; }
 .nut-cauldron-close { font-size: 1.1rem; line-height: 1; padding: 0.35rem 0.5rem; }
@@ -407,6 +426,7 @@
 .nut-pot-leg { stroke: var(--grimoire-gilt-border); stroke-width: 6; stroke-linecap: round; }
 .nut-pot-rim { fill: none; stroke: var(--arcano-gold); stroke-width: 2.5; }
 .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--arcano-forest)); }
+.nut-cauldron[data-status="near"] .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--arcano-gold)); }
 .nut-cauldron[data-status="missed"] .nut-potion { fill: color-mix(in srgb, var(--arcano-bg-deep) 70%, var(--cauldron-paprika)); }
 
 /* Slices: colours from the design tokens; "others" stays neutral. */
@@ -423,6 +443,7 @@
 
 /* Embers, bubbles, steam, fog */
 .nut-ember { fill: var(--cauldron-ember); opacity: 0.8; animation: nut-flicker 1.6s ease-in-out infinite alternate; animation-delay: calc(var(--i) * -0.37s); }
+.nut-cauldron[data-status="near"] .nut-ember { fill: var(--arcano-gold-light); }
 .nut-cauldron[data-status="missed"] .nut-ember { fill: var(--cauldron-paprika-light); animation-duration: 0.7s; }
 .nut-bubble { fill: none; stroke: color-mix(in srgb, var(--arcano-cream) 55%, transparent); stroke-width: 1.2; animation: nut-bubble 2.8s ease-in infinite; animation-delay: calc(var(--i) * -0.6s); }
 .nut-steam {
@@ -468,6 +489,53 @@
 .nut-fill .grim-help { grid-column: 1 / -1; margin: 0; }
 .nut-cauldron-empty { text-align: center; }
 @media (max-width: 420px) {
-  .nut-cauldron { padding: 1.5rem 1rem 1rem; }
   .nut-fill { grid-template-columns: 1fr; }
+}
+
+/* ── Goal cauldron on phones (≤768px): a bottom sheet (#119) ──
+   ARCANO_STYLE_GUIDE.md § Mobile sheets; the Forge's sheets are the reference.
+   Docked to the bottom at full width; the head (handle · title · 44px ✕) never
+   scrolls, .nut-cauldron-scroll does. Dragging the head down closes it
+   (cauldron-sheet.js). Only the top corner ornaments show. */
+@media (max-width: 768px) {
+  .nut-cauldron {
+    inset: auto 0 0 0;
+    width: 100%; max-width: none;
+    max-height: 92vh; max-height: 92svh;
+    overflow: hidden; padding: 0;
+    border-bottom: none;
+    border-radius: var(--arcano-radius-md) var(--arcano-radius-md) 0 0;
+    will-change: transform;
+  }
+  /* Only while open — display on a closed <dialog> would override the UA's display: none. */
+  .nut-cauldron[open] { display: flex; flex-direction: column; animation: nut-sheet-in 0.25s ease-out; }
+  .nut-cauldron.is-dragging { transition: none; }
+  .nut-cauldron.is-settling { transition: transform 0.2s ease; }
+  .nut-cauldron .corner-bl, .nut-cauldron .corner-br { display: none; }
+
+  .nut-cauldron-head {
+    flex: none; position: relative; align-items: center; min-height: 44px;
+    padding: 1.4rem 1rem 0.6rem 1.4rem;
+    border-bottom: 1px solid var(--grimoire-border);
+    touch-action: none; cursor: grab;
+  }
+  .nut-cauldron-handle {
+    display: block; position: absolute; top: 0.55rem; left: 50%;
+    width: 44px; height: 5px; margin-left: -22px; border-radius: 999px;
+    background: var(--grimoire-gilt-border);
+  }
+  .nut-cauldron-heading { flex: 1 1 auto; min-width: 0; }
+  .nut-cauldron-close { flex: none; width: 44px; height: 44px; padding: 0; }
+
+  .nut-cauldron-scroll {
+    flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: 0 1.4rem calc(1.6rem + env(safe-area-inset-bottom));
+  }
+}
+@keyframes nut-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .nut-cauldron[open] { animation: none; }
+  .nut-cauldron.is-settling { transition: none; }
 }

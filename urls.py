@@ -72,6 +72,7 @@ api_urlpatterns = [
     path("legal/withdraw/", nutrition_api.LegalWithdrawView.as_view(), name="legal-withdraw"),
     path("me/", nutrition_api.MeView.as_view(), name="nutrition-me"),
     path("body/", nutrition_api.BodyView.as_view(), name="nutrition-body"),
+    path("age/", nutrition_api.AgeView.as_view(), name="nutrition-age"),
     path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
@@ -97,6 +98,7 @@ urlpatterns = [
     path('es/terms/', views.legal_page_es_view, {'page': 'terms'}, name='terms-es'),
     path('es/privacy/', views.legal_page_es_view, {'page': 'privacy'}, name='privacy-es'),
     path('accept/', views.legal_accept_view, name='legal-accept'),
+    path('age/', views.age_confirm_view, name='age-confirm'),
     path('profile/', views.profile_view, name='profile'),
     path('journal/', views.journal_view, name='journal'),
     # The MCP endpoint (#89); a browser GET renders the info page. OAuth routes +
