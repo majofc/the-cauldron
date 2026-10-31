@@ -905,6 +905,20 @@ def test_progress_payload_carries_no_asymmetry(seeded, client, user):
     assert "asymmetry" not in body
 
 
+def test_progress_points_name_their_session(seeded, client, user):
+    """Each chart point carries its session's uuid, so after the day's save the
+    client can mark the session it just stored on the Progress chart (#120)."""
+    _set_equipment(client, ["bodyweight"])
+    client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
+    session = _open_today(client)
+    sets = {s["uuid"]: {"actual_reps": s["expected_reps"] or 5} for s in session["set_logs"]}
+    saved = client.post(
+        f"/cauldron/api/sessions/{session['uuid']}/log/", {"sets": sets}, format="json"
+    ).json()["session"]
+    points = client.get("/cauldron/api/progress/").json()["points"]
+    assert [p["session"] for p in points] == [saved["uuid"]]
+
+
 def test_unilateral_amrap_logs_one_reps_per_side_value(seeded, client, user):
     """The final (AMRAP) set of a single-leg move logs one value — reps per
     side. The serializer flags the set as unilateral for the "per side" label."""

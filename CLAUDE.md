@@ -77,6 +77,15 @@ its `scheduled_for` via `forge._performed_at`); **Delete** → `DELETE sessions/
 SetLogs, prescriptions untouched; 409 for a completed session). Today's own planned session and past
 sessions with no values never trigger it.
 
+### After the day's save (#120)
+
+`forge.js:showSessionReport(res, { goToProgress })`: the anvil (`ForgeAnvil.celebrate` → its `closed`
+promise resolves on the button, Escape or a backdrop tap, once), then the unlocks (Claim it / Not yet),
+then — with `goToProgress` — `switchTab("progress")` (pushes `/cauldron/forge/progress/`, so Back returns
+to Today) and the saved session is marked `.is-just-saved` ~2s in the history (`data-session`) and on the
+chart (points carry `session` = its uuid; the dot of its period bucket). Today's Save and earphones mode
+pass `goToProgress: true`; the unfinished-past-session sheet does not (the user still has today to do).
+
 ---
 
 ## Models

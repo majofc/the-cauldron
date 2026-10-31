@@ -441,8 +441,10 @@
     closeOverlay();
   }
 
-  // Game-like session report using ForgeAnvil overlay.
-  async function showSessionReport(res) {
+  // Game-like session report using ForgeAnvil overlay. The anvil, then the
+  // unlocks (Claim it / Not yet); with goToProgress the day's save ends on the
+  // Progress tab with the session it just stored highlighted (#120).
+  async function showSessionReport(res, { goToProgress = false } = {}) {
     const unlocks = (res.progression || []).filter((d) => d.unlock).map((d) => d.unlock);
     const peer = res.peer || [];
 
@@ -528,10 +530,11 @@
     // Use ForgeAnvil if available; otherwise fall back to old showResults.
     if (!window.ForgeAnvil) {
       await showResults({ peer, unlocks, title: t("session_forged") });
+      if (goToProgress) showSavedInProgress(res.session);
       return;
     }
 
-    const { done } = window.ForgeAnvil.celebrate({
+    const { closed } = window.ForgeAnvil.celebrate({
       eyebrow: t("anvil_eyebrow"),
       title: t("anvil_title"),
       sub: t("anvil_sub"),
@@ -540,8 +543,9 @@
       strikes: 3,
     });
 
-    // After closing, process unlock accept/deny via existing overlay flow if unlocks exist.
-    await new Promise((resolve) => { done.addEventListener("click", resolve, { once: true }); });
+    // However the anvil is closed (its button, Escape or the backdrop), the
+    // unlocks still get their Claim it / Not yet before anything else.
+    await closed;
 
     if (unlocks.length) {
       openOverlay();
@@ -561,6 +565,39 @@
       }
       closeOverlay();
     }
+    if (goToProgress) showSavedInProgress(res.session);
+  }
+
+  // ── Just-saved highlight (#120) ───────────────────────────────────────────
+  // The session the day's save just stored, waiting to be marked once in the
+  // history list and once on the chart. Both render on their own fetch, so each
+  // takes its turn when it draws; the mark fades after JUST_SAVED_MS.
+  const JUST_SAVED_MS = 2000;
+  let justSaved = null; // { uuid, pending: Set("history" | "chart") }
+
+  function showSavedInProgress(session) {
+    justSaved = session && session.uuid
+      ? { uuid: session.uuid, pending: new Set(["history", "chart"]) }
+      : null;
+    switchTab("progress"); // reloads the chart + history and pushes /forge/progress/
+    // The tabs sit just under the page header: the top of the page shows them and
+    // the start of Progress (scrolling to the tabs would tuck them under the sticky nav).
+    window.scrollTo({ top: 0 });
+  }
+
+  // True once per renderer while a just-saved session waits to be shown.
+  function takeJustSaved(where) {
+    if (!justSaved || !justSaved.pending.has(where)) return null;
+    justSaved.pending.delete(where);
+    const { uuid } = justSaved;
+    if (!justSaved.pending.size) justSaved = null;
+    return uuid;
+  }
+
+  function flashJustSaved(el) {
+    if (!el) return;
+    el.classList.add("is-just-saved");
+    setTimeout(() => el.classList.remove("is-just-saved"), JUST_SAVED_MS);
   }
 
   // ── Equipment ────────────────────────────────────────────────────────────--
@@ -1344,6 +1381,7 @@
           });
           done();
           showLoader(false);
+          // A past day's session: stay on Today, the current day is still to do.
           await showSessionReport(res);
         } catch (e) {
           notify(t("err_save_that_session"));
@@ -1971,7 +2009,7 @@
       const res = await api(`sessions/${currentSession.uuid}/log/`, { method: "POST", body: { sets } });
       $("#forge-log-session").hidden = true;
       showLoader(false);
-      await showSessionReport(res);
+      await showSessionReport(res, { goToProgress: true });
     } catch (e) {
       notify(t("err_save_session"));
     } finally {
@@ -2906,6 +2944,7 @@
 
   // ── History ──────────────────────────────────────────────────────────────--
   async function loadHistory() {
+    const savedUuid = takeJustSaved("history");
     showLoader(true);
     try {
       const sessions = await api("sessions/");
@@ -2919,6 +2958,7 @@
       completed.forEach((s) => {
         const card = document.createElement("div");
         card.className = "forge-history-card";
+        card.dataset.session = s.uuid;
         const when = s.performed_at
           ? new Date(s.performed_at).toLocaleString(LANG, { dateStyle: "medium", timeStyle: "short" })
           : "—";
@@ -2934,6 +2974,7 @@
         });
         card.innerHTML = rows;
         wrap.appendChild(card);
+        if (s.uuid === savedUuid) flashJustSaved(card);
       });
     } catch (e) {
       notify(t("err_load_history"));
@@ -2953,6 +2994,7 @@
   let chartMuscleFilterReady = false;
 
   async function loadProgress() {
+    const savedUuid = takeJustSaved("chart");
     try {
       const params = [];
       if (chartExercise) params.push(`exercise=${encodeURIComponent(chartExercise)}`);
@@ -2974,6 +3016,16 @@
       } catch (e) { /* no norms for this move */ }
     }
     drawChart();
+    if (savedUuid) flashSavedPoint(savedUuid);
+  }
+
+  // The chart is bucketed by period: mark the dot whose bucket holds the session.
+  function flashSavedPoint(uuid) {
+    const point = progressPoints.find((p) => p.session === uuid);
+    if (!point) return; // filtered out of the chart
+    const key = periodKey(point.date, chartPeriod);
+    const dot = $$("#forge-chart .forge-chart-dot").find((d) => d.dataset.key === key);
+    flashJustSaved(dot);
   }
 
   function populateExerciseFilter(names) {
@@ -3097,7 +3149,7 @@
     const area = `M ${padL},${H - padB} L ` + series.map((s, i) => `${xFor(i)},${yFor(s[1])}`).join(" L ") +
       ` L ${xFor(n - 1)},${H - padB} Z`;
     const dots = series.map((s, i) =>
-      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot"><title>${esc(periodLabel(s[0]))}: ${esc(fmtNum(s[1]))}</title></circle>`
+      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot" data-key="${esc(s[0])}"><title>${esc(periodLabel(s[0]))}: ${esc(fmtNum(s[1]))}</title></circle>`
     ).join("");
     // X labels: show a handful to avoid crowding.
     const step = Math.ceil(n / 6);
@@ -3610,7 +3662,7 @@
       closeVoice();
       $("#forge-log-session").hidden = true;
       $("#forge-earphones").hidden = true;
-      await showSessionReport(res);
+      await showSessionReport(res, { goToProgress: true });
     } catch (e) {
       notify(t("err_save_session"));
       setInstruction(t("v_save_failed"));
