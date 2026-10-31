@@ -443,6 +443,24 @@ cards with corner ornaments, `.grim-field`, `.grim-scope`, `.grim-suggest`) and 
 
 "≥ x" marks a total with missing data, and the status is always text as well as colour.
 
+### Dialogs (`<dialog>` + `showModal()`, #119)
+
+Every `<dialog>` opened with `showModal()` must be centred by hand: base.css's reset (`* { margin: 0 }`) drops the
+browser's `margin: auto`, and any `position` other than `fixed` undoes its `inset: 0`, so the dialog lands in the
+top-left corner. Either use `dialog.arcano-modal`, or give it
+`position: fixed; inset: 0; margin: auto; height: fit-content;` (plus a `max-height` and `overflow: auto` so tall
+content scrolls inside the viewport). Never `position: relative` on the dialog itself.
+
+At ≤ 768px it becomes a **bottom sheet** (ARCANO_STYLE_GUIDE.md § Mobile sheets): `inset: auto 0 0 0`, full width,
+`max-height: 92vh` / `92svh`, top corners rounded, no bottom border, `display: flex; flex-direction: column` **only on
+`[open]`** (a `display` on the closed dialog overrides the browser's `display: none`). A non-scrolling head holds a
+drag handle, the title and a 44px ✕; the content scrolls in its own wrapper. Dragging the head down closes it via
+the shared `cauldron-sheet.js` (`CauldronSheet.wireSwipe(sheet, head, close)` — also used by the Forge's sheets);
+✕, Escape and a backdrop click close it at every size. It carries the four corner ornaments
+(`--grimoire-corner-color` in the Grimoire stack); on phones only the top two show. The slide-up entrance and the
+settle-back are dropped under `prefers-reduced-motion`. Reference: the goal cauldron (`.nut-cauldron`,
+`nutrition.css`).
+
 ---
 
 ## Non-negotiables (these extend global rules)

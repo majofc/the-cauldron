@@ -2834,44 +2834,10 @@
     }
   });
 
-  // Drag a sheet's head down to dismiss it. Phones only — on desktop the head has
-  // no box of its own. Past SWIPE_CLOSE_PX it closes; short of that it settles back.
-  const SWIPE_CLOSE_PX = 80;
-  const phoneSheets = window.matchMedia("(max-width: 768px)");
-
+  // Drag a sheet's head down to dismiss it — shared with the Journal (cauldron-sheet.js).
   function wireSheetSwipe(overlay, close) {
     const sheet = overlay && $(".forge-sheet", overlay);
-    const head = sheet && $(".forge-sheet-head", sheet);
-    if (!head) return;
-    let startY = null;
-    let dy = 0;
-    head.addEventListener("pointerdown", (e) => {
-      if (!phoneSheets.matches || e.target.closest("button")) return;
-      startY = e.clientY;
-      dy = 0;
-      sheet.classList.remove("is-settling");
-      sheet.classList.add("is-dragging");
-      head.setPointerCapture(e.pointerId);
-    });
-    head.addEventListener("pointermove", (e) => {
-      if (startY === null) return;
-      dy = Math.max(0, e.clientY - startY);
-      sheet.style.transform = `translateY(${dy}px)`;
-    });
-    const end = () => {
-      if (startY === null) return;
-      startY = null;
-      sheet.classList.remove("is-dragging");
-      if (dy > SWIPE_CLOSE_PX) {
-        sheet.style.transform = "";
-        close();
-        return;
-      }
-      sheet.classList.add("is-settling");
-      sheet.style.transform = "";
-    };
-    head.addEventListener("pointerup", end);
-    head.addEventListener("pointercancel", end);
+    window.CauldronSheet.wireSwipe(sheet, sheet && $(".forge-sheet-head", sheet), close);
   }
   wireSheetSwipe(exModal, closeExerciseModal);
   wireSheetSwipe(swapModal, closeSwapModal);

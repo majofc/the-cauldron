@@ -1254,6 +1254,8 @@
     $("#nut-cauldron-close").addEventListener("click", () => dlg.close());
     // A click on the backdrop (outside the panel) closes it too.
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    // On phones it is a bottom sheet: dragging its head down closes it too.
+    if (window.CauldronSheet) window.CauldronSheet.wireSwipe(dlg, $(".nut-cauldron-head", dlg), () => dlg.close());
     dlg.addEventListener("close", () => {
       cauldron.seq += 1;
       const card = $(`.nut-gauge[data-nutrient="${cauldron.nutrient}"]`);

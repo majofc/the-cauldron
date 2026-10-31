@@ -365,18 +365,23 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
     <dialog class="nut-cauldron" id="nut-cauldron" aria-labelledby="nut-cauldron-title">
       <div class="corner-tl" aria-hidden="true"></div><div class="corner-tr" aria-hidden="true"></div>
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
+      <!-- On phones (≤768px) it is a bottom sheet: the head never scrolls, the content does,
+           and dragging the head down closes it (cauldron-sheet.js). -->
       <div class="nut-cauldron-head">
-        <div>
+        <span class="nut-cauldron-handle" aria-hidden="true"></span>
+        <div class="nut-cauldron-heading">
           <h2 class="grim-h2" id="nut-cauldron-title"></h2>
           <p class="grim-help" id="nut-cauldron-sub"></p>
         </div>
         <button type="button" class="grim-link-btn nut-cauldron-close" id="nut-cauldron-close"
                 aria-label="{% trans 'Close' %}">✕</button>
       </div>
-      <p class="nut-cauldron-total" id="nut-cauldron-total" aria-live="polite"></p>
-      <div class="nut-cauldron-pot" id="nut-cauldron-pot"></div>
-      <p class="nut-cauldron-caption" id="nut-cauldron-caption" aria-live="polite"></p>
-      <div id="nut-cauldron-body"></div>
+      <div class="nut-cauldron-scroll">
+        <p class="nut-cauldron-total" id="nut-cauldron-total" aria-live="polite"></p>
+        <div class="nut-cauldron-pot" id="nut-cauldron-pot"></div>
+        <p class="nut-cauldron-caption" id="nut-cauldron-caption" aria-live="polite"></p>
+        <div id="nut-cauldron-body"></div>
+      </div>
     </dialog>
 
     <!-- The most frequent action, always one tap away; hidden while the form is on screen -->
@@ -461,6 +466,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
   };
 </script>
 {% include 'the_cauldron/_loader_script.html' %}
+<script src="{% static 'the_cauldron/js/cauldron-sheet.js' %}"></script>
 <script src="{% static 'the_cauldron/js/nutrition.js' %}"></script>
 {% endblock %}
 

@@ -583,6 +583,9 @@ PostHog: `profile_body_data_saved {fields_count}` only.
 
 **Goal cauldron (#107)** — clicking a Journal gauge selects it for the chart **and** opens `#nut-cauldron`
 (a `<dialog>`, nutrition.js `openCauldron`) for that nutrient, `roll.span` and the tick at `roll.index`.
+It is centred on desktop (`position: fixed; inset: 0; margin: auto` — base.css's reset drops the dialog's
+`margin: auto`) and a bottom sheet at ≤768px (#119, STYLE_GUIDE.md § Dialogs): `.nut-cauldron-head` never scrolls,
+`.nut-cauldron-scroll` does, and dragging the head closes it through `js/cauldron-sheet.js` (shared with forge.js).
 `GET rolling/breakdown/?span=&end=&nutrient=` (`services/breakdown.py`, consent) groups the window's entries
 (rolling's rule: `end - span < eaten_at <= end`) by spell / reagent / quick-entry name (label = latest snapshot),
 top `TOP` (5) by known amount + an "others" row (`pie`; amounts ÷ 7 for 7d, summing to the card's value) and
