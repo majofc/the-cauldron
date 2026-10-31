@@ -152,7 +152,12 @@ Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper
 hardcoded 3). `forge.regenerate_volume(program, pattern_ids)` runs for the touched patterns only after `set_rung`,
 `set_load` and `sync_program_equipment` (patterns whose prescription was swapped or re-snapped); editing the volume
 (`set_weekly_volume`) regenerates all. Today's untouched sets follow the new count (`_rewrite_open_sets`); a movement
-with logged values keeps today's sets. ⇄ swaps still use `DEFAULT_TARGET_SETS` (3).
+with logged values keeps today's sets. ⇄ swaps prescribe the program's sets (`forge.program_sets`:
+`sets_for_volume` of the active program; `DEFAULT_TARGET_SETS` (3) without one). `align_forge_volume` (#116; runs on
+container start, idempotent) fixes programs left mixed by 0038: an active program where any served pattern has
+`target_sets != sets_for_volume(volume, frequency)` goes to 3 sets everywhere, with the highest volume in
+`[VOLUME_MIN, VOLUME_MAX]` that gives 3 (`forge.align_volume`); aligned programs are untouched, today's untouched sets
+follow.
 
 **ProgramDay**
 Fields: `program` FK, `day_index`, `name`.

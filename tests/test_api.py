@@ -526,13 +526,19 @@ def test_swap_candidates_exclude_unowned_and_blocked(seeded, client, user):
     assert "Barbell Bench Press" not in names  # no barbell owned
 
 
-def test_swap_candidate_carries_its_own_targets(seeded, client):
+def test_swap_candidate_carries_its_own_targets(seeded, client, user):
     _set_equipment(client, ["bodyweight", "pullup_bar"])
     client.post("/cauldron/api/assessment/", _assessment_payload(), format="json")
 
+    # Sets follow the program's weekly volume (#116), not a fixed 3: the same
+    # count generate_program gave the prescriptions.
+    generated = set(PrescribedExercise.objects.filter(
+        day__program__user=user, day__program__is_active=True, day__day_index=0
+    ).values_list("target_sets", flat=True))
+    assert len(generated) == 1
     for c in _candidates(client)["candidates"]:
         exercise = Exercise.objects.get(uuid=c["exercise"])
-        assert c["target_sets"] == forge.DEFAULT_TARGET_SETS
+        assert {c["target_sets"]} == generated
         assert c["target_rest_seconds"] == exercise.rest_seconds
         assert c["pattern_key"] == exercise.pattern.key
 
