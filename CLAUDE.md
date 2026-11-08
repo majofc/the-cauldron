@@ -134,6 +134,14 @@ There is no `towel` — a towel is assumed universal, so towel rungs only need t
 **UserEquipmentProfile** (OneToOne with User)
 What the user has available.
 Fields: `equipment` M2M, `dumbbell_weights` JSON list, `band_levels`, `barbell_min_increment`, `barbell_plates`, `load_unit`.
+**Disc capacity**: `barbell_max_plates_per_side`, `dumbbell_max_plates_per_side` (per end of a handle),
+`kettlebell_max_plates` (in the shell) — null = no limit, else 1–100. `services.loads._enumerate` drops every total
+whose fewest-plates recipe needs more discs on a side (`loads.max_plates`; `ignore_cap=True` lifts it). A load
+**only the cap blocks** (`progression.blocked_by_plate_cap`) snaps **UP** to the next load that fits (the heaviest
+when none does) — in `nearest_available_load` (resnap, initial load, progression base) and in `set_load`, which
+otherwise snaps down. A load the plates can't make at all keeps the usual nearest/down rule. Fixed weights and
+the barbell's `min_increment` ladder ignore the cap. Form: "Most discs that fit…" under each plate inventory; MCP
+`set_equipment` takes the three fields.
 Birth year and sex moved to `CauldronProfile` (#105, migrations 0034–0036); the peer score reads them through
 `services.forge._demographics` (never creates the row). The Forge's equipment form and MCP `set_equipment` no
 longer take them — the Profile's "About you" does.

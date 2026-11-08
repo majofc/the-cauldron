@@ -167,15 +167,40 @@ def _easiest_first(exercise, options: list) -> list:
     return list(reversed(options)) if getattr(exercise, "is_assisted", False) else options
 
 
+def blocked_by_plate_cap(equipment_profile, exercise, target) -> bool:
+    """True when ``target`` could be built from the user's plates but needs more
+    discs on a side than their sleeve/handle/shell takes (``loads.max_plates``)."""
+    if target is None:
+        return False
+    if loads.recipe_for(equipment_profile, exercise, target) is not None:
+        return False
+    return loads.recipe_for(equipment_profile, exercise, target, ignore_cap=True) is not None
+
+
+def next_load_at_or_above(options: list, target: float) -> float:
+    """The lightest of ``options`` (ascending) at or above ``target``; the
+    heaviest when none reaches it."""
+    for load in options:
+        if round(load, 2) >= round(target, 2):
+            return load
+    return options[-1]
+
+
 def nearest_available_load(equipment_profile, exercise, target) -> Optional[float]:
     """The prescribable load closest to ``target`` (ties go lighter), or the
     easiest one when ``target`` is None — the lightest weight, or the heaviest
-    band for an assisted movement. ``None`` when nothing is prescribable."""
+    band for an assisted movement. ``None`` when nothing is prescribable.
+
+    A ``target`` that only the disc-per-side cap blocks goes UP to the next load
+    that fits instead (``blocked_by_plate_cap``): the user can lift it, their
+    sleeve just can't hold that recipe."""
     options = available_loads(equipment_profile, exercise)
     if not options:
         return None
     if target is None:
         return _easiest_first(exercise, options)[0]
+    if blocked_by_plate_cap(equipment_profile, exercise, target):
+        return next_load_at_or_above(options, target)
     return min(options, key=lambda l: (abs(l - target), l))
 
 
