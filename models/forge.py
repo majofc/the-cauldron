@@ -337,6 +337,12 @@ class UserEquipmentProfile(ForgeBaseModel):
     dumbbell_handle_weight = models.FloatField(
         default=2.0, help_text="Weight of one empty adjustable dumbbell handle."
     )
+    # Disc capacity of each plate-loaded implement (``services.loads``): a load
+    # whose fewest-plates recipe needs more discs on one side is not buildable.
+    # Null = no limit.
+    dumbbell_max_plates_per_side = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Most discs that fit on one end of a dumbbell handle; empty = no limit."
+    )
     band_levels = models.JSONField(
         default=list, blank=True, help_text="Ordered band tensions/labels, easiest first."
     )
@@ -349,6 +355,9 @@ class UserEquipmentProfile(ForgeBaseModel):
         help_text='Barbell plates, e.g. [{"weight": 20, "count": 4}].',
     )
     bar_weight = models.FloatField(default=20.0, help_text="Weight of the empty bar.")
+    barbell_max_plates_per_side = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Most discs that fit on one sleeve of the bar; empty = no limit."
+    )
     kettlebell_mode = models.CharField(
         max_length=8, choices=LoadMode.choices, default=LoadMode.FIXED
     )
@@ -361,6 +370,9 @@ class UserEquipmentProfile(ForgeBaseModel):
     )
     kettlebell_handle_weight = models.FloatField(
         default=6.0, help_text="Weight of the empty adjustable kettlebell shell."
+    )
+    kettlebell_max_plates = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Most discs that fit in the kettlebell shell; empty = no limit."
     )
     # When the user last dismissed the "time to retest" nudge (or started a
     # retake, which counts as acting on it). Suppresses the banner for

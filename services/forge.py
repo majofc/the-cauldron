@@ -1588,7 +1588,8 @@ def set_rung(user, presc, target, confirm_unready=False) -> dict:
 def set_load(user, presc, load) -> dict:
     """Set the load every live prescription of ``presc``'s exercise trains with.
 
-    The value snaps silently DOWN to the nearest buildable load (below the
+    The value snaps silently DOWN to the nearest buildable load (UP when only
+    the disc-per-side cap blocks it; below the
     lightest → the lightest). Bands take a level index the user owns; on an
     assisted rung the index keeps its meaning (a lower level is more help).
     ``sessions_at_top`` resets and a parked unlock clears; today's untouched
@@ -1617,8 +1618,13 @@ def set_load(user, presc, load) -> dict:
     else:
         if value <= 0:
             raise ValueError(_("Enter a load above 0."))
-        below = [o for o in options if o <= value]
-        snapped = max(below) if below else min(options)
+        if progression.blocked_by_plate_cap(profile, exercise, value):
+            # Buildable from their plates, but not within the discs a side
+            # takes: the next load that fits, not a lighter one.
+            snapped = progression.next_load_at_or_above(options, value)
+        else:
+            below = [o for o in options if o <= value]
+            snapped = max(below) if below else min(options)
 
     # Already on that load → leave it alone, as set_rung does for the same rung:
     # resetting would wipe sessions_at_top and a parked unlock for no change.

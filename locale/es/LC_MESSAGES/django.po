@@ -5954,3 +5954,24 @@ msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta con
 
 #~ msgid "Nutrients per 100 g — leave blank if unknown"
 #~ msgstr "Nutrientes por 100 g — déjalo en blanco si no lo sabes"
+
+#: the_cauldron/templates/the_cauldron/forge.html
+msgid "no limit"
+msgstr "sin límite"
+
+#: the_cauldron/templates/the_cauldron/forge.html
+msgid "Most discs that fit on each end — empty for no limit"
+msgstr "Máximo de discos que caben en cada extremo — vacío si no hay límite"
+
+#: the_cauldron/templates/the_cauldron/forge.html
+msgid "Most discs that fit on each sleeve — empty for no limit"
+msgstr "Máximo de discos que caben en cada lado de la barra — vacío si no hay límite"
+
+#: the_cauldron/templates/the_cauldron/forge.html
+msgid "Most discs that fit in the shell — empty for no limit"
+msgstr "Máximo de discos que caben dentro de la pesa — vacío si no hay límite"
+
+#: the_cauldron/serializers.py
+#, python-format
+msgid "Discs per side must be between 1 and %(n)s, or empty for no limit."
+msgstr "Los discos por lado deben estar entre 1 y %(n)s, o vacío si no hay límite."
