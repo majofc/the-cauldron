@@ -17,6 +17,14 @@ Three loading geometries, because the plate arithmetic genuinely differs:
 The bare bar / empty handle is itself a valid load and is normally the lightest.
 Recipes use the fewest plates, ties broken deterministically, so the
 instruction is stable and matches what a person actually does.
+
+**Plate capacity.** A sleeve, handle or shell only takes so many discs. Each
+plate-loaded implement has an optional cap (``barbell_max_plates_per_side``,
+``dumbbell_max_plates_per_side``, ``kettlebell_max_plates``; null = no limit):
+a total whose fewest-plates recipe needs more discs on one side than that is not
+buildable. ``ignore_cap=True`` on the entry points answers "buildable if the
+sleeve were long enough", which ``progression`` uses to tell a load the cap
+blocks (snap UP to the next one that fits) from one the plates can't make.
 """
 
 import logging
@@ -143,24 +151,27 @@ def orphan_plates(raw, per_step: int) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _enumerate(plates: list, base: float, per_step: int, multiplier: int) -> list:
+def _enumerate(plates: list, base: float, per_step: int, multiplier: int,
+               max_per_side: Optional[int] = None) -> list:
     """Every load assemblable from ``plates``, lightest first.
 
     ``per_step`` is how many physical plates one "step" of a denomination costs
     (4 dumbbell / 2 barbell / 1 kettlebell); ``multiplier`` is how many times a
     step's weight counts toward the prescribed figure (2 for anything symmetric
-    loaded per side, 1 for a kettlebell).
+    loaded per side, 1 for a kettlebell). ``max_per_side`` caps the plates on
+    one side (in the shell, for a kettlebell); None = no limit.
 
     Cached per inventory (#113): one save asks for the same implement's loads a
     dozen times. Callers get fresh copies, so nothing they do reaches the cache.
     """
     key = tuple((p["weight"], p["count"]) for p in plates)
-    cached = _enumerate_cached(key, round(base, _PRECISION), per_step, multiplier)
+    cached = _enumerate_cached(key, round(base, _PRECISION), per_step, multiplier, max_per_side)
     return [_clone(load) for load in cached]
 
 
 @lru_cache(maxsize=_CACHE_SIZE)
-def _enumerate_cached(plates: tuple, base: float, per_step: int, multiplier: int) -> tuple:
+def _enumerate_cached(plates: tuple, base: float, per_step: int, multiplier: int,
+                      max_per_side: Optional[int] = None) -> tuple:
     """A reachable-totals table, one denomination at a time (#113).
 
     Each entry keeps the cheapest recipe for its total: fewest plates, then the
@@ -169,6 +180,10 @@ def _enumerate_cached(plates: tuple, base: float, per_step: int, multiplier: int
     so float noise never splits one load into two. Past ``MAX_LOADS`` only the
     lightest totals survive each round: a heavier partial total can't end up
     lighter than the ones already kept.
+
+    ``max_per_side`` prunes partial recipes with too many plates on a side. That
+    is exact: plates only accumulate, and each total keeps its fewest-plates
+    recipe, so a total is dropped only when no recipe for it fits.
     """
     scale = 10 ** _PRECISION
     usable = [(weight, count // per_step) for weight, count in plates if count // per_step > 0]
@@ -181,6 +196,8 @@ def _enumerate_cached(plates: tuple, base: float, per_step: int, multiplier: int
         grown = {}
         for added, (used, combo) in table.items():
             for n in range(steps + 1):
+                if max_per_side is not None and used + n > max_per_side:
+                    break
                 candidate = (used + n, combo + (n,))
                 best = grown.get(added + n * cents)
                 if best is None or candidate < best:
@@ -240,7 +257,27 @@ def _fixed_loads(weights: list) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def dumbbell_loads(profile) -> list:
+def max_plates(profile, key) -> Optional[int]:
+    """The user's disc cap for implement ``key`` — per side for a barbell or a
+    dumbbell end, in the shell for a kettlebell. None = no limit (unset, or
+    junk that can't be read)."""
+    field_name = _CAP_FIELDS.get(key)
+    raw = getattr(profile, field_name, None) if field_name else None
+    try:
+        cap = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return cap if cap > 0 else None
+
+
+_CAP_FIELDS = {
+    "barbell": "barbell_max_plates_per_side",
+    "dumbbells": "dumbbell_max_plates_per_side",
+    "kettlebell": "kettlebell_max_plates",
+}
+
+
+def dumbbell_loads(profile, ignore_cap: bool = False) -> list:
     """Loads for a matched pair of dumbbells — the weight of ONE dumbbell."""
     if getattr(profile, "dumbbell_mode", "fixed") != "plates":
         return _fixed_loads(getattr(profile, "dumbbell_weights", None))
@@ -249,10 +286,11 @@ def dumbbell_loads(profile) -> list:
         base=float(getattr(profile, "dumbbell_handle_weight", 0) or 0),
         per_step=4,   # 2 handles × 2 sides
         multiplier=2,  # both sides of the one dumbbell we prescribe
+        max_per_side=None if ignore_cap else max_plates(profile, "dumbbells"),
     )
 
 
-def barbell_loads(profile) -> list:
+def barbell_loads(profile, ignore_cap: bool = False) -> list:
     """Loads for one bar. Falls back to the legacy fixed increment when the user
     has entered no plates, so existing profiles keep working."""
     plates = normalize_plates(getattr(profile, "barbell_plates", None))
@@ -262,10 +300,11 @@ def barbell_loads(profile) -> list:
         if not inc:
             return []
         return [Load(total=round(inc * n, _PRECISION)) for n in range(1, 41)]
-    return _enumerate(plates, base=bar, per_step=2, multiplier=2)
+    return _enumerate(plates, base=bar, per_step=2, multiplier=2,
+                      max_per_side=None if ignore_cap else max_plates(profile, "barbell"))
 
 
-def kettlebell_loads(profile) -> list:
+def kettlebell_loads(profile, ignore_cap: bool = False) -> list:
     """Loads for a kettlebell — fixed bells, or plates stacked in one shell."""
     if getattr(profile, "kettlebell_mode", "fixed") != "plates":
         return _fixed_loads(getattr(profile, "kettlebell_weights", None))
@@ -274,10 +313,11 @@ def kettlebell_loads(profile) -> list:
         base=float(getattr(profile, "kettlebell_handle_weight", 0) or 0),
         per_step=1,   # plates stack internally, no symmetry
         multiplier=1,
+        max_per_side=None if ignore_cap else max_plates(profile, "kettlebell"),
     )
 
 
-def band_loads(profile) -> list:
+def band_loads(profile, ignore_cap: bool = False) -> list:
     """Bands are discrete ordered levels; the index acts as the load value."""
     bands = list(getattr(profile, "band_levels", None) or [])
     return [Load(total=float(i)) for i in range(len(bands))]
@@ -372,18 +412,19 @@ def _owned_keys(profile) -> set:
     return {getattr(e, "key", e) for e in equipment}
 
 
-def buildable_loads(profile, exercise) -> list:
-    """Ascending loads the user can assemble for ``exercise``'s implement."""
+def buildable_loads(profile, exercise, ignore_cap: bool = False) -> list:
+    """Ascending loads the user can assemble for ``exercise``'s implement.
+    ``ignore_cap`` lifts the disc-per-side limit (see the module docstring)."""
     if profile is None:
         return []
     key = implement_for(profile, exercise)
     if key is None:
         return []
     builder = dict(_IMPLEMENT_ORDER)[key]
-    return builder(profile)
+    return builder(profile, ignore_cap=ignore_cap)
 
 
-def recipe_for(profile, exercise, total) -> Optional[Load]:
+def recipe_for(profile, exercise, total, ignore_cap: bool = False) -> Optional[Load]:
     """The recipe for an already-prescribed ``total``, or None if unbuildable.
 
     Matched on the rounded total so a stored float never misses its own recipe.
@@ -394,7 +435,7 @@ def recipe_for(profile, exercise, total) -> Optional[Load]:
         target = round(float(total), _PRECISION)
     except (TypeError, ValueError):
         return None
-    for load in buildable_loads(profile, exercise):
+    for load in buildable_loads(profile, exercise, ignore_cap=ignore_cap):
         if round(load.total, _PRECISION) == target:
             return load
     return None

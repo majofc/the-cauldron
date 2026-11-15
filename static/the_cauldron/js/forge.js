@@ -614,11 +614,14 @@
       $("#forge-barbell-inc").value = profile.barbell_min_increment || "";
       $("#forge-dumbbell-plates").value = fmtPlates(profile.dumbbell_plates);
       $("#forge-dumbbell-handle").value = profile.dumbbell_handle_weight ?? "";
+      $("#forge-dumbbell-cap").value = profile.dumbbell_max_plates_per_side ?? "";
       $("#forge-barbell-plates").value = fmtPlates(profile.barbell_plates);
       $("#forge-bar-weight").value = profile.bar_weight ?? "";
+      $("#forge-barbell-cap").value = profile.barbell_max_plates_per_side ?? "";
       $("#forge-kettlebells").value = (profile.kettlebell_weights || []).join(", ");
       $("#forge-kettlebell-plates").value = fmtPlates(profile.kettlebell_plates);
       $("#forge-kettlebell-handle").value = profile.kettlebell_handle_weight ?? "";
+      $("#forge-kettlebell-cap").value = profile.kettlebell_max_plates ?? "";
       setLoadUnit(profile.load_unit === "lb" ? "lb" : "kg");
       setImplementMode("dumbbell", profile.dumbbell_mode || "fixed");
       setImplementMode("kettlebell", profile.kettlebell_mode || "fixed");
@@ -918,6 +921,11 @@
       const v = parseFloat($(sel).value);
       return isNaN(v) ? fallback : v;
     };
+    // Disc capacity: blank (or nonsense) = no limit → null.
+    const cap = (sel) => {
+      const v = parseInt($(sel).value, 10);
+      return Number.isFinite(v) && v > 0 ? v : null;
+    };
     let body;
     try {
       showEquipError("");
@@ -928,14 +936,17 @@
         dumbbell_weights: parseWeights($("#forge-dumbbells").value, t("lbl_dumbbell_weights")),
         dumbbell_plates: parsePlates($("#forge-dumbbell-plates").value, t("lbl_dumbbell_plates")),
         dumbbell_handle_weight: num("#forge-dumbbell-handle", 0),
+        dumbbell_max_plates_per_side: cap("#forge-dumbbell-cap"),
         band_levels: parseList($("#forge-bands").value),
         barbell_min_increment: num("#forge-barbell-inc", 2.5),
         barbell_plates: parsePlates($("#forge-barbell-plates").value, t("lbl_barbell_plates")),
         bar_weight: num("#forge-bar-weight", 0),
+        barbell_max_plates_per_side: cap("#forge-barbell-cap"),
         kettlebell_mode: implementMode("kettlebell"),
         kettlebell_weights: parseWeights($("#forge-kettlebells").value, t("lbl_kettlebell_weights")),
         kettlebell_plates: parsePlates($("#forge-kettlebell-plates").value, t("lbl_kettlebell_plates")),
         kettlebell_handle_weight: num("#forge-kettlebell-handle", 0),
+        kettlebell_max_plates: cap("#forge-kettlebell-cap"),
       };
     } catch (err) {
       // A parse failure is the user's typo, not a server problem — show exactly

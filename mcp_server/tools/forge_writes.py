@@ -23,6 +23,9 @@ from the_cauldron.services import forge
 
 MCP = Channel.MCP
 NUMBERS = {"type": "array", "items": {"type": "number", "minimum": 0}, "maxItems": 60}
+# Disc capacity of a plate-loaded implement; loads needing more discs on a side
+# are skipped and a blocked load moves up to the next one that fits.
+PLATE_CAP = {"type": ["integer", "null"], "minimum": 1, "maximum": 100}
 EQUIPMENT_FIELDS = {
     "equipment": {"type": "array", "items": {"type": "string"}, "maxItems": 40,
                   "description": "Every equipment key the user owns (replaces the list); see get_equipment."},
@@ -31,15 +34,18 @@ EQUIPMENT_FIELDS = {
     "dumbbell_weights": {**NUMBERS, "description": "Fixed dumbbells owned, per hand."},
     "dumbbell_plates": NUMBERS,
     "dumbbell_handle_weight": {"type": "number", "minimum": 0},
+    "dumbbell_max_plates_per_side": {**PLATE_CAP, "description": "Most discs that fit on one end of a dumbbell handle; null = no limit."},
     "band_levels": {"type": "array", "items": {"type": ["string", "number"]}, "maxItems": 20,
                     "description": "Band tensions or labels the user owns, easiest first."},
     "barbell_min_increment": {"type": "number", "minimum": 0},
     "barbell_plates": NUMBERS,
     "bar_weight": {"type": "number", "minimum": 0},
+    "barbell_max_plates_per_side": {**PLATE_CAP, "description": "Most discs that fit on one sleeve of the bar; null = no limit."},
     "kettlebell_mode": {"type": "string", "enum": ["fixed", "plates"]},
     "kettlebell_weights": NUMBERS,
     "kettlebell_plates": NUMBERS,
     "kettlebell_handle_weight": {"type": "number", "minimum": 0},
+    "kettlebell_max_plates": {**PLATE_CAP, "description": "Most discs that fit in the kettlebell shell; null = no limit."},
 }
 SET_VALUES = {
     "set_id": {"type": "string", "description": "A set id from get_forge_today / start_forge_session."},

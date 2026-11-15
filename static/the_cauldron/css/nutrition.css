@@ -227,6 +227,9 @@
 .nut-gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; }
 .nut-gauge {
   display: grid;
+  /* One column capped at the card's width (#123): without the cap a long
+     badge widens the implicit column and the whole gauge spills out. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.45rem;
   text-align: left;
   font: inherit;
@@ -242,8 +245,8 @@
 .nut-gauge:focus-visible { outline: 2px solid var(--grimoire-gilt); outline-offset: 2px; }
 .nut-gauge.is-selected { border-color: var(--grimoire-gilt-border); }
 .nut-gauge-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; }
-.nut-gauge-name { font-weight: 600; }
-.nut-gauge-value { font-family: var(--arcano-font-display); font-size: 1.45rem; font-weight: 700; }
+.nut-gauge-name { font-weight: 600; min-width: 0; }
+.nut-gauge-value { font-family: var(--arcano-font-display); font-size: 1.45rem; font-weight: 700; white-space: nowrap; }
 .nut-gauge-track { position: relative; display: block; height: 12px; border-radius: 6px; background: var(--grimoire-nutrient-track); overflow: hidden; }
 .nut-gauge-band { position: absolute; top: 0; bottom: 0; background: var(--nut-band); }
 /* The recommended range (#105): an outline, dashed, over my filled one. */
@@ -263,6 +266,9 @@
 }
 .nut-gauge-foot { display: flex; flex-wrap: wrap; gap: 0.35rem 0.75rem; align-items: center; font-size: 0.88rem; }
 .nut-gauge-delta { font-weight: 600; }
+/* Only the gauge's badge may wrap (#123) — "fuera de tu meta · dentro de la
+   recomendada" doesn't fit a narrow card on one line. Badges elsewhere keep nowrap. */
+.nut-gauge-foot .nut-status { white-space: normal; max-width: 100%; }
 .nut-gauge-targets { display: grid; gap: 0.2rem; font-size: 0.82rem; color: var(--grimoire-text-dim); }
 .nut-gauge-target { display: flex; align-items: center; gap: 0.4rem; }
 /* Both statuses at a glance: a dot per goal set, colour + the word after it. */

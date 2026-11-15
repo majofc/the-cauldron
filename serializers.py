@@ -126,11 +126,12 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
         fields = [
             "uuid", "equipment", "load_unit",
             "dumbbell_mode", "dumbbell_weights", "dumbbell_plates",
-            "dumbbell_handle_weight",
+            "dumbbell_handle_weight", "dumbbell_max_plates_per_side",
             "band_levels",
             "barbell_min_increment", "barbell_plates", "bar_weight",
+            "barbell_max_plates_per_side",
             "kettlebell_mode", "kettlebell_weights", "kettlebell_plates",
-            "kettlebell_handle_weight",
+            "kettlebell_handle_weight", "kettlebell_max_plates",
             "orphan_plates",
         ]
         read_only_fields = ["uuid", "orphan_plates"]
@@ -233,6 +234,26 @@ class UserEquipmentProfileSerializer(serializers.ModelSerializer):
 
     def validate_kettlebell_handle_weight(self, value):
         return self._non_negative(value, _("Kettlebell shell weight"))
+
+    def _plate_cap(self, value):
+        """Null/blank = no limit; otherwise a whole number of discs, 1–MAX_PLATE_COUNT."""
+        if value is None:
+            return None
+        if value < 1 or value > loads.MAX_PLATE_COUNT:
+            raise serializers.ValidationError(
+                _("Discs per side must be between 1 and %(n)s, or empty for no limit.")
+                % {"n": loads.MAX_PLATE_COUNT}
+            )
+        return value
+
+    def validate_barbell_max_plates_per_side(self, value):
+        return self._plate_cap(value)
+
+    def validate_dumbbell_max_plates_per_side(self, value):
+        return self._plate_cap(value)
+
+    def validate_kettlebell_max_plates(self, value):
+        return self._plate_cap(value)
 
     def validate_barbell_min_increment(self, value):
         if value is not None and value <= 0:

@@ -102,6 +102,10 @@
               <span>{% blocktrans trimmed %}Weight of one empty handle (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
               <input type="number" id="forge-dumbbell-handle" step="0.1" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
             </label>
+            <label class="forge-field">
+              <span>{% trans "Most discs that fit on each end — empty for no limit" %}</span>
+              <input type="number" id="forge-dumbbell-cap" step="1" min="1" max="100" inputmode="numeric" placeholder="{% trans "no limit" %}">
+            </label>
             <p class="forge-help">{% blocktrans trimmed %}A pair needs 4 of a plate — one per side, per dumbbell. The weight shown
               is what <em>one</em> dumbbell weighs.{% endblocktrans %}</p>
           </div>
@@ -116,6 +120,10 @@
           <label class="forge-field">
             <span>{% blocktrans trimmed %}Empty bar weight (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
             <input type="number" id="forge-bar-weight" step="0.5" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
+          </label>
+          <label class="forge-field">
+            <span>{% trans "Most discs that fit on each sleeve — empty for no limit" %}</span>
+            <input type="number" id="forge-barbell-cap" step="1" min="1" max="100" inputmode="numeric" placeholder="{% trans "no limit" %}">
           </label>
           <label class="forge-field">
             <span>{% blocktrans trimmed %}Smallest increment (<span class="forge-unit-tag">kg</span>) — used only if you list no plates{% endblocktrans %}</span>
@@ -143,6 +151,10 @@
             <label class="forge-field">
               <span>{% blocktrans trimmed %}Empty shell weight (<span class="forge-unit-tag">kg</span>){% endblocktrans %}</span>
               <input type="number" id="forge-kettlebell-handle" step="0.1" min="0" placeholder="{% trans "weight — 0 if weightless" %}">
+            </label>
+            <label class="forge-field">
+              <span>{% trans "Most discs that fit in the shell — empty for no limit" %}</span>
+              <input type="number" id="forge-kettlebell-cap" step="1" min="1" max="100" inputmode="numeric" placeholder="{% trans "no limit" %}">
             </label>
           </div>
         </div>
