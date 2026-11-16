@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import PrescribedExercise, Program, ProgramDay
 from the_cauldron.services import forge
 from the_cauldron.tests.test_mcp_server import _err, _ok, _token
@@ -110,7 +111,7 @@ class TestSetLoad:
     def test_logged_sets_today_are_409_and_untouched_sets_follow(self, seeded, client, user):
         _dumbbells(user)
         [presc] = _program(user, _ex("Dumbbell Row"), target_load=5)
-        session = forge.start_session(user, presc.day)
+        session = persist_today(user, presc.day)
         assert _set_load(client, presc, 10).status_code == 200
         rows = list(session.set_logs.order_by("set_index"))
         assert {r.expected_load for r in rows} == {10}
@@ -232,7 +233,7 @@ class TestMcp:
         assert _ok(token, "set_forge_load", {"prescription_id": str(presc.uuid), "load": 12}) == {
             "load": 10, "snapped_from": 12, "applied_to": 1}
         assert _err(token, "set_forge_load", {"prescription_id": str(presc.uuid), "load": 0})["code"] == "invalid_input"
-        forge.start_session(user, presc.day).set_logs.update(actual_reps=8)
+        persist_today(user, presc.day).set_logs.update(actual_reps=8)
         assert _err(token, "set_forge_load", {"prescription_id": str(presc.uuid), "load": 15})["code"] == "conflict"
 
     def test_set_forge_weekly_volume(self, seeded, user):

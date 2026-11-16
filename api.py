@@ -1,13 +1,14 @@
 """The Forge DRF API. All endpoints require auth and are scoped to request.user."""
 
 import uuid as uuid_module
+from collections.abc import Mapping
 
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.utils.translation import gettext_noop
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ParseError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,7 +25,9 @@ from the_cauldron.models import (
 )
 from the_cauldron.permissions import AdultOnly
 from the_cauldron.serializers import (
+    AssessmentInputSerializer,
     AssessmentSessionSerializer,
+    SetValuesInputSerializer,
     ExerciseSerializer,
     MovementPatternSerializer,
     PlannedSetLogSerializer,
@@ -35,6 +38,54 @@ from the_cauldron.serializers import (
 from the_cauldron.services import forge
 
 
+class ForgeApiMixin:
+    """Shared by every Forge view.
+
+    - "Today" is read on the device in use (#56): the client's IANA zone from
+      ``X-Cauldron-Timezone`` is scoped to the request for ``forge.local_today``.
+      An invalid zone is ignored (profile zone, then the default).
+    - A write whose body isn't a JSON object (a list, a string) is a 400 before
+      the view runs (#10), never a 500 further down.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        with forge.device_timezone(request.headers.get("X-Cauldron-Timezone")):
+            return super().dispatch(request, *args, **kwargs)
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if request.method in ("POST", "PUT", "PATCH") and not isinstance(request.data, Mapping):
+            raise ParseError(_("The request body must be a JSON object."))
+
+
+def _invalid(errors):
+    return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def _set_values_or_errors(session, data):
+    """``data["sets"]`` checked against #10's shape: an object of this
+    session's set uuids → ``{actual_reps, actual_load}`` (whole/finite numbers
+    ≥ 0, or null). Returns ``(sets, None)`` or ``(None, errors)``. Other keys in
+    a set (an old client's reps in reserve) are ignored."""
+    sets = data.get("sets", {})
+    if not isinstance(sets, Mapping):
+        return None, {"sets": [_("Expected an object of set id → values.")]}
+    known = {str(u) for u in session.set_logs.values_list("uuid", flat=True)}
+    errors, clean = {}, {}
+    for key, values in sets.items():
+        if str(key) not in known:
+            errors[str(key)] = [_("Not a set of this session.")]
+            continue
+        serializer = SetValuesInputSerializer(data=values)
+        if not serializer.is_valid():
+            errors[str(key)] = serializer.errors
+            continue
+        clean[str(key)] = serializer.validated_data
+    if errors:
+        return None, {"sets": errors}
+    return clean, None
+
+
 class PatternViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, AdultOnly]
     serializer_class = MovementPatternSerializer
@@ -42,7 +93,7 @@ class PatternViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "uuid"
 
 
-class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
+class ExerciseViewSet(ForgeApiMixin, viewsets.ReadOnlyModelViewSet):
     """Catalog of exercises, optionally filtered to the user's owned equipment
     via ?equipment=mine."""
 
@@ -92,7 +143,7 @@ class ExerciseViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({"unblocked": str(exercise.uuid)})
 
 
-class CatalogView(APIView):
+class CatalogView(ForgeApiMixin, APIView):
     """Full exercise catalog grouped by equipment, annotated with the user's
     blocks and (for blocked moves) the substitute that would be used.
 
@@ -184,7 +235,7 @@ class CatalogView(APIView):
         return Response({"groups": result})
 
 
-class EquipmentProfileView(APIView):
+class EquipmentProfileView(ForgeApiMixin, APIView):
     """GET/PUT the current user's equipment profile."""
 
     permission_classes = [IsAuthenticated, AdultOnly]
@@ -203,7 +254,7 @@ class EquipmentProfileView(APIView):
         return Response(serializer.data)
 
 
-class AssessmentView(APIView):
+class AssessmentView(ForgeApiMixin, APIView):
     """POST AMRAP results → place the user and generate a program.
 
     Body: {"results": [
@@ -222,25 +273,37 @@ class AssessmentView(APIView):
         return Response(AssessmentSessionSerializer(active).data)
 
     def post(self, request):
+        # Shape first (#10): a non-list ``results`` or a non-object item is a
+        # 400 with field errors; domain rules stay in ``TrialInputError``.
+        shape = AssessmentInputSerializer(data=request.data)
+        if not shape.is_valid():
+            return _invalid(shape.errors)
+        results = [
+            {**row, "tested_exercise": str(row["tested_exercise"])} for row in shape.validated_data["results"]
+        ]
         try:
-            session, program, peer = forge.submit_assessment(request.user, request.data.get("results", []))
+            sub = forge.submit_assessment(request.user, results)
         except forge.TrialInputError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        posthog.capture(
-            "assessment_completed",
-            properties={"result_count": len(request.data.get("results", []))},
-        )
+        if not sub.idempotent:
+            posthog.capture(
+                "assessment_completed",
+                properties={"result_count": len(request.data.get("results", []))},
+            )
+        # A retry of a Trial already submitted (#26) gets the current program
+        # back with 200 and writes nothing.
         return Response(
             {
-                "assessment": AssessmentSessionSerializer(session).data,
-                "program": ProgramSerializer(program).data,
-                "peer": peer,
+                "assessment": AssessmentSessionSerializer(sub.assessment).data,
+                "program": ProgramSerializer(sub.program).data,
+                "peer": sub.peer,
+                "idempotent": sub.idempotent,
             },
-            status=status.HTTP_201_CREATED,
+            status=status.HTTP_200_OK if sub.idempotent else status.HTTP_201_CREATED,
         )
 
 
-class RetakeAssessmentView(APIView):
+class RetakeAssessmentView(ForgeApiMixin, APIView):
     """POST → deactivate current assessment/program, open a fresh assessment."""
 
     permission_classes = [IsAuthenticated, AdultOnly]
@@ -251,33 +314,61 @@ class RetakeAssessmentView(APIView):
         return Response(AssessmentSessionSerializer(session).data, status=201)
 
 
-class ProgressionActionView(APIView):
+def _live_prescription(request, presc_uuid):
+    """One prescription of the user's active program, else 404 (also for
+    another user's)."""
+    return get_object_or_404(
+        PrescribedExercise,
+        uuid=presc_uuid,
+        day__program__user=request.user,
+        day__program__is_active=True,
+    )
+
+
+class ProgressionActionView(ForgeApiMixin, APIView):
     """Accept (climb) or deny (hold) a parked difficulty unlock for one
-    prescription. POST /progression/<presc_uuid>/<accept|deny>/."""
+    prescription. POST /progression/<presc_uuid>/<accept|deny>/ — any other
+    action is a 404 from routing (#10)."""
 
     permission_classes = [IsAuthenticated, AdultOnly]
+    accept = staticmethod(forge.accept_progression)
+    deny = staticmethod(forge.deny_progression)
+    event = "progression"
 
     def post(self, request, presc_uuid, action):
-        presc = get_object_or_404(
-            PrescribedExercise,
-            uuid=presc_uuid,
-            day__program__user=request.user,
-            day__program__is_active=True,
-        )
+        presc = _live_prescription(request, presc_uuid)
         if action == "accept":
-            new = forge.accept_progression(request.user, presc)
-            posthog.capture("progression_accepted")
+            new = self.accept(request.user, presc)
+            posthog.capture(f"{self.event}_accepted")
             return Response(
                 {"accepted": True, "exercise": ExerciseSerializer(new).data if new else None}
             )
-        if action == "deny":
-            forge.deny_progression(request.user, presc)
-            posthog.capture("progression_denied")
-            return Response({"denied": True})
-        return Response({"detail": _("unknown action")}, status=status.HTTP_400_BAD_REQUEST)
+        self.deny(request.user, presc)
+        posthog.capture(f"{self.event}_denied")
+        return Response({"denied": True})
 
 
-class RungOverviewView(APIView):
+class RegressionActionView(ProgressionActionView):
+    """The same for a parked move *down* (#23): POST
+    /regression/<presc_uuid>/<accept|deny>/."""
+
+    accept = staticmethod(forge.accept_regression)
+    deny = staticmethod(forge.deny_regression)
+    event = "regression"
+
+
+class CeilingNoticeDismissView(ForgeApiMixin, APIView):
+    """POST /prescription/<uuid>/ceiling-notice/dismiss/ — hide the #24
+    equipment prompt until it applies anew."""
+
+    permission_classes = [IsAuthenticated, AdultOnly]
+
+    def post(self, request, presc_uuid):
+        forge.dismiss_ceiling_notice(_live_prescription(request, presc_uuid))
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RungOverviewView(ForgeApiMixin, APIView):
     """GET → every chain on the live program with the rungs the user may move to,
     plus ``by_exercise`` (rung uuid → prescription uuid) for the skill tree."""
 
@@ -287,7 +378,7 @@ class RungOverviewView(APIView):
         return Response(forge.rung_overview(request.user))
 
 
-class SetRungView(APIView):
+class SetRungView(ForgeApiMixin, APIView):
     """Move a prescription to any performable rung of its chain, up or down.
 
     ``GET /prescription/<presc_uuid>/set-rung/`` — the picker's options.
@@ -375,7 +466,7 @@ class SetLoadView(SetRungView):
         return Response({k: result[k] for k in ("load", "snapped_from", "applied_to")})
 
 
-class ProgramView(APIView):
+class ProgramView(ForgeApiMixin, APIView):
     """GET the user's active program; ``PATCH {"weekly_volume_target": 16}``
     (4–40, #109) sets the weekly volume and regenerates every pattern's sets."""
 
@@ -421,7 +512,7 @@ def unfinished_gate():
     return {**UNFINISHED_GATE, "detail": _(UNFINISHED_GATE["detail"])}
 
 
-class TodayView(APIView):
+class TodayView(ForgeApiMixin, APIView):
     """GET → the plan for today. **Writes nothing.**
 
     There is one day, so there is no ``?day=`` to choose. The response is a
@@ -448,24 +539,25 @@ class TodayView(APIView):
             return Response(unfinished_gate(), status=status.HTTP_409_CONFLICT)
         existing = forge.resumable_session(request.user)
         if existing is not None:
-            payload = WorkoutSessionSerializer(existing).data
+            payload = WorkoutSessionSerializer(forge.session_for_display(existing)).data
         else:
             planned = forge.build_today_plan(request.user, day)
             payload = {
                 "uuid": None,
                 "day": str(day.uuid),
                 "day_name": day_name(day.name),
-                "scheduled_for": timezone.now().date().isoformat(),
+                "scheduled_for": forge.local_today(request.user).isoformat(),
                 "performed_at": None,
                 "status": WorkoutSession.Status.PLANNED,
                 "persisted": False,
                 "set_logs": PlannedSetLogSerializer(planned, many=True).data,
             }
         payload.update(forge.retest_status(request.user))
+        payload["notices"] = forge.today_notices(request.user)
         return Response(payload)
 
 
-class SwapCandidatesView(APIView):
+class SwapCandidatesView(ForgeApiMixin, APIView):
     """GET → every progression chain the user could swap onto, least-trained
     first.
 
@@ -481,7 +573,7 @@ class SwapCandidatesView(APIView):
         return Response(forge.swap_candidates(request.user))
 
 
-class RetestReminderDismissView(APIView):
+class RetestReminderDismissView(ForgeApiMixin, APIView):
     """POST → suppress the retest nudge for a few days (it returns if still due)."""
 
     permission_classes = [IsAuthenticated, AdultOnly]
@@ -492,7 +584,7 @@ class RetestReminderDismissView(APIView):
         return Response(forge.retest_status(request.user))
 
 
-class AssessmentHistoryView(APIView):
+class AssessmentHistoryView(ForgeApiMixin, APIView):
     """GET → per-pattern Trial series for the Evolution charts.
 
     One entry per movement pattern, each with its points oldest-first: the raw
@@ -506,7 +598,7 @@ class AssessmentHistoryView(APIView):
         return Response(forge.trial_history(request.user))
 
 
-class NormsView(APIView):
+class NormsView(ForgeApiMixin, APIView):
     """Decile reference cutoffs for an exercise, for the Progress chart's peer
     lines. GET ?exercise=<name>."""
 
@@ -517,7 +609,7 @@ class NormsView(APIView):
         return Response(forge.peer_decile_cutoffs(request.user, name))
 
 
-class ProgressView(APIView):
+class ProgressView(ForgeApiMixin, APIView):
     """Time-series of completed sessions for the progression chart. Returns one
     point per completed session; the client groups by day/week/month."""
 
@@ -546,7 +638,7 @@ def _exercise_or_400(value):
         return None
 
 
-class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+class SessionViewSet(ForgeApiMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     """Saved sessions.
 
     - ``POST /sessions/`` — persist the on-screen plan (first logged value)
@@ -562,9 +654,9 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     lookup_field = "uuid"
 
     def get_queryset(self):
-        return WorkoutSession.objects.filter(user=self.request.user).prefetch_related(
-            "set_logs__exercise__pattern", "set_logs__exercise__muscles"
-        )
+        return WorkoutSession.objects.filter(user=self.request.user).select_related(
+            "program_day", "user"
+        ).prefetch_related(*forge.SESSION_DISPLAY_PREFETCH)
 
     def create(self, request):
         """Write the plan the user is looking at, on their first logged value.
@@ -580,18 +672,22 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         if forge.has_unfinished_session(request.user):
             return Response(unfinished_gate(), status=status.HTTP_409_CONFLICT)
         # Two inputs racing the first keystroke must not create two sessions.
+        # The DB holds one planned session per day (#56), so a race that slips
+        # past this check gets the winner's session back, with 200.
         existing = forge.resumable_session(request.user)
         if existing is not None:
-            return Response(WorkoutSessionSerializer(existing).data, status=200)
+            return Response(WorkoutSessionSerializer(forge.session_for_display(existing)).data, status=200)
         try:
-            session = forge.create_session_from_plan(
+            session, created = forge.get_or_create_session_from_plan(
                 request.user, day, request.data.get("sets", [])
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        posthog.capture("workout_session_started")
+        if created:
+            posthog.capture("workout_session_started")
         return Response(
-            WorkoutSessionSerializer(session).data, status=status.HTTP_201_CREATED
+            WorkoutSessionSerializer(forge.session_for_display(session)).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
         )
 
     @action(detail=False, methods=["get"])
@@ -600,7 +696,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         was never saved. Older ones are closed as ``skipped`` on the way."""
         session = forge.unfinished_session(request.user)
         return Response(
-            {"session": WorkoutSessionSerializer(session).data if session else None}
+            {"session": WorkoutSessionSerializer(forge.session_for_display(session)).data if session else None}
         )
 
     def destroy(self, request, uuid=None):
@@ -620,9 +716,12 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         session = self.get_object()
         if session.status == WorkoutSession.Status.COMPLETED:
             return Response({"detail": _("Session already finalized.")}, status=409)
-        forge.save_session_values(session, request.data.get("sets", {}))
-        session.refresh_from_db()
-        return Response(WorkoutSessionSerializer(session).data)
+        sets, errors = _set_values_or_errors(session, request.data)
+        if errors:
+            return _invalid(errors)
+        forge.save_session_values(session, sets)
+        # Not refresh_from_db(): it drops the prefetch and costs a query per set (#129).
+        return Response(WorkoutSessionSerializer(forge.session_for_display(session)).data)
 
     @action(detail=True, methods=["post"])
     def swap(self, request, uuid=None):
@@ -648,13 +747,14 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         posthog.capture("workout_exercise_swapped")
-        session.refresh_from_db()
-        return Response(WorkoutSessionSerializer(session).data)
+        return Response(WorkoutSessionSerializer(forge.session_for_display(session)).data)
 
     @action(detail=True, methods=["post"])
     def log(self, request, uuid=None):
         session = self.get_object()
-        set_results = request.data.get("sets", {})
+        set_results, errors = _set_values_or_errors(session, request.data)
+        if errors:
+            return _invalid(errors)
         deltas = forge.apply_session_log(session, set_results)
         posthog.capture(
             "workout_session_completed",
@@ -664,7 +764,7 @@ class SessionViewSet(mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
         peer = forge.session_peer_scores(request.user, session)
         return Response(
             {
-                "session": WorkoutSessionSerializer(session).data,
+                "session": WorkoutSessionSerializer(forge.session_for_display(session)).data,
                 "progression": deltas,
                 "peer": peer,
             }

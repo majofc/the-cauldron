@@ -226,6 +226,7 @@
         </div>
       </div>
       <div id="forge-retest-banner" class="forge-retest-banner" role="status" hidden></div>
+      <div id="forge-today-notices" class="forge-today-notices" hidden></div>
       <div id="forge-today-list" class="forge-today-list"></div>
       <div id="forge-today-muscles" class="forge-muscle-map" hidden>
         <button type="button" id="forge-today-muscles-toggle" class="forge-muscle-map-toggle"
@@ -358,6 +359,7 @@
         <label class="forge-chart-metric">{% trans "Metric" context "chart" %}
           <select id="forge-chart-metric">
             <option value="total_volume">{% trans "Total volume" %}</option>
+            <option value="top_load">{% trans "Top load" %}</option>
             <option value="total_reps">{% trans "Total reps" %}</option>
             <option value="best_amrap">{% trans "Best AMRAP set" %}</option>
           </select>

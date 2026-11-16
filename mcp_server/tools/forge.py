@@ -6,7 +6,6 @@ reshaped here. No consent is needed — training data isn't the sensitive
 nutrition data — but every read is the caller's own.
 """
 
-from django.utils import timezone
 
 from the_cauldron.mcp_server.registry import tool
 from the_cauldron.mcp_server.tools.nutrition import DATE, _range
@@ -22,8 +21,17 @@ MAX_SESSION_DAYS = 62
 SWAP_OPTIONS = 6
 
 
+def _band(labels, index):
+    """A band load's label as the user typed it (#55); "Band N" past the list."""
+    if index is None:
+        return None
+    i = int(round(index))
+    return labels[i] if labels and 0 <= i < len(labels) else f"Band {i + 1}"
+
+
 def _blocks(rows):
-    """Serialized SetLogs → one block per movement, sets in order."""
+    """Serialized SetLogs → one block per movement, sets in order. Band loads
+    are indices: ``load_unit: "band"`` and each set names its band."""
     blocks, by_key = [], {}
     for r in rows:
         key = (r["prescription"], r["exercise"])
@@ -41,7 +49,7 @@ def _blocks(rows):
                 "sets": [],
             }
             blocks.append(block)
-        block["sets"].append({
+        row = {
             "id": r["uuid"],
             "set": r["set_index"] + 1,
             "to_failure": r["is_amrap"],
@@ -49,13 +57,16 @@ def _blocks(rows):
             "target_load": r["expected_load"],
             "done": r["actual_reps"],
             "load_done": r["actual_load"],
-            "rir": r["rir"],
-        })
+        }
+        if r["load_unit"] == "band":
+            row["band"] = _band(r["band_labels"], r["expected_load"])
+            row["band_done"] = _band(r["band_labels"], r["actual_load"])
+        block["sets"].append(row)
     return blocks
 
 
-def session_out(session):
-    data = WorkoutSessionSerializer(session).data
+def session_out(session, reuse_prefetch=False):
+    data = WorkoutSessionSerializer(forge.session_for_display(session, reuse_prefetch)).data
     return {
         "id": data["uuid"],
         "date": data["scheduled_for"],
@@ -95,7 +106,7 @@ def today_state(user):
         return "in_progress", existing, day
     done = (
         WorkoutSession.objects.filter(
-            user=user, scheduled_for=timezone.now().date(), status=WorkoutSession.Status.COMPLETED
+            user=user, scheduled_for=forge.local_today(user), status=WorkoutSession.Status.COMPLETED
         ).order_by("-performed_at").first()
     )
     if done is not None:
@@ -155,8 +166,9 @@ def get_forge_today(ctx):
     title="Training program",
     description=(
         "The user's current Forge program: every prescribed movement with its sets, rep range (seconds when "
-        "timed), load, rest, and any progression earned but not yet applied. The daily workout picks the "
-        "least-trained of these."
+        "timed), load, rest, any rung suggestion waiting for an answer (pending_progression up, "
+        "pending_regression down: answer with answer_forge_suggestion) and ceiling_notice when a movement "
+        "is stuck at 20 reps and needs heavier gear. The daily workout picks the least-trained of these."
     ),
 )
 def get_forge_program(ctx):
@@ -179,8 +191,14 @@ def get_forge_program(ctx):
             "reps_max": p["target_reps_max"],
             "load": p["target_load"],
             "load_unit": p["load_unit"],
+            **({"band": _band(p["band_labels"], p["target_load"])} if p["load_unit"] == "band" else {}),
             "rest_seconds": p["target_rest_seconds"],
             "pending_progression": p["pending_progression_name"],
+            # #23: an easier rung offered after two swap-down sessions.
+            "pending_regression": p["pending_regression_name"],
+            # #24: at the 20-rep ceiling with nothing harder: heavier_load |
+            # lighter_band | top_of_ladder (null when none).
+            "ceiling_notice": p["ceiling_notice"] or None,
         } for p in rows],
     }
 
@@ -231,10 +249,11 @@ def get_forge_sessions(ctx, **args):
     first, last = _range(ctx, args["from"], args.get("to"), 7, MAX_SESSION_DAYS)
     sessions = (
         WorkoutSession.objects.filter(user=ctx.user, scheduled_for__gte=first, scheduled_for__lte=last)
-        .prefetch_related("set_logs__exercise", "set_logs__prescribed_exercise")
+        .select_related("program_day", "user")
+        .prefetch_related(*forge.SESSION_DISPLAY_PREFETCH)
         .order_by("scheduled_for", "created_at")
     )
-    return {"from": first, "to": last, "sessions": [session_out(s) for s in sessions]}
+    return {"from": first, "to": last, "sessions": [session_out(s, reuse_prefetch=True) for s in sessions]}
 
 
 @tool(

@@ -13,6 +13,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import Exercise, MovementPattern, PrescribedExercise, Program, ProgramDay
 from the_cauldron.services import forge
 from the_cauldron.tests.test_set_rung import _ex, _own
@@ -153,7 +154,7 @@ def test_todays_logged_movement_keeps_its_sets(seeded, user):
     PrescribedExercise.objects.filter(day__program=program).update(target_sets=3)
     first = PrescribedExercise.objects.filter(day__program=program).order_by("order").first()
     PrescribedExercise.objects.filter(pk=first.pk).update(target_sets=5)  # mixed
-    session = forge.start_session(user, first.day)
+    session = persist_today(user, first.day)
     # No training history: the opening serves the first five by display order.
     rows = list(session.set_logs.filter(prescribed_exercise=first).order_by("set_index"))
     assert rows
@@ -172,7 +173,7 @@ def test_untouched_sets_today_follow(seeded, user):
     PrescribedExercise.objects.filter(day__program=program).update(target_sets=3)
     first = PrescribedExercise.objects.filter(day__program=program).order_by("order").first()
     PrescribedExercise.objects.filter(pk=first.pk).update(target_sets=5)
-    session = forge.start_session(user, first.day)
+    session = persist_today(user, first.day)
     assert session.set_logs.filter(prescribed_exercise=first).count() == 5
 
     _align()
@@ -195,7 +196,7 @@ def _swap_pair(session, owned):
 def test_a_swap_prescribes_the_programs_sets(seeded, user):
     program = _program(user, volume=16, sets=5)  # 16 / 2.14 → 5
     assert forge.program_sets(user) == 5
-    session = forge.start_session(user, ProgramDay.objects.get(program=program))
+    session = persist_today(user, ProgramDay.objects.get(program=program))
     from_ex, to_ex = _swap_pair(session, forge.owned_equipment_keys_for(user))
 
     forge.swap_session_exercise(session, from_ex, to_ex)
