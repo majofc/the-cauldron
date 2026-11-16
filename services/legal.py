@@ -87,7 +87,7 @@ def withdraw_consent(user, *, delete_data=False):
             IntakeEntry.objects.filter(user=user).delete()
             NutrientGoal.objects.filter(user=user).delete()
             CauldronProfile.objects.filter(user=user).update(
-                weight_kg=None, activity_level="", updated_at=timezone.now()
+                weight_kg=None, activity_level="", journal_hidden_gauges=[], updated_at=timezone.now()
             )
     return withdrawn
 

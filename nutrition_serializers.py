@@ -116,9 +116,17 @@ class IntakeEntrySerializer(serializers.ModelSerializer):
         return str(meal.uuid) if meal else None
 
 
+class GaugeVisibilitySerializer(serializers.Serializer):
+    """``PATCH goals/gauges/`` (#131)."""
+
+    nutrient = serializers.ChoiceField(choices=list(nutrition.FIELDS))
+    visible = serializers.BooleanField()
+
+
 class PlannedMealInputSerializer(serializers.Serializer):
     date = serializers.DateField(required=False)
     slot = serializers.ChoiceField(choices=PlannedMeal.Slot.choices, required=False)
+    time = serializers.TimeField(required=False)  # default: the slot's (#132)
     spell = serializers.UUIDField(required=False)
     quantity = FiniteFloatField(required=False, min_value=0.01, max_value=MAX_QUANTITY)
     unit = serializers.ChoiceField(choices=nutrition.SPELL_UNITS, required=False)
@@ -139,7 +147,8 @@ class PlannedMealSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PlannedMeal
-        fields = ["uuid", "date", "slot", "spell", "spell_title", "quantity", "unit", "order", "eaten", "intake_entry"]
+        fields = ["uuid", "date", "slot", "time", "spell", "spell_title", "quantity", "unit", "order", "eaten",
+                  "intake_entry"]
         read_only_fields = fields
 
     def get_spell_title(self, obj):

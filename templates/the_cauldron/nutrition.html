@@ -170,11 +170,12 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
         <p class="grim-help">{% trans "Beside each of your goals: the recommended one, from your body data — WHO/FAO first, US National Academies (DRI) where WHO sets none. It is read-only and follows your weight, age, sex and activity." %}</p>
         {% include "the_cauldron/_recommendation_notice.html" %}
         <p class="grim-help nut-rec-status" id="nut-rec-status" hidden></p>
+        <p class="grim-help">{% trans "Goals save as you change them. The eye decides whether a nutrient gets a gauge in The Cauldron; it's still tracked and judged everywhere else." %}</p>
         <div id="nut-goal-rows" class="nut-goal-groups"></div>
         <p class="grim-error" id="nut-goal-error" role="alert" hidden></p>
+        <p class="grim-help nut-goal-status" id="nut-goal-status" aria-live="polite"></p>
         <div class="grim-actions">
           <button type="button" class="grim-link-btn" id="nut-history-toggle" aria-expanded="false" aria-controls="nut-history">{% trans "Show goal history" %}</button>
-          <button type="submit" class="btn-cauldron btn-cauldron--primary">{% trans "Save goals" %}</button>
         </div>
         <div id="nut-history" class="nut-history" hidden></div>
       </form>
@@ -231,6 +232,7 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
           <p class="nut-window-range" id="nut-window-range"></p>
           <div class="nut-timeline">
             <div class="nut-timeline-track" aria-hidden="true">
+              <span class="nut-timeline-future" id="nut-timeline-future" hidden></span>
               <span class="nut-timeline-window" id="nut-timeline-window"></span>
             </div>
             <input type="range" id="nut-scrub" min="0" max="0" step="1" value="0"
@@ -239,10 +241,13 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
           </div>
           <div class="nut-scrub-meta">
             <span id="nut-window-label" class="nut-window-label"></span>
+            <span class="nut-projection-note" id="nut-projection-note" hidden
+                  title="{% trans 'Estimated: includes scheduled and planned meals that haven’t happened yet.' %}"><span aria-hidden="true">≈</span>
+              {% trans "Estimated: includes scheduled and planned meals that haven’t happened yet." %}</span>
             <button type="button" class="grim-link-btn" id="nut-now-btn" hidden>{% trans "Back to now" %}</button>
           </div>
         </div>
-        <p class="nut-legend" aria-hidden="true"><span class="nut-legend-mine">{% trans "My goal" %}</span>
+        <p class="nut-legend" id="nut-legend" aria-hidden="true"><span class="nut-legend-mine">{% trans "My goal" %}</span>
           <span class="nut-legend-who">{% trans "Recommended" %}</span>
           <span class="nut-legend-near">{% trans "Off your goal, within the recommended" %}</span></p>
         <p class="grim-help nut-who-missing" id="nut-who-missing" hidden></p>
@@ -278,7 +283,9 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
       <div class="corner-bl" aria-hidden="true"></div><div class="corner-br" aria-hidden="true"></div>
       <div class="grim-spell-page-body">
         <h2 class="grim-h2" id="nut-log-title">{% trans "What you ate" %}</h2>
+        <p class="grim-help nut-log-window" id="nut-log-window"></p>
         <ul class="nut-entries" id="nut-entries"></ul>
+        <div class="nut-upcoming" id="nut-upcoming" hidden></div>
         <form class="grim-form nut-entry-form" id="nut-entry-form" novalidate>
           <h3 class="grim-section-title" id="nut-entry-form-title">{% trans "Log something" %}</h3>
           <!-- One search for everything (spells and ingredients alike); typing it
@@ -344,6 +351,8 @@ Content is rendered by nutrition.js from /cauldron/api/. Full pages, no dialogs.
                 <option value="dinner">{% trans "Dinner" %}</option>
                 <option value="snack">{% trans "Snack" %}</option>
               </select></label>
+            <label class="grim-field"><span>{% trans "At" %}</span>
+              <input name="time" type="time" required></label>
             <label class="grim-field"><span>{% trans "How much" %}</span>
               <input name="quantity" type="number" min="0.01" step="any" inputmode="decimal" value="1"></label>
             <label class="grim-field"><span>{% trans "Unit" %}</span>

@@ -138,6 +138,27 @@ def nutrition_strings():
         "form_save_btn": _("Save entry"),
         "entries_empty": _("Nothing logged on this day."),
         "entries_empty_today": _("Nothing logged yet today."),
+        # The list follows the gauges' window (#124)
+        "entries_empty_window": _("Nothing logged in this window."),
+        "window_last_24h": _("Last 24 hours"),
+        "window_last_7d": _("Last 7 days"),
+        "window_until_24h": _("24 h until %(end)s"),
+        "window_until_7d": _("7 days until %(end)s"),
+        "when_yesterday": _("yesterday %(time)s"),
+        "when_day": _("%(day)s, %(time)s"),
+        "upcoming_title": _("To eat"),
+        # Projection (#132)
+        "window_projection": _("Projection"),
+        # Below the minimum at the selected moment (#125)
+        "chip_short": _("below its minimum at this moment"),
+        "chip_maybe_short": _("maybe below its minimum (some values unknown)"),
+        # Gauge eyes + autosave (#131)
+        "eye_show": _("Show in the Cauldron"),
+        "eye_hide": _("Hide from the Cauldron"),
+        "goal_saving": _("Saving…"),
+        "goal_saved": _("Saved"),
+        "goal_incomplete": _("Fill in the goal's value to save it."),
+        "goal_min_over_max": _("The minimum can't be above the maximum."),
         "from_plan": _("planned"),
         "toast_entry_logged": _("Logged."),
         "toast_entry_saved": _("Entry saved."),

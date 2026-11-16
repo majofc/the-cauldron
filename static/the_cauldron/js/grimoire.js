@@ -38,6 +38,8 @@
     ["omega6_la_g", "g"], ["cholesterol_mg", "mg"], ["sodium_mg", "mg"], ["potassium_mg", "mg"],
     ["calcium_mg", "mg"], ["iron_mg", "mg"], ["vit_a_ug", "µg"], ["vit_c_mg", "mg"],
     ["vit_d_ug", "µg"], ["vit_b12_ug", "µg"],
+    // #125
+    ["thiamin_mg", "mg"], ["riboflavin_mg", "mg"], ["niacin_mg", "mg"], ["pantothenic_mg", "mg"], ["vit_b6_mg", "mg"], ["folate_ug", "µg"], ["vit_e_mg", "mg"], ["vit_k_ug", "µg"], ["zinc_mg", "mg"], ["magnesium_mg", "mg"], ["selenium_ug", "µg"], ["phosphorus_mg", "mg"],
   ];
 
   // ── XSS guard ─────────────────────────────────────────────────────────────
@@ -1418,8 +1420,10 @@
     ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "added_sugar_g", "fiber_g"]],
     ["grp_fats", ["fat_g", "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g",
       "omega3_ala_g", "omega3_epa_g", "omega3_dha_g", "omega6_la_g"]],
-    ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg"]],
-    ["grp_vitamins", ["vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug"]],
+    ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg",
+      "zinc_mg", "magnesium_mg", "selenium_ug", "phosphorus_mg"]],
+    ["grp_vitamins", ["vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug", "thiamin_mg", "riboflavin_mg",
+      "niacin_mg", "pantothenic_mg", "vit_b6_mg", "folate_ug", "vit_e_mg", "vit_k_ug"]],
   ];
 
   function buildReagentForm() {

@@ -31,18 +31,24 @@
     ["omega6_la_g", "g"], ["cholesterol_mg", "mg"], ["sodium_mg", "mg"], ["potassium_mg", "mg"],
     ["calcium_mg", "mg"], ["iron_mg", "mg"], ["vit_a_ug", "µg"], ["vit_c_mg", "mg"],
     ["vit_d_ug", "µg"], ["vit_b12_ug", "µg"],
+    // #125
+    ["thiamin_mg", "mg"], ["riboflavin_mg", "mg"], ["niacin_mg", "mg"], ["pantothenic_mg", "mg"], ["vit_b6_mg", "mg"], ["folate_ug", "µg"], ["vit_e_mg", "mg"], ["vit_k_ug", "µg"], ["zinc_mg", "mg"], ["magnesium_mg", "mg"], ["selenium_ug", "µg"], ["phosphorus_mg", "mg"],
   ];
   const UNIT_OF = Object.fromEntries(NUTRIENTS);
   const NUTRIENT_GROUPS = [
     ["grp_macros", ["kcal", "protein_g", "carbs_g", "sugar_g", "added_sugar_g", "fiber_g"]],
     ["grp_fats", ["fat_g", "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g",
       "omega3_ala_g", "omega3_epa_g", "omega3_dha_g", "omega6_la_g"]],
-    ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg"]],
-    ["grp_vitamins", ["vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug"]],
+    ["grp_minerals", ["cholesterol_mg", "sodium_mg", "potassium_mg", "calcium_mg", "iron_mg",
+      "zinc_mg", "magnesium_mg", "selenium_ug", "phosphorus_mg"]],
+    ["grp_vitamins", ["vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug", "thiamin_mg", "riboflavin_mg",
+      "niacin_mg", "pantothenic_mg", "vit_b6_mg", "folate_ug", "vit_e_mg", "vit_k_ug"]],
   ];
   const KEY_TOTALS = ["kcal", "protein_g", "carbs_g", "fat_g"];
   const GOAL_KINDS = ["none", "at_least", "at_most", "between"];
   const SLOTS = ["breakfast", "lunch", "dinner", "snack"];
+  // Suggested time per slot (#132), as PlannedMeal.SLOT_TIMES.
+  const SLOT_TIMES = { breakfast: "08:00", lunch: "14:00", snack: "17:00", dinner: "20:00" };
   const REAGENT_UNITS = ["g", "kg", "ml", "l", "tsp", "tbsp", "cup", "oz", "lb", "piece"];
 
   // ── XSS guard ─────────────────────────────────────────────────────────────
@@ -244,11 +250,30 @@
     return `<span class="nut-goal-rec"><span class="nut-goal-rec-label">${esc(t("rec_label"))}</span> ${body}</span>`;
   }
 
+  // Goals as last saved, the recommendations and the hidden gauges (#131).
+  const goalsState = { byKey: {}, rec: null, hidden: new Set() };
+
+  // The eye decides whether the nutrient gets a gauge in the Journal (#131).
+  // Off (and disabled) only while there's neither my goal nor a recommended one.
+  function eyeHtml(key) {
+    const eligible = Boolean(goalsState.byKey[key] || (goalsState.rec && goalsState.rec.byKey[key]));
+    const on = eligible && !goalsState.hidden.has(key);
+    const label = t(on ? "eye_hide" : "eye_show");
+    return `<button type="button" class="nut-goal-eye${on ? " is-on" : ""}" data-eye aria-pressed="${on}"
+        aria-label="${esc(`${label}: ${t(`n_${key}`)}`)}" title="${esc(label)}"${eligible ? "" : " disabled"}>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+        ${on ? "" : '<path d="M4 4l16 16" stroke="currentColor" stroke-width="1.8"/>'}
+      </svg></button>`;
+  }
+
   function goalRowHtml(key, goal, rec) {
     const kind = goal ? goal.kind : "none";
     const low = goal && goal.min_value != null ? goal.min_value : "";
     const high = goal && goal.max_value != null ? goal.max_value : "";
     return `<div class="nut-goal" data-nutrient="${key}" data-kind="${kind}">
+      ${eyeHtml(key)}
       <span class="nut-goal-name">${esc(t(`n_${key}`))}</span>
       <select class="nut-goal-kind" aria-label="${esc(t("goal_kind_for", { nutrient: t(`n_${key}`) }))}">${GOAL_KINDS.map((k) =>
         `<option value="${k}"${k === kind ? " selected" : ""}>${esc(t(`goal_${k}`))}</option>`).join("")}</select>
@@ -257,6 +282,7 @@
       <input type="number" class="nut-goal-max" min="0" step="any" inputmode="decimal" value="${esc(high)}"
              aria-label="${esc(t("goal_max_for", { nutrient: t(`n_${key}`) }))}">
       <span class="nut-goal-unit">${esc(UNIT_OF[key])}</span>
+      <span class="nut-goal-row-error grim-error" role="alert" hidden></span>
       ${recCellHtml(key, rec)}
     </div>`;
   }
@@ -279,6 +305,9 @@
         byKey: Object.fromEntries(d.recommended.goals.map((g) => [g.nutrient, g])),
         none: Object.fromEntries(d.recommended.none.map((x) => [x.nutrient, x.note])),
       };
+      goalsState.byKey = byKey;
+      goalsState.rec = rec;
+      goalsState.hidden = new Set(d.hidden_gauges || []);
       renderRecStatus(d.recommended);
       box.innerHTML = NUTRIENT_GROUPS.map(([group, keys]) => `<fieldset class="nut-goal-group">
           <legend>${esc(t(group))}</legend>${keys.map((k) => goalRowHtml(k, byKey[k], rec)).join("")}</fieldset>`).join("");
@@ -352,26 +381,76 @@
     }
   }
 
-  function readGoalForm() {
-    return $$("#nut-goal-rows .nut-goal").map((row) => ({
-      nutrient: row.dataset.nutrient,
-      kind: $(".nut-goal-kind", row).value,
-      min_value: $(".nut-goal-min", row).hidden ? null : ($(".nut-goal-min", row).value || null),
-      max_value: $(".nut-goal-max", row).hidden ? null : ($(".nut-goal-max", row).value || null),
-    })).filter((g) => g.kind !== "none");
+  // One row as a goal, or why it can't be saved yet (#131): a "between" with one
+  // value or min > max stays on screen with its error and isn't sent.
+  function readGoalRow(row) {
+    const kind = $(".nut-goal-kind", row).value;
+    const min = $(".nut-goal-min", row).hidden ? null : ($(".nut-goal-min", row).value || null);
+    const max = $(".nut-goal-max", row).hidden ? null : ($(".nut-goal-max", row).value || null);
+    const goal = { nutrient: row.dataset.nutrient, kind, min_value: min, max_value: max };
+    if (kind === "none") return { goal: null };
+    if ((kind !== "at_most" && min == null) || (kind !== "at_least" && max == null)) return { error: t("goal_incomplete") };
+    if (kind === "between" && Number(min) > Number(max)) return { error: t("goal_min_over_max") };
+    return { goal };
   }
 
-  async function saveGoals(e) {
-    e.preventDefault();
+  // The full set to PUT: every complete row; an incomplete one keeps what was saved.
+  function goalSetFromForm() {
+    return $$("#nut-goal-rows .nut-goal").map((row) => {
+      const read = readGoalRow(row);
+      if (read.error) return goalsState.byKey[row.dataset.nutrient] || null;
+      return read.goal;
+    }).filter(Boolean).map((g) => ({ nutrient: g.nutrient, kind: g.kind, min_value: g.min_value, max_value: g.max_value }));
+  }
+
+  function setGoalStatus(text) {
+    const el = $("#nut-goal-status");
+    if (el) el.textContent = text;
+  }
+
+  // Autosave (#131): a row saves on change (blur or select), once it is complete.
+  let goalSave = Promise.resolve();
+  function autosaveGoal(row) {
     const errEl = $("#nut-goal-error");
+    const rowErr = $(".nut-goal-row-error", row);
+    const read = readGoalRow(row);
+    rowErr.hidden = !read.error;
+    rowErr.textContent = read.error || "";
+    if (read.error) return;
     showError(errEl, null);
+    setGoalStatus(t("goal_saving"));
+    goalSave = goalSave.then(async () => {
+      try {
+        const d = await api("goals/", { method: "PUT", body: { goals: goalSetFromForm() } });
+        goalsState.byKey = Object.fromEntries(d.goals.map((g) => [g.nutrient, g]));
+        goalsState.hidden = new Set(d.hidden_gauges || []);
+        $$("#nut-goal-rows .nut-goal").forEach((r) => {
+          $("[data-eye]", r).outerHTML = eyeHtml(r.dataset.nutrient);
+        });
+        setGoalStatus(t("goal_saved"));
+        if (!$("#nut-history").hidden) loadHistory();
+      } catch (err) {
+        setGoalStatus("");
+        showError(errEl, err);
+      }
+    });
+  }
+
+  async function toggleEye(btn) {
+    const row = btn.closest(".nut-goal");
+    const key = row.dataset.nutrient;
+    const visible = btn.getAttribute("aria-pressed") !== "true";
+    const before = new Set(goalsState.hidden);
+    // Optimistic: flip now, roll back if the save fails.
+    if (visible) goalsState.hidden.delete(key); else goalsState.hidden.add(key);
+    btn.outerHTML = eyeHtml(key);
     try {
-      await api("goals/", { method: "PUT", body: { goals: readGoalForm() } });
-      toast(t("toast_goals_saved"));
-      loadGoals();
-      if (!$("#nut-history").hidden) loadHistory();
+      const d = await api("goals/gauges/", { method: "PATCH", body: { nutrient: key, visible } });
+      goalsState.hidden = new Set(d.hidden_gauges || []);
     } catch (err) {
-      showError(errEl, err);
+      goalsState.hidden = before;
+      $("[data-eye]", row).outerHTML = eyeHtml(key);
+      showError($("#nut-goal-error"), err);
     }
   }
 
@@ -459,10 +538,21 @@
     if (!hasConsent()) return;
     loadGoals();
     loadSettings();
-    $("#nut-goal-form").addEventListener("submit", saveGoals);
+    // No "Save goals" button any more (#131): Enter just commits the row.
+    $("#nut-goal-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const row = document.activeElement && document.activeElement.closest(".nut-goal");
+      if (row) autosaveGoal(row);
+    });
     $("#nut-goal-rows").addEventListener("change", (e) => {
       const row = e.target.closest(".nut-goal");
-      if (row && e.target.classList.contains("nut-goal-kind")) syncGoalRow(row);
+      if (!row) return;
+      if (e.target.classList.contains("nut-goal-kind")) syncGoalRow(row);
+      autosaveGoal(row);
+    });
+    $("#nut-goal-rows").addEventListener("click", (e) => {
+      const eye = e.target.closest("[data-eye]");
+      if (eye && !eye.disabled) toggleEye(eye);
     });
     $("#nut-history-toggle").addEventListener("click", (e) => {
       const box = $("#nut-history");
@@ -517,25 +607,39 @@
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
 
-  async function loadDay() {
+  // The list shows what the gauges count (#124): the window ending at the
+  // scrubber's tick, fetched once the scrubber settles.
+  async function loadWindow() {
     const my = ++journal.seq;
+    const end = roll.data && !roll.follow ? roll.data.ticks[roll.index] : null;
+    const qs = `span=${roll.span}${end ? `&end=${encodeURIComponent(end)}` : ""}`;
     try {
-      const [day, plan] = await Promise.all([
-        api(`intake/day/?date=${encodeURIComponent(CFG.day)}`),
+      const [win, plan] = await Promise.all([
+        api(`intake/window/?${qs}`),
         api(`plan/day/?date=${encodeURIComponent(CFG.day)}`),
       ]);
       if (my !== journal.seq) return;
-      journal.entries = day.entries;
-      renderEntries(day.entries);
+      journal.entries = win.entries;
+      renderWindowHead(win, end);
+      renderEntries(win.entries, win.end_date);
+      renderUpcoming(win.planned);
       renderPlan(plan);
     } catch (err) {
       $("#nut-entries").innerHTML = `<li class="grim-error">${esc(errorText(err))}</li>`;
     }
   }
+  const loadWindowSoon = debounce(loadWindow, 250);
+  const loadDay = loadWindow; // the plan and the list reload together
 
-  // Something was logged, edited, eaten or removed: the day and the window both move.
+  function renderWindowHead(win, end) {
+    const el = $("#nut-log-window");
+    if (!el) return;
+    const days = roll.span === "24h" ? "24h" : "7d";
+    el.textContent = end ? t(`window_until_${days}`, { end: fmtTick(end) }) : t(`window_last_${days}`);
+  }
+
+  // Something was logged, edited, eaten or removed: the window moves, then the list.
   function refreshAll() {
-    loadDay();
     loadRolling();
   }
 
@@ -547,10 +651,21 @@
         ${statusBadge(g.status)}</li>`).join("")}</ul>`;
   }
 
-  function renderEntries(entries) {
+  // "21:30" on the window end's date; "yesterday 21:30" / "Tue 3 Mar, 21:30" otherwise.
+  function entryWhen(e, endDate) {
+    if (!endDate || e.local_date === endDate) return e.local_time;
+    const prev = new Date(`${endDate}T12:00:00`);
+    prev.setDate(prev.getDate() - 1);
+    const two = (n) => String(n).padStart(2, "0");
+    const yesterday = `${prev.getFullYear()}-${two(prev.getMonth() + 1)}-${two(prev.getDate())}`;
+    if (e.local_date === yesterday) return t("when_yesterday", { time: e.local_time });
+    return t("when_day", { day: fmtDate(e.local_date, { weekday: "short", day: "numeric", month: "short" }), time: e.local_time });
+  }
+
+  function renderEntries(entries, endDate) {
     const list = $("#nut-entries");
     if (!entries.length) {
-      list.innerHTML = `<li class="grim-help nut-empty">${esc(isToday() ? t("entries_empty_today") : t("entries_empty"))}</li>`;
+      list.innerHTML = `<li class="grim-help nut-empty">${esc(t("entries_empty_window"))}</li>`;
       return;
     }
     list.innerHTML = entries.map((e) => {
@@ -561,7 +676,7 @@
         : `<span class="grim-casting-spell">${esc(e.label)}</span>`;
       const grams = e.grams != null && e.unit !== "g" ? ` <span class="grim-help">(${esc(fmtAmount(e.grams))} g)</span>` : "";
       return `<li class="nut-entry" data-uuid="${esc(e.uuid)}">
-        <time class="nut-entry-time">${esc(e.local_time)}</time>
+        <time class="nut-entry-time">${esc(entryWhen(e, endDate))}</time>
         <div class="nut-entry-body">${name}
           <span class="nut-entry-amount">${esc(amountText(e))}${grams}</span>
           ${e.planned_meal ? `<span class="grim-badge">${esc(t("from_plan"))}</span>` : ""}
@@ -575,6 +690,27 @@
     }).join("");
   }
 
+  // Plans not eaten yet, from the window end's day on (#124). They have a date
+  // and a time but haven't happened, so they sit apart from the window.
+  function renderUpcoming(meals) {
+    const box = $("#nut-upcoming");
+    if (!box) return;
+    if (!meals.length) {
+      box.hidden = true;
+      box.innerHTML = "";
+      return;
+    }
+    box.hidden = false;
+    box.innerHTML = `<h3 class="grim-section-title">${esc(t("upcoming_title"))}</h3>
+      <ul class="nut-entries">${meals.map((m) => `<li class="nut-plan-item nut-entry" data-uuid="${esc(m.uuid)}">
+        <time class="nut-entry-time">${esc(t("when_day", { day: fmtDate(m.date, { weekday: "short", day: "numeric", month: "short" }), time: String(m.time || "").slice(0, 5) }))}</time>
+        <div class="nut-entry-body"><span class="grim-casting-spell">${esc(m.spell_title)}</span>
+          <span class="nut-entry-amount">${esc(t(`slot_${m.slot}`))} · ${esc(`${fmtNum(m.quantity)} ${unitText(m.unit, m.quantity)}`)}</span></div>
+        <span class="nut-entry-kcal"></span>
+        <div class="grim-casting-actions"><button type="button" class="grim-link-btn" data-plan-eat>${esc(t("plan_eat"))}</button></div>
+      </li>`).join("")}</ul>`;
+  }
+
   // ── How you're doing: the moving window + time in range (services/rolling.py) ──
   // One GET rolling/ brings every hourly tick of the history: values, goal
   // bands and statuses, all judged on the server. Dragging the scrubber or the
@@ -585,6 +721,16 @@
   const tickClock = (iso) => String(iso).slice(11, 16);
   const fmtTick = (iso) => `${fmtDate(tickDay(iso), { weekday: "short", day: "numeric", month: "short" })}, ${tickClock(iso)}`;
   const lastIndex = () => (roll.data ? roll.data.ticks.length - 1 : 0);
+  // "Now": the last real tick. Ticks after it are projected (#132, 24h only).
+  const nowIndex = () => {
+    const d = roll.data;
+    if (!d) return 0;
+    const projected = d.projected || [];
+    let i = d.ticks.length - 1;
+    while (i > 0 && projected[i]) i -= 1;
+    return i;
+  };
+  const isProjected = (i) => Boolean(roll.data && roll.data.projected && roll.data.projected[i]);
   const spanHours = () => (roll.span === "24h" ? 24 : 7 * 24);
 
   // A tick moved back by some hours, still on the user's own clock: ticks come
@@ -606,9 +752,6 @@
 
   // Two goal sets judged over the same window (#105): "mine" and "who" (recommended).
   const SETS = ["mine", "who"];
-  // Recommended-only nutrients get a gauge only from this list; the rest are in
-  // the chips and "Show every nutrient", so the gauges stay focused.
-  const WHO_HEADLINE = ["kcal", "protein_g", "carbs_g", "added_sugar_g", "fiber_g", "fat_g", "sat_fat_g", "sodium_mg"];
   const statusOf = (n, i, set) => {
     const st = roll.data.sets[set].status[n];
     return st ? st[i] : null;
@@ -665,13 +808,15 @@
   async function loadRolling() {
     const my = ++roll.seq;
     try {
-      const d = await api(`rolling/?span=${roll.span}&days=${roll.days}`);
+      // One request: scrubbing (also into the projected hours) never asks again.
+      const ahead = roll.span === "24h" ? "&ahead=12" : "";
+      const d = await api(`rolling/?span=${roll.span}&days=${roll.days}${ahead}`);
       if (my !== roll.seq) return;
       const kept = roll.data && !roll.follow ? roll.data.ticks[roll.index] : null;
       roll.data = d;
       const found = kept ? d.ticks.indexOf(kept) : -1;
-      roll.index = found >= 0 ? found : (roll.follow ? lastIndex() : initialIndex(d));
-      roll.follow = roll.index === lastIndex();
+      roll.index = found >= 0 ? found : (roll.follow ? nowIndex() : initialIndex(d));
+      roll.follow = roll.index === nowIndex();
       if (!d.tracked.includes(roll.nutrient)) roll.nutrient = d.tracked[0] || null;
       $("#nut-who-minor").hidden = d.sets.who.status_reason !== "minor";
       renderWhoMissing(d.sets.who);
@@ -683,6 +828,7 @@
       renderChips();
       renderHistory();
       renderNow();
+      loadWindow();
     } catch (err) {
       $("#nut-gauges").innerHTML = `<p class="grim-error">${esc(errorText(err))}</p>`;
     }
@@ -690,10 +836,12 @@
 
   function setIndex(i) {
     roll.index = Math.max(0, Math.min(lastIndex(), i));
-    roll.follow = roll.index === lastIndex();
+    roll.follow = roll.index === nowIndex();
     $("#nut-scrub").value = String(roll.index);
     renderNow();
+    renderChips();
     moveCursor();
+    loadWindowSoon();
   }
 
   function renderNow() {
@@ -703,14 +851,23 @@
     const iso = d.ticks[i];
     const range = t("window_range", { from: fmtTick(shiftIso(iso, spanHours())), to: fmtTick(iso) });
     $("#nut-window-range").textContent = range;
-    $("#nut-window-label").textContent = roll.follow ? t("window_live") : t("window_past");
-    $("#nut-scrub").setAttribute("aria-valuetext", range);
+    const projected = isProjected(i);
+    $("#nut-window-label").textContent = projected ? t("window_projection") : roll.follow ? t("window_live") : t("window_past");
+    $("#nut-projection-note").hidden = !projected;
+    $("#nut-scrub").setAttribute("aria-valuetext", projected ? `${t("window_projection")}: ${range}` : range);
     placeWindow();
     $("#nut-now-btn").hidden = roll.follow;
-    const goals = d.tracked.filter((n) => statusOf(n, i, "mine") != null
-      || (WHO_HEADLINE.includes(n) && statusOf(n, i, "who") != null));
+    // Gauges (#131): my goal or any recommended one, minus the eyes turned off.
+    const hidden = new Set(d.hidden_gauges || []);
+    const eligible = d.tracked.filter((n) => statusOf(n, i, "mine") != null || statusOf(n, i, "who") != null);
+    const goals = eligible.filter((n) => !hidden.has(n));
+    // Everything hidden: no heading, note or empty grid at all.
+    const allHidden = eligible.length > 0 && !goals.length;
+    $("#nut-now-title").hidden = allHidden;
+    $("#nut-legend").hidden = allHidden;
+    $("#nut-gauges").hidden = allHidden;
     const note = roll.span === "7d" ? `<p class="grim-help">${esc(t("avg_note"))}</p>` : "";
-    $("#nut-gauges").innerHTML = goals.length
+    $("#nut-gauges").innerHTML = allHidden ? "" : goals.length
       ? `${note}${goals.map((n) => gaugeHtml(n, i)).join("")}`
       : `${note}<p class="grim-help">${esc(t("no_goals_yet"))} <a class="grim-back" href="${esc(CFG.profile)}">${esc(t("set_goals"))}</a></p>
          <dl class="grim-macros nut-key-totals">${KEY_TOTALS.map((k) =>
@@ -727,6 +884,12 @@
     const el = $("#nut-timeline-window");
     el.style.left = `${(end - width) * 100}%`;
     el.style.width = `${Math.max(width * 100, 0.6)}%`;
+    // The projected stretch past now (#132), drawn apart.
+    const future = $("#nut-timeline-future");
+    const nowAt = nowIndex() / span;
+    future.hidden = nowAt >= 1;
+    future.style.left = `${nowAt * 100}%`;
+    future.style.width = `${(1 - nowAt) * 100}%`;
   }
 
   function renderTimelineDays() {
@@ -738,9 +901,10 @@
     const fit = Math.max(1, Math.floor(width / 64) - 1);
     const every = Math.max(1, Math.ceil(midnights.length / fit));
     // Labels near the right edge would collide with "now".
-    $("#nut-timeline-days").innerHTML = midnights.filter(([, i], k) => k % every === 0 && i / span < 1 - 72 / width).map(([iso, i]) =>
+    const nowAt = nowIndex() / span;
+    $("#nut-timeline-days").innerHTML = midnights.filter(([, i], k) => k % every === 0 && Math.abs(i / span - nowAt) > 72 / width).map(([iso, i]) =>
       `<span style="left:${(i / span) * 100}%">${esc(fmtDate(tickDay(iso), { weekday: "short", day: "numeric" }))}</span>`).join("")
-      + `<span class="is-now" style="left:100%">${esc(t("today_now"))}</span>`;
+      + `<span class="is-now" style="left:${nowAt * 100}%">${esc(t("today_now"))}</span>`;
   }
 
   // One gauge, both ranges: my goal filled, the recommended one dashed. The
@@ -808,10 +972,22 @@
     };
     $("#nut-hist-chips").innerHTML = d.tracked.map((n) => {
       const parts = SETS.map((set) => [set, pct(n, set)]).filter(([, v]) => v != null);
-      return `<button type="button" class="grim-scope-btn${n === roll.nutrient ? " is-on" : ""}"
-        data-chip="${n}" aria-pressed="${n === roll.nutrient}">${esc(t(`n_${n}`))}
+      const short = shortfall(n, roll.index);
+      const shortTitle = short ? ` title="${esc(t(short === "missed" ? "chip_short" : "chip_maybe_short"))}"` : "";
+      return `<button type="button" class="grim-scope-btn${n === roll.nutrient ? " is-on" : ""}${short ? ` is-short is-short--${short}` : ""}"
+        data-chip="${n}" aria-pressed="${n === roll.nutrient}"${shortTitle}>${esc(t(`n_${n}`))}${short ? `<span class="sr-only"> (${esc(t(short === "missed" ? "chip_short" : "chip_maybe_short"))})</span>` : ""}
         <span class="nut-chip-pct">${parts.map(([set, v]) => `<span class="nut-chip-set nut-chip-set--${set}" title="${esc(t(`set_${set}`))}">${esc(v)}</span>`).join(" · ")}</span></button>`;
     }).join("");
+  }
+
+  // Below the goal's minimum at tick i (#125): my goal, else the recommended one.
+  // "missed" = known short; "uncertain" = short, but unknown values could cover it.
+  function shortfall(n, i) {
+    const d = roll.data;
+    if (!d || !d.logged[i]) return null;
+    const goal = goalOf(n, i, "mine") || goalOf(n, i, "who");
+    if (!goal || goal.min_value == null || d.values[n][i] >= goal.min_value) return null;
+    return d.missing[n][i] ? "uncertain" : "missed";
   }
 
   function selectNutrient(n) {
@@ -863,7 +1039,7 @@
     const m = { l: 52, r: 12, t: 24, b: 30 };
     const pw = W - m.l - m.r;
     const ph = H - m.t - m.b;
-    const N = d.ticks.length;
+    const N = nowIndex() + 1; // projected ticks never enter time in range
     const vals = d.values[n];
     let peak = 0;
     for (let i = 0; i < N; i += 1) {
@@ -963,7 +1139,7 @@
     const line = document.getElementById("nut-cursor-line");
     const dot = document.getElementById("nut-cursor-dot");
     if (!g || !line) return;
-    const i = roll.index;
+    const i = Math.min(roll.index, g.N - 1);
     line.setAttribute("x1", g.x(i));
     line.setAttribute("x2", g.x(i));
     const logged = roll.data.logged[i];
@@ -1007,7 +1183,7 @@
     // The day strip follows my goal, or the recommended one without it.
     const set = d.sets.mine.daily[n] ? "mine" : "who";
     const byDay = Object.fromEntries((d.sets[set].daily[n] || []).map((x) => [x.date, x]));
-    const days = [...new Set(d.ticks.map(tickDay))];
+    const days = [...new Set(d.ticks.slice(0, nowIndex() + 1).map(tickDay))];
     $("#nut-strip").innerHTML = days.map((day) => {
       const cell = byDay[day];
       const label = cell
@@ -1054,7 +1230,7 @@
       for (let i = ticks.length - 1; i >= 0; i -= 1) if (tickDay(ticks[i]) === day.dataset.day) { setIndex(i); break; }
       return true;
     }
-    if (e.target.closest("#nut-now-btn")) { setIndex(lastIndex()); return true; }
+    if (e.target.closest("#nut-now-btn")) { setIndex(nowIndex()); return true; }
     if (e.target.closest("#nut-all-toggle")) {
       const box = $("#nut-all");
       box.hidden = !box.hidden;
@@ -1510,6 +1686,7 @@
         body: {
           date: CFG.day,
           slot: form.elements.slot.value,
+          time: form.elements.time.value || null,
           spell: journal.planPicked.uuid,
           quantity: Number(form.elements.quantity.value),
           unit: form.elements.unit.value,
@@ -1578,8 +1755,8 @@
     const planEl = e.target.closest(".nut-plan-item");
     if (planEl && e.target.closest("[data-plan-eat]")) {
       try {
-        const body = isToday() ? { eaten_at: `${CFG.day}T${nowTime()}` } : {};
-        await api(`plan/${encodeURIComponent(planEl.dataset.uuid)}/eat/`, { method: "POST", body });
+        // Logged at its planned date and time (#132); the entry stays editable.
+        await api(`plan/${encodeURIComponent(planEl.dataset.uuid)}/eat/`, { method: "POST", body: {} });
         toast(t("toast_eaten"));
         refreshAll();
       } catch (err) { toast(errorText(err)); }
@@ -1601,11 +1778,15 @@
     if (!hasConsent()) return;
     resetEntryForm();
     roll.follow = isToday(); // a past day opens the window at that day's end
-    loadDay();
-    initRolling();
+    initRolling(); // the list follows once the window is known (#124)
     initFab();
     $("#nut-entry-form").addEventListener("submit", submitEntry);
     $("#nut-plan-form").addEventListener("submit", submitPlan);
+    // The planned time follows the slot until the user picks one (#132).
+    const planForm = $("#nut-plan-form");
+    const slotTime = () => { planForm.elements.time.value = SLOT_TIMES[planForm.elements.slot.value] || ""; };
+    planForm.elements.slot.addEventListener("change", slotTime);
+    slotTime();
     $("#nut-entry-cancel").addEventListener("click", resetEntryForm);
     $("#nut-entry-search").addEventListener("input", (e) => searchEntrySoon(e.target.value));
     $("#nut-plan-search").addEventListener("input", (e) => searchPlanSoon(e.target.value));

@@ -384,7 +384,7 @@ re-exported from `models/__init__.py`, so `from the_cauldron.models import X` wo
 |---|---|
 | `Tag` | `slug`, `name`, `name_es`. Seeded (soup, salad, drink, breakfast, dessert, main, side, snack, sauce, bread, vegetarian, vegan) |
 | `Reagent` | `name`, `name_es`, `search_name` (normalized, see below), `category`, `source` usda/user/staff, `fdc_id` (unique, nullable), `created_by`, `status` private/pending/approved, `grams_per_unit` JSON (`cup`/`tbsp`/`tsp`/`piece` → grams), `density_g_per_ml` |
-| `ReagentNutrients` | 1:1 `reagent.nutrients`; 24 fields per 100 g (`ReagentNutrients.FIELDS`). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero. `added_sugar_g` (#104, after `sugar_g`) stands in for WHO's free sugars minus fruit-juice sugars (sugar and honey count in full); `added_sugar_over_total` rejects it above a known `sugar_g` — reagent API (PATCH checks the stored sugars), model `clean()` (admin), quick entries, MCP |
+| `ReagentNutrients` | 1:1 `reagent.nutrients`; 36 fields per 100 g (`ReagentNutrients.FIELDS`; #125 appended B1, B2, B3, B5, B6, folate µg DFE, E, K, zinc, magnesium, selenium, phosphorus). **Null = unknown**, shown "—"; never coerced to 0. A stored 0 is a measured zero. `added_sugar_g` (#104, after `sugar_g`) stands in for WHO's free sugars minus fruit-juice sugars (sugar and honey count in full); `added_sugar_over_total` rejects it above a known `sugar_g` — reagent API (PATCH checks the stored sugars), model `clean()` (admin), quick entries, MCP |
 | `Spell` | `owner`, `title` (+ `search_title`, covers `title_es` too), `description`, `servings`, `prep/cook_minutes`, `steps` JSON list, `visibility` private/public, `forked_from` (SET_NULL), `tags` M2M. `title_es` / `description_es` / `steps_es`: Spanish text for **seeded starter spells only** (read-only in the API) |
 | `SpellReagent` | `spell.lines`: `reagent` (PROTECT), `quantity`, `unit`, `grams` (stored), `note` (+ `note_es`, starters only), `order` |
 | `GrimoirePreferences` | 1:1 `user.grimoire_preferences`, `unit_system` metric/us. Created lazily (view / `preferences/` GET) |
@@ -535,6 +535,15 @@ seed later is listed in `seed_grimoire.BACKFILL`: every run fills it on existing
 `--refresh` needed; a staff value is never overwritten). User-created reagents: unknown unless entered.
 Intake entries logged before #104 were marked `added_sugar_g` missing (in `missing` and `basis.missing`) by
 migration 0033 — unknown, never 0.
+**#125 micronutrients**: the 12 are in `build_grimoire_reagents.NUTRIENT_NUMBERS` and `seed_grimoire.BACKFILL`; the
+seed JSON got them from the same USDA SR Legacy records (FDC API). Non-USDA seed/staff reagents (Mexican Coca-Cola)
+keep them null until researched. Migration 0045 marked them missing on every older entry. `manage.py
+fill_micronutrients --file <json>` applies researched values (uuid → values, nulls only, `nutrients_estimated`);
+`manage.py backfill_micronutrients` then fills all-time history where an entry still misses them and its reagent /
+readable spell now knows them (`breakdown.backfill_entries`, flags `basis.estimated`, never changes a known value).
+The goal cauldron's `refresh_entries` reaches all time for these 12 (`breakdown.ALL_TIME_NUTRIENTS`), 7 days for the
+rest. `recommendations.DRI` has their RDA/AI by sex and age; no food maximum (magnesium's and niacin's ULs are
+supplement-only).
 
 **Debugging**
 - A line won't save with "Can't convert…" → the reagent has no weight for that unit and no density;
@@ -619,7 +628,7 @@ Third part of The Cauldron (#80–#84). Models in `models/nutrition.py`; rules i
 | `CauldronProfile` | 1:1 user, `timezone` (IANA, default `America/Mexico_City`). A day = midnight–midnight there. `language` ("" = never chosen; see "Switcher + memory", #87). Body data (#105): `birth_year`, `sex` (male/female/undisclosed), `weight_kg` (20–400), `activity_level` (sedentary/moderate/vigorous, "" = unknown); `age(today)` by birth year. Lazy (`nutrition.get_profile`) |
 | `NutrientGoal` | per nutrient, `kind` at_least/at_most/between, `min_value`/`max_value`, active on `valid_from ≤ day < valid_to`. **Versioned**: a change closes the active row (`valid_to = today`) and opens a new one; no row = no goal. Unique active row per (user, nutrient). A row with `valid_to == valid_from` (changed twice in a day) was never active and is skipped |
 | `IntakeEntry` | `eaten_at` (aware) + `local_date` (fixed at log time in the user's tz), `source` spell/reagent/quick, `basis` (per-100 g snapshot + `serving_g`), `nutrients` (known totals), `missing` (per-nutrient count). Changing the amount rescales `basis` — editing the spell later never rewrites history |
-| `PlannedMeal` | `date`, `slot`, `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`; deleting the entry re-plans it) |
+| `PlannedMeal` | `date`, `slot`, `time` (#132, required, user's clock; default by slot `SLOT_TIMES`: 08:00/14:00/17:00/20:00 — migrations 0046–0047 filled old rows), `spell` (SET_NULL) + `spell_title` snapshot, `quantity`/`unit` (serving/g), `intake_entry` (1:1, set by `eat/`, which defaults `eaten_at` to its date + time; deleting the entry re-plans it) |
 
 **Legal (#84)** — `legal.CURRENT_VERSIONS` is the single source (terms 1.3, privacy 1.5, consent 1.1; privacy 1.5
 joins #105's body data and #72's sign-up / Google); the
@@ -644,14 +653,21 @@ stored or versioned (a profile change re-judges the whole history). `Recommendat
 `NutrientGoal` (`kind`/`min_value`/`max_value`) so `nutrition.bounds`/`judge` work on it, plus `source`/`note`.
 Energy = FAO/WHO/UNU 2004 BMR × PAL (1.53 / 1.76 / 2.25) ±10 %; protein 0.83 g/kg; fat 20–30 %, sat < 10 %,
 trans < 1 %, carbs 45–65 %, added sugars < 10 % of that energy; sodium < 2000 mg, potassium ≥ 3510 mg, fiber ≥ 25 g;
-`DRI` table (RDA/AI) for calcium, iron, vitamins A/C/D/B12, ALA, LA. `NO_RECOMMENDATION` (mono/poly fat,
+`DRI` table (RDA/AI) for calcium, iron, vitamins A/C/D/B12, ALA, LA and #125's twelve. `NO_RECOMMENDATION` (mono/poly fat,
 cholesterol, EPA, DHA, total sugars) carries a note. Unknowns: every candidate (both sexes × `CANDIDATE_AGES`)
 is computed and combined — largest minimum, smallest maximum; an emptied range is left out (`unresolved`);
 unknown activity = sedentary; no weight → `WEIGHT_BASED` goals left out (`needs_weight`); under 18 by the
 youngest age the birth year allows (year difference − 1) → `status: "minor"`, nothing. `GET goals/` adds `recommended` (`payload`); `body/` (GET/PATCH) edits the body
 data — birth year/sex need only a sign-in; adding weight/activity needs the consent (403 `consent_required`),
-clearing them never does. The Journal's gauges show my goals plus `WHO_HEADLINE` recommended ones (nutrition.js);
-every tracked nutrient stays in the chips.
+clearing them never does. The Journal's gauges show every nutrient with my goal **or** a recommended one, minus the ones whose eye is off
+(#131, `CauldronProfile.journal_hidden_gauges`, a display preference: never versioned or judged; `GET goals/` and
+`rolling/` carry `hidden_gauges`; `PATCH goals/gauges/ {nutrient, visible}` — 400 unknown key, 403 without consent;
+withdrawing with delete clears it; MCP ignores it). With every eligible gauge hidden, "How you're doing" drops its
+heading, note and grid. Profile → Daily goals: an eye per row (disabled only with neither goal), and goals
+**autosave** on change (complete rows only; the full set is PUT, so versioning stays in `save_goal_set`); no Save
+button. At the scrubber's tick each chip below its minimum (my goal, else the recommended one) is highlighted —
+`is-short--missed` vs `is-short--uncertain` when unknown values could cover it (#125). PostHog:
+`journal_gauge_toggled {visible}`.
 `legal.withdraw_consent(delete_data=True)` clears weight and activity (birth year/sex stay for the Forge).
 Every page showing them includes `_recommendation_notice.html` (not medical advice, adults only).
 PostHog: `profile_body_data_saved {fields_count}` only.
@@ -683,13 +699,26 @@ never count. Streaks: missed resets; uncertain/pending/not-logged/no-goal skip. 
 Journal's "How you're doing" and "How often you're in range". A tick = a window end, hourly (3-hourly at 90
 days), plus "now"; its window holds entries with `end - span < eaten_at ≤ end` (7d is divided by 7 → daily
 average). Each tick is judged **final** against the goals of its local date; an empty window is `not_logged`
-and never counts. Response: `ticks`, `logged`, per-nutrient `values`/`missing` (all 24), `tracked` (union of both
+and never counts. Response: `ticks`, `projected`, `logged`, per-nutrient `values`/`missing` (all 36), `tracked` (union of both
 sets) and `sets: {mine, who}` (#105) — each with per-goal-nutrient `status`/`low`/`high` arrays, `summary` (time in
 range %) and `daily` (share of each day in range); `who` (the recommendations, the same at every tick) adds
 `status_reason` (`adult`/`minor`). The Journal draws my band filled and the recommended one dashed, both ranges
 and status dots on each gauge, and two percentages per nutrient. The page
 scrubs and charts these client-side with no further requests (`nutrition.js` → `roll`). The calendar-day
 `adherence/` endpoint (#82) stays but no page uses it now.
+**Projection (#132)**: `rolling/?…&ahead=0–12` (24h only; else 400) adds hourly ticks past now, `projected: true`.
+Their windows also count entries scheduled later (`eaten_at` in the future) and uneaten planned meals whose date +
+time is after now (`rolling.planned_as_entries`, nutrients as `eat/` would log them; a gone spell = all missing →
+`uncertain`); a past unmarked plan is ignored, an eaten one counts once (as its entry). Goals are the tick's local
+date's. Projected ticks never enter `summary`/`daily`. The Journal asks `ahead=12`: the scrubber runs to now + 12 h,
+the stretch past "now" is drawn apart, a projected tick reads "Projection" with the estimate note; the history chart
+and strip stop at now. MCP `get_adherence {ahead}` adds `projected` ticks; `time_in_range` is unchanged.
+**The list follows the window (#124)**: `GET intake/window/?end=<iso>&span=24h|7d` (consent, user tz; `end` default
+now, capped at now + 12 h) — entries with `end - span < eaten_at ≤ end` (`rolling.entries_in_window`, the same rule as
+`rolling/` and `rolling/breakdown/`), newest first with `local_date`, plus `planned`: uneaten plans from the window
+end's date on. "What you ate" re-fetches it when the scrubber settles (250 ms debounce, `journal.seq` guard); an entry
+from another day than the window end shows "yesterday 21:30" / "Tue 3 Oct, 21:30"; uneaten plans sit under "To eat".
+`intake/day/` stays (adherence, `get_journal`).
 
 **API** (`/cauldron/api/`): `legal/`, `legal/accept/` `{documents}`, `legal/withdraw/` `{delete_data}`,
 `me/` (GET/PATCH timezone), `goals/` (GET/PUT full set), `goals/history/`, `intake/` (CRUD, `?date=`),
@@ -763,7 +792,9 @@ API — never duplicate rules in a tool). Register with `@registry.tool(...)`; e
 `invalid_arguments`, `invalid_input`, `not_found` (also for other users' data), `consent_required` (+ `accept_url`:
 `/cauldron/accept/` when terms are pending, else the Journal's consent panel), `internal_error` (logged, never leaked).
 Another user's spell text goes in `untrusted_text` (the server `instructions` say it's data).
-Read: `get_today`, `get_journal` (≤ 31 days), `get_adherence` (7/30/90), `get_goals`, `get_goal_breakdown`
+Read: `get_today` (#124: the rolling last 24 h — entries newest first, window totals, goals judged final against
+today's goals, uneaten plans from today on, the Forge summary; no calendar day), `get_journal` (≤ 31 days,
+calendar days), `get_adherence` (7/30/90, `ahead` 0–12 → projected ticks), `get_goals`, `get_goal_breakdown`
 (#107, same payload as `rolling/breakdown/`), `get_meal_plan`,
 `search_spells` (`have_reagents` → `grimoire.spells_using`), `get_spell`, `search_reagents`, `get_reagent`.
 Write (`cauldron:write`; ✱ = two-step): `log_meal`, `update_meal`✱, `delete_meal`✱, `plan_meal`,

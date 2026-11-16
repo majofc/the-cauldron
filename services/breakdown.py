@@ -43,10 +43,16 @@ from the_cauldron.models import (
 from the_cauldron.services import grimoire
 from the_cauldron.services import nutrition as nu
 from the_cauldron.services.nutrition import NutritionInputError
-from the_cauldron.services.rolling import SPANS
+from the_cauldron.services.rolling import SPANS, window_start
 
 TOP = 5
 REFRESH_DAYS = 7
+# #125's micronutrients were unknown for every entry before they existed, so a
+# fill for one of them reaches all of history, not just the last week.
+ALL_TIME_NUTRIENTS = frozenset((
+    "thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "vit_b6_mg", "folate_ug",
+    "vit_e_mg", "vit_k_ug", "zinc_mg", "magnesium_mg", "selenium_ug", "phosphorus_mg",
+))
 MAX_VALUE = 100_000  # per 100 g or per entry; a typo guard, not a nutrition rule
 MAX_LOOKBACK_DAYS = 366
 
@@ -88,7 +94,7 @@ def _key(entry):
 
 def window_entries(user, span, end):
     """The user's entries in the window ending at ``end`` — the rolling rule."""
-    start = end - timedelta(hours=SPANS[span])
+    start = window_start(end, span)
     return list(
         IntakeEntry.objects.filter(user=user, eaten_at__gt=start, eaten_at__lte=end)
         .select_related("spell", "reagent").order_by("eaten_at", "created_at")
@@ -281,9 +287,11 @@ def refresh_entries(user, reagents, nutrient, value, now=None):
     now = now or timezone.now()
     ids = [r.pk for r in reagents]
     recent = IntakeEntry.objects.filter(
-        Q(reagent_id__in=ids) | Q(spell__lines__reagent_id__in=ids),
-        user=user, eaten_at__gt=now - timedelta(days=REFRESH_DAYS), eaten_at__lte=now,
-    ).select_related("spell").distinct()
+        Q(reagent_id__in=ids) | Q(spell__lines__reagent_id__in=ids), user=user, eaten_at__lte=now,
+    )
+    if nutrient not in ALL_TIME_NUTRIENTS:
+        recent = recent.filter(eaten_at__gt=now - timedelta(days=REFRESH_DAYS))
+    recent = recent.select_related("spell").distinct()
     readable = set(grimoire.readable_spells(user).values_list("pk", flat=True))
     changed = []
     spell_bases = {}
@@ -308,25 +316,80 @@ def refresh_entries(user, reagents, nutrient, value, now=None):
                 continue  # nothing this fill could add
         else:
             continue
-        basis = dict(entry.basis or {})
-        basis["per_100g"] = {**basis.get("per_100g", {}), nutrient: per_100g}
-        basis_missing = dict(basis.get("missing", {}))
-        if missing_now:
-            basis_missing[nutrient] = missing_now
-        else:
-            basis_missing.pop(nutrient, None)
-        basis["missing"] = basis_missing
-        basis["estimated"] = True
-        entry.basis = basis
-        entry.nutrients = {**entry.nutrients, nutrient: round(per_100g * entry.grams / 100.0, 3)}
-        entry_missing = dict(entry.missing)
-        if missing_now:
-            entry_missing[nutrient] = missing_now
-        else:
-            entry_missing.pop(nutrient, None)
-        entry.missing = entry_missing
+        fill_entry_value(entry, nutrient, per_100g, missing_now)
         changed.append(entry)
     IntakeEntry.objects.bulk_update(changed, ["basis", "nutrients", "missing"])
+    return len(changed)
+
+
+def fill_entry_value(entry, nutrient, per_100g, missing_now):
+    """Gap-fill one nutrient on an entry from its grams (in memory; the caller
+    saves). Marks the snapshot estimated; a known value is never replaced."""
+    basis = dict(entry.basis or {})
+    basis["per_100g"] = {**basis.get("per_100g", {}), nutrient: per_100g}
+    basis_missing = dict(basis.get("missing", {}))
+    if missing_now:
+        basis_missing[nutrient] = missing_now
+    else:
+        basis_missing.pop(nutrient, None)
+    basis["missing"] = basis_missing
+    basis["estimated"] = True
+    entry.basis = basis
+    entry.nutrients = {**entry.nutrients, nutrient: round(per_100g * entry.grams / 100.0, 3)}
+    entry_missing = dict(entry.missing)
+    if missing_now:
+        entry_missing[nutrient] = missing_now
+    else:
+        entry_missing.pop(nutrient, None)
+    entry.missing = entry_missing
+
+
+def backfill_entries(user, nutrients=ALL_TIME_NUTRIENTS):
+    """Fill ``nutrients`` wherever an entry of ``user`` still misses them and
+    the food now knows them (#125): reagent entries from the reagent's current
+    values, spell entries from the spell's current recipe (only while readable).
+    All of history; only missing values; never a known one. Returns how many
+    entries changed."""
+    changed = []
+    spell_bases = {}
+    readable = None
+    entries = (
+        IntakeEntry.objects.filter(user=user, source__in=[IntakeEntry.Source.REAGENT, IntakeEntry.Source.SPELL])
+        .exclude(grams=None).select_related("reagent__nutrients", "spell")
+    )
+    for entry in entries.iterator():
+        todo = [n for n in nutrients if (entry.missing or {}).get(n)]
+        if not todo or not entry.grams:
+            continue
+        touched = False
+        if entry.source == IntakeEntry.Source.REAGENT:
+            profile = getattr(entry.reagent, "nutrients", None) if entry.reagent_id else None
+            for n in todo:
+                value = getattr(profile, n, None) if profile else None
+                if value is not None:
+                    fill_entry_value(entry, n, value, 0)
+                    touched = True
+        elif entry.spell_id:
+            if readable is None:
+                readable = set(grimoire.readable_spells(user).values_list("pk", flat=True))
+            if entry.spell_id not in readable:
+                continue
+            if entry.spell_id not in spell_bases:
+                try:
+                    spell_bases[entry.spell_id] = nu.spell_basis_snapshot(entry.spell, user)
+                except NutritionInputError:
+                    spell_bases[entry.spell_id] = None
+            fresh = spell_bases[entry.spell_id]
+            if fresh is None:
+                continue
+            for n in todo:
+                missing_now = fresh["missing"].get(n, 0)
+                if n in fresh["per_100g"] and missing_now < entry.missing[n]:
+                    fill_entry_value(entry, n, fresh["per_100g"][n], missing_now)
+                    touched = True
+        if touched:
+            changed.append(entry)
+    IntakeEntry.objects.bulk_update(changed, ["basis", "nutrients", "missing"], batch_size=500)
     return len(changed)
 
 

@@ -13,6 +13,7 @@ from django.utils.translation import get_language
 from django.utils.translation import gettext as _
 
 from the_cauldron.models import Casting, IntakeEntry, PlannedMeal
+from the_cauldron.models.nutrition import SLOT_TIMES
 from the_cauldron.services import grimoire, nutrition
 from the_cauldron.services.nutrition import NutritionInputError
 
@@ -125,13 +126,15 @@ def apply_plan(user, meal, data, *, channel=None):
         meal.spell_title = spell.title
     elif meal.spell_id is None and meal._state.adding:
         raise NutritionInputError(_("Choose a spell."))
-    for field in ("date", "slot", "quantity", "unit", "order"):
-        if field in data:
+    for field in ("date", "slot", "time", "quantity", "unit", "order"):
+        if field in data and data[field] is not None:
             setattr(meal, field, data[field])
     if meal.date is None:
         meal.date = nutrition.today_for(user)
     if not meal.slot:
         raise NutritionInputError(_("Choose a meal: breakfast, lunch, dinner or snack."))
+    if meal.time is None:
+        meal.time = SLOT_TIMES[meal.slot]  # the slot's suggested time (#132)
     if meal.quantity is None:
         meal.quantity = 1
     if channel and meal._state.adding:
@@ -145,20 +148,17 @@ class PlanConflict(Exception):
 
 
 def eat_plan(user, meal_pk, data, *, channel=None):
-    """Log a planned meal as eaten: an ``IntakeEntry`` with the real time
-    (default now, or noon of a past/future planned day) and amount (default
-    the planned one), linked back to the plan item. Locked and re-checked, so
+    """Log a planned meal as eaten: an ``IntakeEntry`` at the planned date and
+    time unless another time is given (#132), with the planned amount unless
+    another is given, linked back to the plan item. Locked and re-checked, so
     a double tap can't log the meal twice."""
-    today = nutrition.today_for(user)
     with transaction.atomic():
         meal = PlannedMeal.objects.select_for_update(of=("self",)).select_related("spell").get(pk=meal_pk, user=user)
         if meal.intake_entry_id:
             raise PlanConflict(_("Already marked as eaten."))
         if meal.spell is None or not grimoire.can_read(meal.spell, user):
             raise PlanConflict(_("That spell is private or no longer exists."))
-        eaten_at = data.get("eaten_at") or (
-            timezone.now() if meal.date == today else datetime.combine(meal.date, time(12, 0))
-        )
+        eaten_at = data.get("eaten_at") or datetime.combine(meal.date, meal.time or time(12, 0))
         entry = apply_entry(user, {
             "source": IntakeEntry.Source.SPELL,
             "spell": meal.spell.uuid,

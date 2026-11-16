@@ -18,9 +18,12 @@ PostHog only ever gets counts and enums from here — never a value, a food or a
 goal (CLAUDE.md "PostHog never receives PII").
 """
 
+from datetime import timedelta
+
 import posthog
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext as _
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -34,6 +37,7 @@ from the_cauldron import nutrition_payloads as payloads
 from the_cauldron import nutrition_writes as writes
 from the_cauldron.nutrition_serializers import (
     BodySerializer,
+    GaugeVisibilitySerializer,
     GoalSetSerializer,
     IntakeEntrySerializer,
     IntakeInputSerializer,
@@ -239,6 +243,24 @@ class GoalsView(APIView):
         return Response(payloads.goals_payload(request.user))
 
 
+class GaugeVisibilityView(APIView):
+    """``PATCH goals/gauges/ {"nutrient", "visible"}`` — the Journal gauge eye
+    (#131). Unknown nutrient → 400. Returns ``{"hidden_gauges": [...]}``."""
+
+    permission_classes = [IsAuthenticated, AdultOnly, NutritionConsent]
+
+    def patch(self, request):
+        req = GaugeVisibilitySerializer(data=request.data)
+        req.is_valid(raise_exception=True)
+        try:
+            hidden = nutrition.set_gauge_visible(request.user, req.validated_data["nutrient"],
+                                                 req.validated_data["visible"])
+        except NutritionInputError as exc:
+            return _bad(exc)
+        posthog.capture("journal_gauge_toggled", properties={"visible": req.validated_data["visible"]})
+        return Response({"hidden_gauges": hidden})
+
+
 class GoalHistoryView(APIView):
     """Every goal version, newest first per nutrient. Rows replaced on the day
     they were set (never active on any day) are left out."""
@@ -309,6 +331,31 @@ class IntakeViewSet(UserTimezoneMixin, viewsets.ModelViewSet):
             return _bad(exc)
         return Response(payloads.day_payload(request.user, day, self.tz, request))
 
+    @action(detail=False, methods=["get"])
+    def window(self, request):
+        """``?end=<iso>&span=24h|7d`` — the entries the gauges count at ``end``
+        (default now), newest first, plus the uneaten plans from that day on
+        (#124). A naive ``end`` is the user's clock; at most now + 12 h, so a
+        projected tick (#132) lists what is already scheduled."""
+        span = request.query_params.get("span", "24h")
+        if span not in rolling.SPANS:
+            return Response({"detail": _("Use span 24h or 7d.")}, status=status.HTTP_400_BAD_REQUEST)
+        end = timezone.now()
+        raw = request.query_params.get("end")
+        if raw:
+            try:
+                parsed = parse_datetime(raw)
+            except ValueError:
+                parsed = None
+            if parsed is None:
+                return Response({"detail": _("Use a date and time like 2026-10-15T18:00.")},
+                                status=status.HTTP_400_BAD_REQUEST)
+            end = nutrition.localize(parsed, self.tz) if timezone.is_naive(parsed) else parsed
+            end = min(end, timezone.now() + timedelta(hours=rolling.MAX_AHEAD))
+        data = payloads.window_payload(request.user, span, end, self.tz, request)
+        data.pop("_entries")
+        return Response(data)
+
 
 # ── Adherence (#82) ─────────────────────────────────────────────────────────
 
@@ -345,7 +392,14 @@ class RollingView(UserTimezoneMixin, APIView):
         if span not in rolling.SPANS or days not in rolling.HISTORY_DAYS:
             return Response({"detail": _("Use span 24h or 7d and 7, 30 or 90 days.")},
                             status=status.HTTP_400_BAD_REQUEST)
-        return Response(rolling.rolling(request.user, span, days))
+        try:
+            ahead = int(request.query_params.get("ahead", 0))
+        except ValueError:
+            ahead = -1
+        if not 0 <= ahead <= rolling.MAX_AHEAD or (ahead and span != "24h"):
+            return Response({"detail": _("Project 0 to 12 hours ahead, on the 24-hour window only.")},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(rolling.rolling(request.user, span, days, ahead=ahead))
 
 
 class BreakdownView(UserTimezoneMixin, APIView):

@@ -18,6 +18,8 @@ sensitive-data consent (``services.legal``), and none of their values ever
 reach PostHog.
 """
 
+from datetime import time as dt_time
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -29,6 +31,9 @@ from .forge import ForgeBaseModel, channel_field
 from .grimoire import Casting, Reagent, ReagentNutrients, Spell
 
 DEFAULT_TIMEZONE = "America/Mexico_City"
+
+# A planned meal's suggested time by slot (#132).
+SLOT_TIMES = {"breakfast": dt_time(8, 0), "lunch": dt_time(14, 0), "snack": dt_time(17, 0), "dinner": dt_time(20, 0)}
 NUTRIENT_CHOICES = [(name, name) for name in ReagentNutrients.FIELDS]
 
 
@@ -100,6 +105,9 @@ class CauldronProfile(ForgeBaseModel):
         null=True, blank=True, validators=[MinValueValidator(20), MaxValueValidator(400)]
     )
     activity_level = models.CharField(max_length=12, choices=Activity.choices, blank=True, default="")
+    # Nutrients the user hid from the Journal's gauges (#131), ``[]`` = all
+    # shown. A display preference only: never versioned, never judged.
+    journal_hidden_gauges = models.JSONField(default=list, blank=True)
 
     def age(self, today=None):
         """Age by birth year (the year's birthday assumed passed), or None."""
@@ -208,6 +216,9 @@ class PlannedMeal(ForgeBaseModel):
     )
     date = models.DateField()
     slot = models.CharField(max_length=10, choices=Slot.choices)
+    # #132: when it's planned, on the user's clock with ``date``. The form and
+    # MCP default it from the slot (``SLOT_TIMES``).
+    time = models.TimeField()
     spell = models.ForeignKey(Spell, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     spell_title = models.CharField(max_length=150, blank=True, default="")  # snapshot
     quantity = models.FloatField(validators=[MinValueValidator(0)])
@@ -222,6 +233,12 @@ class PlannedMeal(ForgeBaseModel):
         # Python (services.nutrition.planned_on, PlanViewSet.list).
         ordering = ["date", "order", "created_at"]
         indexes = [models.Index(fields=["user", "date"])]
+
+    def save(self, *args, **kwargs):
+        # A meal planned without a time gets its slot's suggested one (#132).
+        if self.time is None:
+            self.time = SLOT_TIMES.get(self.slot, dt_time(12, 0))
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.spell_title} on {self.date} ({self.slot})"

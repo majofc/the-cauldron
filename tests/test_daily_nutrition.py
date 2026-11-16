@@ -734,7 +734,7 @@ class TestPlanner:
         assert r.status_code == 201, r.data
         assert r.data["meal"]["eaten"] is True
         assert r.data["entry"]["local_date"] == str(day)
-        assert r.data["entry"]["local_time"] == "12:00"  # a past day defaults to noon
+        assert r.data["entry"]["local_time"] == "14:00"  # its planned time (#132): lunch's 14:00
         assert r.data["entry"]["nutrients"]["kcal"] == pytest.approx(690.75)
         assert c.post(f"{API}plan/{meal['uuid']}/eat/", {}, format="json").status_code == 409
         # Eaten meals count once: as the entry, not again as planned.

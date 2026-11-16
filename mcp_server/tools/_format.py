@@ -63,6 +63,7 @@ def planned(row):
         "id": row["uuid"],
         "date": row["date"],
         "slot": row["slot"],
+        "time": str(row["time"])[:5] if row.get("time") else None,
         "spell_id": row["spell"],
         "title": row["spell_title"],
         "quantity": row["quantity"],

@@ -166,6 +166,22 @@ def clean_goal_set(raw_goals):
     return specs
 
 
+def set_gauge_visible(user, nutrient, visible):
+    """Show or hide one nutrient's Journal gauge (#131). Display only: the goal,
+    its judging and every other view are untouched. Returns the hidden list."""
+    if nutrient not in FIELDS:
+        raise NutritionInputError(_("Unknown nutrient."))
+    profile = get_profile(user)
+    hidden = [n for n in (profile.journal_hidden_gauges or []) if n in FIELDS and n != nutrient]
+    if not visible:
+        hidden.append(nutrient)
+    hidden.sort(key=FIELDS.index)
+    if hidden != profile.journal_hidden_gauges:
+        profile.journal_hidden_gauges = hidden
+        profile.save(update_fields=["journal_hidden_gauges", "updated_at"])
+    return hidden
+
+
 def current_goals(user):
     """The active set: ``{nutrient: NutrientGoal}``."""
     return {g.nutrient: g for g in NutrientGoal.objects.filter(user=user, valid_to__isnull=True)}
