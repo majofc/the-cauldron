@@ -44,24 +44,35 @@ def _day(ctx, day):
     title="Today",
     consent=True,
     description=(
-        "The user's day so far, in their timezone: what they ate (entries with nutrients), the day's "
-        "totals, each daily goal with its status (met / missed / uncertain / pending / not_logged), "
-        "the meals still planned for today with the projected end of day, and where today's Forge workout "
-        "stands. Start here for "
-        "\"how am I doing today?\" or before suggesting what to eat next."
+        "Where the user stands now, over the last 24 hours (the same rolling window as their Journal, not "
+        "the calendar day): every entry eaten in that window (newest first, with its date and nutrients), "
+        "the window's totals (incomplete = some entry lacks that value), each daily goal judged final "
+        "against today's goals (met / missed / uncertain / not_logged), the meals still planned from today "
+        "on, and where today's Forge workout stands. Start here for \"how am I doing?\" or before "
+        "suggesting what to eat next. For calendar days use get_journal."
     ),
 )
 def get_today(ctx):
+    from django.utils import timezone
+
     from the_cauldron.mcp_server.tools.forge import forge_summary  # forge imports this module
 
-    today = nutrition.today_for(ctx.user)
-    plan = payloads.plan_day_payload(ctx.user, today, ctx.serializer_request)
+    now = timezone.now()
+    today = nutrition.today_for(ctx.user, now)
+    window = payloads.window_payload(ctx.user, "24h", now, ctx.tz, ctx.serializer_request)
+    entries = window["_entries"]
+    totals = nutrition.entries_totals(entries)
+    goals = nutrition.goals_on(nutrition.goal_rows_between(ctx.user, today, today), today)
     return {
         "now": fmt.local_now(ctx.tz),
         "timezone": str(ctx.tz),
-        **_day(ctx, today),
-        "planned_meals": [fmt.planned(m) for m in plan["meals"] if not m["eaten"]],
-        "projected_with_plan": [fmt.goal(g) for g in plan["goals"]],
+        "window": {"span": "24h", "from": window["start"].strftime("%Y-%m-%dT%H:%M"),
+                   "to": window["end"].strftime("%Y-%m-%dT%H:%M")},
+        "logged": bool(entries),
+        "entries": [fmt.entry(e) for e in window["entries"]],
+        "totals": fmt.totals(nutrition.totals_payload(totals)),
+        "goals": [fmt.goal(g) for g in nutrition.goal_statuses(goals, totals, logged=bool(entries), final=True)],
+        "planned_meals": [fmt.planned(m) for m in window["planned"]],
         "forge": forge_summary(ctx.user),
     }
 
@@ -97,21 +108,47 @@ def get_journal(ctx, **args):
         "time_in_range: share of hours the rolling 24-hour window was within each goal (hours with "
         "nothing logged don't count); time_in_range_recommended: the same against the recommended goals "
         "(see get_goals). For 7 and 30 days also by_day_goal: days met / missed / "
-        "uncertain per nutrient, % met and current/best streaks."
+        "uncertain per nutrient, % met and current/best streaks. With ahead (1–12) also projected: the "
+        "next hours' 24-hour windows counting meals already scheduled and planned meals not eaten yet — "
+        "estimates, each tick projected: true; they never change time_in_range."
     ),
     schema={
         "type": "object",
-        "properties": {"days": {"type": "integer", "enum": [7, 30, 90], "default": 7}},
+        "properties": {
+            "days": {"type": "integer", "enum": [7, 30, 90], "default": 7},
+            "ahead": {"type": "integer", "minimum": 0, "maximum": 12, "default": 0,
+                      "description": "Hours to project past now (estimates)."},
+        },
         "additionalProperties": False,
     },
 )
-def get_adherence(ctx, days=7):
-    roll = rolling.rolling(ctx.user, "24h", days)
+def get_adherence(ctx, days=7, ahead=0):
+    roll = rolling.rolling(ctx.user, "24h", days, ahead=ahead)
     out = {"days": days, "time_in_range": roll["sets"]["mine"]["summary"],
            "time_in_range_recommended": roll["sets"]["who"]["summary"]}
+    if ahead:
+        out["projected"] = _projected_ticks(roll)
     if days in adherence.WINDOWS:
         out["by_day_goal"] = adherence.adherence(ctx.user, days)["nutrients"]
     return out
+
+
+def _projected_ticks(roll):
+    """The projected ticks of a ``rolling`` payload (#132), one row each: the
+    window's known values and each goal's status, flagged ``projected``."""
+    rows = []
+    for i, projected in enumerate(roll["projected"]):
+        if not projected:
+            continue
+        rows.append({
+            "at": roll["ticks"][i].strftime("%Y-%m-%dT%H:%M"),
+            "projected": True,
+            "values": {n: roll["values"][n][i] for n in roll["tracked"]},
+            "incomplete": [n for n in roll["tracked"] if roll["missing"][n][i]],
+            "status": {n: s[i] for n, s in roll["sets"]["mine"]["status"].items()},
+            "status_recommended": {n: s[i] for n, s in roll["sets"]["who"]["status"].items()},
+        })
+    return rows
 
 
 @tool(

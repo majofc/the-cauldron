@@ -88,6 +88,7 @@ api_urlpatterns = [
     path("age/", nutrition_api.AgeView.as_view(), name="nutrition-age"),
     path("goals/", nutrition_api.GoalsView.as_view(), name="nutrition-goals"),
     path("goals/history/", nutrition_api.GoalHistoryView.as_view(), name="nutrition-goal-history"),
+    path("goals/gauges/", nutrition_api.GaugeVisibilityView.as_view(), name="nutrition-goal-gauges"),
     path("adherence/", nutrition_api.AdherenceView.as_view(), name="nutrition-adherence"),
     path("rolling/", nutrition_api.RollingView.as_view(), name="nutrition-rolling"),
     path("rolling/breakdown/", nutrition_api.BreakdownView.as_view(), name="nutrition-breakdown"),

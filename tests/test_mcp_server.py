@@ -530,15 +530,17 @@ class TestNutritionTools:
     def test_today(self, alice, bob):
         NutrientGoal.objects.create(user=alice, nutrient="kcal", kind="between", min_value=1800, max_value=2200,
                                     valid_from=nutrition.today_for(alice) - timedelta(days=3))
-        _entry(alice, kcal=600)
+        recent = _entry(alice, kcal=600)
+        IntakeEntry.objects.filter(pk=recent.pk).update(eaten_at=timezone.now() - timedelta(hours=1))
         _entry(bob, label="Bob's lunch", kcal=900)
         d = _ok(_token(alice), "get_today")
-        assert d["date"] == str(nutrition.today_for(alice))
+        # #124: the rolling last 24 h, judged final against today's goals.
+        assert d["window"]["span"] == "24h"
         assert d["timezone"] == "America/Mexico_City"
         assert [e["label"] for e in d["entries"]] == ["Tacos"]
         assert d["totals"]["values"]["kcal"] == 600
         assert "carbs_g" in d["totals"]["incomplete"]  # unknown, never 0
-        assert d["goals"][0]["nutrient"] == "kcal" and d["goals"][0]["status"] == "pending"
+        assert d["goals"][0]["nutrient"] == "kcal" and d["goals"][0]["status"] == "missed"
 
     def test_journal_is_own_and_bounded(self, alice, bob):
         today = nutrition.today_for(alice)

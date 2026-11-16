@@ -64,6 +64,20 @@ DRI = {
     "vit_b12_ug": [(18, None, 2.4, 2.4)],
     "omega3_ala_g": [(18, None, 1.6, 1.1)],
     "omega6_la_g": [(18, 19, 16, 11), (19, 51, 17, 12), (51, None, 14, 11)],
+    # #125 (NASEM DRI; 18-year-olds are in the 14–18 band). Magnesium's and
+    # niacin's upper limits apply to supplements only, so no food maximum.
+    "thiamin_mg": [(18, None, 1.2, 1.1)],
+    "riboflavin_mg": [(18, None, 1.3, 1.1)],
+    "niacin_mg": [(18, None, 16, 14)],
+    "pantothenic_mg": [(18, None, 5, 5)],
+    "vit_b6_mg": [(18, 51, 1.3, 1.3), (51, None, 1.7, 1.5)],
+    "folate_ug": [(18, None, 400, 400)],
+    "vit_e_mg": [(18, None, 15, 15)],
+    "vit_k_ug": [(18, None, 120, 90)],
+    "zinc_mg": [(18, 19, 11, 9), (19, None, 11, 8)],
+    "magnesium_mg": [(18, 19, 410, 360), (19, 31, 400, 310), (31, None, 420, 320)],
+    "selenium_ug": [(18, None, 55, 55)],
+    "phosphorus_mg": [(18, 19, 1250, 1250), (19, None, 700, 700)],
 }
 # One age inside every band of BMR and DRI: what "unknown age" is computed over.
 CANDIDATE_AGES = (18, 25, 45, 55, 65, 75)

@@ -127,6 +127,9 @@ class ReagentNutrients(ForgeBaseModel):
         "sat_fat_g", "mono_fat_g", "poly_fat_g", "trans_fat_g", "omega3_ala_g", "omega3_epa_g",
         "omega3_dha_g", "omega6_la_g", "cholesterol_mg", "sodium_mg", "potassium_mg",
         "calcium_mg", "iron_mg", "vit_a_ug", "vit_c_mg", "vit_d_ug", "vit_b12_ug",
+        # #125: B vitamins, E, K, folate (µg DFE) and four minerals.
+        "thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "vit_b6_mg", "folate_ug",
+        "vit_e_mg", "vit_k_ug", "zinc_mg", "magnesium_mg", "selenium_ug", "phosphorus_mg",
     )
 
     reagent = models.OneToOneField(Reagent, on_delete=models.CASCADE, related_name="nutrients")
@@ -157,6 +160,18 @@ class ReagentNutrients(ForgeBaseModel):
     vit_c_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     vit_d_ug = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
     vit_b12_ug = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    thiamin_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    riboflavin_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    niacin_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    pantothenic_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    vit_b6_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    folate_ug = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    vit_e_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    vit_k_ug = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    zinc_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    magnesium_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    selenium_ug = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
+    phosphorus_mg = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0)])
 
     class Meta:
         verbose_name_plural = "reagent nutrients"

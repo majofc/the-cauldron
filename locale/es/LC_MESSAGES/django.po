@@ -2,12 +2,12 @@
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-16 00:11+0000\n"
+"POT-Creation-Date: 2026-11-16 01:50+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -62,11 +62,11 @@ msgid "Display name"
 msgstr "Nombre para mostrar"
 
 #: auth_forms.py:47 templates/the_cauldron/nutrition.html:94
-#: templates/the_cauldron/nutrition.html:404
+#: templates/the_cauldron/nutrition.html:413
 msgid "Birth year"
 msgstr "Año de nacimiento"
 
-#: auth_forms.py:50 nutrition_api.py:181 nutrition_api.py:211
+#: auth_forms.py:50 nutrition_api.py:185 nutrition_api.py:215
 #: nutrition_i18n.py:44
 msgid "Your birth year is required."
 msgstr "Tu año de nacimiento es obligatorio."
@@ -970,7 +970,7 @@ msgstr "Este peldaño se asigna con %(required)s; tu última Prueba fue %(yours)
 #: forge_i18n.py:274 templates/the_cauldron/grimoire.html:111
 #: templates/the_cauldron/grimoire.html:159
 #: templates/the_cauldron/grimoire.html:225
-#: templates/the_cauldron/nutrition.html:315
+#: templates/the_cauldron/nutrition.html:322
 #: templates/the_cauldron/oauth_authorize.html:84
 msgid "Cancel"
 msgstr "Cancelar"
@@ -1753,7 +1753,7 @@ msgstr "Esas cantidades no se pueden convertir a gramos — usa g."
 msgid "Send a JSON object."
 msgstr "Envía un objeto JSON."
 
-#: grimoire_api.py:349 services/nutrition.py:268
+#: grimoire_api.py:349 services/nutrition.py:284
 msgid "This spell has no weighed ingredients."
 msgstr "Este hechizo no tiene ingredientes con peso."
 
@@ -2458,7 +2458,7 @@ msgstr "Prueba una porción"
 msgid "day total"
 msgstr "total del día"
 
-#: grimoire_i18n.py:192 nutrition_i18n.py:152
+#: grimoire_i18n.py:192 nutrition_i18n.py:173
 msgid "I ate this"
 msgstr "Me lo comí"
 
@@ -2711,7 +2711,55 @@ msgstr "Vitamina D"
 msgid "Vitamin B12"
 msgstr "Vitamina B12"
 
-#: grimoire_serializers.py:28 services/breakdown.py:219 services/forge.py:1686
+#: grimoire_i18n.py:256
+msgid "Thiamin (B1)"
+msgstr "Tiamina (B1)"
+
+#: grimoire_i18n.py:257
+msgid "Riboflavin (B2)"
+msgstr "Riboflavina (B2)"
+
+#: grimoire_i18n.py:258
+msgid "Niacin (B3)"
+msgstr "Niacina (B3)"
+
+#: grimoire_i18n.py:259
+msgid "Pantothenic acid (B5)"
+msgstr "Ácido pantoténico (B5)"
+
+#: grimoire_i18n.py:260
+msgid "Vitamin B6"
+msgstr "Vitamina B6"
+
+#: grimoire_i18n.py:261
+msgid "Folate"
+msgstr "Folato"
+
+#: grimoire_i18n.py:262
+msgid "Vitamin E"
+msgstr "Vitamina E"
+
+#: grimoire_i18n.py:263
+msgid "Vitamin K"
+msgstr "Vitamina K"
+
+#: grimoire_i18n.py:264
+msgid "Zinc"
+msgstr "Zinc"
+
+#: grimoire_i18n.py:265
+msgid "Magnesium"
+msgstr "Magnesio"
+
+#: grimoire_i18n.py:266
+msgid "Selenium"
+msgstr "Selenio"
+
+#: grimoire_i18n.py:267
+msgid "Phosphorus"
+msgstr "Fósforo"
+
+#: grimoire_serializers.py:28 services/breakdown.py:225 services/forge.py:1686
 #: services/forge.py:1688
 msgid "Enter a number."
 msgstr "Escribe un número."
@@ -2834,8 +2882,8 @@ msgstr "Esa confirmación expiró, ya se usó o era para otros cambios. Vuelve a
 msgid "Some values are not valid."
 msgstr "Algunos valores no son válidos."
 
-#: mcp_server/registry.py:295 nutrition_api.py:386 nutrition_api.py:393
-#: nutrition_api.py:400
+#: mcp_server/registry.py:295 nutrition_api.py:440 nutrition_api.py:447
+#: nutrition_api.py:454
 msgid "Not found."
 msgstr "No se encontró."
 
@@ -2847,48 +2895,60 @@ msgstr "Algo salió mal. Inténtalo de nuevo."
 msgid "Those results were already recorded; this is your current program."
 msgstr "Esos resultados ya estaban registrados; este es tu programa actual."
 
-#: models/grimoire.py:173 services/breakdown.py:228
+#: models/grimoire.py:188 services/breakdown.py:234
 msgid "Added sugars can't be more than the total sugars."
 msgstr "Los azúcares añadidos no pueden ser más que los azúcares totales."
 
-#: nutrition_api.py:62
+#: nutrition_api.py:66
 msgid "Accept the sensitive-data consent to use goals and the meal log."
 msgstr "Acepta el consentimiento para datos sensibles para usar las metas y el diario de comidas."
 
-#: nutrition_api.py:177
+#: nutrition_api.py:181
 msgid "Give your consent first."
 msgstr "Primero da tu consentimiento."
 
-#: nutrition_api.py:203
+#: nutrition_api.py:207
 msgid "Accept the terms and the privacy notice first."
 msgstr "Primero acepta los Términos y el Aviso de Privacidad."
 
-#: nutrition_api.py:206
+#: nutrition_api.py:210
 msgid "Your birth year is already set."
 msgstr "Tu año de nacimiento ya está registrado."
 
-#: nutrition_api.py:328
+#: nutrition_api.py:342 services/breakdown.py:66
+msgid "Use span 24h or 7d."
+msgstr "Usa una ventana de 24h o 7d."
+
+#: nutrition_api.py:351 services/breakdown.py:75
+msgid "Use a date and time like 2026-10-15T18:00."
+msgstr "Usa una fecha y hora como 2026-10-15T18:00."
+
+#: nutrition_api.py:375
 msgid "Use 7 or 30 days."
 msgstr "Usa 7 o 30 días."
 
-#: nutrition_api.py:346
+#: nutrition_api.py:393
 msgid "Use span 24h or 7d and 7, 30 or 90 days."
 msgstr "Usa una ventana de 24h o 7d y 7, 30 o 90 días."
 
-#: nutrition_api.py:377
+#: nutrition_api.py:400
+msgid "Project 0 to 12 hours ahead, on the 24-hour window only."
+msgstr "Proyecta de 0 a 12 horas, solo en la ventana de 24 horas."
+
+#: nutrition_api.py:431
 msgid "Send an object."
 msgstr "Envía un objeto."
 
-#: nutrition_api.py:381 services/breakdown.py:62 services/nutrition.py:141
-#: services/nutrition.py:332
+#: nutrition_api.py:435 services/breakdown.py:68 services/nutrition.py:141
+#: services/nutrition.py:173 services/nutrition.py:348
 msgid "Unknown nutrient."
 msgstr "Nutriente desconocido."
 
-#: nutrition_api.py:396
+#: nutrition_api.py:450
 msgid "Choose an ingredient or an entry."
 msgstr "Elige un ingrediente o un registro."
 
-#: nutrition_api.py:452
+#: nutrition_api.py:506
 msgid "This meal is already logged as eaten. Edit the log entry instead."
 msgstr "Ya registraste esta comida; edita su registro en el diario."
 
@@ -2948,7 +3008,7 @@ msgid "Saved."
 msgstr "Guardado."
 
 #: nutrition_i18n.py:35 nutrition_i18n.py:72
-#: templates/the_cauldron/nutrition.html:246
+#: templates/the_cauldron/nutrition.html:251
 msgid "Recommended"
 msgstr "Recomendada"
 
@@ -2961,7 +3021,7 @@ msgstr "Agrega tu peso para verla."
 msgid "Add your %(fields)s to see it."
 msgstr "Agrega tu %(fields)s para verla."
 
-#: nutrition_i18n.py:38 templates/the_cauldron/nutrition.html:249
+#: nutrition_i18n.py:38 templates/the_cauldron/nutrition.html:254
 msgid "Recommended goals are for adults only, so none are shown."
 msgstr "Las metas recomendadas son solo para personas adultas, así que no se muestra ninguna."
 
@@ -3053,8 +3113,8 @@ msgstr "%(name)s — %(unit)s por 100 g"
 msgid "Logged %(time)s — total %(unit)s"
 msgstr "Registrado %(time)s — total en %(unit)s"
 
-#: nutrition_i18n.py:63 templates/the_cauldron/nutrition.html:206
-#: templates/the_cauldron/nutrition.html:426
+#: nutrition_i18n.py:63 templates/the_cauldron/nutrition.html:207
+#: templates/the_cauldron/nutrition.html:435
 msgid "Save"
 msgstr "Guardar"
 
@@ -3086,11 +3146,11 @@ msgstr "Valor guardado. Los registros nuevos lo contarán."
 msgid "This spell is someone else's. Use “Make it mine” on it, then fill its ingredients in your copy."
 msgstr "Este hechizo es de otra persona. Usa “Hacerlo mío” y luego completa sus ingredientes en tu copia."
 
-#: nutrition_i18n.py:71 templates/the_cauldron/nutrition.html:245
+#: nutrition_i18n.py:71 templates/the_cauldron/nutrition.html:250
 msgid "My goal"
 msgstr "Mi meta"
 
-#: nutrition_i18n.py:73 templates/the_cauldron/nutrition.html:176
+#: nutrition_i18n.py:73 templates/the_cauldron/nutrition.html:178
 msgid "Show goal history"
 msgstr "Ver historial de metas"
 
@@ -3148,7 +3208,7 @@ msgstr "Define una meta diaria para ver qué tan seguido la cumples."
 msgid "24 hours"
 msgstr "24 horas"
 
-#: nutrition_i18n.py:91 templates/the_cauldron/nutrition.html:265
+#: nutrition_i18n.py:91 templates/the_cauldron/nutrition.html:270
 msgid "7 days"
 msgstr "7 días"
 
@@ -3196,7 +3256,7 @@ msgstr "faltan hasta %(n)s %(unit)s"
 msgid "in range"
 msgstr "en rango"
 
-#: nutrition_i18n.py:102 templates/the_cauldron/nutrition.html:252
+#: nutrition_i18n.py:102 templates/the_cauldron/nutrition.html:257
 msgid "Show every nutrient"
 msgstr "Ver todos los nutrientes"
 
@@ -3328,11 +3388,11 @@ msgstr "No hay ningún asistente conectado."
 msgid "Disconnected. It can't use your account anymore."
 msgstr "Desconectado. Ya no puede usar tu cuenta."
 
-#: nutrition_i18n.py:135 templates/the_cauldron/nutrition.html:283
+#: nutrition_i18n.py:135 templates/the_cauldron/nutrition.html:290
 msgid "Log something"
 msgstr "Registrar algo"
 
-#: nutrition_i18n.py:136 templates/the_cauldron/nutrition.html:316
+#: nutrition_i18n.py:136 templates/the_cauldron/nutrition.html:323
 msgid "Log it"
 msgstr "Registrar"
 
@@ -3352,116 +3412,188 @@ msgstr "No hay nada registrado este día."
 msgid "Nothing logged yet today."
 msgstr "Aún no registras nada hoy."
 
-#: nutrition_i18n.py:141
+#: nutrition_i18n.py:142
+msgid "Nothing logged in this window."
+msgstr "Nada registrado en esta ventana."
+
+#: nutrition_i18n.py:143 templates/the_cauldron/nutrition.html:227
+msgid "Last 24 hours"
+msgstr "Últimas 24 horas"
+
+#: nutrition_i18n.py:144 templates/the_cauldron/nutrition.html:228
+msgid "Last 7 days"
+msgstr "Últimos 7 días"
+
+#: nutrition_i18n.py:145
+#, python-format
+msgid "24 h until %(end)s"
+msgstr "24 h hasta %(end)s"
+
+#: nutrition_i18n.py:146
+#, python-format
+msgid "7 days until %(end)s"
+msgstr "7 días hasta %(end)s"
+
+#: nutrition_i18n.py:147
+#, python-format
+msgid "yesterday %(time)s"
+msgstr "ayer %(time)s"
+
+#: nutrition_i18n.py:148
+#, python-format
+msgid "%(day)s, %(time)s"
+msgstr "%(day)s, %(time)s"
+
+#: nutrition_i18n.py:149
+msgid "To eat"
+msgstr "Por comer"
+
+#: nutrition_i18n.py:151
+msgid "Projection"
+msgstr "Proyección"
+
+#: nutrition_i18n.py:153
+msgid "below its minimum at this moment"
+msgstr "debajo de su mínimo en este momento"
+
+#: nutrition_i18n.py:154
+msgid "maybe below its minimum (some values unknown)"
+msgstr "quizá debajo de su mínimo (faltan algunos valores)"
+
+#: nutrition_i18n.py:156
+msgid "Show in the Cauldron"
+msgstr "Mostrar en el Caldero"
+
+#: nutrition_i18n.py:157
+msgid "Hide from the Cauldron"
+msgstr "Ocultar del Caldero"
+
+#: nutrition_i18n.py:158
+msgid "Saving…"
+msgstr "Guardando…"
+
+#: nutrition_i18n.py:159
+msgid "Saved"
+msgstr "Guardado"
+
+#: nutrition_i18n.py:160
+msgid "Fill in the goal's value to save it."
+msgstr "Escribe el valor de la meta para guardarla."
+
+#: nutrition_i18n.py:161
+msgid "The minimum can't be above the maximum."
+msgstr "El mínimo no puede ser mayor que el máximo."
+
+#: nutrition_i18n.py:162
 msgid "planned"
 msgstr "planeado"
 
-#: nutrition_i18n.py:142
+#: nutrition_i18n.py:163
 msgid "Logged."
 msgstr "Registrado."
 
-#: nutrition_i18n.py:143
+#: nutrition_i18n.py:164
 msgid "Entry saved."
 msgstr "Registro guardado."
 
-#: nutrition_i18n.py:144
+#: nutrition_i18n.py:165
 msgid "serving"
 msgstr "porción"
 
-#: nutrition_i18n.py:145 templates/the_cauldron/nutrition.html:351
+#: nutrition_i18n.py:166 templates/the_cauldron/nutrition.html:360
 msgid "servings"
 msgstr "porciones"
 
-#: nutrition_i18n.py:147 templates/the_cauldron/nutrition.html:342
+#: nutrition_i18n.py:168 templates/the_cauldron/nutrition.html:349
 msgid "Breakfast"
 msgstr "Desayuno"
 
-#: nutrition_i18n.py:148 templates/the_cauldron/nutrition.html:343
+#: nutrition_i18n.py:169 templates/the_cauldron/nutrition.html:350
 msgid "Lunch"
 msgstr "Comida"
 
-#: nutrition_i18n.py:149 templates/the_cauldron/nutrition.html:344
+#: nutrition_i18n.py:170 templates/the_cauldron/nutrition.html:351
 msgid "Dinner"
 msgstr "Cena"
 
-#: nutrition_i18n.py:150 templates/the_cauldron/nutrition.html:345
+#: nutrition_i18n.py:171 templates/the_cauldron/nutrition.html:352
 msgid "Snack"
 msgstr "Colación"
 
-#: nutrition_i18n.py:151
+#: nutrition_i18n.py:172
 msgid "Nothing planned."
 msgstr "Nada planeado."
 
-#: nutrition_i18n.py:153
+#: nutrition_i18n.py:174
 msgid "eaten"
 msgstr "comido"
 
-#: nutrition_i18n.py:154
+#: nutrition_i18n.py:175
 msgid "This spell is no longer available."
 msgstr "Este hechizo ya no está disponible."
 
-#: nutrition_i18n.py:155
+#: nutrition_i18n.py:176
 msgid "If you eat what's planned"
 msgstr "Si comes lo planeado"
 
-#: nutrition_i18n.py:156
+#: nutrition_i18n.py:177
 msgid "Added to the ritual."
 msgstr "Agregado al ritual."
 
-#: nutrition_i18n.py:157
+#: nutrition_i18n.py:178
 msgid "Logged as eaten."
 msgstr "Registrado como comido."
 
-#: nutrition_payloads.py:62
+#: nutrition_payloads.py:94
 #, python-format
 msgid "Ask for at most %(n)s days."
 msgstr "Pide como máximo %(n)s días."
 
-#: nutrition_writes.py:32
+#: nutrition_writes.py:33
 msgid "Choose what you ate: a spell, an ingredient or a quick entry."
 msgstr "Elige qué comiste: un hechizo, un ingrediente o una entrada rápida."
 
-#: nutrition_writes.py:46 nutrition_writes.py:123 nutrition_writes.py:158
+#: nutrition_writes.py:47 nutrition_writes.py:124 nutrition_writes.py:160
 msgid "That spell is private or no longer exists."
 msgstr "Ese hechizo es privado o ya no existe."
 
-#: nutrition_writes.py:50 nutrition_writes.py:127
+#: nutrition_writes.py:51 nutrition_writes.py:128
 msgid "Choose a spell."
 msgstr "Elige un hechizo."
 
-#: nutrition_writes.py:55 services/nutrition.py:301
+#: nutrition_writes.py:56 services/nutrition.py:317
 msgid "Use grams or servings for a spell."
 msgstr "Para un hechizo usa gramos o porciones."
 
-#: nutrition_writes.py:76
+#: nutrition_writes.py:77
 msgid "That ingredient isn't available."
 msgstr "Ese ingrediente no está disponible."
 
-#: nutrition_writes.py:80
+#: nutrition_writes.py:81
 msgid "Choose an ingredient."
 msgstr "Elige un ingrediente."
 
-#: nutrition_writes.py:84
+#: nutrition_writes.py:85
 msgid "Enter how much you ate."
 msgstr "Escribe cuánto comiste."
 
-#: nutrition_writes.py:86
+#: nutrition_writes.py:87
 msgid "Use a weight, a volume or pieces for an ingredient."
 msgstr "Para un ingrediente usa un peso, un volumen o piezas."
 
-#: nutrition_writes.py:97
+#: nutrition_writes.py:98
 msgid "Name what you ate."
 msgstr "Escribe qué comiste."
 
-#: nutrition_writes.py:102 services/nutrition.py:337
+#: nutrition_writes.py:103 services/nutrition.py:353
 msgid "Enter at least one value, e.g. the calories."
 msgstr "Escribe al menos un valor, por ejemplo las calorías."
 
-#: nutrition_writes.py:134
+#: nutrition_writes.py:135
 msgid "Choose a meal: breakfast, lunch, dinner or snack."
 msgstr "Elige una comida: desayuno, comida, cena o colación."
 
-#: nutrition_writes.py:156
+#: nutrition_writes.py:158
 msgid "Already marked as eaten."
 msgstr "Ya está marcado como comido."
 
@@ -3570,27 +3702,19 @@ msgstr "El incremento de la barra debe ser mayor que cero."
 msgid "Expected an object with actual_reps and actual_load."
 msgstr "Se esperaba un objeto con actual_reps y actual_load."
 
-#: services/breakdown.py:60
-msgid "Use span 24h or 7d."
-msgstr "Usa una ventana de 24h o 7d."
-
-#: services/breakdown.py:69
-msgid "Use a date and time like 2026-10-15T18:00."
-msgstr "Usa una fecha y hora como 2026-10-15T18:00."
-
-#: services/breakdown.py:77
+#: services/breakdown.py:83
 msgid "Pick a time within the last year."
 msgstr "Elige un momento dentro del último año."
 
-#: services/breakdown.py:221
+#: services/breakdown.py:227
 msgid "Enter a number of 0 or more."
 msgstr "Escribe un número de 0 o más."
 
-#: services/breakdown.py:337
+#: services/breakdown.py:400
 msgid "Only a typed-in entry takes a value directly."
 msgstr "Solo un registro escrito a mano acepta un valor directo."
 
-#: services/breakdown.py:339
+#: services/breakdown.py:402
 msgid "That value is already known."
 msgstr "Ese valor ya se conoce."
 
@@ -3846,61 +3970,61 @@ msgstr "Una meta “entre” necesita un mínimo y un máximo."
 msgid "A goal's minimum can't be above its maximum."
 msgstr "El mínimo de una meta no puede ser mayor que su máximo."
 
-#: services/nutrition.py:312
+#: services/nutrition.py:328
 msgid "That ingredient is gone — use a weight."
 msgstr "Ese ingrediente ya no existe; usa un peso."
 
-#: services/nutrition.py:328
+#: services/nutrition.py:344
 msgid "Send the values as an object."
 msgstr "Envía los valores como un objeto."
 
-#: services/recommendations.py:83
+#: services/recommendations.py:97
 msgid "Energy requirement ±10 % (the ±10 % is our choice)."
 msgstr "Requerimiento de energía ±10 % (el ±10 % es elección nuestra)."
 
-#: services/recommendations.py:84
+#: services/recommendations.py:98
 #, python-format
 msgid "20–30 % of the energy requirement."
 msgstr "20–30 % del requerimiento de energía."
 
-#: services/recommendations.py:85
+#: services/recommendations.py:99
 #, python-format
 msgid "Under 10 % of the energy requirement."
 msgstr "Menos del 10 % del requerimiento de energía."
 
-#: services/recommendations.py:86
+#: services/recommendations.py:100
 #, python-format
 msgid "Under 1 % of the energy requirement."
 msgstr "Menos del 1 % del requerimiento de energía."
 
-#: services/recommendations.py:87
+#: services/recommendations.py:101
 #, python-format
 msgid "45–65 % of the energy requirement."
 msgstr "45–65 % del requerimiento de energía."
 
-#: services/recommendations.py:88
+#: services/recommendations.py:102
 #, python-format
 msgid "Under 10 % of the energy requirement (WHO free sugars, approximated)."
 msgstr "Menos del 10 % del requerimiento de energía (azúcares libres de la OMS, aproximados)."
 
-#: services/recommendations.py:89
+#: services/recommendations.py:103
 msgid "0.83 g per kg of body weight."
 msgstr "0.83 g por kg de peso corporal."
 
-#: services/recommendations.py:92
+#: services/recommendations.py:106
 msgid "No limit on total sugars — only on added (free) sugars."
 msgstr "No hay límite para los azúcares totales, solo para los añadidos (libres)."
 
-#: services/recommendations.py:93 services/recommendations.py:94
-#: services/recommendations.py:97
+#: services/recommendations.py:107 services/recommendations.py:108
+#: services/recommendations.py:111
 msgid "No recommendation."
 msgstr "Sin recomendación."
 
-#: services/recommendations.py:95
+#: services/recommendations.py:109
 msgid "No recommendation for EPA on its own."
 msgstr "Sin recomendación para el EPA por separado."
 
-#: services/recommendations.py:96
+#: services/recommendations.py:110
 msgid "No recommendation for DHA on its own."
 msgstr "Sin recomendación para el DHA por separado."
 
@@ -4185,11 +4309,15 @@ msgstr "Consultando recetas antiguas…"
 msgid "Profile"
 msgstr "Perfil"
 
-#: templates/the_cauldron/_recommendation_notice.html:3
+#: templates/the_cauldron/_recommendation_notice.html:4
+msgid "About recommended goals: not medical advice"
+msgstr "Sobre las metas recomendadas: no son consejo médico"
+
+#: templates/the_cauldron/_recommendation_notice.html:5
 msgid "Recommended goals combine references calculated for your weight, age, sex and activity level: the WHO and FAO (energy, protein, fats, carbohydrates, added sugars, sodium, potassium and fiber) and, where the WHO sets none, the US National Academies' Dietary Reference Intakes (vitamins, minerals, omega-3 and omega-6)."
 msgstr "Las metas recomendadas combinan referencias calculadas para tu peso, edad, sexo y nivel de actividad: la OMS y la FAO (energía, proteína, grasas, carbohidratos, azúcares añadidos, sodio, potasio y fibra) y, donde la OMS no fija una, las Ingestas Dietéticas de Referencia de las Academias Nacionales de EE. UU. (vitaminas, minerales, omega-3 y omega-6)."
 
-#: templates/the_cauldron/_recommendation_notice.html:4
+#: templates/the_cauldron/_recommendation_notice.html:6
 msgid "Recommended goals are general references for healthy adults, not medical advice. They don't apply to pregnancy, breastfeeding or conditions that affect nutrition. You use them at your own responsibility — ask a health professional for advice about you."
 msgstr "Las metas recomendadas son referencias generales para personas adultas sanas, no consejo médico. No aplican durante el embarazo, la lactancia ni con condiciones que afecten tu nutrición. Las usas bajo tu propia responsabilidad; pide a un profesional de la salud un consejo para tu caso."
 
@@ -4519,7 +4647,7 @@ msgid "Exercise details"
 msgstr "Detalles del ejercicio"
 
 #: templates/the_cauldron/forge.html:294 templates/the_cauldron/forge.html:312
-#: templates/the_cauldron/nutrition.html:377
+#: templates/the_cauldron/nutrition.html:386
 msgid "Close"
 msgstr "Cerrar"
 
@@ -5608,238 +5736,236 @@ msgstr "Por día, de medianoche a medianoche en tu zona horaria. “Sin meta” 
 msgid "Beside each of your goals: the recommended one, from your body data — WHO/FAO first, US National Academies (DRI) where WHO sets none. It is read-only and follows your weight, age, sex and activity."
 msgstr "Junto a cada una de tus metas, la recomendada según tus datos: primero OMS/FAO y, donde la OMS no fija una, las Academias Nacionales de EE. UU. (DRI). Es de solo lectura y cambia con tu peso, edad, sexo y actividad."
 
-#: templates/the_cauldron/nutrition.html:177
-msgid "Save goals"
-msgstr "Guardar metas"
+#: templates/the_cauldron/nutrition.html:173
+msgid "Goals save as you change them. The eye decides whether a nutrient gets a gauge in The Cauldron; it's still tracked and judged everywhere else."
+msgstr "Las metas se guardan al cambiarlas. El ojo decide si un nutriente tiene medidor en El Caldero; se sigue registrando y evaluando en todo lo demás."
 
-#: templates/the_cauldron/nutrition.html:189
-#: templates/the_cauldron/nutrition.html:224
+#: templates/the_cauldron/nutrition.html:190
+#: templates/the_cauldron/nutrition.html:225
 msgid "How you're doing"
 msgstr "Cómo voy"
 
-#: templates/the_cauldron/nutrition.html:190
+#: templates/the_cauldron/nutrition.html:191
 msgid "Your last 24 hours or 7 days against these goals, and how often you're in range, live in The Cauldron."
 msgstr "Tus últimas 24 horas o 7 días contra estas metas, y qué tan seguido estás en rango, están en El Caldero."
 
-#: templates/the_cauldron/nutrition.html:192
+#: templates/the_cauldron/nutrition.html:193
 msgid "Open The Cauldron"
 msgstr "Abrir El Caldero"
 
-#: templates/the_cauldron/nutrition.html:201
+#: templates/the_cauldron/nutrition.html:202
 msgid "Settings"
 msgstr "Configuración"
 
-#: templates/the_cauldron/nutrition.html:203
+#: templates/the_cauldron/nutrition.html:204
 msgid "Timezone — where your day starts and ends"
 msgstr "Zona horaria: dónde empieza y termina tu día"
 
-#: templates/the_cauldron/nutrition.html:208
+#: templates/the_cauldron/nutrition.html:209
 msgid "Sensitive-data consent"
 msgstr "Consentimiento para datos sensibles"
 
-#: templates/the_cauldron/nutrition.html:210
+#: templates/the_cauldron/nutrition.html:211
 msgid "Also delete my goals, meal log and meal plans, and clear my weight and activity level"
 msgstr "Borrar también mis metas, mi diario de comidas y mis planes, y mi peso y nivel de actividad"
 
-#: templates/the_cauldron/nutrition.html:212
+#: templates/the_cauldron/nutrition.html:213
 msgid "Withdraw my consent"
 msgstr "Retirar mi consentimiento"
 
-#: templates/the_cauldron/nutrition.html:225
+#: templates/the_cauldron/nutrition.html:226
 msgid "Window"
 msgstr "Ventana"
 
-#: templates/the_cauldron/nutrition.html:226
-msgid "Last 24 hours"
-msgstr "Últimas 24 horas"
-
-#: templates/the_cauldron/nutrition.html:227
-msgid "Last 7 days"
-msgstr "Últimos 7 días"
-
-#: templates/the_cauldron/nutrition.html:237
+#: templates/the_cauldron/nutrition.html:239
 msgid "Move the window back in time"
 msgstr "Mover la ventana hacia atrás en el tiempo"
 
-#: templates/the_cauldron/nutrition.html:242
+#: templates/the_cauldron/nutrition.html:245
+#: templates/the_cauldron/nutrition.html:246
+msgid "Estimated: includes scheduled and planned meals that haven’t happened yet."
+msgstr "Estimado: incluye comidas agendadas y planeadas que aún no ocurren."
+
+#: templates/the_cauldron/nutrition.html:247
 msgid "Back to now"
 msgstr "Volver a ahora"
 
-#: templates/the_cauldron/nutrition.html:247
+#: templates/the_cauldron/nutrition.html:252
 msgid "Off your goal, within the recommended"
 msgstr "Fuera de tu meta, dentro de la recomendada"
 
-#: templates/the_cauldron/nutrition.html:263
+#: templates/the_cauldron/nutrition.html:268
 msgid "How often you're in range"
 msgstr "Qué tan seguido estoy en rango"
 
-#: templates/the_cauldron/nutrition.html:264
+#: templates/the_cauldron/nutrition.html:269
 msgid "Period"
 msgstr "Periodo"
 
-#: templates/the_cauldron/nutrition.html:266
+#: templates/the_cauldron/nutrition.html:271
 msgid "30 days"
 msgstr "30 días"
 
-#: templates/the_cauldron/nutrition.html:267
+#: templates/the_cauldron/nutrition.html:272
 msgid "90 days"
 msgstr "90 días"
 
-#: templates/the_cauldron/nutrition.html:270
+#: templates/the_cauldron/nutrition.html:275
 msgid "Nutrient"
 msgstr "Nutriente"
 
-#: templates/the_cauldron/nutrition.html:280
+#: templates/the_cauldron/nutrition.html:285
 msgid "What you ate"
 msgstr "Lo que comiste"
 
-#: templates/the_cauldron/nutrition.html:287
+#: templates/the_cauldron/nutrition.html:294
 msgid "What did you eat or drink?"
 msgstr "¿Qué comiste o bebiste?"
 
-#: templates/the_cauldron/nutrition.html:289
+#: templates/the_cauldron/nutrition.html:296
 msgid "A dish, an ingredient, a drink…"
 msgstr "Un platillo, un ingrediente, una bebida…"
 
-#: templates/the_cauldron/nutrition.html:293
+#: templates/the_cauldron/nutrition.html:300
 msgid "← Search instead"
 msgstr "← Mejor buscarlo"
 
-#: templates/the_cauldron/nutrition.html:295
+#: templates/the_cauldron/nutrition.html:302
 msgid "What was it?"
 msgstr "¿Qué era?"
 
-#: templates/the_cauldron/nutrition.html:296
+#: templates/the_cauldron/nutrition.html:303
 msgid "e.g. Tacos al pastor at the stand"
 msgstr "p. ej. Tacos al pastor del puesto"
 
-#: templates/the_cauldron/nutrition.html:299
+#: templates/the_cauldron/nutrition.html:306
 msgid "Calories (kcal)"
 msgstr "Calorías (kcal)"
 
-#: templates/the_cauldron/nutrition.html:300
+#: templates/the_cauldron/nutrition.html:307
 msgid "Protein (g)"
 msgstr "Proteína (g)"
 
-#: templates/the_cauldron/nutrition.html:301
+#: templates/the_cauldron/nutrition.html:308
 msgid "Carbs (g)"
 msgstr "Carbohidratos (g)"
 
-#: templates/the_cauldron/nutrition.html:302
+#: templates/the_cauldron/nutrition.html:309
 msgid "Fat (g)"
 msgstr "Grasa (g)"
 
-#: templates/the_cauldron/nutrition.html:304
+#: templates/the_cauldron/nutrition.html:311
 msgid "Leave blank what you don't know — it's counted as unknown, never as zero."
 msgstr "Deja en blanco lo que no sepas: cuenta como desconocido, nunca como cero."
 
-#: templates/the_cauldron/nutrition.html:306
-#: templates/the_cauldron/nutrition.html:347
+#: templates/the_cauldron/nutrition.html:313
+#: templates/the_cauldron/nutrition.html:356
 msgid "How much"
 msgstr "Cuánto"
 
-#: templates/the_cauldron/nutrition.html:308
-#: templates/the_cauldron/nutrition.html:349
+#: templates/the_cauldron/nutrition.html:315
+#: templates/the_cauldron/nutrition.html:358
 msgid "Unit"
 msgstr "Unidad"
 
-#: templates/the_cauldron/nutrition.html:310
+#: templates/the_cauldron/nutrition.html:317
+#: templates/the_cauldron/nutrition.html:354
 msgid "At"
 msgstr "A las"
 
-#: templates/the_cauldron/nutrition.html:327
+#: templates/the_cauldron/nutrition.html:334
 msgid "The ritual"
 msgstr "El ritual"
 
-#: templates/the_cauldron/nutrition.html:328
+#: templates/the_cauldron/nutrition.html:335
 msgid "Plan spells for this day and see how it would add up before you eat."
 msgstr "Planea hechizos para este día y mira cómo quedaría antes de comer."
 
-#: templates/the_cauldron/nutrition.html:332
+#: templates/the_cauldron/nutrition.html:339
 msgid "Plan a spell"
 msgstr "Planear un hechizo"
 
-#: templates/the_cauldron/nutrition.html:335
+#: templates/the_cauldron/nutrition.html:342
 msgid "Find a spell"
 msgstr "Busca un hechizo"
 
-#: templates/the_cauldron/nutrition.html:335
+#: templates/the_cauldron/nutrition.html:342
 msgid "Find a spell…"
 msgstr "Busca un hechizo…"
 
-#: templates/the_cauldron/nutrition.html:340
+#: templates/the_cauldron/nutrition.html:347
 msgid "Meal"
 msgstr "Comida del día"
 
-#: templates/the_cauldron/nutrition.html:357
+#: templates/the_cauldron/nutrition.html:366
 msgid "Add to the ritual"
 msgstr "Agregar al ritual"
 
-#: templates/the_cauldron/nutrition.html:389
+#: templates/the_cauldron/nutrition.html:398
 msgid "Log a meal"
 msgstr "Registrar comida"
 
-#: templates/the_cauldron/nutrition.html:401
+#: templates/the_cauldron/nutrition.html:410
 msgid "About you"
 msgstr "Sobre ti"
 
-#: templates/the_cauldron/nutrition.html:402
+#: templates/the_cauldron/nutrition.html:411
 msgid "Your birth year is required: The Cauldron is for people 18 and older. The rest is optional. Birth year and sex compare your Forge results with people like you; with your weight and activity level they also set your recommended daily goals."
 msgstr "Tu año de nacimiento es obligatorio: El Caldero es para personas de 18 años o más. Lo demás es opcional. El año de nacimiento y el sexo comparan tus resultados de La Forja con personas como tú; con tu peso y tu nivel de actividad también fijan tus metas diarias recomendadas."
 
-#: templates/the_cauldron/nutrition.html:406
+#: templates/the_cauldron/nutrition.html:415
 msgid "Sex"
 msgstr "Sexo"
 
-#: templates/the_cauldron/nutrition.html:408
+#: templates/the_cauldron/nutrition.html:417
 msgid "Prefer not to say"
 msgstr "Prefiero no decirlo"
 
-#: templates/the_cauldron/nutrition.html:409
+#: templates/the_cauldron/nutrition.html:418
 msgid "Female"
 msgstr "Mujer"
 
-#: templates/the_cauldron/nutrition.html:410
+#: templates/the_cauldron/nutrition.html:419
 msgid "Male"
 msgstr "Hombre"
 
-#: templates/the_cauldron/nutrition.html:412
+#: templates/the_cauldron/nutrition.html:421
 msgid "Weight (kg)"
 msgstr "Peso (kg)"
 
-#: templates/the_cauldron/nutrition.html:414
+#: templates/the_cauldron/nutrition.html:423
 msgid "Activity level"
 msgstr "Nivel de actividad"
 
-#: templates/the_cauldron/nutrition.html:416
+#: templates/the_cauldron/nutrition.html:425
 msgid "Not set"
 msgstr "Sin indicar"
 
-#: templates/the_cauldron/nutrition.html:417
+#: templates/the_cauldron/nutrition.html:426
 msgid "Sedentary or light — desk work, little exercise"
 msgstr "Sedentario o ligero: trabajo de escritorio, poco ejercicio"
 
-#: templates/the_cauldron/nutrition.html:418
+#: templates/the_cauldron/nutrition.html:427
 msgid "Active — on your feet or exercising about an hour a day"
 msgstr "Activo: de pie buena parte del día o haciendo ejercicio cerca de una hora diaria"
 
-#: templates/the_cauldron/nutrition.html:419
+#: templates/the_cauldron/nutrition.html:428
 msgid "Vigorous — hard physical work or long daily training"
 msgstr "Vigoroso: trabajo físico pesado o entrenamiento largo todos los días"
 
-#: templates/the_cauldron/nutrition.html:422
+#: templates/the_cauldron/nutrition.html:431
 msgid "Weight and activity level are health data: give the sensitive-data consent above to add them."
 msgstr "El peso y el nivel de actividad son datos de salud: da arriba el consentimiento para datos sensibles para agregarlos."
 
-#: templates/the_cauldron/nutrition.html:437
+#: templates/the_cauldron/nutrition.html:446
 msgid "Your AI assistants"
 msgstr "Tus asistentes de IA"
 
-#: templates/the_cauldron/nutrition.html:438
+#: templates/the_cauldron/nutrition.html:447
 msgid "Assistants you connected (Claude and others) can read and log for you. Disconnect one and it loses access at once."
 msgstr "Los asistentes que conectaste (Claude y otros) pueden leer y registrar por ti. Si desconectas uno, pierde el acceso de inmediato."
 
-#: templates/the_cauldron/nutrition.html:440
+#: templates/the_cauldron/nutrition.html:449
 msgid "How to connect an assistant →"
 msgstr "Cómo conectar un asistente →"
 
@@ -5913,6 +6039,9 @@ msgstr "Esta conexión no puede continuar"
 #: templates/the_cauldron/oauth_authorize.html:91
 msgid "The assistant sent an invalid request. Go back to it and try connecting again."
 msgstr "El asistente envió una solicitud no válida. Vuelve a él e intenta conectarte de nuevo."
+
+#~ msgid "Save goals"
+#~ msgstr "Guardar metas"
 
 #~ msgid "unknown action"
 #~ msgstr "acción desconocida"

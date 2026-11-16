@@ -63,7 +63,12 @@ TAGS = [
 
 
 # Nutrients added after the catalog was first seeded (#104).
-BACKFILL = ("added_sugar_g",)
+BACKFILL = (
+    "added_sugar_g",
+    # #125
+    "thiamin_mg", "riboflavin_mg", "niacin_mg", "pantothenic_mg", "vit_b6_mg", "folate_ug",
+    "vit_e_mg", "vit_k_ug", "zinc_mg", "magnesium_mg", "selenium_ug", "phosphorus_mg",
+)
 
 
 def _backfill(profile, seeded):

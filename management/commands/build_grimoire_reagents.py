@@ -57,6 +57,19 @@ NUTRIENT_NUMBERS = {
     "vit_c_mg": ["401"],
     "vit_d_ug": ["328"],
     "vit_b12_ug": ["418"],
+    # #125
+    "thiamin_mg": ["404"],
+    "riboflavin_mg": ["405"],
+    "niacin_mg": ["406"],
+    "pantothenic_mg": ["410"],
+    "vit_b6_mg": ["415"],
+    "folate_ug": ["435"],  # µg DFE
+    "vit_e_mg": ["323"],  # α-tocopherol
+    "vit_k_ug": ["430"],  # phylloquinone
+    "zinc_mg": ["309"],
+    "magnesium_mg": ["304"],
+    "selenium_ug": ["317"],
+    "phosphorus_mg": ["305"],
 }
 
 # SR Legacy food categories whose plain foods carry no added sugar.

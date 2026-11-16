@@ -9,11 +9,12 @@ spell may show (``request.user``); the MCP layer passes an object with ``user``.
 
 from datetime import timedelta
 
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from the_cauldron.models import IntakeEntry, NutrientGoal, PlannedMeal
 from the_cauldron.nutrition_serializers import IntakeEntrySerializer, PlannedMealSerializer
-from the_cauldron.services import nutrition, recommendations
+from the_cauldron.services import nutrition, recommendations, rolling
 from the_cauldron.services.nutrition import NutritionInputError
 
 
@@ -25,6 +26,8 @@ def goals_payload(user):
         "today": today,
         "goals": [nutrition.goal_payload(goals[n]) for n in nutrition.FIELDS if n in goals],
         "recommended": recommendations.payload(user, today),
+        # The Journal's gauge eyes (#131); display only.
+        "hidden_gauges": list(nutrition.get_profile(user).journal_hidden_gauges or []),
     }
 
 
@@ -54,6 +57,35 @@ def day_payload(user, day, tz, request):
         "totals": nutrition.totals_payload(totals),
         "goals": nutrition.goal_statuses(goals, totals, logged=bool(entries), final=day < today),
     }
+
+
+def window_payload(user, span, end, tz, request):
+    """The Journal's list (#124): the entries the gauges count at ``end`` —
+    ``end - span < eaten_at ≤ end`` (``services.rolling``) — newest first, each
+    with its ``local_date``; plus the planned meals not eaten yet from the
+    window end's date on (``planned``: date, then slot), which have no place in
+    the window."""
+    entries = list(rolling.entries_in_window(user, span, end).select_related("planned_meal"))
+    entries.reverse()
+    end_date = timezone.localtime(end, tz).date()
+    order = {slot: i for i, slot in enumerate(PlannedMeal.Slot.values)}
+    planned = sorted(
+        PlannedMeal.objects.filter(user=user, intake_entry__isnull=True, date__gte=end_date).select_related("spell"),
+        key=lambda m: (m.date, order.get(m.slot, 9), m.order, m.created_at),
+    )[:MAX_UPCOMING_PLANS]
+    return {
+        "span": span,
+        "start": timezone.localtime(rolling.window_start(end, span), tz),
+        "end": timezone.localtime(end, tz),
+        "end_date": end_date,
+        "entries": IntakeEntrySerializer(entries, many=True, context={"tz": tz, "request": request}).data,
+        "planned": PlannedMealSerializer(planned, many=True, context={"request": request}).data,
+        "_entries": entries,  # for callers that total them (MCP get_today); dropped by the API
+    }
+
+
+# Uneaten plans listed under "To eat" (#124): enough for weeks of planning.
+MAX_UPCOMING_PLANS = 60
 
 
 def check_range(start, end):

@@ -37,7 +37,19 @@
     "vit_a_ug": 2.0,
     "vit_c_mg": 4.5,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.873,
+    "riboflavin_mg": 0.211,
+    "niacin_mg": 2.605,
+    "pantothenic_mg": 2.14,
+    "vit_b6_mg": 0.54,
+    "folate_ug": 479.0,
+    "vit_e_mg": 0.49,
+    "vit_k_ug": 5.0,
+    "zinc_mg": 3.27,
+    "magnesium_mg": 47.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 281.0
    }
   },
   {
@@ -75,7 +87,19 @@
     "vit_a_ug": 3.0,
     "vit_c_mg": 4.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.477,
+    "riboflavin_mg": 0.212,
+    "niacin_mg": 1.541,
+    "pantothenic_mg": 1.588,
+    "vit_b6_mg": 0.535,
+    "folate_ug": 557.0,
+    "vit_e_mg": 0.82,
+    "vit_k_ug": 9.0,
+    "zinc_mg": 2.76,
+    "magnesium_mg": 79.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 252.0
    }
   },
   {
@@ -113,7 +137,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.9,
+    "riboflavin_mg": 0.193,
+    "niacin_mg": 1.955,
+    "pantothenic_mg": 0.899,
+    "vit_b6_mg": 0.286,
+    "folate_ug": 444.0,
+    "vit_e_mg": 0.21,
+    "vit_k_ug": 5.6,
+    "zinc_mg": 3.65,
+    "magnesium_mg": 171.0,
+    "selenium_ug": 3.2,
+    "phosphorus_mg": 352.0
    }
   },
   {
@@ -150,7 +186,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.576,
+    "riboflavin_mg": 0.049,
+    "niacin_mg": 4.192,
+    "pantothenic_mg": 1.014,
+    "vit_b6_mg": 0.164,
+    "folate_ug": 387.0,
+    "vit_e_mg": 0.11,
+    "vit_k_ug": 0.1,
+    "zinc_mg": 1.09,
+    "magnesium_mg": 25.0,
+    "selenium_ug": 15.1,
+    "phosphorus_mg": 115.0
    }
   },
   {
@@ -187,7 +235,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.541,
+    "riboflavin_mg": 0.095,
+    "niacin_mg": 6.494,
+    "pantothenic_mg": 1.065,
+    "vit_b6_mg": 0.477,
+    "folate_ug": 23.0,
+    "vit_e_mg": 0.6,
+    "vit_k_ug": 0.6,
+    "zinc_mg": 2.13,
+    "magnesium_mg": 116.0,
+    "selenium_ug": 17.1,
+    "phosphorus_mg": 311.0
    }
   },
   {
@@ -224,7 +284,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.46,
+    "riboflavin_mg": 0.155,
+    "niacin_mg": 1.125,
+    "pantothenic_mg": 1.12,
+    "vit_b6_mg": 0.1,
+    "folate_ug": 32.0,
+    "vit_e_mg": 0.42,
+    "vit_k_ug": 2.0,
+    "zinc_mg": 3.64,
+    "magnesium_mg": 138.0,
+    "selenium_ug": 28.9,
+    "phosphorus_mg": 410.0
    }
   },
   {
@@ -261,7 +333,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.785,
+    "riboflavin_mg": 0.494,
+    "niacin_mg": 5.904,
+    "pantothenic_mg": 0.438,
+    "vit_b6_mg": 0.044,
+    "folate_ug": 291.0,
+    "vit_e_mg": 0.06,
+    "vit_k_ug": 0.3,
+    "zinc_mg": 0.7,
+    "magnesium_mg": 22.0,
+    "selenium_ug": 33.9,
+    "phosphorus_mg": 108.0
    }
   },
   {
@@ -298,7 +382,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.891,
+    "riboflavin_mg": 0.4,
+    "niacin_mg": 7.177,
+    "pantothenic_mg": 0.431,
+    "vit_b6_mg": 0.142,
+    "folate_ug": 391.0,
+    "vit_e_mg": 0.11,
+    "vit_k_ug": 0.1,
+    "zinc_mg": 1.41,
+    "magnesium_mg": 53.0,
+    "selenium_ug": 63.2,
+    "phosphorus_mg": 189.0
    }
   },
   {
@@ -335,7 +431,19 @@
     "vit_a_ug": 1.0,
     "vit_c_mg": null,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.36,
+    "riboflavin_mg": 0.318,
+    "niacin_mg": 1.52,
+    "pantothenic_mg": 0.772,
+    "vit_b6_mg": 0.487,
+    "folate_ug": 184.0,
+    "vit_e_mg": 2.44,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 3.1,
+    "magnesium_mg": 197.0,
+    "selenium_ug": 8.5,
+    "phosphorus_mg": 457.0
    }
   },
   {
@@ -374,7 +482,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 7.4,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.046,
+    "riboflavin_mg": 0.027,
+    "niacin_mg": 0.116,
+    "pantothenic_mg": 0.123,
+    "vit_b6_mg": 0.12,
+    "folate_ug": 19.0,
+    "vit_e_mg": 0.02,
+    "vit_k_ug": 0.4,
+    "zinc_mg": 0.17,
+    "magnesium_mg": 10.0,
+    "selenium_ug": 0.5,
+    "phosphorus_mg": 29.0
    }
   },
   {
@@ -413,7 +533,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 31.2,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.2,
+    "riboflavin_mg": 0.11,
+    "niacin_mg": 0.7,
+    "pantothenic_mg": 0.596,
+    "vit_b6_mg": 1.235,
+    "folate_ug": 3.0,
+    "vit_e_mg": 0.08,
+    "vit_k_ug": 1.7,
+    "zinc_mg": 1.16,
+    "magnesium_mg": 25.0,
+    "selenium_ug": 14.2,
+    "phosphorus_mg": 153.0
    }
   },
   {
@@ -451,7 +583,19 @@
     "vit_a_ug": 42.0,
     "vit_c_mg": 13.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.037,
+    "riboflavin_mg": 0.019,
+    "niacin_mg": 0.594,
+    "pantothenic_mg": 0.089,
+    "vit_b6_mg": 0.08,
+    "folate_ug": 15.0,
+    "vit_e_mg": 0.54,
+    "vit_k_ug": 7.9,
+    "zinc_mg": 0.17,
+    "magnesium_mg": 11.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 24.0
    }
   },
   {
@@ -489,7 +633,19 @@
     "vit_a_ug": 835.0,
     "vit_c_mg": 5.9,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.066,
+    "riboflavin_mg": 0.058,
+    "niacin_mg": 0.983,
+    "pantothenic_mg": 0.273,
+    "vit_b6_mg": 0.138,
+    "folate_ug": 19.0,
+    "vit_e_mg": 0.66,
+    "vit_k_ug": 13.2,
+    "zinc_mg": 0.24,
+    "magnesium_mg": 12.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 35.0
    }
   },
   {
@@ -526,7 +682,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 19.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.081,
+    "riboflavin_mg": 0.032,
+    "niacin_mg": 1.061,
+    "pantothenic_mg": 0.295,
+    "vit_b6_mg": 0.298,
+    "folate_ug": 15.0,
+    "vit_e_mg": 0.01,
+    "vit_k_ug": 2.0,
+    "zinc_mg": 0.3,
+    "magnesium_mg": 23.0,
+    "selenium_ug": 0.4,
+    "phosphorus_mg": 57.0
    }
   },
   {
@@ -563,7 +731,19 @@
     "vit_a_ug": 469.0,
     "vit_c_mg": 28.1,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.078,
+    "riboflavin_mg": 0.189,
+    "niacin_mg": 0.724,
+    "pantothenic_mg": 0.065,
+    "vit_b6_mg": 0.195,
+    "folate_ug": 194.0,
+    "vit_e_mg": 2.03,
+    "vit_k_ug": 482.9,
+    "zinc_mg": 0.53,
+    "magnesium_mg": 79.0,
+    "selenium_ug": 1.0,
+    "phosphorus_mg": 49.0
    }
   },
   {
@@ -600,7 +780,19 @@
     "vit_a_ug": 31.0,
     "vit_c_mg": 89.2,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.071,
+    "riboflavin_mg": 0.117,
+    "niacin_mg": 0.639,
+    "pantothenic_mg": 0.573,
+    "vit_b6_mg": 0.175,
+    "folate_ug": 63.0,
+    "vit_e_mg": 0.78,
+    "vit_k_ug": 101.6,
+    "zinc_mg": 0.41,
+    "magnesium_mg": 21.0,
+    "selenium_ug": 2.5,
+    "phosphorus_mg": 66.0
    }
   },
   {
@@ -638,7 +830,19 @@
     "vit_a_ug": 157.0,
     "vit_c_mg": 128.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.054,
+    "riboflavin_mg": 0.085,
+    "niacin_mg": 0.979,
+    "pantothenic_mg": 0.317,
+    "vit_b6_mg": 0.291,
+    "folate_ug": 46.0,
+    "vit_e_mg": 1.58,
+    "vit_k_ug": 4.9,
+    "zinc_mg": 0.25,
+    "magnesium_mg": 12.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 26.0
    }
   },
   {
@@ -676,7 +880,19 @@
     "vit_a_ug": 22.0,
     "vit_c_mg": 3.1,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.021,
+    "riboflavin_mg": 0.057,
+    "niacin_mg": 0.32,
+    "pantothenic_mg": 0.246,
+    "vit_b6_mg": 0.074,
+    "folate_ug": 36.0,
+    "vit_e_mg": 0.27,
+    "vit_k_ug": 29.3,
+    "zinc_mg": 0.13,
+    "magnesium_mg": 11.0,
+    "selenium_ug": 0.4,
+    "phosphorus_mg": 24.0
    }
   },
   {
@@ -713,7 +929,19 @@
     "vit_a_ug": 436.0,
     "vit_c_mg": 4.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.072,
+    "riboflavin_mg": 0.067,
+    "niacin_mg": 0.313,
+    "pantothenic_mg": 0.142,
+    "vit_b6_mg": 0.074,
+    "folate_ug": 136.0,
+    "vit_e_mg": 0.13,
+    "vit_k_ug": 102.5,
+    "zinc_mg": 0.23,
+    "magnesium_mg": 14.0,
+    "selenium_ug": 0.4,
+    "phosphorus_mg": 30.0
    }
   },
   {
@@ -750,7 +978,19 @@
     "vit_a_ug": 5.0,
     "vit_c_mg": 2.8,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.027,
+    "riboflavin_mg": 0.033,
+    "niacin_mg": 0.098,
+    "pantothenic_mg": 0.259,
+    "vit_b6_mg": 0.04,
+    "folate_ug": 7.0,
+    "vit_e_mg": 0.03,
+    "vit_k_ug": 16.4,
+    "zinc_mg": 0.2,
+    "magnesium_mg": 13.0,
+    "selenium_ug": 0.3,
+    "phosphorus_mg": 24.0
    }
   },
   {
@@ -787,7 +1027,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 2.1,
     "vit_d_ug": 0.2,
-    "vit_b12_ug": 0.04
+    "vit_b12_ug": 0.04,
+    "thiamin_mg": 0.081,
+    "riboflavin_mg": 0.402,
+    "niacin_mg": 3.607,
+    "pantothenic_mg": 1.497,
+    "vit_b6_mg": 0.104,
+    "folate_ug": 17.0,
+    "vit_e_mg": 0.01,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.52,
+    "magnesium_mg": 9.0,
+    "selenium_ug": 9.3,
+    "phosphorus_mg": 86.0
    }
   },
   {
@@ -824,7 +1076,19 @@
     "vit_a_ug": 709.0,
     "vit_c_mg": 2.4,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.078,
+    "riboflavin_mg": 0.061,
+    "niacin_mg": 0.557,
+    "pantothenic_mg": 0.8,
+    "vit_b6_mg": 0.209,
+    "folate_ug": 11.0,
+    "vit_e_mg": 0.26,
+    "vit_k_ug": 1.8,
+    "zinc_mg": 0.3,
+    "magnesium_mg": 25.0,
+    "selenium_ug": 0.6,
+    "phosphorus_mg": 47.0
    }
   },
   {
@@ -861,7 +1125,19 @@
     "vit_a_ug": 10.0,
     "vit_c_mg": 17.9,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.045,
+    "riboflavin_mg": 0.094,
+    "niacin_mg": 0.451,
+    "pantothenic_mg": 0.204,
+    "vit_b6_mg": 0.163,
+    "folate_ug": 24.0,
+    "vit_e_mg": 0.12,
+    "vit_k_ug": 4.3,
+    "zinc_mg": 0.32,
+    "magnesium_mg": 18.0,
+    "selenium_ug": 0.2,
+    "phosphorus_mg": 38.0
    }
   },
   {
@@ -898,7 +1174,19 @@
     "vit_a_ug": 7.0,
     "vit_c_mg": 10.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.067,
+    "riboflavin_mg": 0.13,
+    "niacin_mg": 1.738,
+    "pantothenic_mg": 1.389,
+    "vit_b6_mg": 0.257,
+    "folate_ug": 81.0,
+    "vit_e_mg": 2.07,
+    "vit_k_ug": 21.0,
+    "zinc_mg": 0.64,
+    "magnesium_mg": 29.0,
+    "selenium_ug": 0.4,
+    "phosphorus_mg": 52.0
    }
   },
   {
@@ -935,7 +1223,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 38.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.024,
+    "riboflavin_mg": 0.015,
+    "niacin_mg": 0.091,
+    "pantothenic_mg": 0.131,
+    "vit_b6_mg": 0.046,
+    "folate_ug": 20.0,
+    "vit_e_mg": 0.15,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.05,
+    "magnesium_mg": 6.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 8.0
    }
   },
   {
@@ -972,7 +1272,19 @@
     "vit_a_ug": 2.0,
     "vit_c_mg": 30.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.025,
+    "riboflavin_mg": 0.015,
+    "niacin_mg": 0.142,
+    "pantothenic_mg": 0.123,
+    "vit_b6_mg": 0.038,
+    "folate_ug": 10.0,
+    "vit_e_mg": 0.22,
+    "vit_k_ug": 0.6,
+    "zinc_mg": 0.08,
+    "magnesium_mg": 8.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 14.0
    }
   },
   {
@@ -1009,7 +1321,19 @@
     "vit_a_ug": 9.0,
     "vit_c_mg": 6.8,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.155,
+    "riboflavin_mg": 0.055,
+    "niacin_mg": 1.77,
+    "pantothenic_mg": 0.717,
+    "vit_b6_mg": 0.093,
+    "folate_ug": 42.0,
+    "vit_e_mg": 0.07,
+    "vit_k_ug": 0.3,
+    "zinc_mg": 0.46,
+    "magnesium_mg": 37.0,
+    "selenium_ug": 0.6,
+    "phosphorus_mg": 89.0
    }
   },
   {
@@ -1046,7 +1370,19 @@
     "vit_a_ug": 3.0,
     "vit_c_mg": 8.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.031,
+    "riboflavin_mg": 0.073,
+    "niacin_mg": 0.665,
+    "pantothenic_mg": 0.334,
+    "vit_b6_mg": 0.367,
+    "folate_ug": 20.0,
+    "vit_e_mg": 0.1,
+    "vit_k_ug": 0.5,
+    "zinc_mg": 0.15,
+    "magnesium_mg": 27.0,
+    "selenium_ug": 1.0,
+    "phosphorus_mg": 22.0
    }
   },
   {
@@ -1083,7 +1419,19 @@
     "vit_a_ug": 3.0,
     "vit_c_mg": 4.6,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.017,
+    "riboflavin_mg": 0.026,
+    "niacin_mg": 0.091,
+    "pantothenic_mg": 0.061,
+    "vit_b6_mg": 0.041,
+    "folate_ug": 3.0,
+    "vit_e_mg": 0.18,
+    "vit_k_ug": 2.2,
+    "zinc_mg": 0.04,
+    "magnesium_mg": 5.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 11.0
    }
   },
   {
@@ -1120,7 +1468,19 @@
     "vit_a_ug": 1.0,
     "vit_c_mg": 58.8,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.024,
+    "riboflavin_mg": 0.022,
+    "niacin_mg": 0.386,
+    "pantothenic_mg": 0.125,
+    "vit_b6_mg": 0.047,
+    "folate_ug": 24.0,
+    "vit_e_mg": 0.29,
+    "vit_k_ug": 2.2,
+    "zinc_mg": 0.14,
+    "magnesium_mg": 13.0,
+    "selenium_ug": 0.4,
+    "phosphorus_mg": 24.0
    }
   },
   {
@@ -1157,7 +1517,19 @@
     "vit_a_ug": 3.0,
     "vit_c_mg": 9.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.037,
+    "riboflavin_mg": 0.041,
+    "niacin_mg": 0.418,
+    "pantothenic_mg": 0.124,
+    "vit_b6_mg": 0.052,
+    "folate_ug": 6.0,
+    "vit_e_mg": 0.57,
+    "vit_k_ug": 19.3,
+    "zinc_mg": 0.16,
+    "magnesium_mg": 6.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 12.0
    }
   },
   {
@@ -1195,7 +1567,19 @@
     "vit_a_ug": 160.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 2.0,
-    "vit_b12_ug": 0.89
+    "vit_b12_ug": 0.89,
+    "thiamin_mg": 0.04,
+    "riboflavin_mg": 0.457,
+    "niacin_mg": 0.075,
+    "pantothenic_mg": 1.533,
+    "vit_b6_mg": 0.17,
+    "folate_ug": 47.0,
+    "vit_e_mg": 1.05,
+    "vit_k_ug": 0.3,
+    "zinc_mg": 1.29,
+    "magnesium_mg": 12.0,
+    "selenium_ug": 30.7,
+    "phosphorus_mg": 198.0
    }
   },
   {
@@ -1230,7 +1614,19 @@
     "vit_a_ug": 9.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.21
+    "vit_b12_ug": 0.21,
+    "thiamin_mg": 0.094,
+    "riboflavin_mg": 0.177,
+    "niacin_mg": 9.6,
+    "pantothenic_mg": 1.495,
+    "vit_b6_mg": 0.811,
+    "folate_ug": 9.0,
+    "vit_e_mg": 0.56,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.68,
+    "magnesium_mg": 28.0,
+    "selenium_ug": 22.8,
+    "phosphorus_mg": 213.0
    }
   },
   {
@@ -1265,7 +1661,19 @@
     "vit_a_ug": 4.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.1,
-    "vit_b12_ug": 2.17
+    "vit_b12_ug": 2.17,
+    "thiamin_mg": 0.042,
+    "riboflavin_mg": 0.151,
+    "niacin_mg": 4.649,
+    "pantothenic_mg": 0.549,
+    "vit_b6_mg": 0.346,
+    "folate_ug": 6.0,
+    "vit_e_mg": 0.17,
+    "vit_k_ug": 1.3,
+    "zinc_mg": 4.48,
+    "magnesium_mg": 18.0,
+    "selenium_ug": 15.8,
+    "phosphorus_mg": 171.0
    }
   },
   {
@@ -1300,7 +1708,19 @@
     "vit_a_ug": 58.0,
     "vit_c_mg": 3.9,
     "vit_d_ug": 11.0,
-    "vit_b12_ug": 3.23
+    "vit_b12_ug": 3.23,
+    "thiamin_mg": 0.207,
+    "riboflavin_mg": 0.155,
+    "niacin_mg": 8.672,
+    "pantothenic_mg": 1.547,
+    "vit_b6_mg": 0.636,
+    "folate_ug": 26.0,
+    "vit_e_mg": 3.55,
+    "vit_k_ug": 0.5,
+    "zinc_mg": 0.36,
+    "magnesium_mg": 27.0,
+    "selenium_ug": 24.0,
+    "phosphorus_mg": 240.0
    }
   },
   {
@@ -1337,7 +1757,19 @@
     "vit_a_ug": null,
     "vit_c_mg": 0.2,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.158,
+    "riboflavin_mg": 0.102,
+    "niacin_mg": 0.381,
+    "pantothenic_mg": 0.133,
+    "vit_b6_mg": 0.092,
+    "folate_ug": 29.0,
+    "vit_e_mg": null,
+    "vit_k_ug": null,
+    "zinc_mg": 1.57,
+    "magnesium_mg": 58.0,
+    "selenium_ug": 17.4,
+    "phosphorus_mg": 190.0
    }
   },
   {
@@ -1375,7 +1807,19 @@
     "vit_a_ug": 46.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 1.3,
-    "vit_b12_ug": 0.45
+    "vit_b12_ug": 0.45,
+    "thiamin_mg": 0.046,
+    "riboflavin_mg": 0.169,
+    "niacin_mg": 0.089,
+    "pantothenic_mg": 0.373,
+    "vit_b6_mg": 0.036,
+    "folate_ug": 5.0,
+    "vit_e_mg": 0.07,
+    "vit_k_ug": 0.3,
+    "zinc_mg": 0.37,
+    "magnesium_mg": 10.0,
+    "selenium_ug": 3.7,
+    "phosphorus_mg": 84.0
    }
   },
   {
@@ -1410,7 +1854,19 @@
     "vit_a_ug": 1.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.75
+    "vit_b12_ug": 0.75,
+    "thiamin_mg": 0.023,
+    "riboflavin_mg": 0.278,
+    "niacin_mg": 0.208,
+    "pantothenic_mg": 0.331,
+    "vit_b6_mg": 0.063,
+    "folate_ug": 7.0,
+    "vit_e_mg": 0.01,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.52,
+    "magnesium_mg": 11.0,
+    "selenium_ug": 9.7,
+    "phosphorus_mg": 135.0
    }
   },
   {
@@ -1447,7 +1903,19 @@
     "vit_a_ug": 337.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.6,
-    "vit_b12_ug": 1.1
+    "vit_b12_ug": 1.1,
+    "thiamin_mg": 0.029,
+    "riboflavin_mg": 0.428,
+    "niacin_mg": 0.059,
+    "pantothenic_mg": 0.41,
+    "vit_b6_mg": 0.066,
+    "folate_ug": 27.0,
+    "vit_e_mg": 0.71,
+    "vit_k_ug": 2.4,
+    "zinc_mg": 3.64,
+    "magnesium_mg": 27.0,
+    "selenium_ug": 28.5,
+    "phosphorus_mg": 455.0
    }
   },
   {
@@ -1482,7 +1950,19 @@
     "vit_a_ug": 207.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.5,
-    "vit_b12_ug": 1.2
+    "vit_b12_ug": 1.2,
+    "thiamin_mg": 0.039,
+    "riboflavin_mg": 0.332,
+    "niacin_mg": 0.271,
+    "pantothenic_mg": 0.453,
+    "vit_b6_mg": 0.091,
+    "folate_ug": 7.0,
+    "vit_e_mg": 0.22,
+    "vit_k_ug": 1.7,
+    "zinc_mg": 2.75,
+    "magnesium_mg": 44.0,
+    "selenium_ug": 22.5,
+    "phosphorus_mg": 694.0
    }
   },
   {
@@ -1520,7 +2000,19 @@
     "vit_a_ug": 684.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.17
+    "vit_b12_ug": 0.17,
+    "thiamin_mg": 0.005,
+    "riboflavin_mg": 0.034,
+    "niacin_mg": 0.042,
+    "pantothenic_mg": 0.11,
+    "vit_b6_mg": 0.003,
+    "folate_ug": 3.0,
+    "vit_e_mg": 2.32,
+    "vit_k_ug": 7.0,
+    "zinc_mg": 0.09,
+    "magnesium_mg": 2.0,
+    "selenium_ug": 1.0,
+    "phosphorus_mg": 24.0
    }
   },
   {
@@ -1558,7 +2050,19 @@
     "vit_a_ug": 411.0,
     "vit_c_mg": 0.6,
     "vit_d_ug": 1.6,
-    "vit_b12_ug": 0.16
+    "vit_b12_ug": 0.16,
+    "thiamin_mg": 0.02,
+    "riboflavin_mg": 0.188,
+    "niacin_mg": 0.064,
+    "pantothenic_mg": 0.495,
+    "vit_b6_mg": 0.035,
+    "folate_ug": 4.0,
+    "vit_e_mg": 0.92,
+    "vit_k_ug": 3.2,
+    "zinc_mg": 0.24,
+    "magnesium_mg": 7.0,
+    "selenium_ug": 3.0,
+    "phosphorus_mg": 58.0
    }
   },
   {
@@ -1597,7 +2101,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 14.35,
+    "vit_k_ug": 60.2,
+    "zinc_mg": 0.0,
+    "magnesium_mg": 0.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 0.0
    }
   },
   {
@@ -1634,7 +2150,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.205,
+    "riboflavin_mg": 1.138,
+    "niacin_mg": 3.618,
+    "pantothenic_mg": 0.471,
+    "vit_b6_mg": 0.137,
+    "folate_ug": 44.0,
+    "vit_e_mg": 25.63,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 3.12,
+    "magnesium_mg": 270.0,
+    "selenium_ug": 4.1,
+    "phosphorus_mg": 481.0
    }
   },
   {
@@ -1672,7 +2200,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.15,
+    "riboflavin_mg": 0.192,
+    "niacin_mg": 13.112,
+    "pantothenic_mg": 1.137,
+    "vit_b6_mg": 0.441,
+    "folate_ug": 87.0,
+    "vit_e_mg": 9.1,
+    "vit_k_ug": 0.3,
+    "zinc_mg": 2.51,
+    "magnesium_mg": 168.0,
+    "selenium_ug": 4.1,
+    "phosphorus_mg": 335.0
    }
   },
   {
@@ -1707,7 +2247,19 @@
     "vit_a_ug": null,
     "vit_c_mg": 1.6,
     "vit_d_ug": null,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.62,
+    "riboflavin_mg": 0.17,
+    "niacin_mg": 8.83,
+    "pantothenic_mg": null,
+    "vit_b6_mg": null,
+    "folate_ug": null,
+    "vit_e_mg": 0.5,
+    "vit_k_ug": null,
+    "zinc_mg": 4.58,
+    "magnesium_mg": 335.0,
+    "selenium_ug": 55.2,
+    "phosphorus_mg": 860.0
    }
   },
   {
@@ -1745,7 +2297,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.019,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.01,
+    "magnesium_mg": 0.0,
+    "selenium_ug": 0.6,
+    "phosphorus_mg": 0.0
    }
   },
   {
@@ -1783,7 +2347,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.5,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.038,
+    "niacin_mg": 0.121,
+    "pantothenic_mg": 0.068,
+    "vit_b6_mg": 0.024,
+    "folate_ug": 2.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.22,
+    "magnesium_mg": 2.0,
+    "selenium_ug": 0.8,
+    "phosphorus_mg": 4.0
    }
   },
   {
@@ -1822,7 +2398,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.1,
+    "magnesium_mg": 1.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 0.0
    }
   },
   {
@@ -1860,7 +2448,19 @@
     "vit_a_ug": 2460.0,
     "vit_c_mg": 0.9,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.33,
+    "riboflavin_mg": 1.23,
+    "niacin_mg": 10.06,
+    "pantothenic_mg": 2.51,
+    "vit_b6_mg": 2.141,
+    "folate_ug": 49.0,
+    "vit_e_mg": 29.1,
+    "vit_k_ug": 80.3,
+    "zinc_mg": 4.33,
+    "magnesium_mg": 178.0,
+    "selenium_ug": 6.3,
+    "phosphorus_mg": 314.0
    }
   },
   {
@@ -1898,7 +2498,19 @@
     "vit_a_ug": 64.0,
     "vit_c_mg": 7.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.628,
+    "riboflavin_mg": 0.327,
+    "niacin_mg": 4.579,
+    "pantothenic_mg": null,
+    "vit_b6_mg": 0.435,
+    "folate_ug": 10.0,
+    "vit_e_mg": 3.33,
+    "vit_k_ug": 5.4,
+    "zinc_mg": 4.8,
+    "magnesium_mg": 366.0,
+    "selenium_ug": 5.2,
+    "phosphorus_mg": 499.0
    }
   },
   {
@@ -1936,7 +2548,19 @@
     "vit_a_ug": 27.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.108,
+    "riboflavin_mg": 0.18,
+    "niacin_mg": 1.143,
+    "pantothenic_mg": 1.399,
+    "vit_b6_mg": 0.291,
+    "folate_ug": 17.0,
+    "vit_e_mg": 1.04,
+    "vit_k_ug": 163.7,
+    "zinc_mg": 1.19,
+    "magnesium_mg": 171.0,
+    "selenium_ug": 4.9,
+    "phosphorus_mg": 158.0
    }
   },
   {
@@ -1974,7 +2598,19 @@
     "vit_a_ug": 15.0,
     "vit_c_mg": 3.8,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.022,
+    "riboflavin_mg": 0.041,
+    "niacin_mg": 1.332,
+    "pantothenic_mg": 0.358,
+    "vit_b6_mg": 0.158,
+    "folate_ug": 6.0,
+    "vit_e_mg": 2.32,
+    "vit_k_ug": 31.2,
+    "zinc_mg": 1.83,
+    "magnesium_mg": 60.0,
+    "selenium_ug": 3.1,
+    "phosphorus_mg": 64.0
    }
   },
   {
@@ -2012,7 +2648,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.7,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.058,
+    "riboflavin_mg": 0.15,
+    "niacin_mg": 1.35,
+    "pantothenic_mg": 0.542,
+    "vit_b6_mg": 0.107,
+    "folate_ug": 20.0,
+    "vit_e_mg": 4.43,
+    "vit_k_ug": 13.4,
+    "zinc_mg": 4.5,
+    "magnesium_mg": 208.0,
+    "selenium_ug": 6.2,
+    "phosphorus_mg": 299.0
    }
   },
   {
@@ -2050,7 +2698,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.078,
+    "riboflavin_mg": 0.241,
+    "niacin_mg": 2.185,
+    "pantothenic_mg": 0.254,
+    "vit_b6_mg": 0.118,
+    "folate_ug": 32.0,
+    "vit_e_mg": 0.1,
+    "vit_k_ug": 2.5,
+    "zinc_mg": 6.81,
+    "magnesium_mg": 499.0,
+    "selenium_ug": 14.3,
+    "phosphorus_mg": 734.0
    }
   },
   {
@@ -2088,7 +2748,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 1.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.022,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.637,
+    "pantothenic_mg": 0.153,
+    "vit_b6_mg": 0.028,
+    "folate_ug": 14.0,
+    "vit_e_mg": null,
+    "vit_k_ug": null,
+    "zinc_mg": 0.56,
+    "magnesium_mg": 46.0,
+    "selenium_ug": null,
+    "phosphorus_mg": 96.0
    }
   },
   {
@@ -2127,7 +2799,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.033,
+    "riboflavin_mg": 0.165,
+    "niacin_mg": 2.196,
+    "pantothenic_mg": 0.297,
+    "vit_b6_mg": 0.148,
+    "folate_ug": 14.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.87,
+    "magnesium_mg": 74.0,
+    "selenium_ug": 0.5,
+    "phosphorus_mg": 166.0
    }
   },
   {
@@ -2166,7 +2850,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.04,
+    "magnesium_mg": 5.0,
+    "selenium_ug": 0.1,
+    "phosphorus_mg": 8.0
    }
   },
   {
@@ -2204,7 +2900,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 5.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.025,
+    "riboflavin_mg": 0.034,
+    "niacin_mg": 0.75,
+    "pantothenic_mg": 0.203,
+    "vit_b6_mg": 0.16,
+    "folate_ug": 11.0,
+    "vit_e_mg": 0.26,
+    "vit_k_ug": 0.1,
+    "zinc_mg": 0.34,
+    "magnesium_mg": 43.0,
+    "selenium_ug": 0.7,
+    "phosphorus_mg": 34.0
    }
   },
   {
@@ -2241,7 +2949,19 @@
     "vit_a_ug": 337.0,
     "vit_c_mg": 27.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.067,
+    "riboflavin_mg": 0.162,
+    "niacin_mg": 1.114,
+    "pantothenic_mg": 0.57,
+    "vit_b6_mg": 0.149,
+    "folate_ug": 62.0,
+    "vit_e_mg": 2.5,
+    "vit_k_ug": 310.0,
+    "zinc_mg": 0.5,
+    "magnesium_mg": 26.0,
+    "selenium_ug": 0.9,
+    "phosphorus_mg": 48.0
    }
   },
   {
@@ -2279,7 +2999,19 @@
     "vit_a_ug": 264.0,
     "vit_c_mg": 18.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.034,
+    "riboflavin_mg": 0.076,
+    "niacin_mg": 0.902,
+    "pantothenic_mg": 0.209,
+    "vit_b6_mg": 0.155,
+    "folate_ug": 68.0,
+    "vit_e_mg": 0.8,
+    "vit_k_ug": 414.8,
+    "zinc_mg": 0.81,
+    "magnesium_mg": 64.0,
+    "selenium_ug": 0.3,
+    "phosphorus_mg": 56.0
    }
   },
   {
@@ -2317,7 +3049,19 @@
     "vit_a_ug": 20.0,
     "vit_c_mg": 12.6,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.575,
+    "riboflavin_mg": 0.055,
+    "niacin_mg": 0.712,
+    "pantothenic_mg": 0.117,
+    "vit_b6_mg": 0.111,
+    "folate_ug": 8.0,
+    "vit_e_mg": 0.59,
+    "vit_k_ug": 2.6,
+    "zinc_mg": 0.12,
+    "magnesium_mg": 10.0,
+    "selenium_ug": 0.7,
+    "phosphorus_mg": 17.0
    }
   },
   {
@@ -2354,7 +3098,19 @@
     "vit_a_ug": 12.0,
     "vit_c_mg": 0.4,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.023,
+    "riboflavin_mg": 0.022,
+    "niacin_mg": 0.11,
+    "pantothenic_mg": 0.06,
+    "vit_b6_mg": 0.007,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.7,
+    "zinc_mg": 0.03,
+    "magnesium_mg": 1.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 3.0
    }
   },
   {
@@ -2391,7 +3147,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.02,
+    "magnesium_mg": 39.0,
+    "selenium_ug": 0.2,
+    "phosphorus_mg": 9918.0
    }
   },
   {
@@ -2430,7 +3198,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.011,
+    "riboflavin_mg": 0.095,
+    "niacin_mg": 0.425,
+    "pantothenic_mg": 0.035,
+    "vit_b6_mg": 0.026,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.11,
+    "magnesium_mg": 12.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 6.0
    }
   },
   {
@@ -2469,7 +3249,19 @@
     "vit_a_ug": 0.0,
     "vit_c_mg": 0.0,
     "vit_d_ug": 0.0,
-    "vit_b12_ug": 0.0
+    "vit_b12_ug": 0.0,
+    "thiamin_mg": 0.0,
+    "riboflavin_mg": 0.0,
+    "niacin_mg": 0.0,
+    "pantothenic_mg": 0.0,
+    "vit_b6_mg": 0.0,
+    "folate_ug": 0.0,
+    "vit_e_mg": 0.0,
+    "vit_k_ug": 0.0,
+    "zinc_mg": 0.0,
+    "magnesium_mg": 1.0,
+    "selenium_ug": 0.0,
+    "phosphorus_mg": 0.0
    }
   }
  ]

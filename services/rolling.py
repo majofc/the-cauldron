@@ -17,17 +17,24 @@ glucose monitor's time in range.
   range. ``uncertain`` (missing data could flip it) is judged but not in range.
 - A window is complete by definition, so it is judged as final: an unmet
   minimum over the last 24 hours is a miss now, whatever comes later.
+- Projection (#132): with ``ahead`` (24h span only, 0–12) up to 12 hourly
+  ticks past now are added, flagged in ``projected``. Their windows also hold
+  entries scheduled in the future and planned meals not eaten yet whose date +
+  time falls after now (``planned_as_entries``). Projected ticks are judged like
+  any other but never count in ``summary`` or ``daily``.
 
 Pure computation on one query of entries plus one of goals; nothing is stored.
 """
 
 from bisect import bisect_right
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 from django.utils import timezone
 
-from the_cauldron.models import IntakeEntry
+from the_cauldron.models import IntakeEntry, PlannedMeal
+from the_cauldron.services import grimoire
 from the_cauldron.services import nutrition as nu
 from the_cauldron.services import recommendations
 from the_cauldron.services.grimoire_nutrition import Total
@@ -35,21 +42,64 @@ from the_cauldron.services.grimoire_nutrition import Total
 SPANS = {"24h": 24, "7d": 7 * 24}
 HISTORY_DAYS = (7, 30, 90)
 JUDGED = (nu.MET, nu.MISSED, nu.UNCERTAIN)
+MAX_AHEAD = 12
+
+
+def window_start(end, span):
+    """The window rule shared by the gauges, the breakdown and the Journal's
+    list (#124): entries with ``window_start(end, span) < eaten_at ≤ end``."""
+    return end - timedelta(hours=SPANS[span])
+
+
+def entries_in_window(user, span, end):
+    """The user's entries in the window ending at ``end``, oldest first."""
+    return (
+        IntakeEntry.objects.filter(user=user, eaten_at__gt=window_start(end, span), eaten_at__lte=end)
+        .order_by("eaten_at", "created_at")
+    )
+
+
+def planned_as_entries(user, after, until, tz):
+    """Planned meals not eaten yet whose date + time falls in ``(after, until]``,
+    as entry-like objects (``eaten_at``, ``nutrients``, ``missing``) with the
+    nutrients marking them as eaten would give (#132). A spell that is gone or
+    unreadable counts as every nutrient missing."""
+    first, last = timezone.localtime(after, tz).date(), timezone.localtime(until, tz).date()
+    meals = PlannedMeal.objects.filter(user=user, intake_entry__isnull=True, date__gte=first, date__lte=last)
+    out, snapshots = [], {}
+    for meal in meals.select_related("spell"):
+        at = nu.localize(datetime.combine(meal.date, meal.time), tz)
+        if not (after < at <= until):
+            continue
+        nutrients, missing = {}, {n: 1 for n in nu.FIELDS}
+        if meal.spell is not None and grimoire.can_read(meal.spell, user):
+            if meal.spell_id not in snapshots:
+                try:
+                    snapshots[meal.spell_id] = nu.spell_basis_snapshot(meal.spell, user)
+                except nu.NutritionInputError:
+                    snapshots[meal.spell_id] = None
+            basis = snapshots[meal.spell_id]
+            if basis is not None:
+                nutrients, missing = nu.totals_from_basis(basis, nu.spell_grams(basis, meal.quantity, meal.unit))
+        out.append(SimpleNamespace(eaten_at=at, nutrients=nutrients, missing=missing, planned=True))
+    return out
 
 
 def step_hours(days):
     return 1 if days <= 30 else 3
 
 
-def ticks_for(now, days):
+def ticks_for(now, days, ahead=0):
     """Window ends: on the hour, every ``step_hours`` back ``days`` days, plus
-    ``now`` itself when it isn't on the hour."""
+    ``now`` itself when it isn't on the hour, plus ``ahead`` hourly ticks past
+    now (#132)."""
     step = timedelta(hours=step_hours(days))
     end = now.replace(minute=0, second=0, microsecond=0)
     count = int(timedelta(days=days) / step)
     ticks = [end - step * i for i in range(count - 1, -1, -1)]
     if now > end:
         ticks.append(now)
+    ticks.extend(end + timedelta(hours=h) for h in range(1, ahead + 1))
     return ticks
 
 
@@ -64,21 +114,28 @@ def _prefix(entries):
     return values, missing
 
 
-def rolling(user, span, days, now=None):
-    """The window ``span`` evaluated at every tick of the last ``days`` days.
-    ``values`` / ``missing`` are shared; each goal set in ``sets`` has its own
-    ``status`` / ``low`` / ``high`` / ``summary`` / ``daily``."""
+def rolling(user, span, days, now=None, ahead=0):
+    """The window ``span`` evaluated at every tick of the last ``days`` days
+    (and ``ahead`` projected hours, 24h span only). ``values`` / ``missing``
+    are shared; each goal set in ``sets`` has its own ``status`` / ``low`` /
+    ``high`` / ``summary`` / ``daily`` (real ticks only)."""
     hours = SPANS[span]
     per_day = hours / 24
     window = timedelta(hours=hours)
     now = now or timezone.now()
     tz = nu.user_tz(user)
-    ticks = ticks_for(now, days)
+    ahead = max(0, min(MAX_AHEAD, int(ahead or 0))) if span == "24h" else 0
+    ticks = ticks_for(now, days, ahead)
+    real = len(ticks) - ahead
 
     entries = list(
-        IntakeEntry.objects.filter(user=user, eaten_at__gt=ticks[0] - window, eaten_at__lte=now)
+        IntakeEntry.objects.filter(user=user, eaten_at__gt=ticks[0] - window, eaten_at__lte=ticks[-1])
         .order_by("eaten_at", "created_at")
     )
+    if ahead:
+        # Real ticks end at now, so neither scheduled entries nor plans after
+        # now ever reach their windows.
+        entries = sorted(entries + planned_as_entries(user, now, ticks[-1], tz), key=lambda e: e.eaten_at)
     times = [e.eaten_at for e in entries]
     pv, pm = _prefix(entries)
     local_days = [timezone.localtime(t, tz).date() for t in ticks]
@@ -103,9 +160,9 @@ def rolling(user, span, days, now=None):
 
     rec = recommendations.recommended_for(user, today=nu.today_for(user, now))
     mine = _judge_set([n for n in nu.FIELDS if any(g.nutrient == n for g in rows)],
-                      my_goals, local_days, values, missing, logged)
+                      my_goals, local_days, values, missing, logged, real)
     who = _judge_set([n for n in nu.FIELDS if n in rec["goals"]],
-                     lambda day: rec["goals"], local_days, values, missing, logged)
+                     lambda day: rec["goals"], local_days, values, missing, logged, real)
     who["status_reason"] = rec["status"]
     # Why a recommendation is missing, so the journal can say what to add (#114).
     for reason in ("needs_weight", "assumed", "unresolved"):
@@ -119,6 +176,7 @@ def rolling(user, span, days, now=None):
         # straight off the string, so UTC here would show tomorrow's 01:00.
         "now": timezone.localtime(now, tz),
         "ticks": [timezone.localtime(t, tz) for t in ticks],
+        "projected": [i >= real for i in range(len(ticks))],
         "logged": logged,
         "values": values,
         "missing": missing,
@@ -126,11 +184,15 @@ def rolling(user, span, days, now=None):
         "tracked": [n for n in nu.FIELDS if n in mine["status"] or n in who["status"]],
         "current_goals": [nu.goal_payload(g) for n, g in sorted(
             nu.current_goals(user).items(), key=lambda kv: nu.FIELDS.index(kv[0]))],
+        # The Journal's gauge filter (#131): display only, judged everywhere else.
+        "hidden_gauges": list(nu.get_profile(user).journal_hidden_gauges or []),
     }
 
 
-def _judge_set(tracked, goals_for, local_days, values, missing, logged):
-    """One goal set judged at every tick: ``goals_for(day)`` → ``{nutrient: goal}``."""
+def _judge_set(tracked, goals_for, local_days, values, missing, logged, real=None):
+    """One goal set judged at every tick: ``goals_for(day)`` → ``{nutrient: goal}``.
+    Only the first ``real`` ticks (not projected ones) feed time in range."""
+    real = len(local_days) if real is None else real
     status = {n: [] for n in tracked}
     low = {n: [] for n in tracked}
     high = {n: [] for n in tracked}
@@ -153,8 +215,8 @@ def _judge_set(tracked, goals_for, local_days, values, missing, logged):
         "status": status,
         "low": low,
         "high": high,
-        "summary": [_summary(n, status[n]) for n in tracked],
-        "daily": _daily(tracked, status, local_days),
+        "summary": [_summary(n, status[n][:real]) for n in tracked],
+        "daily": _daily(tracked, {n: status[n][:real] for n in tracked}, local_days[:real]),
     }
 
 

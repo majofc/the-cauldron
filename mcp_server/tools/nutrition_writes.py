@@ -148,7 +148,7 @@ def delete_meal(ctx, id, apply):
 
 
 def _plan_input(args, *, partial):
-    data = {k: v for k, v in args.items() if k in ("date", "slot", "quantity", "unit")}
+    data = {k: v for k, v in args.items() if k in ("date", "slot", "time", "quantity", "unit")}
     if "spell_id" in args:
         data["spell"] = args["spell_id"]
     req = PlannedMealInputSerializer(data=data, partial=partial)
@@ -160,6 +160,9 @@ PLAN_FIELDS = {
     "spell_id": {"type": "string", "description": "A spell (recipe) from search_spells."},
     "date": {**DATE, "description": "Day to plan (default today)."},
     "slot": SLOT,
+    "time": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+             "description": "HH:MM on the user's clock (#132). Default by slot: breakfast 08:00, lunch 14:00, "
+                            "snack 17:00, dinner 20:00."},
     "quantity": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000},
     "unit": {"type": "string", "enum": nutrition.SPELL_UNITS},
 }
@@ -189,7 +192,7 @@ def _own_meal(ctx, id):
     scope=WRITE,
     consent=True,
     confirm=True,
-    description="Move or change a planned meal (day, slot, amount, spell). Two-step: preview, then confirm_token.",
+    description="Move or change a planned meal (day, slot, time, amount, spell). Two-step: preview, then confirm_token.",
     schema={"type": "object", "properties": {"id": ID, **PLAN_FIELDS}, "required": ["id"], "additionalProperties": False},
 )
 def update_planned_meal(ctx, id, apply, **args):
@@ -226,7 +229,7 @@ def delete_planned_meal(ctx, id, apply):
     scope=WRITE,
     consent=True,
     description=(
-        "Log a planned meal as eaten (default: now if it's today's, the planned amount). "
+        "Log a planned meal as eaten (default: its planned date and time, the planned amount). "
         "Optionally the real time and amount."
     ),
     schema={
