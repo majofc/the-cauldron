@@ -363,6 +363,8 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
 - Retest banner won't appear → `retest_status` keys off the last **completed** assessment and is
   suppressed for 3 days after a dismissal *or a retake*. An open, incomplete session does not
   reset the 30-day clock.
+- The stopwatch button (#133) is `forge.js:timerBtnHtml()`: an icon span (▶ / ■) + a label span; ≤768px hides the
+  label (40×40 square) and `.forge-set-row` becomes `auto minmax(0, 1fr) auto` so nothing overflows from 320px.
 - A forge overlay looks wrong on a phone → the ≤768px "Mobile sheets" block in `forge.css`; dialogs need the
   `.forge-sheet-head` / `.forge-sheet-body` wrappers. Visual baselines live in `tests/visual_baselines/`
   (`FORGE_UPDATE_BASELINES=1` rewrites them; review the PNGs before committing).
@@ -527,6 +529,9 @@ values not on the label stay null) and
 `seed_data/grimoire_spells.json` (13 public spells owned by the inactive system user
 `the-grimoire`, email `the-grimoire@system.invalid` — `auth_user` has a unique email). Rebuild the
 reagent file from a USDA download with `build_grimoire_reagents <sr_legacy.json>` (see its docstring).
+`prune_seed_spells [--dry-run] [--write-seed-file]` (#126) deletes the starter spells the owner (`SUPERADMIN_EMAIL`)
+never cast, logged, planned or forked (others' use doesn't count; history keeps title snapshots; forks stay) and can
+rewrite `grimoire_spells.json` to the kept ones so the next `seed_grimoire` doesn't recreate them.
 **Added sugars** in that build: USDA nutrient 539 where listed (SR Legacy never lists it), else **0** for a food in
 `UNPROCESSED_CATEGORIES` whose description doesn't match `SWEETENED` (sweetened/syrup/honey/dressing/fruit
 yogurt/peanut butter…) or listed in `NO_ADDED_SUGAR` (water, plain oats, cocoa, baking powder); Sugar and Honey

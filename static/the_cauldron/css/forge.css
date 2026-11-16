@@ -801,7 +801,9 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-skip-ex-btn:hover { color: var(--cauldron-paprika-light); border-color: var(--cauldron-paprika-light); }
 
 /* Timers (stopwatch + rest) and sound picker */
-.forge-timed-cell { display: flex; gap: .4rem; align-items: center; }
+.forge-timed-cell { display: flex; gap: .4rem; align-items: center; min-width: 0; }
+.forge-timer-btn { display: inline-flex; align-items: center; gap: .35rem; }
+.forge-timer-icon { font-size: .75em; line-height: 1; }
 .forge-timed-cell .forge-trial-input { width: 70px; }
 .forge-timer-btn, .forge-rest-btn {
   font-family: "Inter", sans-serif; font-size: .8rem;
@@ -1411,6 +1413,25 @@ body.forge-overlay-open { overflow: hidden; }
      pinned to the viewport.
    - The results reveal is a gate: it only gains room to scroll. */
 @media (max-width: 768px) {
+  /* #133: no column may force the row wider than its card. */
+  /* Label over target on the left, the input (and stopwatch) on the right
+     across both lines, the actual load on a line of its own: no column can
+     force the row wider than its card, even at 320px. */
+  .forge-set-row { grid-template-columns: minmax(0, 1fr) auto; column-gap: .6rem; row-gap: .1rem; }
+  .forge-set-row > .forge-set-label { grid-column: 1; grid-row: 1; }
+  .forge-set-row > .forge-set-expected { grid-column: 1; grid-row: 2; min-width: 0; }
+  .forge-set-row > .forge-trial-input,
+  .forge-set-row > .forge-timed-cell { grid-column: 2; grid-row: 1 / span 2; }
+  .forge-set-row > .forge-load-actual { grid-column: 1 / -1; }
+  .forge-timed-cell .forge-trial-input { width: 64px; min-width: 0; }
+  .forge-timer-btn {
+    justify-content: center; min-width: 40px; min-height: 40px; padding: 0; flex: 0 0 auto;
+  }
+  .forge-timer-btn .forge-timer-label {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+  .forge-timer-btn .forge-timer-icon { font-size: 1rem; }
   /* Overlays live inside .page, whose stacking context sits under the sticky
      nav — lift it while one is open so the nav can't cover a sheet's head. */
   body.forge-overlay-open .page { z-index: calc(var(--arcano-z-nav) + 1); }
