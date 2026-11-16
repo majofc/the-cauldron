@@ -32,6 +32,19 @@ MIN_LOAD_STEP = {"kg": 1.0, "lb": 2.5}
 # for a performable harder rung — e.g. the weighted rung after dumbbells are added.
 TOP_OF_LADDER_REPS = 25
 
+# #24: a movement that can't get harder (heaviest load owned, lightest band, top
+# of the ladder) shifts its whole range up one rep per session, keeping its
+# width, until the max reaches this — about a 20RM, still ≥ 40 % 1RM
+# (Schoenfeld 2017/2021, Lasevicius 2018). Then it holds and hands off to a
+# harder rung or an equipment prompt. Rep-based movements only; timed holds keep
+# TIMED_CAP_SECONDS.
+REP_EXTENSION_CEILING = 20
+
+# ``Prescription.ceiling_notice``: why a movement is parked at the ceiling.
+NOTICE_HEAVIER_LOAD = "heavier_load"
+NOTICE_LIGHTER_BAND = "lighter_band"
+NOTICE_TOP_OF_LADDER = "top_of_ladder"
+
 # Timed holds grow their target instead of advancing at the seeded max: the new
 # max is ``max(rmax + TIMED_STEP_SECONDS, round(TIMED_ACHIEVED_RATIO × achieved))``
 # up to TIMED_CAP_SECONDS, and only a hold at the cap counts as topped out.
@@ -59,6 +72,8 @@ class Prescription:
     # harder rung. The orchestrator uses this to gate the climb behind a user
     # Accept/Deny instead of applying it automatically.
     advanced: bool = False
+    # At the rep ceiling with nothing harder to offer (#24): one of NOTICE_*.
+    ceiling_notice: str = ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -299,6 +314,39 @@ def _seeded_rmax(exercise) -> int:
     return rep_targets_for(exercise, exercise.rep_range_min, exercise.rep_range_max)[1]
 
 
+def _base_range(exercise) -> tuple:
+    return rep_targets_for(exercise, exercise.rep_range_min, exercise.rep_range_max)
+
+
+def _clamp_to_ceiling(exercise, rmin, rmax) -> tuple:
+    """A range already above the ceiling (extended before #24) comes back to
+    end at it, with the rung's base width."""
+    if rmax <= REP_EXTENSION_CEILING:
+        return rmin, rmax
+    base_min, base_max = _base_range(exercise)
+    width = max(0, base_max - base_min)
+    return max(1, REP_EXTENSION_CEILING - width), REP_EXTENSION_CEILING
+
+
+def band_label(equipment_profile, index) -> str:
+    """A band load named as the user typed it: "light band"; "Band N" (1-based)
+    for an index past the bands they list. Never raises."""
+    try:
+        i = int(round(float(index)))
+    except (TypeError, ValueError):
+        return "band"
+    labels = list(getattr(equipment_profile, "band_levels", None) or [])
+    if 0 <= i < len(labels):
+        return f"{labels[i]} band"
+    return f"Band {i + 1}"
+
+
+def _load_text(equipment_profile, exercise, load) -> str:
+    if _is_band(equipment_profile, exercise):
+        return band_label(equipment_profile, load)
+    return f"{load}{_unit(equipment_profile)}"
+
+
 def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=_LINKED) -> Prescription:
     """Compute the next prescription for one exercise from its AMRAP test set.
 
@@ -326,11 +374,37 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=
     assisted = getattr(ex, "is_assisted", False)
     if next_rung is _LINKED:
         next_rung = ex.progression
+    if not is_timed:
+        rmin, rmax = _clamp_to_ceiling(ex, rmin, rmax)
 
     def advance_to(rung):
         return Prescription(
             rung, sets, rung.rep_range_min, rung.rep_range_max, None, 0,
             f"Advanced to {rung.name}!", advanced=True,
+        )
+
+    def reset_range():
+        """A range shifted up while stuck returns to the rung's base once load
+        can move again."""
+        return _base_range(ex) if rmax > _seeded_rmax(ex) else (rmin, rmax)
+
+    def stuck(load_, notice, why):
+        """Nothing harder this session: shift the range up a rep (#24); at the
+        ceiling, offer a harder rung after SESSIONS_TO_ADVANCE sessions, else
+        hold with an equipment prompt."""
+        if rmax < REP_EXTENSION_CEILING:
+            return Prescription(ex, sets, rmin + 1, rmax + 1, load_, 0, f"{why}; range up one rep.")
+        new_at_top = min(at_top + 1, SESSIONS_TO_ADVANCE)
+        if next_rung is not None:
+            if new_at_top >= SESSIONS_TO_ADVANCE:
+                return advance_to(next_rung)
+            return Prescription(
+                ex, sets, rmin, rmax, load_, new_at_top,
+                f"Rep ceiling ({new_at_top}/{SESSIONS_TO_ADVANCE}); hold to advance.",
+            )
+        return Prescription(
+            ex, sets, rmin, rmax, load_, new_at_top, f"{why}; holding at {REP_EXTENSION_CEILING} reps.",
+            ceiling_notice=notice,
         )
 
     # ── Underperformed: below the bottom of the range → de-load. ──────────────
@@ -347,7 +421,7 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=
             if easier is not None:
                 return Prescription(
                     ex, max(2, sets), rmin, rmax, easier, 0,
-                    f"De-load: reduced to {easier}{_unit(equipment_profile)}",
+                    f"De-load: reduced to {_load_text(equipment_profile, ex, easier)}",
                 )
             return Prescription(
                 ex, max(2, sets - 1), rmin, rmax, load, 0, "Held load; dropped a set to recover."
@@ -366,22 +440,24 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=
         if is_load_mode and assisted:
             lighter = next_load_down(equipment_profile, ex, load)
             if lighter is not None:
+                lo, hi = reset_range()
                 return Prescription(
-                    ex, sets, rmin, rmax, lighter, 0,
-                    f"Less assistance → band {lighter:g} (reps reset to {rmin}).",
+                    ex, sets, lo, hi, lighter, 0,
+                    f"Less assistance → {_load_text(equipment_profile, ex, lighter)} (reps reset to {lo}).",
                 )
             if load is not None and next_rung is not None:
                 return advance_to(next_rung)
-            return Prescription(ex, sets, rmin, rmax + 1, load, 0, "Lightest band reached; +1 target rep.")
+            return stuck(load, NOTICE_LIGHTER_BAND, "Lightest band reached")
         if is_load_mode:
             new_load = next_load_up(equipment_profile, ex, load)
             if new_load is not None and (load is None or new_load > load):
+                lo, hi = reset_range()
                 return Prescription(
-                    ex, sets, rmin, rmax, new_load, 0,
-                    f"+load → {new_load}{_unit(equipment_profile)} (reps reset to {rmin}).",
+                    ex, sets, lo, hi, new_load, 0,
+                    f"+load → {_load_text(equipment_profile, ex, new_load)} (reps reset to {lo}).",
                 )
-            # No heavier load available: progress reps within an extended range.
-            return Prescription(ex, sets, rmin, rmax + 1, load, 0, "Max load reached; +1 target rep.")
+            # No heavier load available: shift the range up, to the ceiling.
+            return stuck(load, NOTICE_HEAVIER_LOAD, "Max load reached")
 
         # Timed holds grow their target until the cap; only a capped hold is at
         # the top of its range for advancing.
@@ -401,8 +477,9 @@ def next_prescription(prescribed, amrap_reps: int, equipment_profile, next_rung=
         if next_rung is not None and (new_at_top >= SESSIONS_TO_ADVANCE or outgrown):
             return advance_to(next_rung)
         if next_rung is None and new_at_top >= SESSIONS_TO_ADVANCE and not is_timed:
-            # Top of the user's ladder: nowhere to climb, so the range grows. No cap.
-            return Prescription(ex, sets, rmin, rmax + 1, None, 0, "Top of the ladder; +1 target rep.")
+            # Top of the user's ladder: nowhere to climb, so the range shifts up
+            # to the ceiling and then holds (#24).
+            return stuck(None, NOTICE_TOP_OF_LADDER, "Top of the ladder")
         # A capped hold with nowhere to go keeps its counter full, so the first
         # session after a harder rung becomes performable unlocks it.
         return Prescription(

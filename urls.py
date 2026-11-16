@@ -1,12 +1,14 @@
 from allauth.account import views as allauth_views
 from django.contrib.auth import views as auth_views
-from django.urls import include, path
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
 from . import api, grimoire_api, nutrition_api, oauth_views, views
 from .mcp_server.protocol import McpView
 
 app_name = "the_cauldron"
+
+UUID_RE = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 
 router = DefaultRouter()
 router.register(r"patterns", api.PatternViewSet, basename="forge-pattern")
@@ -37,10 +39,21 @@ api_urlpatterns = [
         name="forge-retest-dismiss",
     ),
     path("program/", api.ProgramView.as_view(), name="forge-program"),
-    path(
-        "progression/<uuid:presc_uuid>/<str:action>/",
+    # accept|deny only: anything else is a 404 from routing (#10).
+    re_path(
+        rf"^progression/(?P<presc_uuid>{UUID_RE})/(?P<action>accept|deny)/$",
         api.ProgressionActionView.as_view(),
         name="forge-progression",
+    ),
+    re_path(
+        rf"^regression/(?P<presc_uuid>{UUID_RE})/(?P<action>accept|deny)/$",
+        api.RegressionActionView.as_view(),
+        name="forge-regression",
+    ),
+    path(
+        "prescription/<uuid:presc_uuid>/ceiling-notice/dismiss/",
+        api.CeilingNoticeDismissView.as_view(),
+        name="forge-ceiling-dismiss",
     ),
     path(
         "prescription/<uuid:presc_uuid>/set-load/",

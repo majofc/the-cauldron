@@ -5,13 +5,18 @@ View/API code calls into here; the pure decision logic stays in
 session snapshotting, applying a logged session).
 """
 
+import contextvars
 import math
 import random
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, time, timedelta
+from typing import NamedTuple
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import prefetch_related_objects
 from django.shortcuts import get_object_or_404
 from django.db.models import F, Q
 from django.utils import timezone
@@ -928,47 +933,6 @@ def select_day_prescriptions(user, program_day: ProgramDay) -> list:
     return [p for p in prescriptions if p.pk in keep]
 
 
-@transaction.atomic
-def start_session(user, program_day: ProgramDay) -> WorkoutSession:
-    """Open a WorkoutSession and snapshot expected reps/load from the current
-    prescriptions, so planned-vs-real survives later adaptation.
-
-    Only the least-trained subset of patterns is snapshotted (see
-    ``select_day_prescriptions``).
-
-    Prescriptions are reconciled against the user's current equipment first, so
-    a day never snapshots a movement they can no longer perform.
-
-    Read paths do **not** call this: opening Today builds an ephemeral plan
-    (``build_today_plan``) and the session is only written once the user logs a
-    real value (``create_session_from_plan``). This remains the path for callers
-    that genuinely want a persisted session up front."""
-    sync_program_equipment(user)
-    session = WorkoutSession.objects.create(
-        user=user,
-        program_day=program_day,
-        scheduled_for=timezone.now().date(),
-        status=WorkoutSession.Status.PLANNED,
-    )
-    for presc in select_day_prescriptions(user, program_day):
-        # Bar pull-ups re-pick the weaker grip each day they're scheduled; the
-        # choice is snapshotted onto this session only (the prescription's
-        # nominal grip is untouched). Non-split rungs return unchanged.
-        session_exercise = select_grip_variant(user, presc.exercise)
-        for set_index in range(presc.target_sets):
-            is_amrap = set_index == presc.target_sets - 1
-            SetLog.objects.create(
-                session=session,
-                prescribed_exercise=presc,
-                exercise=session_exercise,
-                set_index=set_index,
-                expected_reps=presc.target_reps_max if is_amrap else presc.target_reps_min,
-                expected_load=presc.target_load,
-                is_amrap=is_amrap,
-            )
-    return session
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # The ephemeral plan
 #
@@ -980,6 +944,82 @@ def start_session(user, program_day: ProgramDay) -> WorkoutSession:
 # Sets of a pattern before any volume applies, and what ``align_volume`` resets
 # to. A ⇄ swap follows the program's volume (``program_sets``).
 DEFAULT_TARGET_SETS = 3
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# "Today" is the date on the device in use (#56)
+#
+# The web client sends its IANA zone in ``X-Cauldron-Timezone`` on every Forge
+# call; ``DeviceTimezoneMixin`` (api.py) scopes it to the request here. MCP calls
+# have no device and fall back to ``CauldronProfile.timezone``. The header never
+# writes the profile: that stays the user's own setting.
+# ─────────────────────────────────────────────────────────────────────────────
+
+DEFAULT_TIMEZONE = "America/Mexico_City"
+_DEVICE_ZONE = contextvars.ContextVar("forge_device_zone", default=None)
+
+
+def _valid_zone(name):
+    """``ZoneInfo`` for an IANA name, or ``None`` for anything else."""
+    if not name or not isinstance(name, str) or len(name) > 64:
+        return None
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError, TypeError):
+        return None
+
+
+@contextmanager
+def device_timezone(name):
+    """Scope the device's zone to a request (an invalid or missing name is ignored)."""
+    token = _DEVICE_ZONE.set(_valid_zone(name))
+    try:
+        yield
+    finally:
+        _DEVICE_ZONE.reset(token)
+
+
+def local_zone(user, tz_name=None):
+    """The zone "today" is read in: ``tz_name`` if valid, else the request's
+    device zone, else the profile's, else ``DEFAULT_TIMEZONE``."""
+    zone = _valid_zone(tz_name) or _DEVICE_ZONE.get()
+    if zone is not None:
+        return zone
+    cached = getattr(user, "_forge_profile_zone", None)
+    if cached is None:
+        name = CauldronProfile.objects.filter(user=user).values_list("timezone", flat=True).first()
+        cached = _valid_zone(name) or ZoneInfo(DEFAULT_TIMEZONE)
+        user._forge_profile_zone = cached
+    return cached
+
+
+def local_today(user, tz_name=None):
+    """Today's date for ``user`` on the device in use (see ``local_zone``)."""
+    return timezone.now().astimezone(local_zone(user, tz_name)).date()
+
+
+# Everything ``WorkoutSessionSerializer`` reads per set (#129).
+SESSION_DISPLAY_PREFETCH = (
+    "set_logs__exercise__pattern",
+    "set_logs__exercise__muscles",
+    "set_logs__exercise__required_equipment",
+    "set_logs__prescribed_exercise",
+)
+
+
+def session_for_display(session, reuse_prefetch=False):
+    """``session`` (or its pk) re-read with everything the serializer touches,
+    so serializing it costs the same queries for 3 sets as for 12.
+    ``reuse_prefetch`` keeps a session a read-only list already loaded with
+    ``SESSION_DISPLAY_PREFETCH`` (never after a write: that cache is stale)."""
+    if reuse_prefetch and "set_logs" in getattr(session, "_prefetched_objects_cache", {}):
+        return session
+    pk = getattr(session, "pk", session)
+    return (
+        WorkoutSession.objects.select_related("program_day", "user")
+        .prefetch_related(*SESSION_DISPLAY_PREFETCH)
+        .get(pk=pk)
+    )
 
 
 def active_day(user):
@@ -1003,7 +1043,7 @@ def resumable_session(user) -> "WorkoutSession | None":
     return (
         WorkoutSession.objects.filter(
             user=user,
-            scheduled_for=timezone.now().date(),
+            scheduled_for=local_today(user),
             status=WorkoutSession.Status.PLANNED,
         )
         .order_by("-created_at")
@@ -1064,27 +1104,34 @@ def _planned_sets(profile, exercise, presc, session, synthetic_key):
 def build_today_plan(user, program_day: ProgramDay) -> list:
     """The plan for ``program_day`` as unsaved SetLog rows — **no DB write**.
 
-    Same content ``start_session`` would snapshot (least-trained patterns, the
-    weaker grip on split rungs), just never persisted. Unlike ``start_session``
-    this does not reconcile equipment: reconciliation writes, and a read path
-    must not. ``select_day_prescriptions`` already hides anything unperformable.
+    The least-trained patterns, the weaker grip on split rungs: what
+    ``create_session_from_plan`` persists once the user logs a value. It does
+    not reconcile equipment: reconciliation writes, and a read path must not.
+    ``select_day_prescriptions`` already hides anything unperformable.
     """
     profile = get_or_create_equipment_profile(user)
     session = WorkoutSession(
         user=user,
         program_day=program_day,
-        scheduled_for=timezone.now().date(),
+        scheduled_for=local_today(user),
         status=WorkoutSession.Status.PLANNED,
     )
     rows = []
     for presc in select_day_prescriptions(user, program_day):
         exercise = select_grip_variant(user, presc.exercise)
         rows.extend(_planned_sets(profile, exercise, presc, session, str(presc.uuid)))
+    # The serializer lists each set's muscles: one query for the plan, not per row.
+    prefetch_related_objects([r.exercise for r in rows], "muscles")
     return rows
 
 
-@transaction.atomic
 def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channel=None) -> WorkoutSession:
+    """``get_or_create_session_from_plan`` without the ``created`` flag."""
+    return get_or_create_session_from_plan(user, program_day, plan_sets, channel=channel)[0]
+
+
+@transaction.atomic
+def get_or_create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channel=None):
     """Persist the on-screen plan as a real session, on the first logged value.
 
     ``plan_sets`` is the client's snapshot: one entry per set, carrying
@@ -1096,6 +1143,10 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
 
     Raises ``ValueError`` if the snapshot is empty or names a prescription that
     is not on this day. ``channel`` marks where the session came from (web/MCP).
+
+    One planned session per user and day (#56, ``one_planned_session_per_day``):
+    when a racing request already wrote today's, that one is returned and this
+    snapshot is discarded. Returns ``(session, created)``.
     """
     sync_program_equipment(user)
 
@@ -1110,6 +1161,7 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
 
     blocks = []
     seen = set()
+    swapped_from = {}  # exercise uuid -> prescription uuid a pre-save ⇄ swap replaced (#23)
     for entry in plan_sets or []:
         if not isinstance(entry, dict):
             continue
@@ -1122,6 +1174,10 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
             if presc_uuid is None:
                 # Don't silently demote a garbled prescription to a free swap.
                 raise ValueError(_("prescription is not on this day"))
+        if presc_uuid is None and entry.get("swapped_from"):
+            replaced = _uuid_or_none(entry["swapped_from"])
+            if replaced is not None:
+                swapped_from[exercise_uuid] = replaced
         key = (presc_uuid, exercise_uuid)
         if key in seen:
             continue
@@ -1142,13 +1198,24 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
     profile = get_or_create_equipment_profile(user)
     owned = owned_equipment_keys(profile)
     blocked = blocked_exercise_ids(user)
-    session = WorkoutSession.objects.create(
-        user=user,
-        program_day=program_day,
-        scheduled_for=timezone.now().date(),
-        status=WorkoutSession.Status.PLANNED,
-        **({"channel": channel} if channel else {}),
-    )
+    today = local_today(user)
+    try:
+        with transaction.atomic():
+            session = WorkoutSession.objects.create(
+                user=user,
+                program_day=program_day,
+                scheduled_for=today,
+                status=WorkoutSession.Status.PLANNED,
+                **({"channel": channel} if channel else {}),
+            )
+    except IntegrityError:
+        existing = WorkoutSession.objects.filter(
+            user=user, scheduled_for=today, status=WorkoutSession.Status.PLANNED
+        ).first()
+        if existing is None:
+            raise
+        return existing, False
+    rows = []
     for presc_uuid, exercise_uuid in blocks:
         exercise = exercises.get(str(exercise_uuid))
         if exercise is None:
@@ -1179,16 +1246,19 @@ def create_session_from_plan(user, program_day: ProgramDay, plan_sets, *, channe
         targets = _block_targets(profile, exercise, presc)
         for set_index in range(targets["sets"]):
             is_amrap = set_index == targets["sets"] - 1
-            SetLog.objects.create(
+            replaced = None if presc else prescriptions.get(swapped_from.get(str(exercise_uuid)))
+            rows.append(SetLog(
                 session=session,
                 prescribed_exercise=presc,
+                swapped_from=replaced,
                 exercise=exercise,
                 set_index=set_index,
                 expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
                 expected_load=targets["load"],
                 is_amrap=is_amrap,
-            )
-    return session
+            ))
+    SetLog.objects.bulk_create(rows)  # one INSERT however many sets (#129)
+    return session, True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1277,6 +1347,7 @@ def swap_candidates(user) -> dict:
         # Bar pull-up chains present as the grip the Forge would schedule today.
         current = select_grip_variant(user, current)
         targets = _block_targets(profile, current, None, sets)
+        band = loads.implement_for(profile, current) == "bands"
         candidates.append(
             {
                 "chain_key": str(chain),
@@ -1292,7 +1363,8 @@ def swap_candidates(user) -> dict:
                 "target_reps_min": targets["reps_min"],
                 "target_reps_max": targets["reps_max"],
                 "target_load": targets["load"],
-                "load_unit": profile.load_unit,
+                "load_unit": "band" if band else profile.load_unit,
+                "band_labels": list(profile.band_levels or []) if band else None,
                 "target_rest_seconds": targets["rest"],
                 "event_count": counts.get(chain, 0),
             }
@@ -1333,12 +1405,15 @@ def swap_session_exercise(session: WorkoutSession, from_exercise, to_exercise) -
     # The session's own program, which may no longer be the active one.
     program = session.program_day.program if session.program_day_id else None
     targets = _block_targets(profile, to_exercise, None, _sets_of(program))
+    # Remember what was replaced (#23) — through a chain of swaps too.
+    swapped_from_id = rows[0].prescribed_exercise_id or rows[0].swapped_from_id
     session.set_logs.filter(exercise=from_exercise).delete()
     for set_index in range(targets["sets"]):
         is_amrap = set_index == targets["sets"] - 1
         SetLog.objects.create(
             session=session,
             prescribed_exercise=None,
+            swapped_from_id=swapped_from_id,
             exercise=to_exercise,
             set_index=set_index,
             expected_reps=targets["reps_max"] if is_amrap else targets["reps_min"],
@@ -1685,17 +1760,41 @@ def _load_or_none(v):
     return load if math.isfinite(load) and 0 <= load <= MAX_LOGGED_LOAD else None
 
 
+def snap_band_load(profile, value) -> float:
+    """A band load is an index into the bands the user owns (#55): round half
+    up, then clamp to ``0 … len(band_levels) - 1``."""
+    top = max(0, len(profile.band_levels or []) - 1)
+    return float(min(max(math.floor(value + 0.5), 0), top))
+
+
 def _write_set_values(session: WorkoutSession, set_results: dict) -> None:
-    """Persist actual reps/load/rir onto ``session``'s sets. No finalization."""
-    for set_log in session.set_logs.all():
+    """Persist actual reps/load onto ``session``'s sets in one UPDATE. No
+    finalization. Any other key in a set's values (e.g. reps in reserve from an old client) is
+    ignored."""
+    now = timezone.now()
+    changed = []
+    profile = None
+    implements = {}
+    for set_log in session.set_logs.select_related("exercise").prefetch_related("exercise__required_equipment"):
         res = set_results.get(str(set_log.uuid))
         if not res:
             continue
         set_log.actual_reps = _int_or_none(res.get("actual_reps"))
         # The heaviest logged load feeds progression (``_progression_base_load``).
-        set_log.actual_load = _load_or_none(res.get("actual_load"))
-        set_log.rir = res.get("rir")
-        set_log.save(update_fields=["actual_reps", "actual_load", "rir"])
+        load = _load_or_none(res.get("actual_load"))
+        if load is not None:
+            if profile is None:
+                profile = get_or_create_equipment_profile(session.user)
+            ex = set_log.exercise
+            if ex.pk not in implements:
+                implements[ex.pk] = loads.implement_for(profile, ex)
+            if implements[ex.pk] == "bands":
+                load = snap_band_load(profile, load)
+        set_log.actual_load = load
+        set_log.updated_at = now  # bulk_update skips auto_now
+        changed.append(set_log)
+    if changed:
+        SetLog.objects.bulk_update(changed, ["actual_reps", "actual_load", "updated_at"])
 
 
 @transaction.atomic
@@ -1712,10 +1811,12 @@ def save_session_values(session: WorkoutSession, set_results: dict) -> None:
 def _performed_at(session: WorkoutSession):
     """When a finalized session counts as performed: now for today's, but a past
     session saved late (the unfinished-session sheet) keeps its own date. Noon,
-    so the date survives display in any nearby timezone."""
-    today = timezone.now().date()
+    so the date survives display in any nearby timezone. "Today" and noon are
+    both read in the device's zone (#56)."""
+    zone = local_zone(session.user)
+    today = timezone.now().astimezone(zone).date()
     if session.scheduled_for and session.scheduled_for < today:
-        return timezone.make_aware(datetime.combine(session.scheduled_for, time(12)))
+        return datetime.combine(session.scheduled_for, time(12), tzinfo=zone)
     return timezone.now()
 
 
@@ -1780,7 +1881,7 @@ def _next_rung(user, exercise, owned, blocked):
 def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     """Record actual reps/load and advance prescriptions via the engine.
 
-    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load", "rir"};
+    ``set_results`` maps SetLog uuid -> {"actual_reps", "actual_load"};
     for a per-side movement ``actual_reps`` is reps per side. Returns a list of human-readable progression deltas.
     """
     profile = get_or_create_equipment_profile(session.user)
@@ -1801,6 +1902,7 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
     amrap_sets = session.set_logs.filter(is_amrap=True).select_related(
         "prescribed_exercise", "prescribed_exercise__exercise"
     )
+    performed_as_prescribed = set()
     for amrap in amrap_sets:
         presc = amrap.prescribed_exercise
         if presc is None or amrap.actual_reps is None:
@@ -1809,6 +1911,8 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         # Forge scheduled today) while ``presc`` tracks the shared rung. Drive the
         # rung from the stronger grip so a weak-grip day never demotes/stalls it.
         reps = effective_progression_reps(session.user, amrap.exercise, amrap.actual_reps)
+        performed_as_prescribed.add(presc.pk)
+        presc.sessions_swapped_down = 0  # done as prescribed: the swap-down run ends (#23)
         base_load = _progression_base_load(session, presc, profile)
         if base_load is not None:
             presc.target_load = base_load
@@ -1826,14 +1930,22 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
                     or substitute_for(session.user, target)
                     or target
                 )
+            # A rung offered at the ceiling (#24) ends the ceiling notice too.
+            presc.ceiling_notice = presc.ceiling_notice_dismissed = ""
             if presc.pending_progression_id is None:
                 presc.pending_progression = target
-                presc.save(update_fields=["pending_progression"])
+                # The latest evidence wins: an unlock replaces a pending regression.
+                presc.pending_regression = None
+            presc.save(update_fields=[
+                "pending_progression", "pending_regression", "sessions_swapped_down",
+                "ceiling_notice", "ceiling_notice_dismissed",
+            ])
             deltas.append(
                 {
                     "exercise": presc.exercise.name,
                     "message": f"Unlocked: {target.name}! Accept to advance.",
                     "unlock": {
+                        "direction": "up",
                         "prescription": str(presc.uuid),
                         "from_name": presc.exercise.name,
                         "to_name": target.name,
@@ -1863,8 +1975,88 @@ def apply_session_log(session: WorkoutSession, set_results: dict) -> list:
         # on a loaded rung, which needs a starting load of its own.
         presc.target_load = _initial_load(profile, new.exercise) if moved else new.target_load
         presc.sessions_at_top = new.sessions_at_top
+        _set_ceiling_notice(presc, new.ceiling_notice)
         presc.save()
         deltas.append({"exercise": new.exercise.name, "message": new.message})
+    deltas.extend(_apply_swap_downs(session, performed_as_prescribed))
+    return deltas
+
+
+def _set_ceiling_notice(presc, notice) -> None:
+    """Raise the #24 equipment prompt once: a notice the user dismissed isn't
+    raised again until the movement leaves the ceiling."""
+    if not notice:
+        presc.ceiling_notice = presc.ceiling_notice_dismissed = ""
+    elif notice != presc.ceiling_notice_dismissed:
+        presc.ceiling_notice = notice
+
+
+# Consecutive swap-down sessions that park a regression suggestion (#23).
+SWAPS_TO_REGRESS = 2
+MAX_LADDER_WALK = 40
+
+
+def is_easier_rung(prescribed, performed) -> bool:
+    """``performed`` is below ``prescribed`` on its ladder: reachable by
+    following ``.regression`` (or a grip variant of such a rung). A grip variant
+    of the prescribed rung itself is the same rung, not easier."""
+    if performed.pk == prescribed.pk or performed.pattern_id != prescribed.pattern_id:
+        return False
+    if prescribed.variant_group and performed.variant_group == prescribed.variant_group:
+        return False
+    rung, seen = prescribed.regression, {prescribed.pk}
+    while rung is not None and rung.pk not in seen and len(seen) < MAX_LADDER_WALK:
+        if rung.pk == performed.pk or (rung.variant_group and rung.variant_group == performed.variant_group):
+            return True
+        seen.add(rung.pk)
+        rung = rung.regression
+    return False
+
+
+def _apply_swap_downs(session, performed_as_prescribed) -> list:
+    """Count sessions where a prescription was ⇄ swapped to an easier rung and
+    that swap's to-failure set was logged; at SWAPS_TO_REGRESS, park the rung
+    performed this time as ``pending_regression`` (#23). Swapped reps are never
+    scored against the prescription."""
+    deltas = []
+    swaps = (
+        session.set_logs.filter(is_amrap=True, prescribed_exercise=None, swapped_from__isnull=False)
+        .exclude(actual_reps=None)
+        .select_related("exercise", "swapped_from__exercise")
+    )
+    done = set()
+    for amrap in swaps:
+        presc_id = amrap.swapped_from_id
+        if presc_id in done or presc_id in performed_as_prescribed:
+            continue
+        if not is_easier_rung(amrap.swapped_from.exercise, amrap.exercise):
+            continue
+        done.add(presc_id)
+        presc = PrescribedExercise.objects.select_for_update().select_related("exercise").get(pk=presc_id)
+        presc.sessions_swapped_down += 1
+        if presc.sessions_swapped_down < SWAPS_TO_REGRESS:
+            presc.save(update_fields=["sessions_swapped_down"])
+            deltas.append({
+                "exercise": presc.exercise.name,
+                "message": f"Swapped down to {amrap.exercise.name} "
+                           f"({presc.sessions_swapped_down}/{SWAPS_TO_REGRESS}).",
+            })
+            continue
+        presc.pending_regression = amrap.exercise
+        presc.pending_progression = None  # the latest evidence wins
+        presc.sessions_swapped_down = 0
+        presc.save(update_fields=["pending_regression", "pending_progression", "sessions_swapped_down"])
+        deltas.append({
+            "exercise": presc.exercise.name,
+            "message": f"Suggested: move down to {amrap.exercise.name}.",
+            "unlock": {
+                "direction": "down",
+                "prescription": str(presc.uuid),
+                "from_name": presc.exercise.name,
+                "to_name": amrap.exercise.name,
+                "to_uuid": str(amrap.exercise.pk),
+            },
+        })
     return deltas
 
 
@@ -1898,6 +2090,70 @@ def deny_progression(user, prescription) -> None:
     prescription.save(update_fields=["pending_progression", "sessions_at_top"])
 
 
+@transaction.atomic
+def accept_regression(user, prescription) -> "Exercise | None":
+    """Move down to the parked easier rung (#23), with its own sets/rep range/
+    load. Re-checks performability and blocks like ``accept_progression``;
+    returns the new Exercise, or None if nothing was pending."""
+    target = prescription.pending_regression
+    if target is None:
+        return None
+    profile = get_or_create_equipment_profile(user)
+    owned, blocked = owned_equipment_keys(profile), blocked_exercise_ids(user)
+    if not is_performable(target, owned, blocked):
+        target = (
+            first_performable_along(target, "regression", owned, blocked)
+            or substitute_for(user, target)
+            or target
+        )
+    prescription.pending_regression = None
+    prescription.sessions_swapped_down = 0
+    _repoint_prescription(prescription, target, profile)
+    return target
+
+
+@transaction.atomic
+def deny_regression(user, prescription) -> None:
+    """Decline a parked regression: offered again only after SWAPS_TO_REGRESS
+    more swap-down sessions."""
+    prescription.pending_regression = None
+    prescription.sessions_swapped_down = 0
+    prescription.save(update_fields=["pending_regression", "sessions_swapped_down"])
+
+
+def today_notices(user) -> dict:
+    """What Today shows above the workout: parked suggestions (an unlock up, or
+    a move down after swap-downs, #23) and #24 ceiling prompts."""
+    rows = (
+        PrescribedExercise.objects.filter(day__program__user=user, day__program__is_active=True)
+        .filter(
+            Q(pending_progression__isnull=False) | Q(pending_regression__isnull=False) | ~Q(ceiling_notice="")
+        )
+        .select_related("exercise", "pending_progression", "pending_regression")
+        .order_by("order")
+    )
+    suggestions, ceiling = [], []
+    for p in rows:
+        for direction, target in (("up", p.pending_progression), ("down", p.pending_regression)):
+            if target is not None:
+                suggestions.append({
+                    "direction": direction, "prescription": str(p.uuid),
+                    "from_name": p.exercise.name, "to_name": target.name, "to_uuid": str(target.pk),
+                })
+        if p.ceiling_notice:
+            ceiling.append({"prescription": str(p.uuid), "exercise_name": p.exercise.name,
+                            "notice": p.ceiling_notice})
+    return {"suggestions": suggestions, "ceiling": ceiling}
+
+
+def dismiss_ceiling_notice(prescription) -> None:
+    """The user saw the #24 equipment prompt: hide it until it applies anew."""
+    if prescription.ceiling_notice:
+        prescription.ceiling_notice_dismissed = prescription.ceiling_notice
+        prescription.ceiling_notice = ""
+        prescription.save(update_fields=["ceiling_notice", "ceiling_notice_dismissed"])
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Unfinished past sessions
 #
@@ -1921,7 +2177,7 @@ def _unfinished_sessions(user):
         WorkoutSession.objects.filter(
             user=user,
             status=WorkoutSession.Status.PLANNED,
-            scheduled_for__lt=timezone.now().date(),
+            scheduled_for__lt=local_today(user),
         )
         .filter(Q(set_logs__actual_reps__isnull=False) | Q(set_logs__actual_load__isnull=False))
         .distinct()
@@ -2136,19 +2392,70 @@ def trial_anchors(user) -> list:
 
 
 @transaction.atomic
-def submit_assessment(user, results, *, channel=None):
+class TrialSubmission(NamedTuple):
+    assessment: AssessmentSession
+    program: Program
+    peer: list
+    # True when nothing was written: a retry of a Trial already submitted.
+    idempotent: bool = False
+
+
+def _peer_entry(user, pattern_key, tested, score) -> dict:
+    return {
+        "pattern_key": pattern_key,
+        "exercise": tested.name,
+        "value": score,
+        "score": peer_score(user, tested.name, score),
+    }
+
+
+def _current_submission(user) -> "TrialSubmission | None":
+    """The active Program, the assessment it came from and its peer scores —
+    what a duplicate submit gets back."""
+    program = Program.objects.filter(user=user, is_active=True).select_related("source_assessment").first()
+    if program is None:
+        return None
+    assessment = program.source_assessment or (
+        AssessmentSession.objects.filter(user=user).exclude(completed_at=None).order_by("-completed_at").first()
+    )
+    if assessment is None:
+        return None
+    peer = [
+        _peer_entry(user, r.pattern.key, r.tested_exercise, r.reps_or_seconds)
+        for r in assessment.results.select_related("pattern", "tested_exercise").order_by("created_at")
+    ]
+    return TrialSubmission(assessment, program, peer, idempotent=True)
+
+
+@transaction.atomic
+def submit_assessment(user, results, *, channel=None) -> TrialSubmission:
     """Record the Trial's AMRAP results, place each pattern and forge the program.
 
     ``results``: ``[{"pattern_key", "tested_exercise" (uuid), "reps_or_seconds"}]``.
-    Reuses an open (resultless) active assessment, else opens one. Returns
-    ``(assessment, program, peer)``; ``peer`` holds the "fires" of each result.
-    An unknown pattern or exercise is a 404; a bad score a ``TrialInputError``.
+    Reuses an open (resultless) active assessment; opens one only for a first
+    Trial (no active Program). Returns a ``TrialSubmission``; ``peer`` holds the
+    "fires" of each result. An unknown pattern or exercise is a 404; a bad score
+    a ``TrialInputError``.
+
+    Idempotent (#26): submits for one user are serialized on their equipment
+    profile row, and a submit that finds no open assessment while a Program is
+    active is a retry (double tap, network retry, MCP replay). It writes nothing
+    and returns the current assessment + Program with ``idempotent=True``. A
+    deliberate redo goes through ``retake_assessment`` first.
     """
     if not results:
         raise TrialInputError(_("results required."))
     profile = get_or_create_equipment_profile(user)
-    session = AssessmentSession.objects.filter(user=user, is_active=True, completed_at__isnull=True).first()
+    UserEquipmentProfile.objects.select_for_update().filter(pk=profile.pk).first()
+    session = (
+        AssessmentSession.objects.select_for_update()
+        .filter(user=user, is_active=True, completed_at__isnull=True)
+        .first()
+    )
     if session is None:
+        current = _current_submission(user)
+        if current is not None:
+            return current
         session = retake_assessment(user, channel=channel)
     blocked = blocked_exercise_ids(user)
     peer = []
@@ -2175,35 +2482,44 @@ def submit_assessment(user, results, *, channel=None):
             pattern=pattern,
             defaults={"tested_exercise": tested, "reps_or_seconds": score, "placed_exercise": placed},
         )
-        peer.append({
-            "pattern_key": pattern.key,
-            "exercise": tested.name,
-            "value": score,
-            "score": peer_score(user, tested.name, score),
-        })
+        peer.append(_peer_entry(user, pattern.key, tested, score))
     session.completed_at = timezone.now()
     session.save(update_fields=["completed_at"])
     # The Trial no longer asks for a split — every program is the same single
     # all-patterns day. ``Program.split`` keeps its default.
     program = generate_program(user, session)
-    return session, program, peer
+    return TrialSubmission(session, program, peer)
 
 
 def progress_points(user, exercise=None, muscle=None) -> dict:
-    """One point per completed session (total reps, volume, best AMRAP) for the
-    progress chart. ``exercise`` (a rung label) or ``muscle`` (a key) narrow
-    every point; sessions with nothing matching are left out."""
+    """One point per completed session (total reps, volume, best AMRAP, top
+    load) for the progress chart. ``exercise`` (a rung label) or ``muscle`` (a
+    key) narrow every point; sessions with nothing matching are left out.
+
+    Band loads are indices, not weights (#55): their volume counts band steps
+    (reps × (index + 1)), and when the chart is narrowed to a band exercise the
+    payload carries ``band_labels`` so its load axis reads in band names."""
+    profile = UserEquipmentProfile.objects.filter(user=user).prefetch_related("equipment").first()
     sessions = (
         WorkoutSession.objects.filter(user=user, status="completed")
-        .prefetch_related("set_logs__exercise__muscles")
+        .prefetch_related("set_logs__exercise__muscles", "set_logs__exercise__required_equipment")
         .order_by("performed_at", "created_at")
     )
+    implements = {}
+
+    def is_band(ex):
+        if ex.pk not in implements:
+            implements[ex.pk] = profile is not None and loads.implement_for(profile, ex) == "bands"
+        return implements[ex.pk]
+
     points = []
     exercises = set()
+    band_exercise = False
     for s in sessions:
         total_reps = 0
         total_volume = 0.0
         top_set = 0
+        top_load = None
         counted = False
         for sl in s.set_logs.all():
             # Grip variants of a bar pull-up collapse to one rung label so the
@@ -2218,9 +2534,18 @@ def progress_points(user, exercise=None, muscle=None) -> dict:
                 continue
             counted = True
             total_reps += sl.actual_reps
-            total_volume += sl.actual_reps * (sl.actual_load or 1)
+            band = is_band(sl.exercise)
+            if band:
+                total_volume += sl.actual_reps * ((sl.actual_load or 0) + 1)
+                band_exercise = band_exercise or bool(exercise)
+            else:
+                total_volume += sl.actual_reps * (sl.actual_load or 1)
             if sl.is_amrap:
                 top_set = max(top_set, sl.actual_reps)
+            if sl.actual_load is not None:
+                # The hardest load: heaviest, or the lightest band when it assists.
+                pick = min if sl.exercise.is_assisted else max
+                top_load = sl.actual_load if top_load is None else pick(top_load, sl.actual_load)
         if (exercise or muscle) and not counted:
             continue
         when = s.performed_at or s.created_at
@@ -2231,9 +2556,14 @@ def progress_points(user, exercise=None, muscle=None) -> dict:
             "total_reps": total_reps,
             "total_volume": round(total_volume, 1),
             "best_amrap": top_set,
+            "top_load": top_load,
         })
     muscles = [{"key": m.key, "name": m.name} for m in Muscle.objects.all().order_by("name")]
-    return {"points": points, "exercises": sorted(exercises), "muscles": muscles}
+    return {
+        "points": points, "exercises": sorted(exercises), "muscles": muscles,
+        "load_unit": "band" if band_exercise else (profile.load_unit if profile else None),
+        "band_labels": list(profile.band_levels or []) if band_exercise else None,
+    }
 
 
 def session_peer_scores(user, session) -> list:

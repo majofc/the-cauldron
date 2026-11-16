@@ -14,6 +14,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import (
     BlockedExercise,
     CauldronProfile,
@@ -243,7 +244,7 @@ class TestStartSessionSnapshot:
         pullup, chinup = _get("Pull-up"), _get("Chin-up")
         day = _pullup_program(user)
         _log_amrap(user, pullup, 9, timezone.now())  # overhand trained → chin weaker
-        session = forge.start_session(user, day)
+        session = persist_today(user, day)
         assert {sl.exercise for sl in session.set_logs.all()} == {chinup}
 
     def test_prescription_grip_is_left_untouched(self, seeded, user):
@@ -251,7 +252,7 @@ class TestStartSessionSnapshot:
         pullup = _get("Pull-up")
         day = _pullup_program(user)
         _log_amrap(user, pullup, 9, timezone.now())
-        forge.start_session(user, day)
+        persist_today(user, day)
         assert day.prescriptions.get().exercise == pullup
 
     def test_weak_grip_day_does_not_demote_the_rung(self, seeded, user):
@@ -262,7 +263,7 @@ class TestStartSessionSnapshot:
         day = _pullup_program(user)
         # Strong overhand on record → Forge schedules the neglected chin-up today.
         _log_amrap(user, pullup, 10, timezone.now())
-        session = forge.start_session(user, day)
+        session = persist_today(user, day)
         amrap = session.set_logs.get(is_amrap=True)
         assert amrap.exercise == _get("Chin-up")  # weaker grip was scheduled
 

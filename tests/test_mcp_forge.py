@@ -8,6 +8,8 @@ the program and runs progression exactly like the website (both call
 
 from datetime import timedelta
 
+from zoneinfo import ZoneInfo
+
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
@@ -25,6 +27,14 @@ from the_cauldron.services import forge
 from the_cauldron.tests.test_mcp_server import _err, _ok, _rpc, _token, _user  # noqa: F401
 
 EQUIPMENT = ["bodyweight", "pullup_bar"]
+
+def _local_today():
+    """"Today" as the Forge reads it without a device header (#56): the
+    profile's zone, America/Mexico_City by default — not the UTC date."""
+    from the_cauldron.services import forge as _forge
+
+    return timezone.now().astimezone(ZoneInfo(_forge.DEFAULT_TIMEZONE)).date()
+
 
 
 @pytest.fixture
@@ -223,7 +233,7 @@ class TestWorkout:
         token = _token(ana)
         session = _ok(token, "start_forge_session")["session"]
         _ok(token, "log_forge_set", {"set_id": session["exercises"][0]["sets"][0]["id"], "reps": 8})
-        WorkoutSession.objects.filter(uuid=session["id"]).update(scheduled_for=timezone.now().date() - timedelta(days=1))
+        WorkoutSession.objects.filter(uuid=session["id"]).update(scheduled_for=_local_today() - timedelta(days=1))
         today = _ok(token, "get_forge_today")
         assert today["status"] == "unfinished_past_session" and today["session"]["id"] == session["id"]
         err = _err(token, "start_forge_session")
@@ -238,7 +248,7 @@ class TestWorkout:
         token = _token(ana)
         session = _ok(token, "start_forge_session")["session"]
         _log_all(token, session)
-        yesterday = timezone.now().date() - timedelta(days=1)
+        yesterday = _local_today() - timedelta(days=1)
         WorkoutSession.objects.filter(uuid=session["id"]).update(scheduled_for=yesterday)
         _ok(token, "finish_forge_session", {"session_id": session["id"]})
         assert timezone.localtime(WorkoutSession.objects.get(uuid=session["id"]).performed_at).date() == yesterday
@@ -251,7 +261,7 @@ class TestWorkout:
         assert _err(bens, "log_forge_set", {"set_id": set_id, "reps": 5})["code"] == "not_found"
         assert _err(bens, "finish_forge_session", {"session_id": session["id"]})["code"] == "not_found"
         assert _err(bens, "delete_forge_session", {"session_id": session["id"]})["code"] == "not_found"
-        today = timezone.now().date()
+        today = _local_today()
         assert _ok(bens, "get_forge_sessions", {"from": str(today)})["sessions"] == []
 
 
@@ -266,7 +276,7 @@ class TestReads:
         _ok(token, "finish_forge_session", {"session_id": session["id"]})
         progress = _ok(token, "get_forge_progress")
         assert len(progress["sessions"]) == 1 and progress["sessions"][0]["total_reps"] > 0
-        today = timezone.now().date()
+        today = _local_today()
         history = _ok(token, "get_forge_sessions", {"from": str(today - timedelta(days=3)), "to": str(today)})
         assert [s["id"] for s in history["sessions"]] == [session["id"]]
         assert _err(token, "get_forge_sessions", {"from": str(today - timedelta(days=90)), "to": str(today)})["code"] == "invalid_arguments"

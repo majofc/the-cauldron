@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import (
     AssessmentResult,
     Equipment,
@@ -218,7 +219,7 @@ def test_fully_equipped_placement(seeded, client, user, score, expected):
 
 
 def _log_amrap(user, presc, reps):
-    session = forge.start_session(user, presc.day)
+    session = persist_today(user, presc.day)
     amrap = session.set_logs.get(is_amrap=True, prescribed_exercise=presc)
     return forge.apply_session_log(session, {str(amrap.uuid): {"actual_reps": reps}})
 
