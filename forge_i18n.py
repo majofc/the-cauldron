@@ -43,8 +43,9 @@ def forge_strings():
         "chime_gong": _("Deep Gong"),
         "chime_triad": _("Arcane Triad"),
         # Timers
-        "sw_start": _("▶ Start"),
-        "sw_stop": _("⏸ Stop"),
+        # The ▶ / ■ glyph lives in the button's icon span (#133), not in the label.
+        "sw_start": _("Start"),
+        "sw_stop": _("Stop"),
         "rested": _("✓ Rested"),
         "rest_m_s": pgettext("rest time", "%(m)sm %(s)ss"),
         "rest_m": pgettext("rest time", "%(m)s min"),

@@ -240,6 +240,24 @@
     } catch (e) { /* audio unavailable — silent */ }
   }
 
+  // The stopwatch button (#133): an icon (▶ / ■) and a text label. At ≤768px
+  // the label is visually hidden, so the button stays a square inside the card.
+  const SW_ICON = { start: "▶", stop: "■" };
+  function timerBtnHtml() {
+    return `<button type="button" class="forge-timer-btn" title="${esc(t("timer_title"))}" aria-label="${esc(t("sw_start"))}">` +
+      `<span class="forge-timer-icon" aria-hidden="true">${SW_ICON.start}</span>` +
+      `<span class="forge-timer-label">${esc(t("sw_start"))}</span></button>`;
+  }
+  function setTimerBtn(btn, running) {
+    const key = running ? "sw_stop" : "sw_start";
+    const icon = btn.querySelector(".forge-timer-icon");
+    const label = btn.querySelector(".forge-timer-label");
+    if (icon) icon.textContent = running ? SW_ICON.stop : SW_ICON.start;
+    if (label) label.textContent = t(key);
+    btn.setAttribute("aria-label", t(key));
+    btn.classList.toggle("is-running", running);
+  }
+
   // Count-up stopwatch: fills the row's number input each second until toggled.
   const swTimers = new WeakMap();
   function toggleStopwatch(btn) {
@@ -251,14 +269,14 @@
     if (swTimers.has(input)) {
       clearInterval(swTimers.get(input));
       swTimers.delete(input);
-      btn.textContent = t("sw_start"); btn.classList.remove("is-running");
+      setTimerBtn(btn, false);
       // Hold finished — notify listeners (e.g. the worked-muscle map) now that
       // the value is final, rather than on every tick while still timing.
       input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     if (!input.value || isNaN(+input.value)) input.value = 0;
-    btn.textContent = t("sw_stop"); btn.classList.add("is-running");
+    setTimerBtn(btn, true);
     const id = setInterval(() => { input.value = (parseInt(input.value, 10) || 0) + 1; }, 1000);
     swTimers.set(input, id);
   }
@@ -1071,7 +1089,7 @@
       const inputs = anchor.is_timed
         ? `<div class="forge-timed-cell">` +
           `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="${esc(t("result_for", { name: exName(anchor.name) }))}">` +
-          `<button type="button" class="forge-timer-btn" title="${esc(t("timer_title"))}">${esc(t("sw_start"))}</button>` +
+          timerBtnHtml() +
           `</div>`
         : `<input class="forge-trial-input" type="number" min="0" placeholder="0" aria-label="${esc(t("result_for", { name: exName(anchor.name) }))}">`;
       // A per-side move tested with one box needs to say so — "8" means 8 each
@@ -1626,7 +1644,7 @@
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" ` +
           `value="${s.actual_reps ?? ""}" placeholder="${s.expected_reps}">`;
         const inputCell = meta.is_timed
-          ? `<div class="forge-timed-cell">${input}<button type="button" class="forge-timer-btn" title="${esc(t("timer_title"))}">${esc(t("sw_start"))}</button></div>`
+          ? `<div class="forge-timed-cell">${input}${timerBtnHtml()}</div>`
           : input;
         row.innerHTML =
           `<span class="forge-set-label">${esc(t("set_n", { n: s.set_index + 1 }))}${
