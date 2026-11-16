@@ -42,7 +42,7 @@ def _run(*args):
 
 def test_dry_run_lists_keep_and_delete_and_writes_nothing(seeded, owner):
     cast = _spell("Classic Guacamole")
-    Casting.objects.create(user=owner, spell=cast, spell_title=cast.title)
+    Casting.objects.create(user=owner, spell=cast, spell_title=cast.title, cast_on=date.today())
     before = Spell.objects.count()
     out = _run("--dry-run")
     assert "keep    Classic Guacamole  (cast)" in out
@@ -56,14 +56,14 @@ def test_keeps_cast_logged_planned_forked_and_deletes_the_rest(seeded, owner):
     stew, curry, oats, cake, salad = (_spell(t) for t in (
         "Smoked Paprika Lentil Stew", "Chickpea & Spinach Coconut Curry", "Overnight Oats with Blueberries",
         "Dark Cocoa Mug Cake", "Crisp Romaine Salad with Lemon Dressing"))
-    Casting.objects.create(user=owner, spell=stew, spell_title=stew.title)
+    Casting.objects.create(user=owner, spell=stew, spell_title=stew.title, cast_on=date.today())
     entry = IntakeEntry.objects.create(user=owner, eaten_at=timezone.now(), local_date=date.today(), source="spell",
                                        spell=curry, label=curry.title, quantity=1, unit="serving")
     PlannedMeal.objects.create(user=owner, spell=oats, spell_title=oats.title, date=date.today(), slot="breakfast",
                                quantity=1)
     Spell.objects.create(owner=owner, title="My cake", servings=1, forked_from=cake)
     # Another user's use doesn't count; their fork survives.
-    other_cast = Casting.objects.create(user=other, spell=salad, spell_title=salad.title)
+    other_cast = Casting.objects.create(user=other, spell=salad, spell_title=salad.title, cast_on=date.today())
     other_fork = Spell.objects.create(owner=other, title="Their salad", servings=1, forked_from=salad)
 
     _run()
@@ -93,7 +93,7 @@ def test_seed_file_rewrite_stops_recreation(seeded, owner, tmp_path, monkeypatch
     spells_file.write_text(original, encoding="utf-8")
     monkeypatch.setattr(prune, "SEED_DIR", tmp_path)
     keep = _spell("Classic Guacamole")
-    Casting.objects.create(user=owner, spell=keep, spell_title=keep.title)
+    Casting.objects.create(user=owner, spell=keep, spell_title=keep.title, cast_on=date.today())
     _run("--write-seed-file")
     kept = [s["title"] for s in json.loads(spells_file.read_text(encoding="utf-8"))["spells"]]
     assert kept == ["Classic Guacamole"]

@@ -1414,7 +1414,15 @@ body.forge-overlay-open { overflow: hidden; }
    - The results reveal is a gate: it only gains room to scroll. */
 @media (max-width: 768px) {
   /* #133: no column may force the row wider than its card. */
-  .forge-set-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+  /* Label over target on the left, the input (and stopwatch) on the right
+     across both lines, the actual load on a line of its own: no column can
+     force the row wider than its card, even at 320px. */
+  .forge-set-row { grid-template-columns: minmax(0, 1fr) auto; column-gap: .6rem; row-gap: .1rem; }
+  .forge-set-row > .forge-set-label { grid-column: 1; grid-row: 1; }
+  .forge-set-row > .forge-set-expected { grid-column: 1; grid-row: 2; min-width: 0; }
+  .forge-set-row > .forge-trial-input,
+  .forge-set-row > .forge-timed-cell { grid-column: 2; grid-row: 1 / span 2; }
+  .forge-set-row > .forge-load-actual { grid-column: 1 / -1; }
   .forge-timed-cell .forge-trial-input { width: 64px; min-width: 0; }
   .forge-timer-btn {
     justify-content: center; min-width: 40px; min-height: 40px; padding: 0; flex: 0 0 auto;
