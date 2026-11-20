@@ -28,12 +28,19 @@ def dedupe(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    # The dedupe deletes rows with FK cascades; Postgres refuses ALTER TABLE on a
+    # table with pending FK trigger events in the same transaction ("cannot ALTER
+    # TABLE ... pending trigger events", which broke the 2026-11-19 deploy). So
+    # the cleanup commits in its own transaction before the constraint is added.
+    # Re-running is safe: dedupe is idempotent.
+    atomic = False
+
     dependencies = [
         ('the_cauldron', '0042_one_planned_session_per_day'),
     ]
 
     operations = [
-        migrations.RunPython(dedupe, migrations.RunPython.noop),
+        migrations.RunPython(dedupe, migrations.RunPython.noop, atomic=True),
         migrations.AddConstraint(
             model_name='program',
             constraint=models.UniqueConstraint(fields=('source_assessment',), name='uniq_program_per_assessment'),
