@@ -3,6 +3,7 @@ import math
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 from rest_framework import serializers
+from rest_framework.settings import api_settings
 
 from the_cauldron.forge_i18n import day_name, localized
 from the_cauldron.services import loads, progression
@@ -46,9 +47,31 @@ class _LoadRecipeMixin:
         recipe = loads.recipe_for(profile, exercise, total)
         return recipe.as_dict() if recipe else None
 
-    def _load_unit_for(self, user):
+    def _implement(self, user, exercise):
+        """``loads.implement_for``, memoised per exercise on the context so a
+        session costs the same queries for 3 sets as for 12 (#129)."""
+        cache = self.context.setdefault("_forge_implements", {})
+        key = (user.pk, exercise.pk)
+        if key not in cache:
+            profile = self._profile_for(user)
+            cache[key] = loads.implement_for(profile, exercise) if profile else None
+        return cache[key]
+
+    def _load_unit_for(self, user, exercise=None):
+        """The profile's kg/lb — or ``"band"`` for a band-implement exercise,
+        whose load is an index into the user's bands (#55)."""
         profile = self._profile_for(user)
-        return profile.load_unit if profile else None
+        if profile is None:
+            return None
+        if exercise is not None and self._implement(user, exercise) == "bands":
+            return "band"
+        return profile.load_unit
+
+    def _band_labels_for(self, user, exercise):
+        """The user's bands, easiest first, for a band load; else None."""
+        if self._implement(user, exercise) != "bands":
+            return None
+        return list(self._profile_for(user).band_levels or [])
 
 
 class _DisplayNameMixin(serializers.Serializer):
@@ -317,28 +340,36 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
     pending_progression_name = serializers.CharField(
         source="pending_progression.name", read_only=True, default=None
     )
+    pending_regression_name = serializers.CharField(
+        source="pending_regression.name", read_only=True, default=None
+    )
     target_load_recipe = serializers.SerializerMethodField()
     load_unit = serializers.SerializerMethodField()
     # #109: the loads "set my load" can land on (band level indices for bands),
     # null for a difficulty-mode movement.
     load_options = serializers.SerializerMethodField()
     is_band_load = serializers.SerializerMethodField()
+    band_labels = serializers.SerializerMethodField()
 
     class Meta:
         model = PrescribedExercise
         fields = [
             "uuid", "pattern_key", "exercise_name", "is_timed", "video_url", "cues",
             "target_sets", "target_reps_min", "target_reps_max", "target_load",
-            "target_load_recipe", "load_unit", "load_options", "is_band_load",
+            "target_load_recipe", "load_unit", "band_labels", "load_options", "is_band_load",
             "target_rest_seconds", "order",
             "pending_progression", "pending_progression_name",
+            "pending_regression", "pending_regression_name", "ceiling_notice",
         ]
 
     def get_target_load_recipe(self, obj):
         return self._recipe_payload(obj.day.program.user, obj.exercise, obj.target_load)
 
     def get_load_unit(self, obj):
-        return self._load_unit_for(obj.day.program.user)
+        return self._load_unit_for(obj.day.program.user, obj.exercise)
+
+    def get_band_labels(self, obj):
+        return self._band_labels_for(obj.day.program.user, obj.exercise)
 
     def get_load_options(self, obj):
         if obj.exercise.progression_mode != Exercise.ProgressionMode.LOAD:
@@ -347,8 +378,7 @@ class PrescribedExerciseSerializer(_LoadRecipeMixin, serializers.ModelSerializer
         return progression.available_loads(profile, obj.exercise) if profile else []
 
     def get_is_band_load(self, obj):
-        profile = self._profile_for(obj.day.program.user)
-        return bool(profile) and loads.implement_for(profile, obj.exercise) == "bands"
+        return self._implement(obj.day.program.user, obj.exercise) == "bands"
 
 
 class ProgramDaySerializer(serializers.ModelSerializer):
@@ -382,23 +412,26 @@ class SetLogSerializer(_LoadRecipeMixin, serializers.ModelSerializer):
     is_unilateral = serializers.SerializerMethodField()
     expected_load_recipe = serializers.SerializerMethodField()
     load_unit = serializers.SerializerMethodField()
+    band_labels = serializers.SerializerMethodField()
     # The client sends these straight back when it persists the plan, and needs
     # the exercise uuid to name what a ⇄ swap is replacing.
     exercise = serializers.PrimaryKeyRelatedField(read_only=True)
     prescription = serializers.PrimaryKeyRelatedField(
         source="prescribed_exercise", read_only=True
     )
+    # #23: the prescription a ⇄ swap replaced; the client posts it back.
+    swapped_from = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = SetLog
         fields = [
-            "uuid", "exercise", "prescription",
+            "uuid", "exercise", "prescription", "swapped_from",
             "exercise_name", "video_url", "is_timed", "cues", "muscles",
             "rest_seconds", "is_unilateral",
             "set_index", "expected_reps", "expected_load",
-            "expected_load_recipe", "load_unit",
+            "expected_load_recipe", "load_unit", "band_labels",
             "actual_reps", "actual_load",
-            "is_amrap", "rir",
+            "is_amrap",
         ]
         read_only_fields = ["uuid", "exercise_name", "set_index", "expected_reps",
                             "expected_load", "is_amrap"]
@@ -417,7 +450,10 @@ class SetLogSerializer(_LoadRecipeMixin, serializers.ModelSerializer):
         return self._recipe_payload(obj.session.user, obj.exercise, obj.expected_load)
 
     def get_load_unit(self, obj):
-        return self._load_unit_for(obj.session.user)
+        return self._load_unit_for(obj.session.user, obj.exercise)
+
+    def get_band_labels(self, obj):
+        return self._band_labels_for(obj.session.user, obj.exercise)
 
 
 class PlannedSetLogSerializer(SetLogSerializer):
@@ -453,3 +489,38 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
 
     def get_persisted(self, obj):
         return True
+
+
+# ── Write payload shapes (#10) ───────────────────────────────────────────────
+# Shape only: a malformed body is a 400 with field errors instead of a 500.
+# Domain rules (unknown pattern, placement) stay in services.forge.
+
+
+class AssessmentResultInputSerializer(serializers.Serializer):
+    pattern_key = serializers.CharField(max_length=64)
+    tested_exercise = serializers.UUIDField()
+    reps_or_seconds = serializers.IntegerField(min_value=0, max_value=100000)
+    # Left/right capture was removed in #50; still accepted from old clients.
+    left_reps = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+    right_reps = serializers.IntegerField(min_value=0, required=False, allow_null=True)
+
+
+class AssessmentInputSerializer(serializers.Serializer):
+    results = AssessmentResultInputSerializer(many=True, allow_empty=False)
+    # Ignored: every program is one all-patterns day. Kept for cached clients.
+    split = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class SetValuesInputSerializer(serializers.Serializer):
+    """One set's values on ``sessions/{uuid}/sets|log/``. Unknown keys (e.g.
+    reps in reserve from an old client) are ignored."""
+
+    actual_reps = serializers.IntegerField(min_value=0, max_value=100000, required=False, allow_null=True)
+    actual_load = serializers.FloatField(min_value=0, max_value=1000, required=False, allow_null=True)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            raise serializers.ValidationError(
+                {api_settings.NON_FIELD_ERRORS_KEY: [_("Expected an object with actual_reps and actual_load.")]}
+            )
+        return super().to_internal_value(data)

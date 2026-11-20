@@ -7,7 +7,9 @@
 <h1 class="forge-title">{% trans "Enter The Cauldron" %}</h1>
 <p class="forge-subtitle">{% trans "Sign in to tend your forge." %}</p>
 
-{% for error in form.non_field_errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}
+{# login_lockout_message: set by arcano's context processor while django-axes has locked the login out. #}
+{% if login_lockout_message %}<p class="forge-error" role="alert">{{ login_lockout_message }}</p>
+{% else %}{% for error in form.non_field_errors %}<p class="forge-error" role="alert">{{ error }}</p>{% endfor %}{% endif %}
 
 <form method="post" action="{% url 'the_cauldron:login' %}" class="forge-form">
   {% csrf_token %}

@@ -461,6 +461,11 @@ class Program(ForgeBaseModel):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            # #26: one Program per Trial; a racing or retried submit returns the
+            # existing one instead.
+            models.UniqueConstraint(fields=["source_assessment"], name="uniq_program_per_assessment"),
+        ]
 
     def __str__(self):
         return f"Program {self.uuid} for {self.user}"
@@ -511,6 +516,32 @@ class PrescribedExercise(ForgeBaseModel):
         on_delete=models.SET_NULL,
         related_name="+",
     )
+    # #23: consecutive scheduled sessions where the user ⇄ swapped this to an
+    # easier rung of its ladder and logged it. At 2 the easier rung is parked
+    # in ``pending_regression`` (Accept/Deny, like an unlock).
+    sessions_swapped_down = models.PositiveIntegerField(default=0)
+    pending_regression = models.ForeignKey(
+        Exercise,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    class CeilingNotice(models.TextChoices):
+        """#24: parked at the rep ceiling with nothing harder to offer."""
+
+        NONE = "", "None"
+        HEAVIER_LOAD = "heavier_load", "Add a heavier load"
+        LIGHTER_BAND = "lighter_band", "Add a lighter band"
+        TOP_OF_LADDER = "top_of_ladder", "Top of the ladder"
+
+    ceiling_notice = models.CharField(max_length=16, choices=CeilingNotice.choices, blank=True, default="")
+    # The notice the user dismissed, so it isn't raised again every session;
+    # cleared once the movement leaves the ceiling.
+    ceiling_notice_dismissed = models.CharField(
+        max_length=16, choices=CeilingNotice.choices, blank=True, default=""
+    )
 
     class Meta:
         ordering = ["day", "order"]
@@ -545,6 +576,15 @@ class WorkoutSession(ForgeBaseModel):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [
+            # #56: two racing first values (double tap, two tabs, web + MCP)
+            # must not open two sessions for one day.
+            models.UniqueConstraint(
+                fields=["user", "scheduled_for"],
+                condition=models.Q(status="planned"),
+                name="one_planned_session_per_day",
+            ),
+        ]
 
     def __str__(self):
         return f"Session {self.uuid} ({self.status})"
@@ -567,7 +607,11 @@ class SetLog(ForgeBaseModel):
     actual_reps = models.PositiveIntegerField(null=True, blank=True)
     actual_load = models.FloatField(null=True, blank=True)
     is_amrap = models.BooleanField(default=False)
-    rir = models.IntegerField(null=True, blank=True)
+    # #23: the prescription a ⇄ swap replaced. ``prescribed_exercise`` stays
+    # null, so the swapped reps are never scored against it.
+    swapped_from = models.ForeignKey(
+        PrescribedExercise, on_delete=models.SET_NULL, null=True, blank=True, related_name="swapped_set_logs"
+    )
 
     class Meta:
         ordering = ["session", "prescribed_exercise", "set_index"]

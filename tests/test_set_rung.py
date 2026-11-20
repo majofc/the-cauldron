@@ -12,6 +12,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import (
     AssessmentResult,
     AssessmentSession,
@@ -125,7 +126,7 @@ def test_shrimp_squat_drops_several_rungs_on_every_program_day(seeded, client, u
     for presc in prescriptions:
         presc.refresh_from_db()
         assert presc.exercise == split
-        session = forge.start_session(user, presc.day)
+        session = persist_today(user, presc.day)
         assert {s.exercise.name for s in session.set_logs.all()} == {"Split Squat"}
 
 
@@ -328,7 +329,7 @@ def test_normal_progression_resumes_one_rung_up_from_the_new_position(seeded, cl
 
     for _ in range(progression.SESSIONS_TO_ADVANCE):
         presc.refresh_from_db()
-        session = forge.start_session(user, presc.day)
+        session = persist_today(user, presc.day)
         amrap = session.set_logs.get(is_amrap=True, prescribed_exercise=presc)
         forge.apply_session_log(
             session, {str(amrap.uuid): {"actual_reps": presc.target_reps_max}}
@@ -426,7 +427,7 @@ def test_requires_authentication(seeded, user):
 def test_a_movement_with_logged_sets_today_is_refused(seeded, client, user):
     _own(user, "bodyweight")
     [presc] = _program(user, _ex("Shrimp Squat"))
-    session = forge.start_session(user, presc.day)
+    session = persist_today(user, presc.day)
     first = session.set_logs.order_by("set_index").first()
     first.actual_reps = 3
     first.save()
@@ -441,7 +442,7 @@ def test_a_movement_with_logged_sets_today_is_refused(seeded, client, user):
 def test_untouched_sets_on_todays_session_follow_the_move(seeded, client, user):
     _own(user, "bodyweight")
     [presc] = _program(user, _ex("Shrimp Squat"))
-    session = forge.start_session(user, presc.day)
+    session = persist_today(user, presc.day)
 
     assert _set_rung(client, presc, _ex("Split Squat")).status_code == 200
 

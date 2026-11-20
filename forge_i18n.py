@@ -71,6 +71,16 @@ def forge_strings():
         "not_yet": _("Not yet"),
         "advanced_to": _("Advanced to %(name)s!"),
         "holding_level": _("Holding at your current level."),
+        # A move down after swap-downs (#23)
+        "regress_title": _("Move down to %(name)s?"),
+        "regress_text": _("Your last sessions swapped %(from)s for %(to)s. Train %(to)s for now?"),
+        "accept": _("Accept"),
+        "deny": _("Deny"),
+        "moved_down_to": _("Now training %(name)s."),
+        # Rep ceiling with nothing harder to offer (#24)
+        "ceiling_heavier_load": _("%(name)s: you've outgrown your heaviest weight. Add a heavier one in Equipment."),
+        "ceiling_lighter_band": _("%(name)s: you're on your lightest band. Add a lighter one in Equipment."),
+        "ceiling_top_of_ladder": _("%(name)s: you're at 20 reps on the top of your ladder. Add equipment in Equipment to unlock a harder rung."),
         # Session report (the anvil)
         "report_unlocks": _("New paths unlocked"),
         "unlocked_from": _("unlocked from %(name)s"),
@@ -227,6 +237,8 @@ def forge_strings():
         "set_load_save": _("Use this load"),
         "set_load_help": _("Applies everywhere this movement is in your plan. A load you can't build rounds down to the nearest one you can."),
         "band_level": _("Band %(n)s"),
+        # A band load named as the user typed it (#55): "light band" / "liga light".
+        "band_label": _("%(label)s band"),
         "load_set": _("Load set to %(load)s."),
         "load_snapped": _("%(asked)s can't be built — set to %(load)s."),
         "err_set_load": _("Couldn't set that load."),
@@ -274,7 +286,7 @@ def forge_strings():
         "decile_short": pgettext("decile, chart label", "D%(d)s"),
         "chart_aria": _("Progression chart"),
         "week_label": pgettext("chart bucket", "Wk %(n)s"),
-        "err_start_session": _("Couldn't start the session."),
+        "err_session_start": _("Couldn't start the session."),
         # Earphones mode — on-screen and spoken
         "v_mode": _("Earphones mode"),
         "v_getting_ready": _("Getting ready…"),

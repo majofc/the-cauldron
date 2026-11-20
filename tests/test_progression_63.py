@@ -11,6 +11,8 @@ The first half is pure engine logic (no DB); the rest drives the ORM and API.
 from datetime import timedelta
 from types import SimpleNamespace as NS
 
+from zoneinfo import ZoneInfo
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -39,6 +41,14 @@ from the_cauldron.services.progression import (
 )
 
 User = get_user_model()
+
+def _local_today():
+    """"Today" as the Forge reads it without a device header (#56): the
+    profile's zone, America/Mexico_City by default — not the UTC date."""
+    from the_cauldron.services import forge as _forge
+
+    return timezone.now().astimezone(ZoneInfo(_forge.DEFAULT_TIMEZONE)).date()
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -168,10 +178,12 @@ class TestTopOfLadder:
         r = next_prescription(presc(dragon, at_top=SESSIONS_TO_ADVANCE - 1), 11, None, next_rung=None)
         assert (r.exercise, r.target_reps_max, r.sessions_at_top) == (dragon, 6, 0)
 
-    def test_extension_has_no_cap(self):
+    def test_extension_stops_at_the_rep_ceiling(self):
+        # #24 replaced "no cap": an old 30-rep range is clamped to the ceiling and holds.
         dragon = rung("Dragon Squat", rmin=1, rmax=5)
         r = next_prescription(presc(dragon, rmax=30, at_top=1), 31, None, next_rung=None)
-        assert r.target_reps_max == 31
+        assert (r.target_reps_min, r.target_reps_max) == (16, 20)
+        assert r.ceiling_notice == "top_of_ladder"
 
     def test_outgrown_rung_unlocks_as_soon_as_a_harder_one_is_performable(self):
         weighted = rung("Weighted Pistol Squat", mode="load", rmin=3, rmax=8)
@@ -270,7 +282,7 @@ def _session(user, p, scheduled_for=None, values=None):
     (reps, load) already logged on it."""
     session = WorkoutSession.objects.create(
         user=user, program_day=p.day, status=WorkoutSession.Status.PLANNED,
-        scheduled_for=scheduled_for or timezone.now().date(),
+        scheduled_for=scheduled_for or _local_today(),
     )
     for i in range(3):
         reps, load = (values or {}).get(i, (None, None))
@@ -344,13 +356,15 @@ class TestAssistedSessions:
 
 
 class TestTopOfLadderSessions:
-    def test_dragon_squat_without_weights_keeps_extending(self, seeded, user):
+    def test_dragon_squat_without_weights_holds_at_the_ceiling(self, seeded, user):
+        # #24: no more endless extension. Clamped to 20 with an equipment prompt.
         _own(user, "bodyweight")
         p = _prescribe(user, _ex("Dragon Squat"), target_reps_max=26, sessions_at_top=1)
         _log(_session(user, p), 30, [None, None, None])
         p.refresh_from_db()
         assert p.exercise.name == "Dragon Squat"
-        assert p.target_reps_max == 28  # +1, rounded up to even (per side)
+        assert p.target_reps_max == 20
+        assert p.ceiling_notice == "top_of_ladder"
         assert p.pending_progression is None
 
     def test_adding_dumbbells_unlocks_the_weighted_rung(self, seeded, user):
@@ -368,7 +382,7 @@ class TestUnfinishedSessions:
 
     def test_only_newest_is_offered_and_older_are_skipped(self, seeded, user, client):
         p = self._setup(user)
-        today = timezone.now().date()
+        today = _local_today()
         old = _session(user, p, today - timedelta(days=5), {0: (5, None)})
         new = _session(user, p, today - timedelta(days=2), {0: (6, None)})
         resp = client.get("/cauldron/api/sessions/unfinished/")
@@ -380,7 +394,7 @@ class TestUnfinishedSessions:
 
     def test_today_is_gated_until_resolved(self, seeded, user, client):
         p = self._setup(user)
-        _session(user, p, timezone.now().date() - timedelta(days=1), {0: (5, None)})
+        _session(user, p, _local_today() - timedelta(days=1), {0: (5, None)})
         resp = client.get("/cauldron/api/today/")
         assert resp.status_code == 409
         assert resp.json()["code"] == "unfinished_session"
@@ -388,7 +402,7 @@ class TestUnfinishedSessions:
 
     def test_save_completes_on_its_own_date_and_progresses(self, seeded, user, client):
         p = self._setup(user)
-        day = timezone.now().date() - timedelta(days=3)
+        day = _local_today() - timedelta(days=3)
         s = _session(user, p, day, {0: (5, None)})
         sets = {
             str(x.uuid): {"actual_reps": p.target_reps_max, "actual_load": None}
@@ -406,7 +420,7 @@ class TestUnfinishedSessions:
 
     def test_delete_removes_session_and_sets_only(self, seeded, user, client):
         p = self._setup(user)
-        s = _session(user, p, timezone.now().date() - timedelta(days=1), {2: (8, None)})
+        s = _session(user, p, _local_today() - timedelta(days=1), {2: (8, None)})
         before = PrescribedExercise.objects.filter(pk=p.pk).values().get()
         resp = client.delete(f"/cauldron/api/sessions/{s.uuid}/")
         assert resp.status_code == 204
@@ -426,13 +440,13 @@ class TestUnfinishedSessions:
         other = User.objects.create_user(username="other63", email="other63@example.com", password="pw12345!")
         _own(other, "bodyweight")
         p = _prescribe(other, _ex("Pistol Squat"))
-        s = _session(other, p, timezone.now().date() - timedelta(days=1), {0: (5, None)})
+        s = _session(other, p, _local_today() - timedelta(days=1), {0: (5, None)})
         assert client.delete(f"/cauldron/api/sessions/{s.uuid}/").status_code == 404
         assert client.get("/cauldron/api/sessions/unfinished/").json()["session"] is None
 
     def test_sessions_superseded_by_a_completed_one_are_closed(self, seeded, user, client):
         p = self._setup(user)
-        today = timezone.now().date()
+        today = _local_today()
         stale = _session(user, p, today - timedelta(days=4), {0: (5, None)})
         done = _session(user, p, today - timedelta(days=2))
         done.status = WorkoutSession.Status.COMPLETED
@@ -444,7 +458,7 @@ class TestUnfinishedSessions:
 
     def test_sessions_from_a_retired_program_are_closed(self, seeded, user, client):
         p = self._setup(user)
-        old = _session(user, p, timezone.now().date() - timedelta(days=1), {0: (5, None)})
+        old = _session(user, p, _local_today() - timedelta(days=1), {0: (5, None)})
         Program.objects.filter(user=user).update(is_active=False)
         _prescribe(user, _ex("Pistol Squat"))  # the replacement program
         assert client.get("/cauldron/api/today/").status_code == 200
@@ -454,7 +468,7 @@ class TestUnfinishedSessions:
 
     def test_todays_session_and_empty_past_sessions_never_trigger(self, seeded, user, client):
         p = self._setup(user)
-        _session(user, p, timezone.now().date(), {0: (5, None)})
-        _session(user, p, timezone.now().date() - timedelta(days=1))
+        _session(user, p, _local_today(), {0: (5, None)})
+        _session(user, p, _local_today() - timedelta(days=1))
         assert client.get("/cauldron/api/sessions/unfinished/").json()["session"] is None
         assert client.get("/cauldron/api/today/").status_code == 200

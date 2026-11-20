@@ -12,6 +12,8 @@ Setting the rung, the load and the weekly volume (#109) are not: they are the
 user's explicit choice and reversible the same way.
 """
 
+from django.utils.translation import gettext as _
+
 import posthog
 
 from the_cauldron.mcp_server.errors import ToolError
@@ -52,7 +54,6 @@ SET_VALUES = {
     "reps": {"type": "integer", "minimum": 0, "maximum": 1000,
              "description": "Reps done — or seconds held, for a timed movement; per side for per-side ones."},
     "load": {"type": "number", "minimum": 0, "maximum": 1000, "description": "Weight actually used, if any."},
-    "rir": {"type": "integer", "minimum": 0, "maximum": 10, "description": "Reps in reserve, if known."},
 }
 SESSION_ID = {"type": "string", "description": "A session id from get_forge_today or get_forge_sessions."}
 
@@ -127,12 +128,13 @@ def submit_trial_results(ctx, results):
         payload.append({"pattern_key": r["pattern"], "tested_exercise": str(exercise_id),
                         "reps_or_seconds": r["value"]})
     try:
-        session, program, peer = forge.submit_assessment(ctx.user, payload, channel=MCP)
+        sub = forge.submit_assessment(ctx.user, payload, channel=MCP)
     except forge.TrialInputError as exc:
         raise ToolError("invalid_input", str(exc)) from None
+    session, program, peer = sub.assessment, sub.program, sub.peer
     data = AssessmentSessionSerializer(session).data
     fires = {p["pattern_key"]: p["score"] for p in peer}
-    return {
+    out = {
         "placements": [
             {"pattern": r["pattern_key"], "value": r["reps_or_seconds"], "placed_on": r["placed_exercise_name"],
              "fires": (fires.get(r["pattern_key"]) or {}).get("flames")}
@@ -141,6 +143,12 @@ def submit_trial_results(ctx, results):
         "program_ready": program is not None,
         "next_step": "Call get_forge_today for the first workout.",
     }
+    if sub.idempotent:
+        # A replay (#26): nothing new was written. To redo the Trial on purpose,
+        # retake_trial first.
+        out["already_recorded"] = True
+        out["note"] = _("Those results were already recorded; this is your current program.")
+    return out
 
 
 @tool(
@@ -205,13 +213,13 @@ def _own_set(ctx, set_id):
 
 
 def _values(args):
-    return {"actual_reps": args.get("reps"), "actual_load": args.get("load"), "rir": args.get("rir")}
+    return {"actual_reps": args.get("reps"), "actual_load": args.get("load")}
 
 
 def _set_out(row):
     row.refresh_from_db()
     return {"id": row.uuid, "exercise": row.exercise.name, "set": row.set_index + 1, "to_failure": row.is_amrap,
-            "done": row.actual_reps, "load_done": row.actual_load, "rir": row.rir}
+            "done": row.actual_reps, "load_done": row.actual_load}
 
 
 @tool(
@@ -247,7 +255,7 @@ def log_forge_set(ctx, set_id, **args):
 )
 def update_forge_set(ctx, set_id, apply, **args):
     row = _own_set(ctx, set_id)
-    values = {"reps": row.actual_reps, "load": row.actual_load, "rir": row.rir, **args}
+    values = {"reps": row.actual_reps, "load": row.actual_load, **args}
     if not apply:
         return {"target": row.uuid, "preview": {"set": _set_out(row), "changes": args}}
     forge.save_session_values(row.session, {str(row.uuid): _values(values)})
@@ -394,3 +402,35 @@ def set_forge_weekly_volume(ctx, sets_per_week):
         raise ToolError("invalid_input", str(exc)) from None
     _capture("forge_volume_set", None, result["direction"])
     return {"weekly_volume_target": result["weekly_volume_target"], "prescriptions_changed": result["changed"]}
+
+
+@tool(
+    "answer_forge_suggestion",
+    title="Accept or decline a rung suggestion",
+    scope=WRITE,
+    description=(
+        "Accept or decline a parked rung suggestion from get_forge_program: pending_progression (direction "
+        "\"up\", an earned unlock) or pending_regression (direction \"down\", offered after two sessions swapped "
+        "to an easier rung). Accepting moves the prescription onto that rung with its own sets, rep range and "
+        "load; declining keeps the current rung until the suggestion is earned again."
+    ),
+    schema={"type": "object", "properties": {
+        "prescription_id": PRESCRIPTION_ID,
+        "direction": {"type": "string", "enum": ["up", "down"]},
+        "accept": {"type": "boolean"},
+    }, "required": ["prescription_id", "direction", "accept"], "additionalProperties": False},
+)
+def answer_forge_suggestion(ctx, prescription_id, direction, accept):
+    presc = _prescription(ctx, prescription_id)
+    pending = presc.pending_progression if direction == "up" else presc.pending_regression
+    if pending is None:
+        raise ToolError("not_found", f"No {direction} suggestion is pending on that prescription.")
+    if direction == "up":
+        result = forge.accept_progression(ctx.user, presc) if accept else forge.deny_progression(ctx.user, presc)
+    else:
+        result = forge.accept_regression(ctx.user, presc) if accept else forge.deny_regression(ctx.user, presc)
+    event = "progression" if direction == "up" else "regression"
+    posthog.capture(f"{event}_{'accepted' if accept else 'denied'}")
+    if accept:
+        return {"accepted": True, "exercise": result.name if result else None}
+    return {"declined": True, "exercise": presc.exercise.name}

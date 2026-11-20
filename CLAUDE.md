@@ -51,11 +51,32 @@ Progress mechanic: when a user hits the top of an exercise's rep range consisten
 - **Next rung** — `forge._next_rung` resolves what "harder" means for this user (walks
   `progression` past rungs needing missing gear) and passes it as `next_rung`; `None` = the top of
   *their* ladder. Without the argument the engine follows `ex.progression`.
+- **Rep ceiling (#24)** — a rep-based movement that can't get harder (heaviest load owned, lightest
+  assisting band, top of the user's ladder) shifts its **whole range** up one rep per session, keeping its
+  width (6–12 → 7–13 → … → 14–20), until the max reaches `REP_EXTENSION_CEILING` (20, ≈ a 20RM). At the
+  ceiling: a performable harder rung (`next_rung`) is parked as a pending unlock after
+  `SESSIONS_TO_ADVANCE` sessions — load-mode movements too; with nothing harder it holds and sets
+  `PrescribedExercise.ceiling_notice` (`heavier_load` / `lighter_band` / `top_of_ladder`), shown once on Today
+  (`today/` → `notices.ceiling`) and in MCP `get_forge_program`. Dismissing (`POST
+  prescription/{uuid}/ceiling-notice/dismiss/`) stores it in `ceiling_notice_dismissed`, so it isn't raised
+  again until the movement leaves the ceiling. When load can move again (heavier gear, a lighter band) the
+  range returns to the rung's base. A range already above 20 is clamped (base width) on its next session.
+  Timed holds keep `TIMED_CAP_SECONDS`.
 - **Top of ladder** — difficulty rung with no performable next rung: after `SESSIONS_TO_ADVANCE`
-  sessions at the top, `rmax + 1` (no cap). Once the range is extended past the rung's seeded max
-  and the AMRAP is ≥ `TOP_OF_LADDER_REPS` (25), every top-of-range session re-checks: a harder rung
-  that became performable (dumbbells added → Weighted Pistol Squat) is parked as pending
-  immediately. Load mode at the heaviest buildable load keeps `rmax + 1` (no cap).
+  sessions at the top, the range shifts up (rep ceiling above). Once the range is extended past the
+  rung's seeded max and the AMRAP is ≥ `TOP_OF_LADDER_REPS` (25), every top-of-range session re-checks:
+  a harder rung that became performable (dumbbells added → Weighted Pistol Squat) is parked as pending
+  immediately.
+- **Swap-down regression (#23)** — a ⇄ swap writes its sets with `prescribed_exercise=None` (never scored
+  against the prescription) and `SetLog.swapped_from` = the prescription it replaced (pre-save swaps send
+  `swapped_from` in the plan snapshot). A session whose swapped AMRAP is logged on an easier rung of the same
+  ladder (reached via `.regression`, not a grip variant of the prescribed rung — `forge.is_easier_rung`)
+  bumps `PrescribedExercise.sessions_swapped_down`; doing it as prescribed resets it. At `SWAPS_TO_REGRESS` (2)
+  the rung performed in the latest swap-down is parked as `pending_regression` (clears a pending progression,
+  and vice versa). `accept_regression` repoints with that rung's own targets; `deny_regression` resets the
+  count. API `POST regression/{uuid}/{accept|deny}/`; MCP `answer_forge_suggestion`.
+- **Band messages (#55)** — band loads are named, never kg: "+load → medium band", "Less assistance →
+  light band" (`progression.band_label`, "Band N" past the user's list).
 - **Weighted lower rungs** — Weighted Pistol Squat (12) and Weighted Dragon Squat (13), load mode,
   dumbbells OR kettlebell, linked after Dragon Squat.
 - **Timed holds** (difficulty mode, every rung) — AMRAP ≥ `rmax` grows the target:
@@ -160,6 +181,7 @@ left/right capture anywhere (removed in #50; migration 0014 summed old per-side 
 re-placed them, capped at ±1 rung).
 
 **Program** — generated plan
+Unique `source_assessment` (`uniq_program_per_assessment`, #26; null allowed).
 Fields: `user`, `is_active`, `source_assessment` FK, `split` (full_body_3x/upper_lower_4x), `weekly_volume_target`
 (sets/pattern/week, 4–40, default 16 since #109; migration 0038 set 16 on existing programs without regenerating).
 
@@ -189,12 +211,26 @@ Unique: `(program, day_index)`.
 | `order` | display order on the day card |
 | `sessions_at_top` | consecutive sessions at top of rep range |
 | `pending_progression` | FK Exercise — earned unlock, not yet applied |
+| `sessions_swapped_down` / `pending_regression` | #23 — swap-down count and the easier rung offered |
+| `ceiling_notice` / `ceiling_notice_dismissed` | #24 — equipment prompt at the rep ceiling, and the one the user dismissed |
 
 **WorkoutSession**
 Fields: `user`, `program_day`, `scheduled_for`, `performed_at`, `status` (planned/completed/skipped).
+**One planned session per (user, day)** (#56): partial unique constraint `one_planned_session_per_day`
+(`status="planned"`). `get_or_create_session_from_plan` inserts in a savepoint and, on the constraint, returns the
+existing planned session (`POST sessions/` → 200, 201 only when created; MCP `start_forge_session` → `in_progress`).
+Migration 0042 collapsed old duplicates (kept the one with values, else the newest; the rest `skipped`).
+**"Today" = the device's date** (#56): forge.js sends `X-Cauldron-Timezone` (its IANA zone) on every call;
+`api.ForgeApiMixin` scopes it (`forge.device_timezone`) and `forge.local_today(user)` reads it, else
+`CauldronProfile.timezone` (MCP), else `America/Mexico_City`. Used for `scheduled_for`, `resumable_session`, the
+unfinished-session gate and the `performed_at` noon. The header never writes the profile. There is no
+`start_session` any more: tests persist a day with `tests/helpers.persist_today(user, day)`.
+**Display (#129)**: every serialized session goes through `forge.session_for_display` (prefetches
+`SESSION_DISPLAY_PREFETCH`), so a response costs the same queries for 3 sets as for 12; set values are written
+with one `bulk_update`, new sessions' sets with one `bulk_create`.
 
 **SetLog** — one actual set
-Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `is_amrap`, `rir`.
+Fields: `session`, `prescribed_exercise`, `exercise` (may differ if mid-session regression), `set_index`, `expected_reps/load`, `actual_reps/load`, `is_amrap`. (No RIR: effort comes from the AMRAP set; `rir` was dropped in #27.)
 
 Workout logging records **one input per set**. For a per-side movement that value means
 *reps per side* — including per-side timed holds. Only the third (last) set is to-failure.
@@ -237,8 +273,15 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
   - `POST /cauldron/api/assessment/` — submit every row at once and forge the program.
     Body: `{"split": "full_body_3x", "results": [{"pattern_key", "tested_exercise" (uuid),
     "reps_or_seconds"}, …]}`.
-    Returns `{assessment, program, peer}`. There is no `start/` or `complete/`
-    endpoint — one POST does both.
+    Returns `{assessment, program, peer, idempotent}`. There is no `start/` or `complete/`
+    endpoint — one POST does both. **Idempotent (#26)**: submits serialize on the user's equipment-profile row
+    (`select_for_update`); with no open assessment and an active Program the submit is a retry — nothing is
+    written and the current assessment/Program come back with **200** + `idempotent: true` (MCP
+    `submit_trial_results`: `already_recorded` + `note`). A new assessment is opened on submit only for a first
+    Trial; a redo goes through `retake/`. `manage.py dedupe_programs --dry-run` lists the racing-submit clones
+    migration 0043 deletes (counts per user id) — run it against prod before deploying.
+    **Shapes (#10)**: `AssessmentInputSerializer` — a non-list `results`, a non-object item or a JSON-list body
+    → 400 with field errors (every Forge write rejects a non-object body, `ForgeApiMixin`).
   - `POST /cauldron/api/assessment/retake/` — deactivate current session + program, open a
     fresh session (full reassessment; there is no lightweight check-in mode)
   - `GET /cauldron/api/assessment/history/` — per-pattern Trial series for the Evolution
@@ -249,12 +292,22 @@ All DRF — check `the_cauldron/urls.py` for full list. Key groups:
   days are nested inside the program payload.
 - **Today:** `GET /cauldron/api/today/?day=<index>` — opens (creates) a WorkoutSession for
   that day and returns it, **plus** `retest_due`, `last_trial_at`, `days_since_last_trial`
-- **Session logging:** `GET /cauldron/api/sessions/`, `POST /cauldron/api/sessions/{uuid}/log/`
-  with `{"sets": {"<setlog-uuid>": {"actual_reps", "actual_load", "rir"}}}`
+- **Session logging (#10 shapes):** `sets` must be an object of this session's set uuids →
+  `{actual_reps, actual_load}` (numbers ≥ 0 or null) — else 400 and nothing is written (`sets/` too).
+  Band loads (#55) snap to an owned band index (round half up, clamp `0…len(band_levels)-1`), REST and MCP.
+  `GET /cauldron/api/sessions/`, `POST /cauldron/api/sessions/{uuid}/log/`
+  with `{"sets": {"<setlog-uuid>": {"actual_reps", "actual_load"}}}` (other keys, e.g. an old client's `rir`, are ignored)
 - **Unfinished sessions (#63):** `GET /cauldron/api/sessions/unfinished/` → `{"session": …|null}`;
   `DELETE /cauldron/api/sessions/{uuid}/` → 204 (409 if completed). `today/` and `POST sessions/`
   return 409 `{"code": "unfinished_session"}` while one is pending
-- **Progression:** `POST /cauldron/api/progression/{presc_uuid}/{accept|deny}/`
+- **Progression:** `POST /cauldron/api/progression/{presc_uuid}/{accept|deny}/` and
+  `regression/{presc_uuid}/{accept|deny}/` (#23) — any other action is a 404 from routing (#10).
+  `today/` adds `notices: {suggestions: [{direction: up|down, …}], ceiling: [{prescription, exercise_name, notice}]}`.
+- **Band loads (#55):** for a band-implement exercise `load_unit` is `"band"` and `band_labels` lists the
+  user's bands (`PrescribedExerciseSerializer`, `SetLogSerializer`, swap candidates); `is_band_load` agrees.
+  forge.js `fmtLoad(load, unit, labels)` renders "light band" / "liga light"; band actual-load inputs are a
+  `<select>` of owned bands. `progress/` narrowed to a band exercise returns `load_unit: "band"` + `band_labels`
+  (chart metric "Top load" in band steps); band volume counts band steps (reps × (index + 1)).
 - **Set my rung (#59):**
   - `GET /cauldron/api/prescription/{presc_uuid}/set-rung/` — picker options: every performable rung
     of the prescription's chain (whole mixed ladder on lower), each flagged `is_current` / `unready`
@@ -741,6 +794,7 @@ UI badges: "estimated nutrition" on spells (`has_estimated_nutrition`) and reage
 **Forge tools** (`tools/forge.py`, `tools/forge_writes.py`; no nutrition consent needed):
 read `get_forge_today`, `get_forge_program`, `get_forge_progress`, `get_forge_sessions` (≤ 62 days),
 `get_equipment`, `get_trial`; write `set_equipment`✱, `submit_trial_results`, `retake_trial`✱,
+`answer_forge_suggestion` (#23: accept/decline `pending_progression` up or `pending_regression` down),
 `start_forge_session`, `log_forge_set`, `update_forge_set`✱, `finish_forge_session`, `delete_forge_session`✱;
 #109: read `get_forge_rung_options`, write `set_forge_rung` (`set_rung(confirm_unready=True)`: no Trial warning),
 `set_forge_load` (same contract as set-load), `set_forge_weekly_volume` — none two-step.

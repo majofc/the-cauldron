@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from rest_framework.test import APIClient
 
+from the_cauldron.tests.helpers import persist_today
 from the_cauldron.models import (
     AssessmentResult,
     AssessmentSession,
@@ -207,7 +208,7 @@ def test_progression_writes_back_even_targets(seeded, user):
     assert shrimp.regression == pistol
 
     presc = _program_on(user, shrimp)
-    session = forge.start_session(user, presc.day)
+    session = persist_today(user, presc.day)
     amrap = session.set_logs.get(is_amrap=True)
     # Well under the bottom of the range → regress one rung.
     forge.apply_session_log(session, {str(amrap.uuid): {"actual_reps": 1}})

@@ -1276,6 +1276,13 @@ body.forge-overlay-open { overflow: hidden; }
 .forge-load-actual { display: inline-flex; align-items: center; gap: .35rem; }
 .forge-load-actual-label { color: var(--cauldron-cream-muted); font-size: .78rem; }
 .forge-load-actual .forge-trial-input { width: 5rem; }
+/* Band loads are picked from the owned bands by name (#55): a plain select, not the big number font. */
+.forge-load-actual select.forge-trial-input {
+  width: auto; min-width: 7rem; max-width: 100%;
+  font-family: "Inter", sans-serif; font-style: normal; font-size: .85rem;
+  color: var(--cauldron-cream); background: var(--cauldron-bg-card);
+  border: 1px solid var(--cauldron-paprika-border); border-radius: 8px; padding: .3rem .4rem;
+}
 .forge-load-unit { color: var(--cauldron-cream-dim); font-size: .8rem; }
 
 /* Recipe modal body. */

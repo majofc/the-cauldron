@@ -93,12 +93,19 @@
     return m ? decodeURIComponent(m.pop()) : "";
   }
 
+  // "Today" is the date on this device (#56): the server reads the zone from
+  // every call. Never stored; an unknown zone falls back server-side.
+  const DEVICE_TZ = (() => {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (_) { return ""; }
+  })();
+
   async function api(path, { method = "GET", body } = {}) {
     const opts = {
       method,
       headers: { "X-CSRFToken": getCookie("csrftoken") },
       credentials: "same-origin",
     };
+    if (DEVICE_TZ) opts.headers["X-Cauldron-Timezone"] = DEVICE_TZ;
     if (body !== undefined) {
       opts.headers["Content-Type"] = "application/json";
       opts.body = JSON.stringify(body);
@@ -335,11 +342,38 @@
   }
 
   // "You've mastered X. The path to Y is open — take it?" (names in <strong>).
+  // A move down (#23) reads "Your last sessions swapped X for Y. Move down?".
   function unlockText(u) {
-    return t("unlock_text", {
+    return t(u.direction === "down" ? "regress_text" : "unlock_text", {
       from: `<strong>${esc(exName(u.from_name))}</strong>`,
       to: `<strong>${esc(exName(u.to_name))}</strong>`,
     });
+  }
+
+  // One parked suggestion — up (an unlock) or down — answered in the overlay.
+  async function resolveUnlock(u) {
+    const down = u.direction === "down";
+    const body = down
+      ? `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("regress_title", { name: exName(u.to_name) }))}</h3>` +
+        `<p class="forge-unlock-text">${unlockText(u)}</p>`
+      : `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
+        `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("unlock_title"))}</h3>` +
+        `<p class="forge-unlock-text">${unlockText(u)}</p>`;
+    const act = await step(body, [
+      { act: "accept", cls: "btn-cauldron--primary", label: down ? t("accept") : t("claim_it") },
+      { act: "deny", cls: "btn-cauldron--ghost", label: down ? t("deny") : t("not_yet") },
+    ]);
+    await answerSuggestion(u, act);
+  }
+
+  async function answerSuggestion(u, act) {
+    const down = u.direction === "down";
+    try {
+      await api(`${down ? "regression" : "progression"}/${u.prescription}/${act}/`, { method: "POST" });
+      notify(act === "accept"
+        ? t(down ? "moved_down_to" : "advanced_to", { name: exName(u.to_name) })
+        : t("holding_level"));
+    } catch (e) { notify(t("err_progression")); }
   }
 
   function scoreCardMarkup(item) {
@@ -405,21 +439,8 @@
     await wait(1300); // let the forge roar before the reveal
     anvil.classList.remove("forging");
 
-    // Celebrate each earned unlock first (Accept/Deny).
-    for (const u of unlocks) {
-      const body =
-        `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
-        `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("unlock_title"))}</h3>` +
-        `<p class="forge-unlock-text">${unlockText(u)}</p>`;
-      const act = await step(body, [
-        { act: "accept", cls: "btn-cauldron--primary", label: t("claim_it") },
-        { act: "deny", cls: "btn-cauldron--ghost", label: t("not_yet") },
-      ]);
-      try {
-        await api(`progression/${u.prescription}/${act}/`, { method: "POST" });
-        notify(act === "accept" ? t("advanced_to", { name: exName(u.to_name) }) : t("holding_level"));
-      } catch (e) { notify(t("err_progression")); }
-    }
+    // Celebrate each earned unlock first (Accept/Deny), and any move down.
+    for (const u of unlocks) await resolveUnlock(u);
 
     // Then the flames verdict.
     const scored = peer.filter((p) => p.score && p.score.has_data)
@@ -452,15 +473,16 @@
     const content = document.createElement("div");
     content.className = "forge-session-report";
 
-    // Unlocked exercises section.
-    if (unlocks.length) {
+    // Unlocked exercises section (moves down are only asked, not celebrated).
+    const ups = unlocks.filter((u) => u.direction !== "down");
+    if (ups.length) {
       const unlocksEl = document.createElement("div");
       unlocksEl.className = "forge-report-unlocks";
       const sectionTitle = document.createElement("h4");
       sectionTitle.className = "forge-report-section-title";
       sectionTitle.textContent = t("report_unlocks");
       unlocksEl.appendChild(sectionTitle);
-      unlocks.forEach((u) => {
+      ups.forEach((u) => {
         const iconKey = exIconKey(u.to_name);
         const item = document.createElement("div");
         item.className = "forge-report-unlock-item";
@@ -549,20 +571,7 @@
 
     if (unlocks.length) {
       openOverlay();
-      for (const u of unlocks) {
-        const body =
-          `<div class="forge-unlock-burst" aria-hidden="true"><span>🔨</span><span>✨</span><span>🔥</span></div>` +
-          `<h3 class="forge-reveal-title forge-unlock-title">${esc(t("unlock_title"))}</h3>` +
-          `<p class="forge-unlock-text">${unlockText(u)}</p>`;
-        const act = await step(body, [
-          { act: "accept", cls: "btn-cauldron--primary", label: t("claim_it") },
-          { act: "deny", cls: "btn-cauldron--ghost", label: t("not_yet") },
-        ]);
-        try {
-          await api(`progression/${u.prescription}/${act}/`, { method: "POST" });
-          notify(act === "accept" ? t("advanced_to", { name: exName(u.to_name) }) : t("holding_level"));
-        } catch (e) { notify(t("err_progression")); }
-      }
+      for (const u of unlocks) await resolveUnlock(u);
       closeOverlay();
     }
     if (goToProgress) showSavedInProgress(res.session);
@@ -890,10 +899,39 @@
     return unit === "kg" || unit === "lb" ? unit : "";
   }
 
-  function fmtLoad(load, unit) {
+  // A band load is an index into the bands the user owns (#55): "light band" /
+  // "liga light"; past the list, "Band N" (1-based). Never "kg"/"lb".
+  function bandName(load, labels) {
+    const i = Math.round(Number(load));
+    const label = Array.isArray(labels) ? labels[i] : undefined;
+    return label != null && label !== "" ? t("band_label", { label }) : t("band_level", { n: i + 1 });
+  }
+
+  function fmtLoad(load, unit, labels) {
     if (load == null) return "";
+    if (unit === "band") return bandName(load, labels);
     const u = unitLabel(unit);
     return u ? `${fmtNum(load)} ${u}` : String(load);
+  }
+
+  // The actual-load field of a set row: a select of the owned bands for a band
+  // load (value = index), else a number with its unit.
+  function actualLoadField(s, cls, ariaLabel) {
+    if (s.load_unit === "band") {
+      const labels = s.band_labels || [];
+      const current = s.actual_load == null ? "" : String(Math.round(s.actual_load));
+      const options = [`<option value="">${esc(bandName(s.expected_load, labels))}</option>`]
+        .concat(labels.map((_, i) =>
+          `<option value="${i}"${String(i) === current ? " selected" : ""}>${esc(bandName(i, labels))}</option>`));
+      return `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
+        `<select class="forge-trial-input ${cls}" data-uuid="${s.uuid}" aria-label="${esc(ariaLabel)}">` +
+        `${options.join("")}</select></label>`;
+    }
+    return `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
+      `<input type="number" min="0" step="0.25" class="forge-trial-input ${cls}" ` +
+      `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
+      `aria-label="${esc(ariaLabel)}">` +
+      `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
   }
 
   // "2 × 2.5 kg + 1 × 1.25 kg per side" — the fewest plates that make the load.
@@ -1138,7 +1176,7 @@
         const label = Math.round((hi - f * (hi - lo)) * 10) / 10;
         return (
           `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" class="forge-chart-grid"/>` +
-          `<text x="${padL - 6}" y="${y + 4}" class="forge-chart-axis" text-anchor="end">${label}</text>`
+          `<text x="${padL - 6}" y="${y + 4}" class="forge-chart-axis" text-anchor="end">${esc(String(label))}</text>`
         );
       })
       .join("");
@@ -1279,6 +1317,7 @@
       }
       renderToday(currentSession);
       renderRetestBanner(currentSession);
+      renderTodayNotices(currentSession && currentSession.notices);
       $("#forge-log-session").hidden = false;
       $("#forge-earphones").hidden = !voiceSupported();
       loadSwapCandidates();
@@ -1328,18 +1367,15 @@
       sets.forEach((s) => {
         const loadInput = s.expected_load == null
           ? ""
-          : `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
-            `<input type="number" min="0" step="0.25" class="forge-trial-input forge-unfinished-load" ` +
-            `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
-            `aria-label="${esc(t("weight_for_set", { n: s.set_index + 1, name: exName(meta.exercise_name) }))}">` +
-            `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
+          : actualLoadField(s, "forge-unfinished-load",
+            t("weight_for_set", { n: s.set_index + 1, name: exName(meta.exercise_name) }));
         html +=
           `<div class="forge-set-row${s.is_amrap ? " is-amrap" : ""}">` +
           `<span class="forge-set-label">${esc(t("set_n", { n: s.set_index + 1 }))}${
             s.is_unilateral ? ` <span class="forge-trial-perleg">${esc(t("per_side_dot"))}</span>` : ""
           }</span>` +
           `<span class="forge-set-expected">${esc(t("target_n", { n: s.expected_reps, unit }))}${
-            s.expected_load == null ? "" : ` @ ${esc(fmtLoad(s.expected_load, s.load_unit))}`}</span>` +
+            s.expected_load == null ? "" : ` @ ${esc(fmtLoad(s.expected_load, s.load_unit, s.band_labels))}`}</span>` +
           `<input type="number" min="0" class="forge-trial-input forge-unfinished-reps" ` +
           `data-uuid="${s.uuid}" data-load="${s.expected_load ?? ""}" value="${s.actual_reps ?? ""}" ` +
           `placeholder="${s.expected_reps}" aria-label="${esc(t("unit_for_set", { unit, n: s.set_index + 1, name: exName(meta.exercise_name) }))}">` +
@@ -1454,6 +1490,50 @@
     });
   }
 
+  // Parked suggestions (#23 up/down) and rep-ceiling prompts (#24), inline above
+  // the workout like the retest nudge — never blocking.
+  function renderTodayNotices(notices) {
+    const host = $("#forge-today-notices");
+    if (!host) return;
+    host.innerHTML = "";
+    const { suggestions = [], ceiling = [] } = notices || {};
+    suggestions.forEach((u) => {
+      const down = u.direction === "down";
+      const card = document.createElement("div");
+      card.className = "forge-retest-banner forge-notice";
+      card.setAttribute("role", "status");
+      card.innerHTML =
+        `<div class="forge-retest-text"><strong>${esc(down ? t("regress_title", { name: exName(u.to_name) }) : t("unlock_title"))}</strong> ` +
+        `${unlockText(u)}</div>` +
+        `<div class="forge-retest-actions">` +
+        `<button type="button" class="btn-cauldron btn-cauldron--primary" data-act="accept">${esc(down ? t("accept") : t("claim_it"))}</button>` +
+        `<button type="button" class="btn-cauldron btn-cauldron--ghost" data-act="deny">${esc(down ? t("deny") : t("not_yet"))}</button>` +
+        `</div>`;
+      card.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", async () => {
+        card.remove();
+        await answerSuggestion(u, btn.dataset.act);
+      }, { once: true }));
+      host.appendChild(card);
+    });
+    ceiling.forEach((n) => {
+      const card = document.createElement("div");
+      card.className = "forge-retest-banner forge-notice";
+      card.setAttribute("role", "status");
+      card.innerHTML =
+        `<div class="forge-retest-text">${esc(t(`ceiling_${n.notice}`, { name: exName(n.exercise_name) }))}</div>` +
+        `<div class="forge-retest-actions">` +
+        `<button type="button" class="forge-retest-dismiss" aria-label="${esc(t("dismiss_reminder"))}">✕</button></div>`;
+      $(".forge-retest-dismiss", card).addEventListener("click", async () => {
+        card.remove();
+        try {
+          await api(`prescription/${n.prescription}/ceiling-notice/dismiss/`, { method: "POST" });
+        } catch (e) { /* comes back next load; never interrupt the session */ }
+      }, { once: true });
+      host.appendChild(card);
+    });
+    host.hidden = !host.children.length;
+  }
+
   // Map each set-log uuid → the muscles its exercise trains, for the daily
   // worked-muscle diagram (revealed once every set is logged).
   let muscleBySetUuid = {};
@@ -1473,6 +1553,7 @@
       if (s.expected_load_recipe) {
         recipeBySetUuid[s.uuid] = Object.assign({}, s.expected_load_recipe, {
           unit: s.load_unit,
+          bandLabels: s.band_labels,
           exerciseName: s.exercise_name,
         });
       }
@@ -1493,6 +1574,8 @@
       // these, so a skipped block simply never reaches the server.
       block.dataset.exercise = exerciseUuid;
       if (meta.prescription) block.dataset.prescription = meta.prescription;
+      // A ⇄ swap remembers the prescription it replaced (#23).
+      if (meta.swapped_from) block.dataset.swappedFrom = meta.swapped_from;
       const rest = meta.rest_seconds ? fmtRest(meta.rest_seconds) : "";
       const video = meta.video_url
         ? `<a class="forge-video-link" href="${meta.video_url}" target="_blank" rel="noopener" data-no-loader>${esc(t("watch_how"))}</a>`
@@ -1528,18 +1611,14 @@
           ? ""
           : recipeBySetUuid[s.uuid]
           ? `<button type="button" class="forge-load-btn" data-recipe-uuid="${s.uuid}" ` +
-            `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(s.expected_load, s.load_unit))}</button>`
-          : `<span class="forge-load-plain">${esc(fmtLoad(s.expected_load, s.load_unit))}</span>`;
+            `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(s.expected_load, s.load_unit, s.band_labels))}</button>`
+          : `<span class="forge-load-plain">${esc(fmtLoad(s.expected_load, s.load_unit, s.band_labels))}</span>`;
         // A logged weight may differ from the prescribed one (a plate went
         // missing, or the day felt strong). It is recorded as history only —
         // progression still advances from the prescription.
         const loadInput = s.expected_load == null
           ? ""
-          : `<label class="forge-load-actual"><span class="forge-load-actual-label">${esc(t("load"))}</span>` +
-            `<input type="number" min="0" step="0.25" class="forge-trial-input forge-actual-load" ` +
-            `data-uuid="${s.uuid}" value="${s.actual_load ?? ""}" placeholder="${s.expected_load}" ` +
-            `aria-label="${esc(t("weight_for_set", { n: s.set_index + 1, name: exName(name) }))}">` +
-            `<span class="forge-load-unit">${esc(unitLabel(s.load_unit))}</span></label>`;
+          : actualLoadField(s, "forge-actual-load", t("weight_for_set", { n: s.set_index + 1, name: exName(name) }));
         // Reps already logged are rendered back in: a resumed session has to
         // come back with the user's work on screen, not an empty form.
         const input =
@@ -1589,6 +1668,7 @@
         entries.push({
           exercise: block.dataset.exercise,
           prescription: block.dataset.prescription || null,
+          swapped_from: block.dataset.swappedFrom || null,
           set_index: index,
         });
       });
@@ -1611,6 +1691,7 @@
       if (s.expected_load_recipe) {
         recipeBySetUuid[s.uuid] = Object.assign({}, s.expected_load_recipe, {
           unit: s.load_unit,
+          bandLabels: s.band_labels,
           exerciseName: s.exercise_name,
         });
       }
@@ -1814,7 +1895,7 @@
     const load =
       candidate.target_load == null
         ? ""
-        : `<li>${esc(t("load_value", { load: fmtLoad(candidate.target_load, candidate.load_unit) }))}</li>`;
+        : `<li>${esc(t("load_value", { load: fmtLoad(candidate.target_load, candidate.load_unit, candidate.band_labels) }))}</li>`;
     swapBody.innerHTML =
       `<h4 class="forge-swap-confirm-name">${esc(exName(candidate.exercise_name))}</h4>` +
       `<p class="forge-help">${esc(patternName(candidate.pattern_key, candidate.pattern_name))}</p>` +
@@ -1866,6 +1947,9 @@
   // Replace a movement on the *unsaved* plan. Synthetic ids again, so the rows
   // are indistinguishable from the ones `today/` handed us.
   function swapPlannedSets(setLogs, fromExercise, candidate) {
+    // The prescription being replaced (or the one an earlier swap replaced).
+    const from = setLogs.find((s) => s.exercise === fromExercise) || {};
+    const swappedFrom = from.prescription || from.swapped_from || null;
     const replacement = [];
     for (let i = 0; i < candidate.target_sets; i++) {
       const isAmrap = i === candidate.target_sets - 1;
@@ -1873,6 +1957,7 @@
         uuid: `swap:${candidate.exercise}:${i}`,
         exercise: candidate.exercise,
         prescription: null,
+        swapped_from: swappedFrom,
         exercise_name: candidate.exercise_name,
         video_url: candidate.video_url,
         cues: candidate.cues,
@@ -1888,7 +1973,6 @@
         actual_reps: null,
         actual_load: null,
         is_amrap: isAmrap,
-        rir: null,
       });
     }
     const out = [];
@@ -2314,6 +2398,7 @@
             if (p.target_load_recipe) {
               recipeByPrescriptionUuid[p.uuid] = Object.assign({}, p.target_load_recipe, {
                 unit: p.load_unit,
+                bandLabels: p.band_labels,
                 exerciseName: p.exercise_name,
               });
             }
@@ -2508,8 +2593,8 @@
     if (presc && presc.target_load != null) {
       const body = presc.target_load_recipe
         ? `<button type="button" class="forge-load-btn" data-recipe-prescription="${presc.uuid}" ` +
-          `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(presc.target_load, presc.load_unit))}</button>`
-        : `<div class="forge-ex-modal-value">${esc(fmtLoad(presc.target_load, presc.load_unit))}</div>`;
+          `title="${esc(t("load_btn_title"))}">${esc(fmtLoad(presc.target_load, presc.load_unit, presc.band_labels))}</button>`
+        : `<div class="forge-ex-modal-value">${esc(fmtLoad(presc.target_load, presc.load_unit, presc.band_labels))}</div>`;
       addSection(esc(t("sec_prescribed_load")), body);
     }
     if (presc && presc.load_options && presc.load_options.length && state !== "blocked") {
@@ -2609,11 +2694,11 @@
   // ── Load recipe modal ─────────────────────────────────────────────────────
   // Reuses the exercise overlay's card and close/backdrop behaviour; it only
   // swaps in different content and offers no exercise actions.
-  function openRecipeModal(load, recipe, unit, exerciseName) {
+  function openRecipeModal(load, recipe, unit, exerciseName, labels) {
     exModalBody.innerHTML = "";
     exModalActions.innerHTML = "";
     exModalBody.innerHTML =
-      `<p class="forge-ex-modal-name">${esc(fmtLoad(load, unit))}</p>` +
+      `<p class="forge-ex-modal-name">${esc(fmtLoad(load, unit, labels))}</p>` +
       (exerciseName ? `<p class="forge-ex-modal-pattern">${esc(exName(exerciseName))}</p>` : "");
 
     const section = (label, html) => {
@@ -2659,7 +2744,7 @@
     const presUuid = btn.dataset.recipePrescription;
     const entry = setUuid ? recipeBySetUuid[setUuid] : presUuid ? recipeByPrescriptionUuid[presUuid] : null;
     if (!entry) return;
-    openRecipeModal(entry.total, entry, entry.unit, entry.exerciseName);
+    openRecipeModal(entry.total, entry, entry.unit, entry.exerciseName, entry.bandLabels);
   });
 
   const exModalCloseBtn = $("#forge-ex-modal-close");
@@ -2676,7 +2761,7 @@
     const field = presc.is_band_load
       ? `<select class="forge-set-load-input" id="forge-set-load-value" aria-label="${esc(t("sec_set_load"))}">${
         presc.load_options.map((v) => `<option value="${v}"${v === presc.target_load ? " selected" : ""}>${
-          esc(t("band_level", { n: fmtNum(v) }))}</option>`).join("")}</select>`
+          esc(bandName(v, presc.band_labels))}</option>`).join("")}</select>`
       : `<input type="number" class="forge-set-load-input" id="forge-set-load-value" min="0" step="any" inputmode="decimal" ` +
         `value="${presc.target_load ?? ""}" aria-label="${esc(t("sec_set_load"))}">` +
         `<span class="forge-load-unit">${esc(unitLabel(presc.load_unit))}</span>`;
@@ -2691,9 +2776,9 @@
     btn.disabled = true;
     try {
       const res = await api(`prescription/${presc.uuid}/set-load/`, { method: "POST", body: { load: value } });
-      const shown = presc.is_band_load ? t("band_level", { n: fmtNum(res.load) }) : fmtLoad(res.load, presc.load_unit);
+      const shown = fmtLoad(res.load, presc.load_unit, presc.band_labels);
       notify(res.snapped_from != null
-        ? t("load_snapped", { asked: fmtLoad(res.snapped_from, presc.load_unit), load: shown })
+        ? t("load_snapped", { asked: fmtLoad(res.snapped_from, presc.load_unit, presc.band_labels), load: shown })
         : t("load_set", { load: shown }));
       closeExerciseModal();
       // Today's untouched sets were rewritten server-side: refresh them like a rung move.
@@ -2962,6 +3047,9 @@
 
   // ── Progression chart ────────────────────────────────────────────────────--
   let progressPoints = [];
+  // Band exercises chart their load in band steps named after the user's bands (#55).
+  let chartLoadUnit = null;
+  let chartBandLabels = null;
   let chartPeriod = "day";
   let chartMetric = "total_volume";
   let chartExercise = "";
@@ -2979,6 +3067,8 @@
       const qs = params.length ? `?${params.join("&")}` : "";
       const data = await api("progress/" + qs);
       progressPoints = data.points || [];
+      chartLoadUnit = data.load_unit || null;
+      chartBandLabels = data.band_labels || null;
       populateExerciseFilter(data.exercises || []);
       populateChartMuscleFilter(data.muscles || []);
     } catch (e) {
@@ -3066,8 +3156,8 @@
     progressPoints.forEach((p) => {
       const k = periodKey(p.date, chartPeriod);
       const cur = buckets.get(k) || 0;
-      // Volume/reps sum within a period; best_amrap takes the max.
-      buckets.set(k, chartMetric === "best_amrap"
+      // Volume/reps sum within a period; best_amrap and top_load take the max.
+      buckets.set(k, chartMetric === "best_amrap" || chartMetric === "top_load"
         ? Math.max(cur, p[chartMetric] || 0)
         : cur + (p[chartMetric] || 0));
     });
@@ -3109,11 +3199,17 @@
     const xFor = (i) => padL + (n === 1 ? (W - padL - padR) / 2 : (i * (W - padL - padR)) / (n - 1));
     const yFor = (v) => H - padB - (v / maxV) * (H - padT - padB);
 
-    const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+    // A band load axis steps one band at a time, labelled with band names.
+    const bandAxis = chartMetric === "top_load" && chartLoadUnit === "band";
+    const valueText = (v) => (bandAxis ? bandName(v, chartBandLabels) : fmtNum(v));
+    const gridFractions = bandAxis
+      ? Array.from({ length: Math.round(maxV) + 1 }, (_, i) => 1 - i / Math.max(1, Math.round(maxV)))
+      : [0, 0.25, 0.5, 0.75, 1];
+    const gridLines = gridFractions.map((f) => {
       const y = padT + f * (H - padT - padB);
-      const label = Math.round(maxV * (1 - f));
+      const label = bandAxis ? valueText(Math.round(maxV * (1 - f))) : Math.round(maxV * (1 - f));
       return `<line x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}" class="forge-chart-grid"/>` +
-        `<text x="${padL - 8}" y="${y + 4}" class="forge-chart-axis" text-anchor="end">${label}</text>`;
+        `<text x="${padL - 8}" y="${y + 4}" class="forge-chart-axis" text-anchor="end">${esc(String(label))}</text>`;
     }).join("");
 
     const decileLines = deciles.map((c) => {
@@ -3126,7 +3222,7 @@
     const area = `M ${padL},${H - padB} L ` + series.map((s, i) => `${xFor(i)},${yFor(s[1])}`).join(" L ") +
       ` L ${xFor(n - 1)},${H - padB} Z`;
     const dots = series.map((s, i) =>
-      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot" data-key="${esc(s[0])}"><title>${esc(periodLabel(s[0]))}: ${esc(fmtNum(s[1]))}</title></circle>`
+      `<circle cx="${xFor(i)}" cy="${yFor(s[1])}" r="3.5" class="forge-chart-dot" data-key="${esc(s[0])}"><title>${esc(periodLabel(s[0]))}: ${esc(valueText(s[1]))}</title></circle>`
     ).join("");
     // X labels: show a handful to avoid crowding.
     const step = Math.ceil(n / 6);
@@ -3429,6 +3525,7 @@
         targetReps: s.expected_reps,
         expectedLoad: s.expected_load,
         loadUnit: s.load_unit,
+        bandLabels: s.band_labels,
         loadRecipe: s.expected_load_recipe || null,
         restSeconds: s.rest_seconds || 0,
         cues: s.cues || "",
@@ -3450,7 +3547,7 @@
     setExercise(name);
     // Hands-free: the weight is useless without its unit, and a short recipe
     // saves walking back to the screen to see which plates to grab.
-    const loadStr = s.expectedLoad != null ? ` ${t("v_at", { load: fmtLoad(s.expectedLoad, s.loadUnit) })}` : "";
+    const loadStr = s.expectedLoad != null ? ` ${t("v_at", { load: fmtLoad(s.expectedLoad, s.loadUnit, s.bandLabels) })}` : "";
     const recipeStr = s.loadRecipe ? ` — ${fmtRecipe(s.loadRecipe, s.loadUnit)}` : "";
     setTarget(
       s.isTimed
@@ -3672,7 +3769,7 @@
     try {
       await ensureSession();
     } catch (e) {
-      notify(t("err_start_session"));
+      notify(t("err_session_start"));
       return;
     }
     const allSteps = buildSteps(currentSession);
