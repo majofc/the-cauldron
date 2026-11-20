@@ -25,7 +25,7 @@ SENSITIVE_CONSENT = LegalAcceptance.Document.SENSITIVE_CONSENT
 
 CURRENT_VERSIONS = {
     TERMS: "1.4",  # 1.4: adults only (#115)
-    PRIVACY: "1.6",  # 1.6: the birth year is required (#115)
+    PRIVACY: "1.7",  # 1.7: sign-in lockout records + PostHog lockout event (arcano#200)
     SENSITIVE_CONSENT: "1.1",
 }
 # Accepting these is required to use any part of The Cauldron.
